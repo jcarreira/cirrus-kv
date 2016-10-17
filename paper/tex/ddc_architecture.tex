@@ -1,0 +1,31 @@
+\section{Disaggregated datacenter architecture}
+\label{sec:ddc_architecture}
+
+\begin{center}
+\begin{figure}[!ht]
+\includegraphics[width=8cm]{img/DDC-diagram.pdf}
+\caption{Disaggregated datacenter}
+\label{fig:ddc}
+\end{figure}
+\end{center}
+
+
+\System targets datacenter-scale deployments (see Figure~\ref{fig:ddc}) mainly composed of compute nodes and memory blades. We envision a datacenter having 1000s of compute nodes and 10s of memory nodes.
+
+%1000s of compute nodes and 10s of memory blades.
+
+
+
+%In this architecture, compute nodes have a high CPU/Mem. ratio while memory blades have $O(1\text{TB})$ of non-volatile memory. 
+
+\paragraph{Compute nodes}
+\margintext{red}{Be more specific about CPU/Mem ratio,  number of nodes, etc..}
+Compute nodes is where most of the datacenter computation occurs. These nodes contain a small amount of local memory and can access large pools of memory (in memory blades) through the datacenter network fabric. The CPUs of the compute nodes are connected to a small amount of local DRAM that can serve as a cache to the rest of the data stored in the memory blades.
+
+\paragraph{Memory blades}
+\margintext{red}{Citations here}
+Memory blades are high-density appliances of DRAM-like non-volatile memory. These blades serve as the main storage medium for the datacenter applications working data and are directly connected to the datacenter network. Examples of memories in these blades can be 3XPoint, Memristors or HBM.
+
+
+%Movement of data between the \emph{memory blades} and the compute nodes is managed by \System.
+

@@ -1,0 +1,49 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage{graphicx}
+%\usepackage{subfig}
+%\usepackage{times}
+%\usepackage{fullpage}
+%\usepackage{amsmath}
+%\usepackage{todonotes}
+%\usepackage{slashbox,multirow}
+%\usepackage[strings]{underscore}
+%\usepackage{adjustbox}
+\usepackage{cite,url}
+\usepackage[affil-it]{authblk}
+%\usepackage{marginnote}
+\usepackage{xspace}
+\usepackage{color}
+
+\marginparwidth=1.5cm
+
+\newcommand{\System}{Sirius\xspace}
+\newcommand{\margintext}[2]{\marginpar{\color{#1} \scriptsize #2}}
+
+\usepackage{footnote}
+\usepackage{threeparttable}
+
+\begin{document}
+
+\title{\bf Sirius: Disaggregated-datacenter Support}
+\author{Joao Carreira, Sagar Karandikar, Nathan Pemberton, Emmanuel Amaro}
+\affil{UC Berkeley}
+\date{}
+\maketitle
+\thispagestyle{empty}
+
+\input{tex/abstract}
+\input{tex/introduction}
+\input{tex/ddc_architecture}
+\input{tex/design.tex}
+\input{tex/implementation.tex}
+\input{tex/evaluation.tex}
+\input{tex/related_work.tex}
+\input{tex/conclusion.tex}
+
+\bibliography{bib/references}
+\bibliographystyle{abbrv}
+
+
+\end{document}

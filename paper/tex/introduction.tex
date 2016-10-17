@@ -1,0 +1,15 @@
+\section{Introduction}
+\label{sec:introduction}
+
+The building block of today’s datacenters is the server: a monolithic package of CPU, memory and storage, combined in largely inflexible ratios. A recent trend in hardware architecture for datacenters proposes a new building block: specialized blades that focus on providing individual resources \cite{hp_the_machine, huawei_dc_30, hp_moonshot, fb_disag_rack, intel_rsa, ericsson, fujitsu_disag}. With this principle, a datacenter can be built with a set of homogenous blades (e.g. CPU blades) inter-connected by a high-speed network. We call this a disaggregated datacenter because resources are decoupled from each other, i.e., they are not aggregated into servers on single boards. Advances in networking, differences in scaling between compute, memory, and storage technologies, and the increasing need for better application/energy performance and resource utilization led to an increasing interest in this area. 
+
+In this paper we propose \System, a system for managing resources in disaggregated datacenters. There were two main underlying principles while developing this system. First, \System is aggressively optimized for the performance of the underlying datacenter hardware (e.g. memory technologies, network). Secondly, 
+
+%Rather than network latency/bandwidth, the performance of disaggregated memory architectures based on virtual memory systems with stock operating systems is poor and inadequate to the high-performance needs of this architecture.
+
+In this paper we propose \System,
+%~\footnote{FireBox's topology resembles a star. \System is the brightest star visible from Earth}
+a system for memory disaggregation support in FireBox. \System consists of three main components: a simple user-space API for remote memory access, a centralized manager for resource allocation and access control and a memory blade controller that manages and makes memory visible within memory blades. 
+
+The rest of the paper is organized as follows. In section~\ref{sec:ddc_architecture} we introduce the disaggregated datacenter. In section~\ref{sec:design} we present the design of \System and explain the trade-offs of this design. Next, in section~\ref{sec:implementation}, we present the implementation of \System and its optimizations. In section~\ref{sec:evaluation} we present our evaluation methodology and results. Next, we discuss relevant research work in section~\ref{sec:related_work}. Finally, in section~\ref{sec:conclusion} we conclude the paper.
+

@@ -1,0 +1,15 @@
+\section{Implementation}
+\label{sec:implementation}
+
+We have implemented \System in a Infiniband-connected cluster with 16 compute nodes and 1 memory-heavy node. Each node has 128GB of DRAM and 8 CPU cores. Each node is connected to the network by a 56Gbps (ConnectX-3 EN Mellanox) NIC.
+
+\subsection{\System}
+
+
+\subsection{Security}
+
+
+\System's was developed on top of an Infiniband-connected cluster (see Section~X) and thus leverages RDMA capabilities to enforce access control, authentication and data integrity. These responsibilities are contained within the network module (see Figure~X) to keep extensibility to networks with different characteristics.
+
+
+\subsection{Network}

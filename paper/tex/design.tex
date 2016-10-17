@@ -1,0 +1,53 @@
+\section{\System Design}
+\label{sec:design}
+
+
+
+\subsection{Network Hardware/Software}
+
+Due to the small amount of local memory in compute nodes, movement of data between memory blades and compute nodes can be frequent. Gao et al~\cite{gao} suggest that current network technology is within reach for the needs of memory disaggregation. Gao suggests a network fabric capable of a latency/bandwidth of 5$\mu$s/100Gbps to achieve a 5\% degradation in a suite of representative datacenter benchmarks. However, this result assumes a fast path access from user-space applications to the network. Previous research suggests using the virtual memory subsystem provided by commodity CPUs to transparently manage local/remote memory~\cite{disag_isca}. 
+\margintext{red}{Show this with numbers}
+We have found such approach inadequate for the high performance needs required in datacenters. 
+
+\subsection{Data model}
+
+\System provides access to contiguous regions of remote memory to all types of applications. Unlike other systems \cite{ramcloud, farm} for remote memory management, \System does not put constraints on the format and structure of data. We have decided to retain generality and provide good performance to a large number of applications, leaving that design decision to application developers. Despite this largely unconstrained space, while developing \System we had in mind memory intensive systems such as Hadoop~\cite{hadoop_mr} and Spark~\cite{spark}. Finally, the problem of efficiently facilitating data sharing in this environment is an interesting one that we would like to explore in future work.
+
+\subsection{Security}
+
+\paragraph{Threat model} \System targets large-scale disaggregated data center deployments, such as FireBox. We envision this architecture beig used in the datacenter to serve cloud applications and thus our system is highly influenced by the constraints and goals of cloud environments. Due to the diversity of clients and applications running in datacenters, some of these applications can be malicious and try to gain access to other client's data or to the underlying infrastructure/management. \System's design has this aspects in mind and thus provides authentication of applications and access control to data. \System assumes the OS/VM layer of the compute nodes/memory blades (as well as network fabric) are trustworthy. We believe our system can be complemented with promising orthogonal approaches to solve these problems~\cite{intel_sgx}.
+
+\paragraph{Data access} \System provides data isolation between applications. This means memory stored in memory blades can only be accessed by applications that have acquired access to the memory region where data leaves. Applications gain access to data by authenticating with the centralized controller. Likewise, data at rest (SSD/HDD) is also protected by access controls and (optionally) encrypted.
+
+\paragraph{Authentication} Authentication of applications is done when creating/accessing resources by talking to a centralized authorization controller. The controller maintains applications identities and is responsible for authenticating applications into the system.
+
+%\missingfigure[figwidth=4cm]{Authentication/authorization in \System}
+
+\subsection{Resources allocation}
+
+We delegate the task of allocating resources in the datacenter to a centralized resource allocator.
+
+We build on the ideas of Kubernetes and make our data center information shared to all datacenter management applications through a well-defined API. Access to this API is authenticated to ensure only privileged applications (e.g., monitoring, scheduling) can access datacenter-wide information.
+
+\begin{table*}[t!]
+\centering
+%\resizebox{\columnwidth}{!}{ 
+\begin{tabular}{c|c|c}
+  API & Description \\
+  \hline \hline
+  \emph{Token authenticate(resource\_allocator)} & Authenticate with datacenter controller \\
+  \emph{MemId allocate(size)} & Allocate \emph{size} bytes of memory \\
+  \emph{bool deallocate(MemId)} & Seallocate previously allocated memory \\
+  \emph{bool write(data, address, size, MemId)} & Write to given address \emph{size} bytes from \emph{data} \\
+  \emph{bool read(data, address, size, MemId)} & Read from given address \emph{size} bytes to \emph{data} \\
+  %\emph{resize(MemId, newSize)} & Increase size of previous memory allocation \\
+\end{tabular}
+%}
+\caption{\System's user-space API} 
+\label{tbl:api}
+\end{table*}
+
+
+\subsection{User-space API}
+
+Application developers can use a simple user-space interface~\ref{tbl:api} to manage memory storage in the datacenter. This API assumes applications are connected to the datacenter network fabric and the centralized datacenter controller is discoverable.
