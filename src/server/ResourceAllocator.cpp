@@ -40,7 +40,6 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    int context_id = ctx->context_id;
     LOG(INFO) << "Received message";
 
     switch (msg->type) {

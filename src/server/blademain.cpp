@@ -4,6 +4,8 @@
 #include "BladeServer.h"
 #include "src/utils/easylogging++.h"
 
+static const uint64_t GB = (1024*1024*1024);
+
 static const int PORT = 12345;
 
 INITIALIZE_EASYLOGGINGPP
@@ -26,7 +28,7 @@ void set_ctrlc_handler() {
 int main() {
     LOG(INFO) << "Starting RDMA server in port: " << PORT;
 
-    sirius::BladeServer server(PORT, 0);
+    sirius::BladeServer server(PORT, 10 * GB);
 
     server.init();
 

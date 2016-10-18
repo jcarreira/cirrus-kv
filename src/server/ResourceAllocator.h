@@ -3,11 +3,11 @@
 #ifndef _RESOURCE_ALLOCATOR_H_
 #define _RESOURCE_ALLOCATOR_H_
 
+#include <rdma/rdma_cma.h>
 #include "src/utils/utils.h"
 #include "src/server/RDMAServer.h"
 #include "src/authentication/Authenticator.h"
 #include "src/common/AllocatorMessage.h"
-#include <rdma/rdma_cma.h>
 #include <vector>
 #include <thread>
 #include <memory>
