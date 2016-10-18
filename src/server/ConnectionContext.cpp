@@ -4,6 +4,8 @@
 #include "src/utils/utils.h"
 
 namespace sirius {
+    
+uint64_t ConnectionContext::id_count_ = 0;
 
 ConnectionContext::ConnectionContext() :
     recv_msg(NULL),
@@ -11,8 +13,11 @@ ConnectionContext::ConnectionContext() :
     send_msg(NULL),
     send_msg_mr(NULL),
     server(NULL),
-    context_id(0) {
-    TEST_NZ(sem_init(&ack_sem, 0, 0));
+    context_id_(id_count_++) {
+}
+
+ConnectionContext::~ConnectionContext() {
+
 }
 
 }
