@@ -13,14 +13,56 @@ namespace sirius {
 
 static const int SIZE = 1000000;
 
-BladeServer::BladeServer(int port, int timeout_ms) :
-    RDMAServer(port, timeout_ms) {
+BladeServer::BladeServer(int port, 
+        uint64_t pool_size,
+        int timeout_ms) :
+    RDMAServer(port, timeout_ms),
+    mr_data_(0),
+    mr_pool_(0),
+   pool_size_(pool_size) {
 
 }
 
 BladeServer::~BladeServer() {
 }
 
+void BladeServer::init() {
+    // let upper layer initialize
+    // all network related things
+    RDMAServer::init();
+}
+
+void BladeServer::handle_connection(struct rdma_cm_id* id) {
+}
+
+void BladeServer::handle_disconnection(struct rdma_cm_id* id) {
+
+}
+
+void BladeServer::create_pool(uint64_t size) {
+    TimerFunction tf("create_pool", true);
+
+    LOG(INFO) << "Allocating memory pool of size: " << size;
+
+    void *data;
+    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&data),
+                sysconf(_SC_PAGESIZE), size));
+    mr_data_.push_back(data);
+
+    LOG(INFO) << "Creating memory region";
+    ibv_mr* pool;
+    TEST_Z(pool = ibv_reg_mr(
+                gen_ctx_.pd, data, size,
+                IBV_ACCESS_LOCAL_WRITE |
+                IBV_ACCESS_REMOTE_WRITE |
+                IBV_ACCESS_REMOTE_READ));
+
+    mr_pool_.push_back(pool);
+
+    LOG(INFO) << "Memory region created";
+}
+
+#if 0
 uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
     TimerFunction tf("create_pool");
 
@@ -45,37 +87,18 @@ uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
     LOG(INFO) << "Creating memory window";
 
     InfinibandSupport ibs;
-
-
     std::call_once(ibs.mw_support_check_, 
             &InfinibandSupport::check_mw_support, &ibs, gen_ctx_.ctx);
     std::call_once(ibs.odp_support_check_, 
             &InfinibandSupport::check_odp_support, &ibs, gen_ctx_.ctx);
+
+    return 0;
 
     // create memory window
     struct ibv_mw* mw;
     TEST_Z(gen_ctx_.pd);
     TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_2));
     // fix: dont forget to dealloc
-
-    /*
-       struct ibv_exp_mw_bind {
-       struct ibv_qp                    *qp;
-       struct ibv_mw                    *mw;
-       uint64_t                         wr_id;          // User defined WR ID 
-    uint64_t                         exp_send_flags; // Use ibv_exp_send_flags 
-    struct ibv_exp_mw_bind_info      bind_info;
-    uint32_t                         comp_mask;      // reserved for future growth (must be 0) 
-};
-
-struct ibv_exp_mw_bind_info {
-    struct ibv_mr        *mr;                 // The MR to bind the MW to 
-    uint64_t             addr;                // The address the MW should start at 
-    uint64_t             length;              // The length (in byte) the MW should span 
-    uint64_t             exp_mw_access_flags; // Access flags to the MW. Use ibv_exp_access_flags 
-};
-
-*/
 
     // create configuration
     struct ibv_exp_mw_bind mw_bind;
@@ -96,12 +119,14 @@ struct ibv_exp_mw_bind_info {
     // bind memory window to memory region
     // int ibv_exp_bind_mw(struct ibv_exp_mw_bind *mw_bind);
     int ret;
-    TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
+    //TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
 
     LOG(INFO) << "Pool created (and mw bound) successfully";
 
     return mw->rkey;
 }
+
+#endif
 
 void BladeServer::process_message(rdma_cm_id* id,
         void* message) {
@@ -110,8 +135,13 @@ void BladeServer::process_message(rdma_cm_id* id,
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    int context_id = ctx->context_id;
+    int context_id = ctx->context_id_;
     LOG(INFO) << "Received message";
+
+    // we shouldnt do this earlier has soon has process starts
+    // but cant make it work like that (yet)
+    std::call_once(pool_flag_, 
+            &BladeServer::create_pool, this, pool_size_);
 
     switch (msg->type) {
         case ALLOC:
@@ -119,22 +149,23 @@ void BladeServer::process_message(rdma_cm_id* id,
                 LOG(INFO) << "ALLOC. ctx_id: " << context_id;
 
                 uint64_t size = msg->data.alloc.size;
-                uint32_t rkey = create_pool(size, id);
+                //uint32_t rkey = create_pool(size, id);
 
                 uint64_t mr_id = 42;
                 uint64_t remote_addr =
-                    reinterpret_cast<uint64_t>(mr_data_[context_id]);
+                    reinterpret_cast<uint64_t>(mr_data_[0]);
                 BladeMessageGenerator::alloc_ack_msg(
                         conns_[context_id]->send_msg,
                         mr_id,
                         remote_addr,
-                        rkey);
-                        //mr_pool_[context_id]->rkey);
+                        //rkey);
+                        mr_pool_[0]->rkey);
 
                 LOG(INFO) << "Sending ack. "
                     << " remote_addr: " << remote_addr
-                    << " rkey: " << mr_pool_[context_id]->rkey;
+                    << " rkey: " << mr_pool_[0]->rkey;
 
+                // send async message
                 send_message(id, sizeof(BladeMessage));
 
                 break;
@@ -146,7 +177,5 @@ void BladeServer::process_message(rdma_cm_id* id,
             break;
     }
 }
-
-
 
 }

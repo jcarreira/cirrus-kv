@@ -22,11 +22,24 @@ RDMAServer::RDMAServer(int port, int timeout_ms) {
 }
 
 RDMAServer::~RDMAServer() {
-    rdma_destroy_id(id_);
     rdma_destroy_event_channel(ec_);
 
+    if (gen_ctx_.pd)
+        TEST_NZ(ibv_dealloc_pd(gen_ctx_.pd));
+    if (gen_ctx_.cq)
+        TEST_Z(ibv_destroy_cq(gen_ctx_.cq));
+    if (id_) {
+        rdma_destroy_qp(id_);
+        rdma_destroy_id(id_);
+    }
+    // if (gen_ctx_.cq_poller_thread)
+    //    delete gen_ctx_.cq_poller_thread;
+
+    // clean all connection data
     std::for_each(conns_.begin(), conns_.end(),
-            [](ConnectionContext* ptr){ delete ptr; });
+            [](ConnectionContext* ptr) {
+                delete ptr; 
+            });
 }
 
 void RDMAServer::init() {
@@ -42,6 +55,10 @@ void RDMAServer::init() {
     // create channel and listen for incoming connections
     TEST_Z(ec_ = rdma_create_event_channel());
     TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
+
+    LOG(INFO) << "Created id: " 
+        << reinterpret_cast<uint64_t>(id_);
+
     TEST_NZ(rdma_bind_addr(id_, (struct sockaddr *)&addr));
     TEST_NZ(rdma_listen(id_, NUM_BACKLOG));
 }
@@ -52,11 +69,8 @@ void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    if (ctx->checksum != 42)
-        DIE("Wrong connection context");
-
     struct ibv_send_wr wr, *bad_wr = NULL;
-    struct ibv_sge sge;
+    ibv_sge sge;
 
     memset(&wr, 0, sizeof(wr));
 
@@ -100,7 +114,13 @@ void RDMAServer::build_params(struct rdma_conn_param *params) {
     params->rnr_retry_count = 7;  // infinite retry
 }
 
-void RDMAServer::build_context(struct ibv_context *verbs) {
+/*
+ * I tried to call this as soon as possible
+ * 1) to avoid the call_once and 2) having to create
+ * a memory pool only when the first client connects
+ * but couldn't get around that
+ */
+void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     // set ibv_context
     gen_ctx_.ctx = verbs;
 
@@ -152,9 +172,9 @@ void RDMAServer::build_qp_attr(struct ibv_qp_init_attr *qp_attr) {
     // we use reliable IB
     qp_attr->qp_type = IBV_QPT_RC;
 
-    // at most 10 outstanding send/recv work requests
-    qp_attr->cap.max_send_wr = 10;
-    qp_attr->cap.max_recv_wr = 10;
+    // at most 100 outstanding send/recv work requests
+    qp_attr->cap.max_send_wr = 100;
+    qp_attr->cap.max_recv_wr = 100;
 
     // max number of scatter gather work requests
     qp_attr->cap.max_send_sge = 1;
@@ -164,13 +184,13 @@ void RDMAServer::build_qp_attr(struct ibv_qp_init_attr *qp_attr) {
 // I think we should only call this once per execution
 // we can serve multiple clients with the same pd, qp and cq
 void RDMAServer::build_connection(struct rdma_cm_id *id) {
-    struct ibv_qp_init_attr qp_attr;
-
     // create all the boleirplate required to
     // receive connections (queue pair, protection domain,
     // completion queue)
     // build_context(id->verbs);
-    std::call_once(gen_ctx_flag, &RDMAServer::build_context, this, id->verbs);
+    std::call_once(gen_ctx_flag, &RDMAServer::build_gen_context, this, id->verbs);
+
+    struct ibv_qp_init_attr qp_attr;
     // setup queue pair attributes
     build_qp_attr(&qp_attr);
 
@@ -201,7 +221,7 @@ void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
     ConnectionContext* con_ctx = new ConnectionContext;
 
     conns_.push_back(con_ctx);
-    con_ctx->context_id = ConnectionContext::generateContextId();
+    //con_ctx->context_id = ConnectionContext::generateContextId();
 
     // Tie server object to connection context to
     // be able to handle messages later on
@@ -278,29 +298,35 @@ void RDMAServer::loop() {
             TEST_NZ(rdma_connect(event_copy.id, &cm_params));
 
         } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
-            LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST";
+            // Every new connection gets a new rdma_id
+
+            LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST. id: " 
+                << reinterpret_cast<uint64_t>(event_copy.id);
             build_connection(event_copy.id);
-
             create_connection_context(event_copy.id);
-
             TEST_NZ(rdma_accept(event_copy.id, &cm_params));
-
         } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
             LOG(INFO) << "RDMA_CM_EVENT_ESTABLISHED";
             handle_established(event_copy.id);
-
+            handle_connection(event_copy.id);
         } else if (event_copy.event == RDMA_CM_EVENT_DISCONNECTED) {
             LOG(INFO) << "RDMA_CM_EVENT_DISCONNECTED";
+            handle_disconnection(event_copy.id);
             rdma_destroy_qp(event_copy.id);
-
             handle_disconnected(event_copy.id);
-
             rdma_destroy_id(event_copy.id);
-
         } else {
             DIE("unknown event\n");
         }
     }
+}
+    
+void RDMAServer::handle_connection(struct rdma_cm_id* id) {
+    id = id; // compiler warning
+}
+
+void RDMAServer::handle_disconnection(struct rdma_cm_id* id) {
+    id = id; // compiler warning
 }
 
 } // sirius

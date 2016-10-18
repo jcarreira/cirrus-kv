@@ -3,24 +3,16 @@
 #ifndef _RDMA_SERVER_H_
 #define _RDMA_SERVER_H_
 
+#include <rdma/rdma_cma.h>
 #include "src/utils/utils.h"
-#include "Server.h"
+#include "src/server/Server.h"
+#include "src/server/GeneralContext.h"
 #include "ConnectionContext.h"
 #include <vector>
 #include <mutex>
-#include <thread>
 #include <memory>
 
 namespace sirius {
-
-class GeneralContext {
-public:
-    struct ibv_context *ctx;
-    struct ibv_pd *pd;
-    struct ibv_cq *cq;
-    struct ibv_comp_channel *comp_channel;
-    std::thread* cq_poller_thread;
-};
     
 class RDMAServer : public Server {
 public:
@@ -37,7 +29,7 @@ protected:
     // RDMA setup functions
     void build_connection(struct rdma_cm_id *id);
     void build_params(struct rdma_conn_param *params);
-    void build_context(struct ibv_context *verbs);
+    void build_gen_context(struct ibv_context *verbs);
     void build_qp_attr(struct ibv_qp_init_attr *qp_attr);
 
     void create_connection_context(struct rdma_cm_id *id);
@@ -49,6 +41,9 @@ protected:
     static void* poll_cq();
     static void post_msg_receive(struct rdma_cm_id *id);
     static void send_message(struct rdma_cm_id *id, uint64_t size);
+
+    virtual void handle_connection(struct rdma_cm_id*);
+    virtual void handle_disconnection(struct rdma_cm_id*);
 
     // leave this to specific server programs
     virtual void process_message(rdma_cm_id*, void* msg) = 0;
