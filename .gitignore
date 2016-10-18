@@ -1,3 +1,6 @@
 *.o
 *.log
 *.status
+*.in
+*.a
+Makefile
