@@ -5,6 +5,7 @@
 #include "src/common/BladeMessageGenerator.h"
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
+#include "src/utils/TimerFunction.h"
 #include "src/utils/easylogging++.h"
 
 namespace sirius {
@@ -41,33 +42,56 @@ AllocRec BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
-// write to memory region
-bool BladeClient::write(AllocRec alloc_rec,
+bool BladeClient::write_sync(AllocRec alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data) {
-    std::memcpy(con_ctx.send_msg, data, length);
-
     LOG(INFO) << "writing rdma"
         << " length: " << length
         << " offset: " << offset
         << " remote_addr: " << alloc_rec->remote_addr
         << " rkey: " << alloc_rec->peer_rkey;
 
+    if (length > SEND_MSG_SIZE)
+        return false;
+
+    // FIX: build a wrapper around memcpy
+    // to deal with memory size limitations
+    std::memcpy(con_ctx.send_msg, data, length);
     write_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
 
     return true;
 }
 
-// read from memory region
-// given offset and length
-// copy to data
-bool BladeClient::read(AllocRec alloc_rec,
+bool BladeClient::write(AllocRec alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        const void* data) {
+    LOG(INFO) << "writing rdma"
+        << " length: " << length
+        << " offset: " << offset
+        << " remote_addr: " << alloc_rec->remote_addr
+        << " rkey: " << alloc_rec->peer_rkey;
+
+    if (length > SEND_MSG_SIZE)
+        return false;
+
+    // FIX: build a wrapper around memcpy
+    // to deal with memory size limitations
+    std::memcpy(con_ctx.send_msg, data, length);
+    write_rdma(id_, length,
+            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
+
+    return true;
+}
+
+bool BladeClient::read_sync(AllocRec alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {
-    LOG(INFO) << "read op";
+    if (length > RECV_MSG_SIZE)
+        return false;
 
     LOG(INFO) << "reading rdma"
         << " length: " << length
@@ -78,7 +102,34 @@ bool BladeClient::read(AllocRec alloc_rec,
     read_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
 
-    std::memcpy(data, con_ctx.recv_msg, length);
+    {
+        TimerFunction tf("Memcpy time", true);
+        std::memcpy(data, con_ctx.recv_msg, length);
+    }
+
+    return true;
+}
+
+bool BladeClient::read(AllocRec alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        void *data) {
+    if (length > RECV_MSG_SIZE)
+        return false;
+
+    LOG(INFO) << "reading rdma"
+        << " length: " << length
+        << " offset: " << offset
+        << " remote_addr: " << alloc_rec->remote_addr
+        << " rkey: " << alloc_rec->peer_rkey;
+
+    read_rdma(id_, length,
+            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
+
+    {
+        TimerFunction tf("Memcpy time", true);
+        std::memcpy(data, con_ctx.recv_msg, length);
+    }
 
     return true;
 }

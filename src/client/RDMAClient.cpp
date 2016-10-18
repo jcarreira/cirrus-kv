@@ -12,6 +12,7 @@
 
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
+#include "src/utils/TimerFunction.h"
 #include "src/utils/easylogging++.h"
 
 namespace sirius {
@@ -46,10 +47,15 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
-    TEST_Z(con_ctx.recv_msg_mr =
-            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
-                RECV_MSG_SIZE,
-                IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
+
+    {
+        TimerFunction tf("Registering memory region", true);
+        TEST_Z(con_ctx.recv_msg_mr =
+                ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
+                    RECV_MSG_SIZE,
+                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
+    }
+
 
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
                 sysconf(_SC_PAGESIZE),

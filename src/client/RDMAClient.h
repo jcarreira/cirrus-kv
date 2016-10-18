@@ -79,8 +79,9 @@ protected:
 
     ConnectionContext con_ctx;
 
-    const int RECV_MSG_SIZE = 10000;
-    const int SEND_MSG_SIZE = 10000;
+    const size_t GB = (1024*1024*1024);
+    const size_t RECV_MSG_SIZE = 3 * GB;
+    const size_t SEND_MSG_SIZE = 3 * GB;
 };
 
 #endif // _RDMA_CLIENT_H_
