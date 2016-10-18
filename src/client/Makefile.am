@@ -5,6 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
 bin_PROGRAMS = clientmain scalability_main
+noinst_LIBRARIES = libclient.a
 
 clientmain_SOURCES  = main.cpp RDMAClient.cpp \
                BladeClient.cpp
@@ -20,3 +21,6 @@ scalability_main_LDADD    = -libverbs -lrdmacm
 scalability_main_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
 scalability_main_LDFLAGS  = -pthread
 scalability_main_LDADD     = -L../utils/ -lutils
+
+libclient_a_SOURCES = BladeClient.cpp RDMAClient.cpp
+libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir)
