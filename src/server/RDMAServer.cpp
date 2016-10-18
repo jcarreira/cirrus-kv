@@ -175,6 +175,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     build_qp_attr(&qp_attr);
 
     // create queue pair
+    // FIX: maybe put this qp in the ConnectionContext
+    // to avoid needing this id (?)
     TEST_NZ(rdma_create_qp(id, gen_ctx_.pd, &qp_attr));
 }
 

@@ -12,10 +12,13 @@ namespace sirius {
 
 class ApplicationQuota {
 public:
-    ApplicationQuota() {}
-    virtual ~ApplicationQuota() {}
-private:
+    ApplicationQuota(uint64_t memory) :
+        memory_(memmory) {}}
 
+    virtual ~ApplicationQuota() {}
+
+private:
+    uint64_t memory_;
 };
 
 } // sirius

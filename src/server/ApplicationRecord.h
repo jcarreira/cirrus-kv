@@ -7,13 +7,16 @@ namespace sirius {
 
 class ApplicationRecord {
 public:
-    ApplicationRecord() {}
-    virtual ~ApplicationRecord() {}
-private:
+    ApplicationRecord();
+    virtual ~ApplicationRecord();
 
+    void addAllocation(const Allocation& alloc);
+    void setQuota(const ApplicationQuota& quota);
+
+private:
     uint64_t app_id_;
-    ApplicationQuota app_quota_;
-    std::vector<Allocation> app_allocations;
+    ApplicationQuota quota_;
+    std::vector<Allocation> allocations_;
 };
 
 } // sirius

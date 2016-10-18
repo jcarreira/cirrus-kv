@@ -7,6 +7,7 @@
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/easylogging++.h"
 #include "src/utils/TimerFunction.h"
+#include "src/utils/InfinibandSupport.h"
 
 namespace sirius {
 
@@ -14,12 +15,13 @@ static const int SIZE = 1000000;
 
 BladeServer::BladeServer(int port, int timeout_ms) :
     RDMAServer(port, timeout_ms) {
+
 }
 
 BladeServer::~BladeServer() {
 }
 
-void BladeServer::create_pool(uint64_t size) {
+uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
     TimerFunction tf("create_pool");
 
     LOG(INFO) << "Allocating memory pool of size: " << size;
@@ -40,6 +42,65 @@ void BladeServer::create_pool(uint64_t size) {
     mr_pool_.push_back(pool);
 
     LOG(INFO) << "Memory region created";
+    LOG(INFO) << "Creating memory window";
+
+    InfinibandSupport ibs;
+
+
+    std::call_once(ibs.mw_support_check_, 
+            &InfinibandSupport::check_mw_support, &ibs, gen_ctx_.ctx);
+    std::call_once(ibs.odp_support_check_, 
+            &InfinibandSupport::check_odp_support, &ibs, gen_ctx_.ctx);
+
+    // create memory window
+    struct ibv_mw* mw;
+    TEST_Z(gen_ctx_.pd);
+    TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_2));
+    // fix: dont forget to dealloc
+
+    /*
+       struct ibv_exp_mw_bind {
+       struct ibv_qp                    *qp;
+       struct ibv_mw                    *mw;
+       uint64_t                         wr_id;          // User defined WR ID 
+    uint64_t                         exp_send_flags; // Use ibv_exp_send_flags 
+    struct ibv_exp_mw_bind_info      bind_info;
+    uint32_t                         comp_mask;      // reserved for future growth (must be 0) 
+};
+
+struct ibv_exp_mw_bind_info {
+    struct ibv_mr        *mr;                 // The MR to bind the MW to 
+    uint64_t             addr;                // The address the MW should start at 
+    uint64_t             length;              // The length (in byte) the MW should span 
+    uint64_t             exp_mw_access_flags; // Access flags to the MW. Use ibv_exp_access_flags 
+};
+
+*/
+
+    // create configuration
+    struct ibv_exp_mw_bind mw_bind;
+    std::memset(&mw_bind, 0, sizeof(mw_bind));
+    mw_bind.qp = id->qp;
+    mw_bind.mw = mw;
+    mw_bind.wr_id = 1;
+    mw_bind.exp_send_flags = IBV_SEND_SIGNALED;
+    mw_bind.bind_info.mr = pool;
+    mw_bind.bind_info.addr = reinterpret_cast<uint64_t>(data);
+    mw_bind.bind_info.length = size;
+    mw_bind.bind_info.exp_mw_access_flags |= IBV_EXP_ACCESS_REMOTE_WRITE 
+        | IBV_EXP_ACCESS_REMOTE_READ
+        | IBV_EXP_ACCESS_LOCAL_WRITE
+        | IBV_EXP_ACCESS_MW_BIND;
+
+    LOG(INFO) << "Binding memory window";
+    // bind memory window to memory region
+    // int ibv_exp_bind_mw(struct ibv_exp_mw_bind *mw_bind);
+    int ret;
+    TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
+
+    LOG(INFO) << "Pool created (and mw bound) successfully";
+
+    return mw->rkey;
 }
 
 void BladeServer::process_message(rdma_cm_id* id,
@@ -58,7 +119,7 @@ void BladeServer::process_message(rdma_cm_id* id,
                 LOG(INFO) << "ALLOC. ctx_id: " << context_id;
 
                 uint64_t size = msg->data.alloc.size;
-                create_pool(size);
+                uint32_t rkey = create_pool(size, id);
 
                 uint64_t mr_id = 42;
                 uint64_t remote_addr =
@@ -67,7 +128,8 @@ void BladeServer::process_message(rdma_cm_id* id,
                         conns_[context_id]->send_msg,
                         mr_id,
                         remote_addr,
-                        mr_pool_[context_id]->rkey);
+                        rkey);
+                        //mr_pool_[context_id]->rkey);
 
                 LOG(INFO) << "Sending ack. "
                     << " remote_addr: " << remote_addr
@@ -84,5 +146,7 @@ void BladeServer::process_message(rdma_cm_id* id,
             break;
     }
 }
+
+
 
 }

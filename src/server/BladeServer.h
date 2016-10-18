@@ -8,7 +8,6 @@
 #include <rdma/rdma_cma.h>
 #include <vector>
 #include <thread>
-#include <memory>
 #include <semaphore.h>
 
 namespace sirius {
@@ -20,8 +19,8 @@ public:
 
 private:
     void process_message(rdma_cm_id*, void* msg);
-    void create_pool(uint64_t size);
-   
+    uint32_t create_pool(uint64_t size, rdma_cm_id*);
+
     std::vector<void*> mr_data_;
     std::vector<ibv_mr*> mr_pool_;
 };
