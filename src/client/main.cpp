@@ -46,7 +46,7 @@ int main() {
 
     LOG(INFO) << "Connected to blade";
 
-    sirius::AllocRec alloc1 = client1.allocate(60 * GB);
+    sirius::AllocRec alloc1 = client1.allocate(1 * MB);
     //sirius::AllocRec alloc2 = client2.allocate(1 * GB);
 
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
