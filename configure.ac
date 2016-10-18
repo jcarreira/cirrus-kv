@@ -12,6 +12,8 @@ AC_LANG(C++)
 AC_PROG_CXX
 AC_PROG_CC
 
+AC_PROG_RANLIB
+
 CXXFLAGS="-std=c++11 -fPIC"
 
 # Checks for libraries.
@@ -37,6 +39,7 @@ AC_CONFIG_FILES([Makefile
                  src/client/Makefile
                  src/resource_allocator/Makefile
                  src/server/Makefile
-                 src/utils/Makefile])
+                 src/utils/Makefile
+                 src/authentication/Makefile])
 
 AC_OUTPUT
