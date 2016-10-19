@@ -4,12 +4,13 @@
 #define _AUTHENTICATOR_H_
 
 #include "src/authentication/ApplicationKey.h"
+#include "src/common/AllocatorMessage.h"
 
 namespace sirius {
 
 class Authenticator {
 public:
-    virtual bool allowApplication(const ApplicationKey& app_key) = 0;
+    virtual bool allowApplication(const AppId& app_id) = 0;
 private:
 };
 
