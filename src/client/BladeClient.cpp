@@ -7,6 +7,7 @@
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/easylogging++.h"
+#include "src/client/AuthenticationClient.h"
 
 namespace sirius {
 
@@ -15,6 +16,21 @@ BladeClient::BladeClient(int timeout_ms)
 }
 
 BladeClient::~BladeClient() {
+}
+
+bool BladeClient::authenticate(std::string address,
+        std::string port, AuthenticationToken& auth_token) {
+    
+    LOG(INFO) << "BladeClient authenticating";
+    AuthenticationClient auth_client;
+    
+    LOG(INFO) << "BladeClient connecting to controller";
+    auth_client.connect(address, port);
+   
+    LOG(INFO) << "BladeClient authenticating";
+    auth_token = auth_client.authenticate();
+
+    return auth_token.allow;
 }
 
 AllocRec BladeClient::allocate(uint64_t size) {

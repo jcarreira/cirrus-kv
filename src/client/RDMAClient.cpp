@@ -311,6 +311,9 @@ void RDMAClient::connect(std::string host, std::string port) {
     TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
     TEST_NZ(rdma_resolve_addr(id_, NULL, addr->ai_addr, timeout_ms_));
 
+    LOG(INFO) << "Created id: " 
+        << reinterpret_cast<uint64_t>(id_);
+
     freeaddrinfo(addr);
 
     id_->context = &con_ctx;
@@ -318,6 +321,8 @@ void RDMAClient::connect(std::string host, std::string port) {
 
     while (rdma_get_cm_event(ec_, &event) == 0) {
         struct rdma_cm_event event_copy;
+            
+        LOG(INFO) << "New event";
 
         memcpy(&event_copy, event, sizeof(*event));
         rdma_ack_cm_event(event);
@@ -325,6 +330,10 @@ void RDMAClient::connect(std::string host, std::string port) {
         if (event_copy.event == RDMA_CM_EVENT_ADDR_RESOLVED) {
             // create connection and event loop
             build_connection(event_copy.id);
+
+            LOG(INFO) << "id: " 
+                << reinterpret_cast<uint64_t>(event_copy.id);
+
             setup_memory(con_ctx);
             TEST_NZ(post_receive(id_));
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
@@ -332,10 +341,17 @@ void RDMAClient::connect(std::string host, std::string port) {
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
             LOG(INFO) << "Connecting (rdma_connect)";
             TEST_NZ(rdma_connect(event_copy.id, &cm_params));
+            LOG(INFO) << "id: " 
+                << reinterpret_cast<uint64_t>(event_copy.id);
         } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
+            LOG(INFO) << "RDMA_CM_EVENT_ESTABLISHED";
+            LOG(INFO) << "id: " 
+                << reinterpret_cast<uint64_t>(event_copy.id);
             break;
         }
     }
+            
+    LOG(INFO) << "Connection successful";
 }
 
 } // sirius

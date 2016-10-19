@@ -6,6 +6,7 @@
 #include "src/client/RDMAClient.h"
 #include <memory>
 #include "src/common/AllocationRecord.h"
+#include "src/authentication/AuthenticationToken.h"
 
 namespace sirius {
 
@@ -15,6 +16,9 @@ class BladeClient : public RDMAClient {
 public:
     BladeClient(int timeout_ms = 500);
     ~BladeClient();
+
+    bool authenticate(std::string allocator_address,
+        std::string port, AuthenticationToken& auth_token);
 
     // allocate data
     // return 0 if error
