@@ -1,9 +1,10 @@
 /* Copyright 2016 Joao Carreira */
 
 #include <csignal>
-#include "src/server/ResourceAllocator.h"
+#include "ResourceAllocator.h"
 #include "src/utils/easylogging++.h"
 
+static const uint64_t GB = (1024*1024*1024);
 static const int PORT = 12346;
 
 INITIALIZE_EASYLOGGINGPP
@@ -24,15 +25,14 @@ void set_ctrlc_handler() {
 }
 
 int main() {
-    LOG(INFO) << "Starting resource allocator in port: " << PORT;
+    LOG(INFO) << "Starting RDMA server in port: " << PORT;
 
-    sirius::ResourceAllocator resalloc(PORT);
+    sirius::ResourceAllocator server(PORT);
 
-    LOG(INFO) << "Running allocator init()";
-    resalloc.init();
+    server.init();
 
-    LOG(INFO) << "Running resource allocator loop";
-    resalloc.loop();
+    LOG(INFO) << "Running ResourceAllocator's loop";
+    server.loop();
 
     return 0;
 }

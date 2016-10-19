@@ -68,8 +68,8 @@ protected:
     // size of memory pool
     int SIZE = 10000;
 
-    const int RECV_MSG_SIZE = 10000;
-    const int SEND_MSG_SIZE = 10000;
+    static const int RECV_MSG_SIZE = 10000;
+    static const int SEND_MSG_SIZE = 10000;
 
     typedef void (RDMAServer::*msg_handler)(rdma_cm_id*,
             void* msg);

@@ -19,6 +19,8 @@ class ResourceAllocator : public RDMAServer {
 public:
     ResourceAllocator(int port, int timeout_ms = 500);
     virtual ~ResourceAllocator();
+
+    virtual void init();
 protected:
     void process_message(rdma_cm_id*, void* msg);
 

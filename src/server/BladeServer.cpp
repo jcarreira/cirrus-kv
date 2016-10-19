@@ -1,7 +1,7 @@
 /* Copyright 2016 Joao Carreira */
 
 #include <unistd.h>
-#include <chrono>
+#include <errno.h>
 #include "src/server/BladeServer.h"
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
@@ -39,6 +39,7 @@ void BladeServer::handle_disconnection(struct rdma_cm_id* id) {
 
 }
 
+#if 0
 void BladeServer::create_pool(uint64_t size) {
     TimerFunction tf("create_pool", true);
 
@@ -61,9 +62,9 @@ void BladeServer::create_pool(uint64_t size) {
 
     LOG(INFO) << "Memory region created";
 }
+#endif
 
-#if 0
-uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
+uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     TimerFunction tf("create_pool");
 
     LOG(INFO) << "Allocating memory pool of size: " << size;
@@ -92,13 +93,20 @@ uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
     std::call_once(ibs.odp_support_check_, 
             &InfinibandSupport::check_odp_support, &ibs, gen_ctx_.ctx);
 
-    return 0;
 
     // create memory window
     struct ibv_mw* mw;
     TEST_Z(gen_ctx_.pd);
-    TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_2));
+
+    ibv_pd* pd;
+    TEST_Z(pd = ibv_alloc_pd(id->verbs));
+    mw = ibv_alloc_mw(pd, IBV_MW_TYPE_2);
+    LOG(ERROR) << "errno: " << errno << " EPERM: " << EPERM;
+    TEST_Z(mw);
+    //TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
     // fix: dont forget to dealloc
+    
+    return 0;
 
     // create configuration
     struct ibv_exp_mw_bind mw_bind;
@@ -126,8 +134,6 @@ uint32_t BladeServer::create_pool(uint64_t size, rdma_cm_id* id) {
     return mw->rkey;
 }
 
-#endif
-
 void BladeServer::process_message(rdma_cm_id* id,
         void* message) {
     BladeMessage* msg =
@@ -135,30 +141,27 @@ void BladeServer::process_message(rdma_cm_id* id,
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    int context_id = ctx->context_id_;
     LOG(INFO) << "Received message";
 
     // we shouldnt do this earlier has soon has process starts
     // but cant make it work like that (yet)
     std::call_once(pool_flag_, 
-            &BladeServer::create_pool, this, pool_size_);
+            &BladeServer::create_pool2, this, pool_size_, id);
 
     switch (msg->type) {
         case ALLOC:
             {
-                LOG(INFO) << "ALLOC. ctx_id: " << context_id;
+                LOG(INFO) << "ALLOC";
 
                 uint64_t size = msg->data.alloc.size;
-                //uint32_t rkey = create_pool(size, id);
 
                 uint64_t mr_id = 42;
                 uint64_t remote_addr =
                     reinterpret_cast<uint64_t>(mr_data_[0]);
                 BladeMessageGenerator::alloc_ack_msg(
-                        conns_[context_id]->send_msg,
+                        ctx->send_msg,
                         mr_id,
                         remote_addr,
-                        //rkey);
                         mr_pool_[0]->rkey);
 
                 LOG(INFO) << "Sending ack. "

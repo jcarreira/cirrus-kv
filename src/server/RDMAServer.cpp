@@ -102,10 +102,13 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
     wr.num_sge = 1;
 
     sge.addr = reinterpret_cast<uint64_t>(ctx->recv_msg);
-    sge.length = 1000;  // FIX
+    sge.length = RECV_MSG_SIZE;
     sge.lkey = ctx->recv_msg_mr->lkey;
 
     TEST_NZ(ibv_post_recv(id->qp, &wr, &bad_wr));
+    
+    LOG(INFO) << "Posted receive in wq. id: "
+        << reinterpret_cast<uint64_t>(id);
 }
 
 void RDMAServer::build_params(struct rdma_conn_param *params) {
@@ -129,6 +132,12 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 10,
                 NULL, gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
+
+    // Test this
+    ibv_pd* pd;
+    ibv_mw* mw;
+    //TEST_Z(pd = ibv_alloc_pd(verbs));
+    TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
     LOG(INFO) << "Creating polling thread";
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);
@@ -205,8 +214,6 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
 // 2. publicize memory region to client
 void RDMAServer::handle_established(struct rdma_cm_id *id) {
     post_msg_receive(id);
-    LOG(INFO) << "Posted receive in wq. id: "
-        << reinterpret_cast<uint64_t>(id);
 }
 
 void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
