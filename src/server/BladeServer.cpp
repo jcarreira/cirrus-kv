@@ -13,14 +13,13 @@ namespace sirius {
 
 static const int SIZE = 1000000;
 
-BladeServer::BladeServer(int port, 
+BladeServer::BladeServer(int port,
         uint64_t pool_size,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
     mr_data_(0),
     mr_pool_(0),
    pool_size_(pool_size) {
-
 }
 
 BladeServer::~BladeServer() {
@@ -36,7 +35,6 @@ void BladeServer::handle_connection(struct rdma_cm_id* id) {
 }
 
 void BladeServer::handle_disconnection(struct rdma_cm_id* id) {
-
 }
 
 #if 0
@@ -88,9 +86,9 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     LOG(INFO) << "Creating memory window";
 
     InfinibandSupport ibs;
-    std::call_once(ibs.mw_support_check_, 
+    std::call_once(ibs.mw_support_check_,
             &InfinibandSupport::check_mw_support, &ibs, gen_ctx_.ctx);
-    std::call_once(ibs.odp_support_check_, 
+    std::call_once(ibs.odp_support_check_,
             &InfinibandSupport::check_odp_support, &ibs, gen_ctx_.ctx);
 
 
@@ -103,9 +101,9 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     mw = ibv_alloc_mw(pd, IBV_MW_TYPE_2);
     LOG(ERROR) << "errno: " << errno << " EPERM: " << EPERM;
     TEST_Z(mw);
-    //TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
+    // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
     // fix: dont forget to dealloc
-    
+
     return 0;
 
     // create configuration
@@ -118,7 +116,7 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     mw_bind.bind_info.mr = pool;
     mw_bind.bind_info.addr = reinterpret_cast<uint64_t>(data);
     mw_bind.bind_info.length = size;
-    mw_bind.bind_info.exp_mw_access_flags |= IBV_EXP_ACCESS_REMOTE_WRITE 
+    mw_bind.bind_info.exp_mw_access_flags |= IBV_EXP_ACCESS_REMOTE_WRITE
         | IBV_EXP_ACCESS_REMOTE_READ
         | IBV_EXP_ACCESS_LOCAL_WRITE
         | IBV_EXP_ACCESS_MW_BIND;
@@ -127,7 +125,7 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     // bind memory window to memory region
     // int ibv_exp_bind_mw(struct ibv_exp_mw_bind *mw_bind);
     int ret;
-    //TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
+    // TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
 
     LOG(INFO) << "Pool created (and mw bound) successfully";
 
@@ -145,7 +143,7 @@ void BladeServer::process_message(rdma_cm_id* id,
 
     // we shouldnt do this earlier has soon has process starts
     // but cant make it work like that (yet)
-    std::call_once(pool_flag_, 
+    std::call_once(pool_flag_,
             &BladeServer::create_pool2, this, pool_size_, id);
 
     switch (msg->type) {
@@ -173,7 +171,10 @@ void BladeServer::process_message(rdma_cm_id* id,
 
                 break;
             }
-        //case STATS: // ask for utilization stats
+        case STATS:
+                BladeMessageGenerator::stats_msg(ctx->send_msg);
+                send_message(id, sizeof(BladeMessage));
+            break;
         default:
             LOG(ERROR) << "Unknown message";
             exit(-1);
@@ -181,4 +182,4 @@ void BladeServer::process_message(rdma_cm_id* id,
     }
 }
 
-}
+}  // namespace sirius

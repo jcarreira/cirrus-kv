@@ -2,16 +2,19 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(DDC, 0.1, joao@berkeley.edu)
+AC_INIT(SIRIUS, 0.1, joao@berkeley.edu)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
-AC_LANG(C++)
 AC_PROG_CXX
+AC_PROG_AWK
 AC_PROG_CC
-
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
 CXXFLAGS="-std=c++11 -fPIC"
@@ -21,7 +24,8 @@ AC_CHECK_LIB([ibverbs], [ibv_create_qp])
 AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
 # Checks for header files.
-AC_CHECK_HEADERS([netdb.h stdint.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([netdb.h stdint.h stdlib.h sys/socket.h \
+        sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

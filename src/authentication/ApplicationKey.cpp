@@ -5,7 +5,6 @@
 namespace sirius {
 
 ApplicationKey::ApplicationKey() {
-
 }
 
-} // sirius
+}  // namespace sirius

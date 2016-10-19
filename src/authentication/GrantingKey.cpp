@@ -9,5 +9,5 @@ namespace sirius {
 GrantingKey::GrantingKey() {
     std::memset(data_, 0, sizeof(data_));
 }
-    
+
 }

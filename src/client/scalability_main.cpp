@@ -8,7 +8,6 @@
 #include "src/client/BladeClient.h"
 #include "src/common/AllocationRecord.h"
 #include "src/utils/easylogging++.h"
-//#include "src/common/config.h"
 #include "src/utils/TimerFunction.h"
 
 const char PORT[] = "12345";
@@ -44,7 +43,6 @@ int main() {
     client1.connect("10.10.49.87", PORT);
 
     for (int i = 1; i < 1024 * 10; i += (1024*10 / 50)) {
-
         std::cout << "Allocating " << i << "MB" << std::endl;
         sirius::AllocRec alloc1 = client1.allocate(i * MB);
 

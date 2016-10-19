@@ -2,6 +2,7 @@
 
 #include "src/client/BladeClient.h"
 #include <unistd.h>
+#include <string>
 #include "src/common/BladeMessageGenerator.h"
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
@@ -20,13 +21,12 @@ BladeClient::~BladeClient() {
 
 bool BladeClient::authenticate(std::string address,
         std::string port, AuthenticationToken& auth_token) {
-    
     LOG(INFO) << "BladeClient authenticating";
     AuthenticationClient auth_client;
-    
+
     LOG(INFO) << "BladeClient connecting to controller";
     auth_client.connect(address, port);
-   
+
     LOG(INFO) << "BladeClient authenticating";
     auth_token = auth_client.authenticate();
 
@@ -150,4 +150,4 @@ bool BladeClient::read(AllocRec alloc_rec,
     return true;
 }
 
-}
+}  // namespace sirius

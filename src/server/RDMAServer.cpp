@@ -1,13 +1,13 @@
 /* Copyright 2016 Joao Carreira */
 
 #include "src/server/RDMAServer.h"
-#include "src/common/ThreadPinning.h"
 
 #include <unistd.h>
 
 #include <iostream>
 #include <cstring>
 
+#include "src/common/ThreadPinning.h"
 #include "src/utils/easylogging++.h"
 
 namespace sirius {
@@ -38,7 +38,7 @@ RDMAServer::~RDMAServer() {
     // clean all connection data
     std::for_each(conns_.begin(), conns_.end(),
             [](ConnectionContext* ptr) {
-                delete ptr; 
+                delete ptr;
             });
 }
 
@@ -56,7 +56,7 @@ void RDMAServer::init() {
     TEST_Z(ec_ = rdma_create_event_channel());
     TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
 
-    LOG(INFO) << "Created id: " 
+    LOG(INFO) << "Created id: "
         << reinterpret_cast<uint64_t>(id_);
 
     TEST_NZ(rdma_bind_addr(id_, (struct sockaddr *)&addr));
@@ -106,7 +106,7 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
     sge.lkey = ctx->recv_msg_mr->lkey;
 
     TEST_NZ(ibv_post_recv(id->qp, &wr, &bad_wr));
-    
+
     LOG(INFO) << "Posted receive in wq. id: "
         << reinterpret_cast<uint64_t>(id);
 }
@@ -136,14 +136,14 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     // Test this
     ibv_pd* pd;
     ibv_mw* mw;
-    //TEST_Z(pd = ibv_alloc_pd(verbs));
+    // TEST_Z(pd = ibv_alloc_pd(verbs));
     TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
     LOG(INFO) << "Creating polling thread";
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);
 
     ThreadPinning::pinThread(gen_ctx_.cq_poller_thread->native_handle(),
-            2); // random core
+            2);  // random core
 }
 
 void* RDMAServer::poll_cq() {
@@ -197,7 +197,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     // receive connections (queue pair, protection domain,
     // completion queue)
     // build_context(id->verbs);
-    std::call_once(gen_ctx_flag, &RDMAServer::build_gen_context, this, id->verbs);
+    std::call_once(gen_ctx_flag,
+            &RDMAServer::build_gen_context, this, id->verbs);
 
     struct ibv_qp_init_attr qp_attr;
     // setup queue pair attributes
@@ -228,7 +229,7 @@ void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
     ConnectionContext* con_ctx = new ConnectionContext;
 
     conns_.push_back(con_ctx);
-    //con_ctx->context_id = ConnectionContext::generateContextId();
+    // con_ctx->context_id = ConnectionContext::generateContextId();
 
     // Tie server object to connection context to
     // be able to handle messages later on
@@ -307,7 +308,7 @@ void RDMAServer::loop() {
         } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
             // Every new connection gets a new rdma_id
 
-            LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST. id: " 
+            LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST. id: "
                 << reinterpret_cast<uint64_t>(event_copy.id);
             build_connection(event_copy.id);
             create_connection_context(event_copy.id);
@@ -327,13 +328,13 @@ void RDMAServer::loop() {
         }
     }
 }
-    
+
 void RDMAServer::handle_connection(struct rdma_cm_id* id) {
-    id = id; // compiler warning
+    id = id;  // compiler warning
 }
 
 void RDMAServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id; // compiler warning
+    id = id;  // compiler warning
 }
 
-} // sirius
+}  // namespace sirius

@@ -17,11 +17,10 @@
 
 namespace sirius {
 
-ResourceAllocator::ResourceAllocator(int port, 
+ResourceAllocator::ResourceAllocator(int port,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
     authenticator_(new DumbAuthenticator()) {
-
 }
 
 ResourceAllocator::~ResourceAllocator() {
@@ -31,9 +30,10 @@ void ResourceAllocator::init() {
     RDMAServer::init();
 }
 
-void ResourceAllocator::send_auth_token(rdma_cm_id* id, const AllocatorMessage& msg) {
-
-    AuthenticationToken token = AuthenticationToken::create_default_allow_token(); // allow
+void ResourceAllocator::send_auth_token(rdma_cm_id* id,
+        const AllocatorMessage& msg) {
+    AuthenticationToken token =
+        AuthenticationToken::create_default_allow_token();  // allow
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -43,11 +43,13 @@ void ResourceAllocator::send_auth_token(rdma_cm_id* id, const AllocatorMessage& 
     send_message(id, sizeof(AllocatorMessage));
 }
 
-void ResourceAllocator::send_auth_refusal(rdma_cm_id* id, const AllocatorMessage& msg) {
+void ResourceAllocator::send_auth_refusal(rdma_cm_id* id,
+        const AllocatorMessage& msg) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
-    
-    AuthenticationToken token = AuthenticationToken::create_default_deny_token(); // deny
+
+    AuthenticationToken token =
+        AuthenticationToken::create_default_deny_token();  // deny
 
     AllocatorMessageGenerator::auth_ack1_msg(
             ctx->send_msg,
@@ -60,7 +62,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
         reinterpret_cast<AllocatorMessage*>(message);
 
     LOG(INFO) << "ResourceAllocator Received message";
-    
+
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -68,9 +70,9 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
         case AUTH1:
             LOG(INFO) << "ResourceAllocator AUTH1";
             // we get the application public key
-            // we could also get an ID here 
-            //ApplicationKey* ak = &msg->data.auth.application_key;
-            //AppId app_id = msg->data.auth.app_id;
+            // we could also get an ID here
+            // ApplicationKey* ak = &msg->data.auth.application_key;
+            // AppId app_id = msg->data.auth.app_id;
 
             if (authenticator_->allowApplication(msg->data.auth1.app_id)) {
                 send_auth_token(id, *msg);
@@ -83,7 +85,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
             LOG(ERROR) << "Unknown message";
             exit(-1);
             break;
-    };
+    }
 }
 
-} // sirius
+}  // namespace sirius

@@ -52,7 +52,7 @@ void test_1_client() {
 
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
 
-    srand (time(NULL));
+    srand(time(NULL));
 
     client1.write_sync(alloc1, 0, strlen(to_send), to_send);
 
@@ -80,11 +80,10 @@ void test_2_clients() {
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
     LOG(INFO) << "Received allocation 2. id: " << alloc2->alloc_id;
 
-    srand (time(NULL));
-
+    unsigned int seed = 42;
     std::ostringstream oss;
     {
-        oss << "data" << rand();
+        oss << "data" << rand_r(&seed);
         LOG(INFO) << "Writing " << oss.str().c_str();
         sirius::TimerFunction tf("client1.write");
         client1.write_sync(alloc1, 0, oss.str().size(), oss.str().c_str());
@@ -98,7 +97,6 @@ void test_2_clients() {
 
     client2.read_sync(alloc2, 0, 5, data);
     LOG(INFO) << "Received data 2: " << data;
-
 }
 
 // test bandwidth utilization
@@ -110,17 +108,17 @@ void test_performance() {
 
     uint64_t mem_size = 1 * GB;
 
-    char* data = (char*)malloc(mem_size);
+    char* data = reinterpret_cast<char*>(malloc(mem_size));
     if (!data)
         exit(-1);
 
     memset(data, 0, mem_size);
     data[0] = 'Y';
 
-    sirius::AllocRec alloc1 = client.allocate(1 * GB); // currently ignored
+    sirius::AllocRec alloc1 = client.allocate(1 * GB);  // currently ignored
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
-    
-    // small write to force creation of pool    
+
+    // small write to force creation of pool
     {
         sirius::TimerFunction tf("Timing 1byte write", true);
         client.write(alloc1, 0, 1, data);
@@ -164,7 +162,7 @@ void test_authentication() {
 
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
 
-    srand (time(NULL));
+    srand(time(NULL));
 
     client.write_sync(alloc1, 0, strlen(to_send), to_send);
 
@@ -181,15 +179,14 @@ void test_destructor() {
 
     sirius::AuthenticationToken token(false);
     client.authenticate(controller_address, controller_port, token);
-
 }
 
 int main() {
     test_1_client();
-    //test_2_clients();
-    //test_performance();
-    //test_authentication();
-    //test_destructor();
+    // test_2_clients();
+    // test_performance();
+    // test_authentication();
+    // test_destructor();
     return 0;
 }
 

@@ -1,6 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "AllocatorMessageGenerator.h"
+#include "src/common/AllocatorMessageGenerator.h"
 
 #include <cstring>
 
@@ -14,13 +14,13 @@ void AllocatorMessageGenerator::auth1_msg(void *data, AppId app_id) {
     msg->data.auth1.app_id = app_id;
 }
 
-void AllocatorMessageGenerator::auth_ack1_msg(void *data, 
+void AllocatorMessageGenerator::auth_ack1_msg(void *data,
         AuthenticationToken auth_token) {
     AllocatorMessage* msg =
         reinterpret_cast<AllocatorMessage*>(data);
 
     msg->type = AUTH_ACK1;
-    msg->data.auth_ack1.challenge = 34; // random number from die draw
+    msg->data.auth_ack1.challenge = 34;  // random number from die draw
 }
 
-} // sirius
+}  // namespace sirius

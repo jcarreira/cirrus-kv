@@ -3,9 +3,14 @@
 #ifndef _BLADE_MESSAGE_H_
 #define _BLADE_MESSAGE_H_
 
+#include <cstdint>
+
 namespace sirius {
 
-enum msg_type { ALLOC, ALLOC_ACK };
+enum msg_type { 
+    ALLOC, ALLOC_ACK,
+    STATS, STATS_ACK,
+};
 
 struct BladeMessage {
     msg_type type;

@@ -1,6 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "AuthenticationClient.h"
+#include "src/client/AuthenticationClient.h"
 #include "src/common/AllocatorMessage.h"
 #include "src/common/AllocatorMessageGenerator.h"
 #include "src/utils/easylogging++.h"
@@ -13,7 +13,6 @@ AuthenticationClient::AuthenticationClient(int timeout_ms) :
 }
 
 AuthenticationClient::~AuthenticationClient() {
-
 }
 
 AuthenticationToken AuthenticationClient::authenticate() {
@@ -29,10 +28,11 @@ AuthenticationToken AuthenticationClient::authenticate() {
 
     sem_post(&con_ctx.recv_sem);
 
-    AllocatorMessage* msg = reinterpret_cast<AllocatorMessage*>(con_ctx.recv_msg);
+    AllocatorMessage* msg =
+        reinterpret_cast<AllocatorMessage*>(con_ctx.recv_msg);
     LOG(INFO) << "Received challenge: " << msg->data.auth_ack1.challenge;
 
     return AuthenticationToken(true);
 }
 
-} // sirius
+}  // namespace sirius

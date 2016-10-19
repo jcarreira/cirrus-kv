@@ -6,7 +6,6 @@ namespace sirius {
 
 AuthenticationToken::AuthenticationToken(bool allow) :
     allow(allow) {
-
 }
 
 AuthenticationToken AuthenticationToken::create_default_allow_token() {
@@ -17,4 +16,4 @@ AuthenticationToken AuthenticationToken::create_default_deny_token() {
     return AuthenticationToken(false);
 }
 
-} // sirius
+}  // namespace sirius

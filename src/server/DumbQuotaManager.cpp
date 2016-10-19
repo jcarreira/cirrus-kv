@@ -1,13 +1,12 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "DumbQuotaManager.h"
+#include "src/server/DumbQuotaManager.h"
 
 namespace sirius {
 
 DumbQuotaManager::DumbQuotaManager() {
-
 }
-    
+
 bool DumbQuotaManager::canAllocateMemory(uint64_t app_id, uint64_t memorySize) {
     return true;
 }
@@ -20,5 +19,5 @@ bool DumbQuotaManager::allocateMemory(uint64_t app_id, uint64_t memorySize) {
     return true;
 }
 
-} // sirius
+}  // namespace sirius
 

@@ -4,7 +4,7 @@
 #include "src/utils/utils.h"
 
 namespace sirius {
-    
+
 uint64_t ConnectionContext::id_count_ = 0;
 
 ConnectionContext::ConnectionContext() :
@@ -17,7 +17,6 @@ ConnectionContext::ConnectionContext() :
 }
 
 ConnectionContext::~ConnectionContext() {
-
 }
 
-}
+}  // namespace sirius
