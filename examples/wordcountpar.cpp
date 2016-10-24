@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <cctype>
+#include <omp.h>
 
 #include "src/client/BladeClient.h"
 #include "src/utils/easylogging++.h"
@@ -118,9 +119,9 @@ size_t get_file_size(std::string fname) {
 }
 
 int main() {
-    google::dense_hash_map<MyString, int> wc2;
-    wc2.set_empty_key(MyString());
-
+    google::dense_hash_map<MyString, int> wc2[50];
+    for (int i = 0; i < 50; ++i)
+        wc2[i].set_empty_key(MyString());
 
     std::string file = "wordc2.txt";
     size_t file_size = get_file_size(file);
@@ -149,27 +150,44 @@ int main() {
 
     LOG(INFO) << "Data written";
 
-    uint64_t index = 0;
     uint64_t count = 0;
 
+//     omp_set_dynamic(0);
+//     omp_set_num_threads(4);
+//#pragma omp parallel num_threads(4)
+#pragma omp parallel for num_threads(16)
+     for (int i = 0; i < 16; ++i)
     {
+        int tid = omp_get_thread_num();
+        uint64_t size_partition = file_size / omp_get_num_threads();
+        uint64_t l = tid * size_partition;
+        uint64_t r = l + size_partition;
+        uint64_t index = l;
+        
+    
+        LOG(INFO) << "Running thread " << omp_get_thread_num();
+        LOG(INFO) << "Num threads " << omp_get_num_threads();
+
         sirius::TimerFunction tf("Traverse data", true);
-        while (data[index]) {
-            while (data[index] == ' ')
+
+        while (index < r && data[index]) {
+            while (index < r && data[index] == ' ')
                 ++index;
 
             uint64_t start_of_word = index;
-            while (data[index] && data[index] != ' ')
+            while (index < r && data[index] && data[index] != ' ')
                 index++;
             uint64_t last_of_word = index;
             MyString str(start_of_word, last_of_word, data);
-            wc2[str]++;
-            count++;
+            if (str == MyString())
+                continue;
+            wc2[i][str]++;
+            //count++;
         }
     }
 
     LOG(INFO) << "Words counted";
-    LOG(INFO) << "size: " << wc2.size();
+    //LOG(INFO) << "size: " << wc2.size();
     LOG(INFO) << "count: " << count;
 
     return 0;

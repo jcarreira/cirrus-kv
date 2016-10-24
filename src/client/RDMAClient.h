@@ -80,8 +80,8 @@ protected:
     ConnectionContext con_ctx;
 
     const size_t GB = (1024*1024*1024);
-    const size_t RECV_MSG_SIZE = 10 * GB;
-    const size_t SEND_MSG_SIZE = 10 * GB;
+    const size_t RECV_MSG_SIZE = 20 * GB;
+    const size_t SEND_MSG_SIZE = 20 * GB;
 };
 
 } // sirius

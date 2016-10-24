@@ -45,7 +45,8 @@ uint32_t BladeServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     id = id; // warnings
 
-    LOG(INFO) << "Allocating memory pool of size: " << size;
+    LOG(INFO) << "Allocating memory pool of size: " << (size/1024/1024) << "MB "
+        << (size/1024/1024/1024) << "GB";
 
     void *data;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&data),

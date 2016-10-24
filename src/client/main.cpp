@@ -44,7 +44,7 @@ void test_1_client() {
     LOG(INFO) << "Connecting to server in port: " << PORT;
 
     sirius::BladeClient client1;
-    client1.connect("10.10.49.87", PORT);
+    client1.connect("10.10.49.88", PORT);
 
     LOG(INFO) << "Connected to blade";
 
@@ -172,7 +172,7 @@ void test_authentication() {
 }
 
 void test_destructor() {
-    std::string controller_address = "10.10.49.87";
+    std::string controller_address = "10.10.49.88";
     std::string controller_port = "12346";
 
     sirius::BladeClient client;
