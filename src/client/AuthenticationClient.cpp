@@ -19,7 +19,7 @@ AuthenticationToken AuthenticationClient::authenticate() {
     LOG(INFO) << "AuthenticationClient authenticating";
 
     AppId app_id = 1;
-    AllocatorMessageGenerator::auth1_msg(con_ctx.send_msg, app_id);
+    AllocatorMessageGenerator::auth1(con_ctx.send_msg, app_id);
 
     // post receive
     TEST_NZ(post_receive(id_));
