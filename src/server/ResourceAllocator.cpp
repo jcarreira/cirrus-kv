@@ -30,30 +30,28 @@ void ResourceAllocator::init() {
     RDMAServer::init();
 }
 
-void ResourceAllocator::send_auth_token(rdma_cm_id* id,
+void ResourceAllocator::send_challenge(rdma_cm_id* id,
         const AllocatorMessage& msg) {
     AuthenticationToken token =
         AuthenticationToken::create_default_allow_token();  // allow
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    AllocatorMessageGenerator::auth_ack1_msg(
+    AllocatorMessageGenerator::auth_ack1(
             ctx->send_msg,
-            token);
+            1,
+            42);
     send_message(id, sizeof(AllocatorMessage));
 }
 
-void ResourceAllocator::send_auth_refusal(rdma_cm_id* id,
+void ResourceAllocator::send_stats(rdma_cm_id* id,
         const AllocatorMessage& msg) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    AuthenticationToken token =
-        AuthenticationToken::create_default_deny_token();  // deny
-
-    AllocatorMessageGenerator::auth_ack1_msg(
+    AllocatorMessageGenerator::stats_ack(
             ctx->send_msg,
-            token);
+            total_mem_allocated);
     send_message(id, sizeof(AllocatorMessage));
 }
 
@@ -74,13 +72,19 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
             // ApplicationKey* ak = &msg->data.auth.application_key;
             // AppId app_id = msg->data.auth.app_id;
 
-            if (authenticator_->allowApplication(msg->data.auth1.app_id)) {
-                send_auth_token(id, *msg);
-            } else {
-                send_auth_refusal(id, *msg);
-            }
+//            if (authenticator_->allowApplication(msg->data.auth1.app_id)) {
+                send_challenge(id, *msg);
+ //           }
 
             break;
+        case AUTH2:
+            LOG(INFO) << "ResourceAllocator AUTH2";
+            // we get the challenge response
+            break;
+        case STATS:
+            send_stats(id, *msg);
+        case ALLOC:
+            // client wants to allocate some memory
         default:
             LOG(ERROR) << "Unknown message";
             exit(-1);

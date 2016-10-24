@@ -24,10 +24,15 @@ public:
 protected:
     void process_message(rdma_cm_id*, void* msg);
 
-    void send_auth_token(rdma_cm_id* id, const AllocatorMessage& msg);
-    void send_auth_refusal(rdma_cm_id* id, const AllocatorMessage& msg);
+    void send_challenge(rdma_cm_id* id, const AllocatorMessage& msg);
+
+    void send_stats(rdma_cm_id* id,
+            const AllocatorMessage& msg);
 
     Authenticator* authenticator_;
+
+    // total amount of memory allocated
+    uint64_t total_mem_allocated;
 };
 
 } // sirius
