@@ -79,6 +79,8 @@ void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
     wr.sg_list = &sge;
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
+    if (size <= MAX_INLINE_DATA)
+        wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr = reinterpret_cast<uint64_t>(ctx->send_msg);
     sge.length = size;
@@ -133,11 +135,11 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
                 NULL, gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
 
-    // Test this
-    ibv_pd* pd;
-    ibv_mw* mw;
-    // TEST_Z(pd = ibv_alloc_pd(verbs));
-    TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
+    //// Test this
+    //ibv_pd* pd;
+    //ibv_mw* mw;
+    //// TEST_Z(pd = ibv_alloc_pd(verbs));
+    //TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
     LOG(INFO) << "Creating polling thread";
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);
@@ -188,6 +190,9 @@ void RDMAServer::build_qp_attr(struct ibv_qp_init_attr *qp_attr) {
     // max number of scatter gather work requests
     qp_attr->cap.max_send_sge = 1;
     qp_attr->cap.max_recv_sge = 1;
+
+    // Allow inline data
+    qp_attr->cap.max_inline_data = MAX_INLINE_DATA;
 }
 
 // I think we should only call this once per execution
@@ -208,6 +213,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     // FIX: maybe put this qp in the ConnectionContext
     // to avoid needing this id (?)
     TEST_NZ(rdma_create_qp(id, gen_ctx_.pd, &qp_attr));
+
+    LOG(INFO) << "max_inline_data: " << qp_attr.cap.max_inline_data;
 }
 
 // connection has been established by now
