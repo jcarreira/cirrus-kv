@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = utils server client authentication
+SUBDIRS = authentication common utils server client

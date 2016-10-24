@@ -40,10 +40,9 @@ AC_CHECK_FUNCS([gettimeofday localtime_r memset mkdir strerror strstr])
 AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  src/Makefile
-                 src/resource_allocator/Makefile
+                 src/authentication/Makefile
                  src/utils/Makefile
                  src/common/Makefile
-                 src/authentication/Makefile
                  src/client/Makefile
                  src/server/Makefile])
 
