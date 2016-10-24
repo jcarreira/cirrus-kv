@@ -32,14 +32,18 @@ void BladeServer::init() {
 }
 
 void BladeServer::handle_connection(struct rdma_cm_id* id) {
+    id = id;
 }
 
 void BladeServer::handle_disconnection(struct rdma_cm_id* id) {
+    id = id;
 }
 
-#if 0
-void BladeServer::create_pool(uint64_t size) {
+#if 1
+uint32_t BladeServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
     TimerFunction tf("create_pool", true);
+
+    id = id; // warnings
 
     LOG(INFO) << "Allocating memory pool of size: " << size;
 
@@ -59,8 +63,10 @@ void BladeServer::create_pool(uint64_t size) {
     mr_pool_.push_back(pool);
 
     LOG(INFO) << "Memory region created";
+
+    return 0;
 }
-#endif
+#else 
 
 uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     TimerFunction tf("create_pool");
@@ -131,6 +137,7 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
 
     return mw->rkey;
 }
+#endif
 
 void BladeServer::process_message(rdma_cm_id* id,
         void* message) {
@@ -144,14 +151,14 @@ void BladeServer::process_message(rdma_cm_id* id,
     // we shouldnt do this earlier has soon has process starts
     // but cant make it work like that (yet)
     std::call_once(pool_flag_,
-            &BladeServer::create_pool2, this, pool_size_, id);
+            &BladeServer::create_pool, this, pool_size_, id);
 
     switch (msg->type) {
         case ALLOC:
             {
                 LOG(INFO) << "ALLOC";
 
-                uint64_t size = msg->data.alloc.size;
+                //uint64_t size = msg->data.alloc.size;
 
                 uint64_t mr_id = 42;
                 uint64_t remote_addr =

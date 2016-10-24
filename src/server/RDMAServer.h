@@ -68,8 +68,10 @@ protected:
     // size of memory pool
     int SIZE = 10000;
 
-    static const int RECV_MSG_SIZE = 10000;
-    static const int SEND_MSG_SIZE = 10000;
+    static const int RECV_MSG_SIZE   = 10000;
+    static const int SEND_MSG_SIZE   = 10000;
+    // seems to be the maximum inline data
+    static const int MAX_INLINE_DATA = 912;
 
     typedef void (RDMAServer::*msg_handler)(rdma_cm_id*,
             void* msg);

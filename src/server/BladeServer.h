@@ -24,8 +24,8 @@ private:
     void handle_connection(struct rdma_cm_id* id);
     void handle_disconnection(struct rdma_cm_id* id);
 
-    void create_pool(uint64_t size);
-    uint32_t create_pool2(uint64_t size, struct rdma_cm_id*);
+//    void create_pool(uint64_t size);
+    uint32_t create_pool(uint64_t size, struct rdma_cm_id*);
 
     std::vector<void*> mr_data_;
     std::vector<ibv_mr*> mr_pool_;
