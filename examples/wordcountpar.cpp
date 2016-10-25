@@ -15,7 +15,8 @@
 #include "src/client/BladeClient.h"
 #include "src/utils/easylogging++.h"
 #include "src/utils/TimerFunction.h"
-#include "examples/sparsehash/src/google/dense_hash_map"
+#include <google/dense_hash_map>
+//#include "examples/sparsehash/src/google/dense_hash_map"
 
 /*
  * Wordcount
