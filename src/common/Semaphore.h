@@ -1,4 +1,4 @@
-/* Copyrithgt 2016 Joao Carreira */
+/* Copyright 2016 Joao Carreira */
 
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_
@@ -8,10 +8,9 @@
 
 namespace sirius {
 
-class Semaphore
-{
+class Semaphore {
 public:
-    semaphore()
+    Semaphore()
         : count_()
     {}
 

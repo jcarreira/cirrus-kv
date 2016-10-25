@@ -25,7 +25,7 @@ AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
 # Checks for header files.
 AC_CHECK_HEADERS([netdb.h stdint.h stdlib.h sys/socket.h \
-        sys/time.h syslog.h unistd.h])
+        sys/time.h syslog.h unistd.h google/dense_hash_map])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
@@ -43,6 +43,7 @@ AC_CONFIG_FILES([Makefile
                  src/authentication/Makefile
                  src/utils/Makefile
                  src/common/Makefile
+                 src/object_store/Makefile
                  src/client/Makefile
                  src/server/Makefile])
 
