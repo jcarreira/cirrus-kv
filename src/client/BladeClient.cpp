@@ -93,8 +93,6 @@ bool BladeClient::write(AllocRec alloc_rec,
     if (length > SEND_MSG_SIZE)
         return false;
 
-    // FIX: build a wrapper around memcpy
-    // to deal with memory size limitations
     std::memcpy(con_ctx.send_msg, data, length);
     write_rdma(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
