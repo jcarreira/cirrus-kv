@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 #include <errno.h>
-#include "src/server/BladeServer.h"
+#include "src/server/BladePoolServer.h"
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/easylogging++.h"
@@ -13,7 +13,7 @@ namespace sirius {
 
 static const int SIZE = 1000000;
 
-BladeServer::BladeServer(int port,
+BladePoolServer::BladePoolServer(int port,
         uint64_t pool_size,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
@@ -22,25 +22,25 @@ BladeServer::BladeServer(int port,
    pool_size_(pool_size) {
 }
 
-BladeServer::~BladeServer() {
+BladePoolServer::~BladePoolServer() {
 }
 
-void BladeServer::init() {
+void BladePoolServer::init() {
     // let upper layer initialize
     // all network related things
     RDMAServer::init();
 }
 
-void BladeServer::handle_connection(struct rdma_cm_id* id) {
+void BladePoolServer::handle_connection(struct rdma_cm_id* id) {
     id = id;
 }
 
-void BladeServer::handle_disconnection(struct rdma_cm_id* id) {
+void BladePoolServer::handle_disconnection(struct rdma_cm_id* id) {
     id = id;
 }
 
-#if 1
-uint32_t BladeServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
+#if 0
+uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
     TimerFunction tf("create_pool", true);
 
     id = id; // warnings
@@ -69,7 +69,7 @@ uint32_t BladeServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 }
 #else 
 
-uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
+uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
     TimerFunction tf("create_pool");
 
     LOG(INFO) << "Allocating memory pool of size: " << size;
@@ -108,11 +108,8 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     mw = ibv_alloc_mw(pd, IBV_MW_TYPE_2);
     LOG(ERROR) << "errno: " << errno << " EPERM: " << EPERM;
     TEST_Z(mw);
-    // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
-    // fix: dont forget to dealloc
-
-    return 0;
-
+    
+    LOG(INFO) << "Creating mw binding config";
     // create configuration
     struct ibv_exp_mw_bind mw_bind;
     std::memset(&mw_bind, 0, sizeof(mw_bind));
@@ -132,7 +129,7 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
     // bind memory window to memory region
     // int ibv_exp_bind_mw(struct ibv_exp_mw_bind *mw_bind);
     int ret;
-    // TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
+    TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
 
     LOG(INFO) << "Pool created (and mw bound) successfully";
 
@@ -140,7 +137,7 @@ uint32_t BladeServer::create_pool2(uint64_t size, struct rdma_cm_id* id) {
 }
 #endif
 
-void BladeServer::process_message(rdma_cm_id* id,
+void BladePoolServer::process_message(rdma_cm_id* id,
         void* message) {
     BladeMessage* msg =
         reinterpret_cast<BladeMessage*>(message);
@@ -152,7 +149,7 @@ void BladeServer::process_message(rdma_cm_id* id,
     // we shouldnt do this earlier has soon has process starts
     // but cant make it work like that (yet)
     std::call_once(pool_flag_,
-            &BladeServer::create_pool, this, pool_size_, id);
+            &BladePoolServer::create_pool, this, pool_size_, id);
 
     switch (msg->type) {
         case ALLOC:

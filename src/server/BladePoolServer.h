@@ -1,7 +1,7 @@
 /* Copyright 2016 Joao Carreira */
 
-#ifndef _BLADE_SERVER_H_
-#define _BLADE_SERVER_H_
+#ifndef _BLADE_POOL_SERVER_H_
+#define _BLADE_POOL_SERVER_H_
 
 #include <rdma/rdma_cma.h>
 #include "src/utils/utils.h"
@@ -12,11 +12,11 @@
 
 namespace sirius {
 
-class BladeServer : public RDMAServer {
+class BladePoolServer : public RDMAServer {
 public:
-    BladeServer(int port, uint64_t pool_size,
+    BladePoolServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
-    virtual ~BladeServer();
+    virtual ~BladePoolServer();
     virtual void init();
 
 private:
@@ -36,4 +36,4 @@ private:
 
 }
 
-#endif // _BLADE_SERVER_H_
+#endif // _BLADE_POOL_SERVER_H_

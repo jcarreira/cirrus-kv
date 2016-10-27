@@ -8,7 +8,7 @@ DEFAULT_LIB=-libverbs -lrdmacm -L../utils/ -lutils \
 bin_PROGRAMS = blademain allocmain controllermain
 noinst_LIBRARIES = libserver.a
 
-blademain_SOURCES  = blademain.cpp RDMAServer.cpp BladeServer.cpp \
+blademain_SOURCES  = blademain.cpp RDMAServer.cpp BladePoolServer.cpp \
                     ConnectionContext.cpp DumbQuotaManager.cpp
 blademain_LDFLAGS  = -pthread
 blademain_CPPFLAGS = -ggdb -I$(top_srcdir)
@@ -29,7 +29,7 @@ controllermain_CPPFLAGS = -ggdb -I$(top_srcdir)
 controllermain_LDADD    = $(DEFAULT_LIB)
 
 
-libserver_a_SOURCES = RDMAServer.cpp BladeServer.cpp \
+libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
                      ConnectionContext.cpp DumbQuotaManager.cpp \
                      ResourceAllocator.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir)

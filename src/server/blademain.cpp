@@ -1,7 +1,7 @@
 /* Copyright 2016 Joao Carreira */
 
 #include <csignal>
-#include "BladeServer.h"
+#include "BladePoolServer.h"
 #include "src/utils/easylogging++.h"
 
 static const uint64_t GB = (1024*1024*1024);
@@ -28,7 +28,7 @@ void set_ctrlc_handler() {
 int main() {
     LOG(INFO) << "Starting RDMA server in port: " << PORT;
 
-    sirius::BladeServer server(PORT, 10 * GB);
+    sirius::BladePoolServer server(PORT, 10 * GB);
 
     server.init();
 
