@@ -7,15 +7,16 @@
 
 namespace sirius {
 
-typedef uint64_t ObjectName;
+typedef uint64_t ObjectID;
 typedef void* Object;
 
 class ObjectStore {
 public:
     ObjectStore();
 
-    virtual Object get(ObjectName) = 0;
-    virtual bool put(Object, ObjectName) = 0;
+    virtual Object get(ObjectID) = 0;
+    virtual bool put(Object, uint64_t size, ObjectID) = 0;
+    virtual void printStats() = 0;
 
 private:
 };

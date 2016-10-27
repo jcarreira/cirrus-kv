@@ -12,8 +12,9 @@ class RDMAObjectStore : public ObjectStore {
 public:
     RDMAObjectStore();
 
-    Object get(ObjectName);
-    bool put(Object, ObjectName);
+    Object get(ObjectID);
+    bool put(Object, uint64_t, ObjectID);
+    virtual void printStats();
 
 private:
     // cache of objects
