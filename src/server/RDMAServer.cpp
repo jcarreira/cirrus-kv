@@ -136,10 +136,10 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
 
     //// Test this
-    //ibv_pd* pd;
-    //ibv_mw* mw;
+    // ibv_pd* pd;
+    // ibv_mw* mw;
     //// TEST_Z(pd = ibv_alloc_pd(verbs));
-    //TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
+    // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
     LOG(INFO) << "Creating polling thread";
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);

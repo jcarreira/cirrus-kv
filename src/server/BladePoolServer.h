@@ -10,6 +10,12 @@
 #include <thread>
 #include <semaphore.h>
 
+/*
+ * This server only creates one big pool
+ * Allocations here always return a pointer
+ * to that big pool
+ */
+
 namespace sirius {
 
 class BladePoolServer : public RDMAServer {
@@ -24,7 +30,6 @@ private:
     void handle_connection(struct rdma_cm_id* id);
     void handle_disconnection(struct rdma_cm_id* id);
 
-//    void create_pool(uint64_t size);
     uint32_t create_pool(uint64_t size, struct rdma_cm_id*);
 
     std::vector<void*> mr_data_;

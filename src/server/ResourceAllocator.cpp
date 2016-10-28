@@ -72,9 +72,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
             // ApplicationKey* ak = &msg->data.auth.application_key;
             // AppId app_id = msg->data.auth.app_id;
 
-//            if (authenticator_->allowApplication(msg->data.auth1.app_id)) {
-                send_challenge(id, *msg);
- //           }
+            send_challenge(id, *msg);
 
             break;
         case AUTH2:

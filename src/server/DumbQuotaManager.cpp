@@ -8,6 +8,8 @@ DumbQuotaManager::DumbQuotaManager() {
 }
 
 bool DumbQuotaManager::canAllocateMemory(uint64_t app_id, uint64_t memorySize) {
+    app_id = app_id;
+    memorySize = memorySize;
     return true;
 }
 
