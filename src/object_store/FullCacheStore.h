@@ -90,7 +90,8 @@ public:
         if (!(mem = objects_[name])) {
 #endif
             //mem = new char[size];
-            mem = alloc_mem + mem_last_index;
+            mem = reinterpret_cast<void*>(
+                    reinterpret_cast<uint64_t>(alloc_mem) + mem_last_index);
             mem_last_index += size;
             if (!mem)
                 DIE("Error allocating cache memory");

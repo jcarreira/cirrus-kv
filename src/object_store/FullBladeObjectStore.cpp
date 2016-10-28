@@ -59,6 +59,10 @@ bool FullBladeObjectStore::insertObjectLocation(ObjectID id,
     return true;
 }
 
+void FullBladeObjectStore::release(Object obj) {
+    delete[] obj;
+}
+
 void FullBladeObjectStore::printStats() {
 }
 

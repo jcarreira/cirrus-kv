@@ -4,7 +4,7 @@
 #define _RDMA_OBJECT_STORE_H_
 
 #include "src/object_store/ObjectStore.h"
-#include "src/object_store/CacheStore.h"
+#include "src/object_store/FullCacheStore.h"
 #include "src/client/BladeClient.h"
 
 namespace sirius {

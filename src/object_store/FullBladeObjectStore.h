@@ -30,6 +30,7 @@ public:
     Object get(ObjectID);
     bool put(Object, uint64_t, ObjectID);
     virtual void printStats();
+    virtual void release(Object);
 
 private:
     Object readToLocal(ObjectID id, BladeLocation loc);
