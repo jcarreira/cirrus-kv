@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <cstring>
-#include "src/object_store/CacheStore.h"
+#include "src/object_store/FullCacheStore.h"
 #include "src/utils/utils.h"
 
 //#define GOOGLE
@@ -26,9 +26,9 @@ static const uint64_t GB = 1024*1024*1024;
 
 namespace sirius {
 
-class CacheStore : public ObjectStore {
+class FullCacheStore : public ObjectStore {
 public:
-    CacheStore() :
+    FullCacheStore() :
         ObjectStore() {
 #ifdef GOOGLE
         objects_.set_empty_key(ObjectID());
@@ -138,6 +138,8 @@ private:
     void** objects_;
 #endif
     sem_t hash_sem;
+
+    uint64_t CACHE_SIZE = 10000000;
 };
 
 

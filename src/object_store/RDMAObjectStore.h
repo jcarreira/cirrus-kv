@@ -5,12 +5,14 @@
 
 #include "src/object_store/ObjectStore.h"
 #include "src/object_store/CacheStore.h"
+#include "src/client/BladeClient.h"
 
 namespace sirius {
 
 class RDMAObjectStore : public ObjectStore {
 public:
-    RDMAObjectStore();
+    RDMAObjectStore(const std::string& blade_addr,
+        const std::string& port);
 
     Object get(ObjectID);
     bool put(Object, uint64_t, ObjectID);
@@ -18,7 +20,8 @@ public:
 
 private:
     // cache of objects
-    mutable CacheStore cache_;
+    mutable FullCacheStore cache_;
+    BladeClient client;
 };
 
 }

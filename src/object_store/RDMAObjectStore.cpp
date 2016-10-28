@@ -3,13 +3,13 @@
 #include <iostream>
 #include "src/object_store/RDMAObjectStore.h"
 #include "src/utils/utils.h"
-//#include "src/utils/easylogging++.h"
 
 namespace sirius {
 
-RDMAObjectStore::RDMAObjectStore() :
+RDMAObjectStore::RDMAObjectStore(const std::string& blade_addr,
+        const std::string& port) :
     ObjectStore() {
-
+        client.connect(blade_addr, port);
 }
 
 Object RDMAObjectStore::get(ObjectID name) {
@@ -33,5 +33,5 @@ void RDMAObjectStore::printStats() {
     cache_.printStats();
 }
 
-} //  namespace sirius
+}  //  namespace sirius
 
