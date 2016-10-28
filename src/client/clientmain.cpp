@@ -34,6 +34,34 @@ void set_ctrlc_handler() {
     sigaction(SIGINT, &sig_int_handler, NULL);
 }
 
+void test_allocation() {
+    char data[1000];
+    const char* to_send = "SIRIUS_DDC";
+    snprintf(data, sizeof(data), "%s", "WRONG");
+
+    sirius::BladeClient client;
+    client.connect("10.10.49.83", PORT);
+
+    LOG(INFO) << "Connected to blade";
+    sirius::AllocRec alloc1 = client.allocate(1 * MB);
+
+    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id
+        << " remote_addr: " << alloc1->remote_addr
+        << " peer_rkey: " << alloc1->peer_rkey;
+
+    client.write_sync(alloc1, 0, strlen(to_send), to_send);
+    client.read_sync(alloc1, 0, strlen(to_send), data);
+    if (strncmp(data, to_send, strlen(to_send)) != 0)
+        exit(-1);
+    
+    sirius::AllocRec alloc2 = client.allocate(2 * MB);
+    LOG(INFO) << "Received allocation 2. id: " << alloc2->alloc_id
+        << " remote_addr: " << alloc2->remote_addr
+        << " peer_rkey: " << alloc2->peer_rkey;
+
+    client.read_sync(alloc2, 0, strlen(to_send), data);
+    LOG(INFO) << "Received data 2: " << data;
+}
 
 void test_1_client() {
     char data[1000];
@@ -44,15 +72,13 @@ void test_1_client() {
     LOG(INFO) << "Connecting to server in port: " << PORT;
 
     sirius::BladeClient client1;
-    client1.connect("10.10.49.88", PORT);
+    client1.connect("10.10.49.83", PORT);
 
     LOG(INFO) << "Connected to blade";
 
     sirius::AllocRec alloc1 = client1.allocate(1 * MB);
 
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
-
-    srand(time(NULL));
 
     client1.write_sync(alloc1, 0, strlen(to_send), to_send);
 
@@ -69,7 +95,7 @@ void test_2_clients() {
 
     sirius::BladeClient client1, client2;
 
-    client1.connect("10.10.49.87", PORT);
+    client1.connect("10.10.49.83", PORT);
     client2.connect("10.10.49.87", PORT);
 
     LOG(INFO) << "Connected to blade";
@@ -182,11 +208,12 @@ void test_destructor() {
 }
 
 int main() {
-    test_1_client();
+    //test_1_client();
     // test_2_clients();
     // test_performance();
     // test_authentication();
     // test_destructor();
+    test_allocation();
     return 0;
 }
 

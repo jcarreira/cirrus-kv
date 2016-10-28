@@ -11,7 +11,7 @@ LIBS    = -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthenti
 bin_PROGRAMS = clientmain scalability_main
 noinst_LIBRARIES = libclient.a
 
-clientmain_SOURCES  = main.cpp $(SOURCES)
+clientmain_SOURCES  = clientmain.cpp $(SOURCES)
 clientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
 clientmain_LDFLAGS  = -pthread
 clientmain_LDADD    = $(LIBS)

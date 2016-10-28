@@ -20,8 +20,6 @@ public:
     bool authenticate(std::string allocator_address,
         std::string port, AuthenticationToken& auth_token);
 
-    // allocate data
-    // return 0 if error
     AllocRec allocate(uint64_t size);
 
     bool write(AllocRec alloc_rec, uint64_t offset, 

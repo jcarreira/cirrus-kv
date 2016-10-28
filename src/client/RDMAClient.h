@@ -46,7 +46,7 @@ class RDMAClient {
 public:
     RDMAClient(int timeout_ms = 500);
     ~RDMAClient();
-    virtual void connect(std::string host, std::string port);
+    virtual void connect(const std::string& host, const std::string& port);
 
 protected:
     void build_params(struct rdma_conn_param *params);

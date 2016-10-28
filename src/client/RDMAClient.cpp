@@ -56,7 +56,6 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
                     IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
     }
 
-
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
                 sysconf(_SC_PAGESIZE),
                 SEND_MSG_SIZE));
@@ -300,7 +299,7 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     sem_wait(&ctx->rdma_sem);
 }
 
-void RDMAClient::connect(std::string host, std::string port) {
+void RDMAClient::connect(const std::string& host, const std::string& port) {
     struct addrinfo *addr;
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = NULL;
