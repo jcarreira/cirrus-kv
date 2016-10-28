@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <fstream>
 #include <map>
 #include <string>
 #include <cctype>
@@ -17,7 +16,7 @@
 #include "examples/sparsehash/src/google/dense_hash_map"
 
 /*
- * Wordcount
+ *  Wordcount
  */
 
 #define my_isalpha(a) ( ((a) >= 'A' && (a) <= 'Z') || \
@@ -28,13 +27,13 @@ INITIALIZE_EASYLOGGINGPP
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 
-uint32_t MurmurHash1 (const void * key, int len, uint32_t seed) {
+uint32_t MurmurHash1(const void * key, int len, uint32_t seed) {
     const unsigned int m = 0xc6a4a793;
     const int r = 16;
     unsigned int h = seed ^ (len * m);
     const unsigned char * data = (const unsigned char *)key;
 
-    while(len >= 4) {
+    while (len >= 4) {
         unsigned int k = *(unsigned int *)data;
         h += k;
         h *= m;
@@ -42,7 +41,7 @@ uint32_t MurmurHash1 (const void * key, int len, uint32_t seed) {
         data += 4;
         len -= 4;
     }
-    switch(len) {
+    switch (len) {
         case 3:
             h += data[2] << 16;
         case 2:
@@ -51,40 +50,41 @@ uint32_t MurmurHash1 (const void * key, int len, uint32_t seed) {
             h += data[0];
             h *= m;
             h ^= h >> r;
-    };
+    }
     h *= m;
     h ^= h >> 10;
     h *= m;
     h ^= h >> 17;
     return h;
-} 
+}
 
 
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 class MyString {
-public:
-    MyString(uint64_t a = 0, uint64_t b = 0, char* data = 0) :
+ public:
+    explicit MyString(uint64_t a = 0, uint64_t b = 0, char* data = 0) :
         a_(a), b_(b), data_(data), val_(0) {
             if (data) {
                 val_ = MurmurHash1(data_ + a_, b_ - a_, 42);
-                //LOG(INFO) << "hash: " << val_;
             }
         }
 
     bool operator<(const MyString& ms) const {
-        //LOG(INFO) << "operator<";
         int l1 = b_ - a_, l2 = ms.b_ - ms.a_;
         int min_l = MIN(l1, l2);
         int cmp = strncmp(data_ + a_, ms.data_ + ms.a_, min_l);
         if (cmp == 0) {
-            if (l1 == l2)
+            if (l1 == l2) {
                 return 0;
-            else return l1 < l2;
+            } else {
+                return l1 < l2;
+            }
         } else {
             return cmp < 0;
         }
     }
-    
+
     bool operator==(const MyString& ms) const {
         int l1 = b_ - a_, l2 = ms.b_ - ms.a_;
         if (l1 != l2)
@@ -94,7 +94,6 @@ public:
         return ret;
     }
 
-public:
     uint64_t a_;
     uint64_t b_;
     char* data_;
@@ -102,15 +101,17 @@ public:
 };
 
 namespace std {
-    namespace tr1 {
-        template<>
-            struct hash<MyString> {
-                std::size_t operator()(MyString s) const { 
-                    return s.val_;
-                }
-            };
+namespace tr1 {
+
+template<>
+struct hash<MyString> {
+    std::size_t operator()(MyString s) const {
+        return s.val_;
     }
-}
+};
+
+}  // namespace tr1
+}  // namespace std
 
 size_t get_file_size(std::string fname) {
     std::ifstream file(fname, std::ios::binary | std::ios::ate);
@@ -121,15 +122,13 @@ int main() {
     google::dense_hash_map<MyString, int> wc2;
     wc2.set_empty_key(MyString());
 
-
     std::string file = "wordc2.txt";
     size_t file_size = get_file_size(file);
     std::ifstream input(file, std::ios::binary);
-    
+
     char* data = reinterpret_cast<char*>(malloc(file_size));
     if (!data)
         return 0;
-
 
     std::copy(
             std::istreambuf_iterator<char>(input),

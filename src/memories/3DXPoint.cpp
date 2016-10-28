@@ -1,5 +1,7 @@
 /* Copyright Joao Carreira 2016 */
 
+#include "src/memories/3DXPoint.h"
+
 namespace sirius {
 
 3DXPoint::getWriteBandwidth() {
@@ -18,4 +20,4 @@ namespace sirius {
     return write_latency_us_;
 }
 
-} //  namespace sirius
+}  //  namespace sirius
