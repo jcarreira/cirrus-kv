@@ -2,7 +2,7 @@
 
 #include <csignal>
 #include "ResourceAllocator.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 static const uint64_t GB = (1024*1024*1024);
 static const int PORT = 12346;

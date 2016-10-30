@@ -13,7 +13,7 @@
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 namespace sirius {
 

@@ -2,7 +2,7 @@
 
 #include <csignal>
 #include "src/server/ResourceAllocator.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 static const int PORT = 12346;
 

@@ -7,7 +7,7 @@
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 #include "src/client/AuthenticationClient.h"
 
 namespace sirius {

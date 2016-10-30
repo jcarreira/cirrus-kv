@@ -6,7 +6,7 @@
 #include <string>
 #include <chrono>
 
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 namespace sirius {
 

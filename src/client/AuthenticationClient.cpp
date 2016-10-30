@@ -3,7 +3,7 @@
 #include "src/client/AuthenticationClient.h"
 #include "src/common/AllocatorMessage.h"
 #include "src/common/AllocatorMessageGenerator.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 #include "src/utils/utils.h"
 
 namespace sirius {

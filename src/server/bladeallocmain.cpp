@@ -2,7 +2,7 @@
 
 #include <csignal>
 #include "BladeAllocServer.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 static const uint64_t GB = (1024*1024*1024);
 

@@ -3,7 +3,7 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 ELPP_DISABLE_INFO_LOGS
 

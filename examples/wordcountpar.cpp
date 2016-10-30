@@ -13,7 +13,7 @@
 #include <string>
 
 #include "src/client/BladeClient.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 #include "src/utils/TimerFunction.h"
 
 /*

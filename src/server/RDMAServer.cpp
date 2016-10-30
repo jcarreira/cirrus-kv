@@ -8,7 +8,7 @@
 #include <cstring>
 
 #include "src/common/ThreadPinning.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 namespace sirius {
 

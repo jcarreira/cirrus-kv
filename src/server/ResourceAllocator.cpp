@@ -6,7 +6,7 @@
 #include "src/authentication/AuthenticationToken.h"
 #include "src/common/AllocatorMessageGenerator.h"
 
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 
 /*
  * Users authenticate in the ResourceManager and get a token

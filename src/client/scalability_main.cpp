@@ -7,7 +7,7 @@
 #include <string>
 #include "src/client/BladeClient.h"
 #include "src/common/AllocationRecord.h"
-#include "src/utils/easylogging++.h"
+#include "third_party/easylogging++.h"
 #include "src/utils/TimerFunction.h"
 
 const char PORT[] = "12345";
