@@ -17,6 +17,7 @@
 #include "src/utils/utils.h"
 
 //#define GOOGLE
+//#define CUCKOO
 
 #ifdef GOOGLE
 #include <google/dense_hash_map>
@@ -26,49 +27,50 @@ static const uint64_t GB = 1024*1024*1024;
 
 namespace sirius {
 
-class FullCacheStore : public ObjectStore {
+class FullCacheStore {
 public:
-    FullCacheStore() :
-        ObjectStore() {
+    FullCacheStore()
+    //   : ObjectStore()
+    {
 #ifdef GOOGLE
         objects_.set_empty_key(ObjectID());
         sem_init(&hash_sem, 0, 1);
 #elif !defined(CUCKOO)
-    //    objects_.resize(10000000);
         objects_ = new void*[10000000];
         std::memset(objects_, 0, 10000000 * sizeof(void*));
-        //std::fill(objects_.begin(), objects_.end(), static_cast<void*>(0));
 #endif
         alloc_mem = new char[2 * GB];
     }
         
-    inline Object get(ObjectID name) {
-        
-    //    std::cout << "Getting name: " << name
-    //        << std::endl;
-
-        Object ret;
-#ifdef GOOGLE
-        google::dense_hash_map<ObjectID, Object>::iterator it;
-        sem_wait(&hash_sem);
-        it = objects_.find(name);
-        if (it == objects_.end()) {
-            sem_post(&hash_sem);
-#elif defined(CUCKOO)
-        bool found = objects_.find(name, ret);
-        if (!found) {
-#else
-        if ((ret = objects_[name]) == 0) {
-#endif
-            return 0;
-        } else {
-#ifdef GOOGLE
-            ret = it->second;
-            sem_post(&hash_sem);
-#endif
-            return ret;
-        }
+    inline Object get(const ObjectID& name) {
+        return objects_[name];
     }
+        
+//    //    std::cout << "Getting name: " << name
+//    //        << std::endl;
+//
+//        Object ret;
+//#ifdef GOOGLE
+//        google::dense_hash_map<ObjectID, Object>::iterator it;
+//        sem_wait(&hash_sem);
+//        it = objects_.find(name);
+//        if (it == objects_.end()) {
+//            sem_post(&hash_sem);
+//#elif defined(CUCKOO)
+//        bool found = objects_.find(name, ret);
+//        if (!found) {
+//#else
+//        if ((ret = objects_[name]) == 0) {
+//#endif
+//            return 0;
+//        } else {
+//#ifdef GOOGLE
+//            ret = it->second;
+//            sem_post(&hash_sem);
+//#endif
+//            return ret;
+//        }
+//    }
 
     inline bool put(Object obj, uint64_t size, ObjectID name) {
         // right now we use C++ allocator
@@ -142,8 +144,6 @@ private:
 
     uint64_t CACHE_SIZE = 10000000;
 };
-
-
 
 }
 #endif // _CACHE_STORE_H_

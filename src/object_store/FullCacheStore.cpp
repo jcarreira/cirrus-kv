@@ -19,6 +19,12 @@ FullCacheStore::FullCacheStore() :
 }
 
 Object FullCacheStore::get(ObjectID name) {
+#if !defined(GOOGLE) && !defined(CUCKOO)
+    return objects_[name];
+#else
+
+    exit(-1);
+
     Object ret;
 #ifdef GOOGLE
     google::dense_hash_map<ObjectID, Object>::iterator it;
@@ -29,8 +35,6 @@ Object FullCacheStore::get(ObjectID name) {
 #elif defined(CUCKOO)
     bool found = objects_.find(name, ret);
     if (!found) {
-#else
-    if ((ret = objects_[name]) == 0) {
 #endif
         return 0;
     } else {
@@ -40,6 +44,8 @@ Object FullCacheStore::get(ObjectID name) {
 #endif
         return ret;
     }
+
+#endif
 }
 
 bool FullCacheStore::put(Object obj, uint64_t size, ObjectID name) {

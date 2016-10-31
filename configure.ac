@@ -7,6 +7,8 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
+CXXFLAGS=-O3
+
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_AWK
@@ -45,6 +47,7 @@ AC_CONFIG_FILES([Makefile
                  src/common/Makefile
                  src/object_store/Makefile
                  src/client/Makefile
-                 src/server/Makefile])
+                 src/server/Makefile
+                 src/test/Makefile])
 
 AC_OUTPUT

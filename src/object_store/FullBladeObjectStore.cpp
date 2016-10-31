@@ -13,12 +13,18 @@ FullBladeObjectStore::FullBladeObjectStore(const std::string& bladeIP,
 }
 
 Object FullBladeObjectStore::get(ObjectID id) {
+    // We do not implement this because
+    // this store does not cache locally
+    return 0;
+}
+
+void FullBladeObjectStore::get(ObjectID id, void*& ptr) {
     BladeLocation loc;
     if (objects_.find(id, loc)) {
-        return readToLocal(id, loc);
+        readToLocal(loc, ptr);
     } else {
         // object is not in store
-        return reinterpret_cast<Object>(0);
+        ptr = 0;
     }
 }
 
@@ -27,24 +33,16 @@ bool FullBladeObjectStore::put(Object obj, uint64_t size, ObjectID id) {
     if (objects_.find(id, loc)) {
         return writeRemote(obj, loc);
     } else {
+        // we could merge this into a single message (?)
         sirius::AllocRec allocRec = client.allocate(size);
         insertObjectLocation(id, size, allocRec);
-        return false;
+        return writeRemote(obj, BladeLocation(size, allocRec));
     }
 }
 
-Object FullBladeObjectStore::readToLocal(ObjectID id, BladeLocation loc) {
-    // FIX: we want to put this into an LRU cache
-    id = id;
-    //
-    Object ptr = new char[loc.size];
-    if (!ptr) {
-        DIE("Error allocating memory");
-    }
-
+bool FullBladeObjectStore::readToLocal(BladeLocation loc, void* ptr) {
     client.read_sync(loc.allocRec, 0, loc.size, ptr);
-
-    return ptr;
+    return true;
 }
 
 bool FullBladeObjectStore::writeRemote(Object obj, BladeLocation loc) {
@@ -57,10 +55,6 @@ bool FullBladeObjectStore::insertObjectLocation(ObjectID id,
     objects_[id] = BladeLocation(size, allocRec);
 
     return true;
-}
-
-void FullBladeObjectStore::release(Object obj) {
-    delete[] obj;
 }
 
 void FullBladeObjectStore::printStats() {
