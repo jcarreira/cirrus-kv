@@ -5,9 +5,10 @@
 #include "src/server/BladeAllocServer.h"
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/InfinibandSupport.h"
+#include <boost/interprocess/creation_tags.hpp>
 
 namespace sirius {
 
@@ -44,62 +45,26 @@ void BladeAllocServer::handle_disconnection(struct rdma_cm_id* id) {
 bool BladeAllocServer::create_pool(uint64_t size) {
     TimerFunction tf("create_pool");
 
-    LOG(INFO) << "Allocating memory pool of size: " << size;
+    LOG(INFO) << "Allocating memory pool of size: " << size << std::endl;
 
-    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&big_pool_data_),
+    TEST_NZ(posix_memalign(reinterpret_cast<void**>(&big_pool_data_),
                 sysconf(_SC_PAGESIZE), size));
 
-    LOG(INFO) << "Creating memory region";
+    LOG(INFO) << "Creating memory region" << std::endl;
     TEST_Z(big_pool_mr_ = ibv_reg_mr(
                 gen_ctx_.pd, big_pool_data_, size,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE |
                 IBV_ACCESS_REMOTE_READ));
 
-    LOG(INFO) << "Memory region created";
+    LOG(INFO) << "Memory region created" << std::endl;
+
+    // create allocator
+    allocator = new
+        boost::interprocess::managed_external_buffer(
+                boost::interprocess::create_only_t(), big_pool_data_, size);
 
     return true;
-}
-
-void* BladeAllocServer::find_free_data(uint64_t size) {
-    size = size;
-    // we start allocating from big_pool_data onwards
-    return reinterpret_cast<void*>(
-            reinterpret_cast<char*>(big_pool_data_) + mem_allocated);
-}
-
-void BladeAllocServer::allocate_mem(rdma_cm_id* id,
-        uint64_t size, void*& ptr, uint32_t& rkey) {
-    ptr = find_free_data(size);
-
-    // // create memory window
-    // struct ibv_mw* mw;
-    // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
-
-    // LOG(INFO) << "Creating mw binding config";
-    // // create configuration
-    // struct ibv_exp_mw_bind mw_bind;
-    // std::memset(&mw_bind, 0, sizeof(mw_bind));
-    // mw_bind.qp = id->qp;
-    // mw_bind.mw = mw;
-    // mw_bind.wr_id = 1;
-    // mw_bind.exp_send_flags = IBV_SEND_SIGNALED;
-    // mw_bind.bind_info.mr = big_pool_mr_;
-    // mw_bind.bind_info.addr = reinterpret_cast<uint64_t>(ptr);
-    // mw_bind.bind_info.length = size;
-    // mw_bind.bind_info.exp_mw_access_flags |= IBV_EXP_ACCESS_REMOTE_WRITE
-    //     | IBV_EXP_ACCESS_REMOTE_READ
-    //     | IBV_EXP_ACCESS_LOCAL_WRITE
-    //     | IBV_EXP_ACCESS_MW_BIND;
-
-    // LOG(INFO) << "Binding memory window";
-
-    // // bind memory window to memory region
-    // // int ibv_exp_bind_mw(struct ibv_exp_mw_bind *mw_bind);
-    // int ret;
-    // TEST_NZ(ret = ibv_exp_bind_mw(&mw_bind));
-    // rkey = mw->rkey;
-    rkey = big_pool_mr_->rkey;
 }
 
 void BladeAllocServer::process_message(rdma_cm_id* id,
@@ -122,11 +87,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 uint64_t size = msg->data.alloc.size;
 
                 LOG(INFO) << "Received allocation request. size: " << size;
-
-                void* ptr;
-                uint32_t rkey;
-                allocate_mem(id, size, ptr, rkey);
-                mem_allocated += size;
+                void* ptr = allocator->allocate(size);
 
                 uint64_t remote_addr =
                     reinterpret_cast<uint64_t>(ptr);
@@ -140,11 +101,10 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                         ctx->send_msg,
                         alloc_id,
                         remote_addr,
-                        rkey);
+                        big_pool_mr_->rkey);
 
                 LOG(INFO) << "Sending ack. "
-                    << " remote_addr: " << remote_addr
-                    << " rkey: " << rkey;
+                    << " remote_addr: " << remote_addr;
 
                 // send async message
                 send_message(id, sizeof(BladeMessage));

@@ -11,6 +11,7 @@
 #include <thread>
 #include <semaphore.h>
 #include <map>
+#include <boost/interprocess/managed_external_buffer.hpp>
 
 /*
  * This server supports allocations on top of a big mem pool
@@ -56,6 +57,8 @@ private:
     std::map<uint64_t, BladeAllocation> id_to_alloc_;
     uint64_t num_allocs_;
     uint64_t mem_allocated;
+
+    boost::interprocess::managed_external_buffer* allocator;
 };
 
 }
