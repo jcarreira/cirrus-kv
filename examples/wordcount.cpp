@@ -11,7 +11,6 @@
 #include <cctype>
 
 #include "src/client/BladeClient.h"
-#include "third_party/easylogging++.h"
 #include "src/utils/TimerFunction.h"
 #include "examples/sparsehash/src/google/dense_hash_map"
 
@@ -21,8 +20,6 @@
 
 #define my_isalpha(a) ( ((a) >= 'A' && (a) <= 'Z') || \
         ((a) >= 'a' && (a) <= 'z'))
-
-INITIALIZE_EASYLOGGINGPP
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";

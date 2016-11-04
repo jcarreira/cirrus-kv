@@ -8,7 +8,6 @@
 #include <string>
 #include "src/client/BladeClient.h"
 #include "src/common/AllocationRecord.h"
-#include "third_party/easylogging++.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/TimerFunction.h"
@@ -16,8 +15,6 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-
-INITIALIZE_EASYLOGGINGPP
 
 void ctrlc_handler(int sig_num) {
     LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;

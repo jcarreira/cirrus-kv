@@ -6,9 +6,10 @@
 
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 #include "src/common/ThreadPinning.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 

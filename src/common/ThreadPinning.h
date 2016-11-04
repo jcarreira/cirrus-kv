@@ -1,7 +1,5 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "third_party/easylogging++.h"
-
 #include <pthread.h>
 #include <thread>
 

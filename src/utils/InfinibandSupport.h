@@ -5,7 +5,6 @@
 
 #include <mutex>
 #include <rdma/rdma_cma.h>
-#include "third_party/easylogging++.h"
 
 namespace sirius {
 

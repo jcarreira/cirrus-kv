@@ -6,8 +6,6 @@
 #include <string>
 #include <chrono>
 
-#include "third_party/easylogging++.h"
-
 namespace sirius {
 
 class TimerFunction {
