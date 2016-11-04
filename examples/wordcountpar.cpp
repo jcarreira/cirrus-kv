@@ -13,8 +13,8 @@
 #include <string>
 
 #include "src/client/BladeClient.h"
-#include "third_party/easylogging++.h"
 #include "src/utils/TimerFunction.h"
+#include "src/utils/logging.h"
 
 /*
  * Wordcount
@@ -22,8 +22,6 @@
 
 #define my_isalpha(a) ( ((a) >= 'A' && (a) <= 'Z') || \
         ((a) >= 'a' && (a) <= 'z'))
-
-INITIALIZE_EASYLOGGINGPP
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
@@ -139,15 +137,15 @@ int main() {
 
     LOG(INFO) << "Copying done";
 
-    sirius::BladeClient client;
-    client.connect("10.10.49.88", PORT);
-    sirius::AllocRec alloc1 = client.allocate(file_size);
-
-    {
-        sirius::TimerFunction tf("RDMA write", true);
-        client.write_sync(alloc1, 0, file_size, data);
-    }
-
+//    sirius::BladeClient client;
+//    client.connect("10.10.49.88", PORT);
+//    sirius::AllocRec alloc1 = client.allocate(file_size);
+//
+//    {
+//        sirius::TimerFunction tf("RDMA write", true);
+//        client.write_sync(alloc1, 0, file_size, data);
+//    }
+//
     LOG(INFO) << "Data written";
 
     uint64_t count = 0;
@@ -175,8 +173,8 @@ int main() {
                 index++;
             uint64_t last_of_word = index;
             MyString str(start_of_word, last_of_word, data);
-            if (str == MyString())
-                continue;
+            //if (str == MyString())
+            //    continue;
             wc2[i][str]++;
         }
     }

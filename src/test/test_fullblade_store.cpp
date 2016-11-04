@@ -11,14 +11,12 @@
 #include <cctype>
 
 #include "src/client/BladeClient.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
 #include "src/object_store/FullBladeObjectStore.h"
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-
-INITIALIZE_EASYLOGGINGPP
 
 struct Dummy {
     char data[15];

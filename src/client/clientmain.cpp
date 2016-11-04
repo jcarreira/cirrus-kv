@@ -5,10 +5,10 @@
 #include <csignal>
 #include <memory>
 #include <sstream>
-#include <string>
+#include <cstring>
 #include "src/client/BladeClient.h"
 #include "src/common/AllocationRecord.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/TimerFunction.h"
@@ -16,8 +16,6 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-
-INITIALIZE_EASYLOGGINGPP
 
 void ctrlc_handler(int sig_num) {
     LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;
@@ -49,9 +47,9 @@ void test_allocation() {
         << " remote_addr: " << alloc1->remote_addr
         << " peer_rkey: " << alloc1->peer_rkey;
 
-    client.write_sync(alloc1, 0, strlen(to_send), to_send);
-    client.read_sync(alloc1, 0, strlen(to_send), data);
-    if (strncmp(data, to_send, strlen(to_send)) != 0)
+    client.write_sync(alloc1, 0, std::strlen(to_send), to_send);
+    client.read_sync(alloc1, 0, std::strlen(to_send), data);
+    if (strncmp(data, to_send, std::strlen(to_send)) != 0)
         exit(-1);
     
     sirius::AllocRec alloc2 = client.allocate(2 * MB);
@@ -59,7 +57,7 @@ void test_allocation() {
         << " remote_addr: " << alloc2->remote_addr
         << " peer_rkey: " << alloc2->peer_rkey;
 
-    client.read_sync(alloc2, 0, strlen(to_send), data);
+    client.read_sync(alloc2, 0, std::strlen(to_send), data);
     LOG(INFO) << "Received data 2: " << data;
 }
 
@@ -80,10 +78,10 @@ void test_1_client() {
 
     LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
 
-    client1.write_sync(alloc1, 0, strlen(to_send), to_send);
+    client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
     LOG(INFO) << "Old data: " << data;
-    client1.read_sync(alloc1, 0, strlen(to_send), data);
+    client1.read_sync(alloc1, 0, std::strlen(to_send), data);
     LOG(INFO) << "Received data 1: " << data;
 }
 
@@ -190,10 +188,10 @@ void test_authentication() {
 
     srand(time(NULL));
 
-    client.write_sync(alloc1, 0, strlen(to_send), to_send);
+    client.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
     LOG(INFO) << "Old data: " << data;
-    client.read_sync(alloc1, 0, strlen(to_send), data);
+    client.read_sync(alloc1, 0, std::strlen(to_send), data);
     LOG(INFO) << "Received data 1: " << data;
 }
 

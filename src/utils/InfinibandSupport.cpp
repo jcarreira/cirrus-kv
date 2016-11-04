@@ -1,5 +1,6 @@
 /* Copyright Joao Carreira 2016 */
 
+#include <cstring>
 #include "src/utils/InfinibandSupport.h"
 #include "src/utils/utils.h"
 

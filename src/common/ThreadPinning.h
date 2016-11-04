@@ -1,6 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 
 #include <pthread.h>
 #include <thread>

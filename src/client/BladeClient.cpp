@@ -2,12 +2,12 @@
 
 #include "src/client/BladeClient.h"
 #include <unistd.h>
-#include <string>
+#include <cstring>
 #include "src/common/BladeMessageGenerator.h"
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 
 namespace sirius {

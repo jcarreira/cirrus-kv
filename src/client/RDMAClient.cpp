@@ -13,7 +13,7 @@
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 
@@ -47,22 +47,27 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
+    LOG(INFO) << "Memaling done" << std::endl;
 
     {
-        TimerFunction tf("Registering memory region", true);
+        LOG(INFO) << "Registering region" << std::endl;
+        //TimerFunction tf("Registering memory region", true);
         TEST_Z(con_ctx.recv_msg_mr =
                 ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
                     RECV_MSG_SIZE,
                     IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
     }
 
+    LOG(INFO) << "posix_memalign" << std::endl;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
                 sysconf(_SC_PAGESIZE),
                 SEND_MSG_SIZE));
+    LOG(INFO) << "reg_mr" << std::endl;
     TEST_Z(con_ctx.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));
+    LOG(INFO) << "Set up memory done" << std::endl;
 }
 
 void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
@@ -303,9 +308,12 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
     struct addrinfo *addr;
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = NULL;
+    
+    LOG(INFO) << "connect()" << std::endl;
 
     // use connection manager to resolve address
     TEST_NZ(getaddrinfo(host.c_str(), port.c_str(), NULL, &addr));
+    ec_ = rdma_create_event_channel();
     TEST_Z(ec_ = rdma_create_event_channel());
     TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
     TEST_NZ(rdma_resolve_addr(id_, NULL, addr->ai_addr, timeout_ms_));
