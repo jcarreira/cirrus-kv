@@ -5,7 +5,7 @@
 #include "src/server/BladePoolServer.h"
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/InfinibandSupport.h"
 

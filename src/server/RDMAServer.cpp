@@ -6,9 +6,10 @@
 
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 #include "src/common/ThreadPinning.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 
@@ -19,6 +20,8 @@ RDMAServer::RDMAServer(int port, int timeout_ms) {
     timeout_ms_ = timeout_ms;
     id_ = NULL;
     ec_ = NULL;
+
+    std::cout.setf(std::ios::unitbuf);
 }
 
 RDMAServer::~RDMAServer() {

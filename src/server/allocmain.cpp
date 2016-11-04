@@ -2,11 +2,12 @@
 
 #include <csignal>
 #include "src/server/ResourceAllocator.h"
-#include "third_party/easylogging++.h"
+#include "src/utils/logging.h"
+//#include "third_party/easylogging++.h"
 
 static const int PORT = 12346;
 
-INITIALIZE_EASYLOGGINGPP
+//INITIALIZE_EASYLOGGINGPP
 
 void ctrlc_handler(int sig_num) {
     LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;
