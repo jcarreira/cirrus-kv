@@ -73,8 +73,7 @@ protected:
     // seems to be the maximum inline data
     static const int MAX_INLINE_DATA = 912;
 
-    typedef void (RDMAServer::*msg_handler)(rdma_cm_id*,
-            void* msg);
+    using msg_handler = void (RDMAServer::*)(rdma_cm_id*, void*);
 
     std::once_flag gen_ctx_flag;
 };

@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 DEFAULT_LIB=-libverbs -lrdmacm -L../utils/ -lutils \
             -L../common/ -lcommon -L../authentication/ -lauthentication
 
-bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain
+bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain bladefilemain
 noinst_LIBRARIES = libserver.a
 
 bladepoolmain_SOURCES  = bladepoolmain.cpp RDMAServer.cpp BladePoolServer.cpp \
@@ -19,6 +19,13 @@ bladeallocmain_SOURCES  = bladeallocmain.cpp RDMAServer.cpp BladePoolServer.cpp 
 bladeallocmain_LDFLAGS  = -pthread
 bladeallocmain_CPPFLAGS = -ggdb -I$(top_srcdir)
 bladeallocmain_LDADD    = $(DEFAULT_LIB)
+
+    
+bladefilemain_SOURCES  = bladefilemain.cpp RDMAServer.cpp BladePoolServer.cpp \
+                    ConnectionContext.cpp DumbQuotaManager.cpp BladeAllocServer.cpp BladeFileAllocServer.cpp
+bladefilemain_LDFLAGS  = -pthread
+bladefilemain_CPPFLAGS = -ggdb -I$(top_srcdir)
+bladefilemain_LDADD    = $(DEFAULT_LIB)
 
 
 allocmain_SOURCES  = allocmain.cpp RDMAServer.cpp ResourceAllocator.cpp \

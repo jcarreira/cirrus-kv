@@ -1,6 +1,7 @@
 /* Copyright 2016 Joao Carreira */
 
 #include "src/utils/TimerFunction.h"
+#include <iostream>
 
 namespace sirius {
 

@@ -1,65 +1,64 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "src/client/BladeClient.h"
+#include "src/client/BladeFileClient.h"
 #include <unistd.h>
 #include <string>
 #include <cstring>
-#include "src/common/BladeMessageGenerator.h"
-#include "src/common/BladeMessage.h"
+#include "src/common/BladeFileMessageGenerator.h"
+#include "src/common/BladeFileMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
-#include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 
-BladeClient::BladeClient(int timeout_ms)
+BladeFileClient::BladeFileClient(int timeout_ms)
     : RDMAClient(timeout_ms) {
 }
 
-BladeClient::~BladeClient() {
+BladeFileClient::~BladeFileClient() {
 }
 
-bool BladeClient::authenticate(std::string address,
+bool BladeFileClient::authenticate(std::string address,
         std::string port, AuthenticationToken& auth_token) {
-    LOG(INFO) << "BladeClient authenticating";
+    LOG(INFO) << "BladeFileClient authenticating";
     AuthenticationClient auth_client;
 
-    LOG(INFO) << "BladeClient connecting to controller";
+    LOG(INFO) << "BladeFileClient connecting to controller";
     auth_client.connect(address, port);
 
-    LOG(INFO) << "BladeClient authenticating";
+    LOG(INFO) << "BladeFileClient authenticating";
     auth_token = auth_client.authenticate();
 
     return auth_token.allow;
 }
 
-AllocRec BladeClient::allocate(uint64_t size) {
+FileAllocRec BladeFileClient::allocate(const std::string& filename, uint64_t size) {
     LOG(INFO) << "Allocating " << size << " bytes";
 
-    BladeMessageGenerator::alloc_msg(con_ctx.send_msg,
+    BladeFileMessageGenerator::alloc_msg(con_ctx.send_msg,
+            filename,
             size);
 
     // post receive
     TEST_NZ(post_receive(id_));
-    LOG(INFO) << "Sending alloc msg size: " << sizeof(BladeMessage);
-    send_message_sync(id_, sizeof(BladeMessage));
+    LOG(INFO) << "Sending alloc msg size: " << sizeof(BladeFileMessage);
+    send_message_sync(id_, sizeof(BladeFileMessage));
 
-    BladeMessage* msg =
-        reinterpret_cast<BladeMessage*>(con_ctx.recv_msg);
+    BladeFileMessage* msg =
+        reinterpret_cast<BladeFileMessage*>(con_ctx.recv_msg);
 
-    AllocRec alloc(new AllocationRecord(
-              msg->data.alloc_ack.mr_id,
+    FileAllocRec alloc(new FileAllocationRecord(
                 msg->data.alloc_ack.remote_addr,
                 msg->data.alloc_ack.peer_rkey));
 
     LOG(INFO) << "Received allocation from Blade. remote_addr: "
-        << msg->data.alloc_ack.remote_addr
-        << " mr_id: " << msg->data.alloc_ack.mr_id;
+        << msg->data.alloc_ack.remote_addr << std::endl;
     return alloc;
 }
 
-bool BladeClient::write_sync(const AllocRec& alloc_rec,
+bool BladeFileClient::write_sync(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data) {
@@ -81,7 +80,7 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
     return true;
 }
 
-bool BladeClient::write(const AllocRec& alloc_rec,
+bool BladeFileClient::write(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data) {
@@ -101,7 +100,7 @@ bool BladeClient::write(const AllocRec& alloc_rec,
     return true;
 }
 
-bool BladeClient::read_sync(const AllocRec& alloc_rec,
+bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {
@@ -125,7 +124,7 @@ bool BladeClient::read_sync(const AllocRec& alloc_rec,
     return true;
 }
 
-bool BladeClient::read(const AllocRec& alloc_rec,
+bool BladeFileClient::read(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {

@@ -6,8 +6,6 @@
 #include <string>
 #include <chrono>
 
-#include "src/utils/logging.h"
-
 namespace sirius {
 
 class TimerFunction {
@@ -21,9 +19,9 @@ public:
 
     uint64_t getUsElapsed() const;
 
-    typedef std::chrono::high_resolution_clock Time;
-    typedef std::chrono::microseconds us; 
-    typedef std::chrono::milliseconds ms; 
+    using Time = std::chrono::high_resolution_clock;
+    using us = std::chrono::microseconds; 
+    using ms = std::chrono::milliseconds; 
 
 private:
     std::string name_;

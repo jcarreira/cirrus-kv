@@ -1,9 +1,8 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "src/utils/logging.h"
-
 #include <pthread.h>
 #include <thread>
+#include "src/utils/logging.h"
 
 namespace sirius {
 

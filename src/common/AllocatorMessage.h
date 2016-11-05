@@ -15,7 +15,7 @@ enum auth_msg_type {
     ALLOC, ALLOC_ACK,
 };
 
-typedef uint64_t AppId;
+using AppId = uint64_t;
 
 struct AllocatorMessage {
     int id;

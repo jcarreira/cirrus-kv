@@ -7,8 +7,8 @@
 
 namespace sirius {
 
-typedef uint64_t ObjectID;
-typedef void* Object;
+using ObjectID = uint64_t;
+using Object = void*;
 
 class ObjectStore {
 public:

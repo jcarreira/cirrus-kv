@@ -10,7 +10,7 @@
 
 namespace sirius {
 
-typedef std::shared_ptr<AllocationRecord> AllocRec;
+using AllocRec = std::shared_ptr<AllocationRecord>;
 
 class BladeClient : public RDMAClient {
 public:
@@ -22,13 +22,13 @@ public:
 
     AllocRec allocate(uint64_t size);
 
-    bool write(AllocRec alloc_rec, uint64_t offset, 
+    bool write(const AllocRec& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data);
-    bool write_sync(AllocRec alloc_rec, uint64_t offset, 
+    bool write_sync(const AllocRec& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data);
-    bool read(AllocRec alloc_rec, uint64_t offset,
+    bool read(const AllocRec& alloc_rec, uint64_t offset,
             uint64_t length, void *data);
-    bool read_sync(AllocRec alloc_rec, uint64_t offset,
+    bool read_sync(const AllocRec& alloc_rec, uint64_t offset,
             uint64_t length, void *data);
 
 private:
