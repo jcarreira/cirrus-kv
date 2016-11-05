@@ -4,6 +4,7 @@
 #include "src/common/AllocatorMessage.h"
 #include "src/common/AllocatorMessageGenerator.h"
 #include "src/utils/utils.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 

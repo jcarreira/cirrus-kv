@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <thread>
+#include "src/utils/logging.h"
 
 namespace sirius {
 

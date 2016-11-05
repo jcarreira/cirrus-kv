@@ -46,7 +46,7 @@ RDMAServer::~RDMAServer() {
 void RDMAServer::init() {
     struct sockaddr_in addr;
 
-    LOG(INFO) << "RDMAServer::init";
+    LOG(INFO) << "RDMAServer::init" << std::endl;
 
     // get ready to connect
     memset(&addr, 0, sizeof(addr));
@@ -58,14 +58,14 @@ void RDMAServer::init() {
     TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
 
     LOG(INFO) << "Created id: "
-        << reinterpret_cast<uint64_t>(id_);
+        << reinterpret_cast<uint64_t>(id_) << std::endl;
 
     TEST_NZ(rdma_bind_addr(id_, (struct sockaddr *)&addr));
     TEST_NZ(rdma_listen(id_, NUM_BACKLOG));
 }
 
 void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
-    LOG(INFO) << "Sending message. size: " << size;
+    LOG(INFO) << "Sending message. size: " << size << std::endl;
 
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -88,7 +88,7 @@ void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
     sge.lkey = ctx->send_msg_mr->lkey;
 
     TEST_NZ(ibv_post_send(id->qp, &wr, &bad_wr));
-    LOG(INFO) << "Message sent";
+    LOG(INFO) << "Message sent" << std::endl;
 }
 
 void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
@@ -111,7 +111,7 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
     TEST_NZ(ibv_post_recv(id->qp, &wr, &bad_wr));
 
     LOG(INFO) << "Posted receive in wq. id: "
-        << reinterpret_cast<uint64_t>(id);
+        << reinterpret_cast<uint64_t>(id) << std::endl;
 }
 
 void RDMAServer::build_params(struct rdma_conn_param *params) {
@@ -142,7 +142,7 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     //// TEST_Z(pd = ibv_alloc_pd(verbs));
     // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
-    LOG(INFO) << "Creating polling thread";
+    LOG(INFO) << "Creating polling thread" << std::endl;
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);
 
     ThreadPinning::pinThread(gen_ctx_.cq_poller_thread->native_handle(),
@@ -154,7 +154,7 @@ void* RDMAServer::poll_cq() {
     struct ibv_wc wc;
     void* cq_ctx;
 
-    LOG(INFO) << "Polling..";
+    LOG(INFO) << "Polling.." << std::endl;
 
     while (1) {
         TEST_NZ(ibv_get_cq_event(gen_ctx_.comp_channel, &cq, &cq_ctx));
@@ -215,7 +215,7 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     // to avoid needing this id (?)
     TEST_NZ(rdma_create_qp(id, gen_ctx_.pd, &qp_attr));
 
-    LOG(INFO) << "max_inline_data: " << qp_attr.cap.max_inline_data;
+    LOG(INFO) << "max_inline_data: " << qp_attr.cap.max_inline_data << std::endl;
 }
 
 // connection has been established by now
@@ -263,20 +263,20 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
     ConnectionContext *con_ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Processing event..";
+    LOG(INFO) << "Processing event.." << std::endl;
 
     if (wc->opcode == IBV_WC_RECV) {
-        LOG(INFO) << "Blade server received a message..";
+        LOG(INFO) << "Blade server received a message.." << std::endl;
 
         // post another receive WR
         post_msg_receive(id);
-        LOG(INFO) << "Posted new receive WR";
+        LOG(INFO) << "Posted new receive WR" << std::endl;
 
         msg_handler f = &RDMAServer::process_message;
         (con_ctx->server->*f)(id, con_ctx->recv_msg);
 
     } else if (wc->opcode == IBV_WC_SEND) {
-        LOG(INFO) << "Blade server sent a message..";
+        LOG(INFO) << "Blade server sent a message.." << std::endl;
     } else {
         DIE("Dont know what is this opcode");
     }
@@ -291,16 +291,16 @@ void RDMAServer::loop() {
 
     build_params(&cm_params);
 
-    LOG(INFO) << "Running loop ";
+    LOG(INFO) << "Running loop " << std::endl;
     while (rdma_get_cm_event(ec_, &event) == 0) {
         struct rdma_cm_event event_copy;
 
         memcpy(&event_copy, event, sizeof(*event));
         rdma_ack_cm_event(event);
 
-        LOG(INFO) << "Checking event";
+        LOG(INFO) << "Checking event" << std::endl;
         if (event_copy.event == RDMA_CM_EVENT_ADDR_RESOLVED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ADDR_RESOLVED";
+            LOG(INFO) << "RDMA_CM_EVENT_ADDR_RESOLVED" << std::endl;
             // address successfully resolved
             // happens when we try to connect
             build_connection(event_copy.id);
@@ -310,23 +310,23 @@ void RDMAServer::loop() {
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
 
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ROUTE_RESOLVED";
+            LOG(INFO) << "RDMA_CM_EVENT_ROUTE_RESOLVED" << std::endl;
             TEST_NZ(rdma_connect(event_copy.id, &cm_params));
 
         } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
             // Every new connection gets a new rdma_id
 
             LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST. id: "
-                << reinterpret_cast<uint64_t>(event_copy.id);
+                << reinterpret_cast<uint64_t>(event_copy.id) << std::endl;
             build_connection(event_copy.id);
             create_connection_context(event_copy.id);
             TEST_NZ(rdma_accept(event_copy.id, &cm_params));
         } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ESTABLISHED";
+            LOG(INFO) << "RDMA_CM_EVENT_ESTABLISHED" << std::endl;
             handle_established(event_copy.id);
             handle_connection(event_copy.id);
         } else if (event_copy.event == RDMA_CM_EVENT_DISCONNECTED) {
-            LOG(INFO) << "RDMA_CM_EVENT_DISCONNECTED";
+            LOG(INFO) << "RDMA_CM_EVENT_DISCONNECTED" << std::endl;
             handle_disconnection(event_copy.id);
             rdma_destroy_qp(event_copy.id);
             handle_disconnected(event_copy.id);

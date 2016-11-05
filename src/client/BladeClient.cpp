@@ -3,10 +3,12 @@
 #include "src/client/BladeClient.h"
 #include <unistd.h>
 #include <string>
+#include <cstring>
 #include "src/common/BladeMessageGenerator.h"
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
+#include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 
 namespace sirius {
@@ -57,7 +59,7 @@ AllocRec BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
-bool BladeClient::write_sync(AllocRec alloc_rec,
+bool BladeClient::write_sync(const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data) {
@@ -79,7 +81,7 @@ bool BladeClient::write_sync(AllocRec alloc_rec,
     return true;
 }
 
-bool BladeClient::write(AllocRec alloc_rec,
+bool BladeClient::write(const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data) {
@@ -99,7 +101,7 @@ bool BladeClient::write(AllocRec alloc_rec,
     return true;
 }
 
-bool BladeClient::read_sync(AllocRec alloc_rec,
+bool BladeClient::read_sync(const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {
@@ -123,7 +125,7 @@ bool BladeClient::read_sync(AllocRec alloc_rec,
     return true;
 }
 
-bool BladeClient::read(AllocRec alloc_rec,
+bool BladeClient::read(const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {
