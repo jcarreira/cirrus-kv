@@ -11,6 +11,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <cstring>
 
 #include "src/client/BladeClient.h"
 #include "src/utils/TimerFunction.h"

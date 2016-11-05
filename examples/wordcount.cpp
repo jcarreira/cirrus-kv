@@ -8,11 +8,13 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <cstring>
 #include <cctype>
 
 #include "src/client/BladeClient.h"
 #include "src/utils/TimerFunction.h"
 #include "examples/sparsehash/src/google/dense_hash_map"
+#include "src/utils/logging.h"
 
 /*
  *  Wordcount
