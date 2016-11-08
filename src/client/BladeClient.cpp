@@ -14,7 +14,7 @@
 namespace sirius {
 
 BladeClient::BladeClient(int timeout_ms)
-    : RDMAClient(timeout_ms) {
+    : RDMAClient(timeout_ms), remote_addr_(0) {
 }
 
 BladeClient::~BladeClient() {

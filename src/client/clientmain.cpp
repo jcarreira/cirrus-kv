@@ -162,6 +162,8 @@ void test_performance() {
         client.read(alloc1, 0, mem_size, data);
         std::cout << "data[0]: " << data[0] << std::endl;
     }
+
+    free(data);
 }
 
 void test_authentication() {

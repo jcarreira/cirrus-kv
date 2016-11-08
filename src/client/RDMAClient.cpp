@@ -43,7 +43,7 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
 }
 
 void RDMAClient::setup_memory(ConnectionContext& ctx) {
-    LOG(INFO) << "Setting up memory";
+    LOG(INFO) << "Setting up memory" << std::endl;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
@@ -60,7 +60,7 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
 
     LOG(INFO) << "posix_memalign" << std::endl;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
-                sysconf(_SC_PAGESIZE),
+                static_cast<size_t>(sysconf(_SC_PAGESIZE)),
                 SEND_MSG_SIZE));
     LOG(INFO) << "reg_mr" << std::endl;
     TEST_Z(con_ctx.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.send_msg,
