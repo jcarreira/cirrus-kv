@@ -248,13 +248,13 @@ void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
 
     // Create memory regions to be able to receive/send RDMA messages
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx->recv_msg),
-        sysconf(_SC_PAGESIZE), RECV_MSG_SIZE));
+        static_cast<size_t>(sysconf(_SC_PAGESIZE)), RECV_MSG_SIZE));
     TEST_Z(con_ctx->recv_msg_mr = ibv_reg_mr(
         gen_ctx_.pd, con_ctx->recv_msg, RECV_MSG_SIZE,
         IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx->send_msg),
-        sysconf(_SC_PAGESIZE), SEND_MSG_SIZE));
+        static_cast<size_t>(sysconf(_SC_PAGESIZE)), SEND_MSG_SIZE));
     TEST_Z(con_ctx->send_msg_mr = ibv_reg_mr(
         gen_ctx_.pd, con_ctx->send_msg, SEND_MSG_SIZE,
         IBV_ACCESS_LOCAL_WRITE));

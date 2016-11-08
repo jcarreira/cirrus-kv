@@ -49,7 +49,7 @@ uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     void *data;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&data),
-                sysconf(_SC_PAGESIZE), size));
+                static_cast<size_t>(sysconf(_SC_PAGESIZE)), size));
     mr_data_.push_back(data);
 
     LOG(INFO) << "Creating memory region";

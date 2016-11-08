@@ -32,7 +32,7 @@ protected:
     Authenticator* authenticator_;
 
     // total amount of memory allocated
-    uint64_t total_mem_allocated;
+    uint64_t total_mem_allocated_;
 };
 
 } // sirius

@@ -13,6 +13,7 @@ ConnectionContext::ConnectionContext() :
     send_msg(NULL),
     send_msg_mr(NULL),
     server(NULL),
+    info(0),
     context_id_(id_count_++) {
 }
 

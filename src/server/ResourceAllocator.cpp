@@ -20,10 +20,12 @@ namespace sirius {
 ResourceAllocator::ResourceAllocator(int port,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
-    authenticator_(new DumbAuthenticator()) {
+    authenticator_(new DumbAuthenticator()),
+    total_mem_allocated_(0) {
 }
 
 ResourceAllocator::~ResourceAllocator() {
+    delete authenticator_;
 }
 
 void ResourceAllocator::init() {
@@ -51,7 +53,7 @@ void ResourceAllocator::send_stats(rdma_cm_id* id,
 
     AllocatorMessageGenerator::stats_ack(
             ctx->send_msg,
-            total_mem_allocated);
+            total_mem_allocated_);
     send_message(id, sizeof(AllocatorMessage));
 }
 
@@ -81,6 +83,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
             break;
         case STATS:
             send_stats(id, *msg);
+            break;
         case ALLOC:
             // client wants to allocate some memory
         default:

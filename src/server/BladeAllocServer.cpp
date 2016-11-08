@@ -22,7 +22,8 @@ BladeAllocServer::BladeAllocServer(int port,
     big_pool_data_(0),
     big_pool_size_(pool_size),
     num_allocs_(0),
-    mem_allocated(0) {
+    mem_allocated(0),
+    allocator(0) {
 }
 
 BladeAllocServer::~BladeAllocServer() {
@@ -48,7 +49,7 @@ bool BladeAllocServer::create_pool(uint64_t size) {
     LOG(INFO) << "Allocating memory pool of size: " << size << std::endl;
 
     TEST_NZ(posix_memalign(reinterpret_cast<void**>(&big_pool_data_),
-                sysconf(_SC_PAGESIZE), size));
+                static_cast<size_t>(sysconf(_SC_PAGESIZE)), size));
 
     LOG(INFO) << "Creating memory region" << std::endl;
     TEST_Z(big_pool_mr_ = ibv_reg_mr(

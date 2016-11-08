@@ -41,6 +41,14 @@ public:
 #endif
         alloc_mem = new char[2 * GB];
     }
+
+    ~FullCacheStore() {
+#ifndef CUCKOO
+        delete[] objects_;
+#endif
+        if (alloc_mem)
+            delete[] alloc_mem;
+    }
         
     inline Object get(const ObjectID& name) {
         return objects_[name];
