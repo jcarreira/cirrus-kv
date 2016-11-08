@@ -23,7 +23,8 @@ class BladeLocation {
 public:
     BladeLocation(uint64_t sz, const AllocRec& ar) :
         size(sz), allocRec(ar) {}
-    BladeLocation(){}
+    explicit BladeLocation(uint64_t sz = 0) :
+        size(sz) {}
 
     uint64_t size;
     AllocRec allocRec;
