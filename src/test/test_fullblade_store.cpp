@@ -29,7 +29,12 @@ int main() {
 
     void* d = (Dummy*)new Dummy;
     ((Dummy*)d)->id = 42;
-    store.put(&d, sizeof(Dummy), 1);
+
+    try {
+        store.put(&d, sizeof(Dummy), 1);
+    } catch(...) {
+        std::cerr << "Error inserting into hash table" << std::endl;
+    }
 
     void *d2;
     store.get(1, d2);
