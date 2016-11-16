@@ -27,6 +27,8 @@ BladeAllocServer::BladeAllocServer(int port,
 }
 
 BladeAllocServer::~BladeAllocServer() {
+    if (allocator)
+        delete allocator;
 }
 
 void BladeAllocServer::init() {
