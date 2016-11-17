@@ -77,7 +77,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Received message";
+    LOG(INFO) << "Received message"
+        << std::endl;
 
     // create a big poll
     // and allocate data from here
@@ -89,7 +90,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
             {
                 uint64_t size = msg->data.alloc.size;
 
-                LOG(INFO) << "Received allocation request. size: " << size;
+                LOG(INFO) << "Received allocation request. size: " << size
+                    <<std::endl;
                 void* ptr = allocator->allocate(size);
 
                 uint64_t remote_addr =
@@ -107,7 +109,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                         big_pool_mr_->rkey);
 
                 LOG(INFO) << "Sending ack. "
-                    << " remote_addr: " << remote_addr;
+                    << " remote_addr: " << remote_addr
+                    << std::endl;
 
                 // send async message
                 send_message(id, sizeof(BladeMessage));
@@ -119,7 +122,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 send_message(id, sizeof(BladeMessage));
             break;
         default:
-            LOG(ERROR) << "Unknown message";
+            LOG(ERROR) << "Unknown message"
+                << std::endl;
             exit(-1);
             break;
     }

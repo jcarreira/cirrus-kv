@@ -5,12 +5,30 @@
 
 #include "src/client/RDMAClient.h"
 #include <memory>
+#include <utility>
 #include "src/common/AllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"
 
 namespace sirius {
 
+class FutureBladeOp;
+
 using AllocRec = std::shared_ptr<AllocationRecord>;
+using OpRet = std::pair<bool, FutureBladeOp*>;
+
+class FutureBladeOp {
+public:
+    FutureBladeOp(RDMAOpInfo* info) :
+        op_info(info) {}
+    
+    virtual ~FutureBladeOp();
+
+    void wait();
+    bool try_wait();
+
+private: 
+    RDMAOpInfo* op_info;
+};
 
 class BladeClient : public RDMAClient {
 public:
@@ -22,12 +40,12 @@ public:
 
     AllocRec allocate(uint64_t size);
 
-    bool write(const AllocRec& alloc_rec, uint64_t offset, 
-            uint64_t length, const void* data);
+    OpRet write_async(const AllocRec& alloc_rec,
+            uint64_t offset, uint64_t length, const void* data);
     bool write_sync(const AllocRec& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data);
-    bool read(const AllocRec& alloc_rec, uint64_t offset,
-            uint64_t length, void *data);
+    OpRet read_async(const AllocRec& alloc_rec,
+            uint64_t offset, uint64_t length, void *data);
     bool read_sync(const AllocRec& alloc_rec, uint64_t offset,
             uint64_t length, void *data);
 

@@ -7,7 +7,7 @@
 #include <thread>
 #include <memory>
 #include <rdma/rdma_cma.h>
-#include <semaphore.h>
+#include "src/common/Semaphore.h"
 
 namespace sirius {
 
@@ -20,6 +20,19 @@ struct GeneralContext {
     struct ibv_cq *cq;
     struct ibv_comp_channel *comp_channel;
     std::thread* cq_poller_thread;
+};
+
+// Struct used to carry information from issuing operation
+// to receiving completion
+// this is allocated when issuing and deallocated
+// for async ops this is passed up
+struct RDMAOpInfo {
+    RDMAOpInfo(struct rdma_cm_id* id_, bool use_s, Semaphore* s) :
+        id(id_), use_sem(use_s), op_sem(s) {}
+
+    struct rdma_cm_id* id;
+    bool use_sem;
+    Semaphore* op_sem;
 };
 
 /*
@@ -43,9 +56,9 @@ struct ConnectionContext {
     uint64_t peer_addr;
     uint32_t peer_rkey;
 
-    sem_t rdma_sem;
-    sem_t send_sem;
-    sem_t recv_sem;
+    // these are used for SEND and RECV
+    Semaphore send_sem;
+    Semaphore recv_sem;
     
     GeneralContext gen_ctx_;
 };
@@ -63,13 +76,17 @@ protected:
     void build_connection(struct rdma_cm_id *id);
     void build_context(struct ibv_context *verbs, ConnectionContext*);
 
+    // Message (Send/Recv)
     void send_message(rdma_cm_id*, uint64_t size);
-    void send_message_sync(rdma_cm_id*, uint64_t size);
-    void write_rdma(struct rdma_cm_id *id, uint64_t size,
+    void send_receive_message_sync(rdma_cm_id*, uint64_t size);
+
+    // RDMA (write/read)
+    RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey);
     void write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey);
-    void read_rdma(struct rdma_cm_id *id, uint64_t size, 
+
+    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey);
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey);

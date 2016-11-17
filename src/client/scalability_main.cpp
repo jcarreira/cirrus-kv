@@ -51,7 +51,7 @@ int main() {
         uint64_t elapsed_cum = 0;
         for (int j = 0; j < 20; ++j) {
             sirius::TimerFunction tf("client1.write");
-            client1.write(alloc1, 0, 5, "data1");
+            client1.write_sync(alloc1, 0, 5, "data1");
             elapsed_cum += tf.getUsElapsed();
         }
 

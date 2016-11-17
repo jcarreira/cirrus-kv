@@ -44,15 +44,18 @@ uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     id = id;  // warnings
 
-    LOG(INFO) << "Allocating memory pool of size: " << (size/1024/1024) << "MB "
-        << (size/1024/1024/1024) << "GB";
+    LOG(INFO) << "Allocating memory pool of size: "
+        << (size/1024/1024) << "MB "
+        << (size/1024/1024/1024) << "GB"
+        << std::endl;
 
     void *data;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&data),
                 static_cast<size_t>(sysconf(_SC_PAGESIZE)), size));
     mr_data_.push_back(data);
 
-    LOG(INFO) << "Creating memory region";
+    LOG(INFO) << "Creating memory region"
+        << std::endl;
     ibv_mr* pool;
     TEST_Z(pool = ibv_reg_mr(
                 gen_ctx_.pd, data, size,
@@ -62,7 +65,8 @@ uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     mr_pool_.push_back(pool);
 
-    LOG(INFO) << "Memory region created";
+    LOG(INFO) << "Memory region created"
+        << std::endl;
 
     return 0;
 }
@@ -74,7 +78,8 @@ void BladePoolServer::process_message(rdma_cm_id* id,
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Received message";
+    LOG(INFO) << "Received message"
+        << std::endl;
 
     // we should do this as earlier as possible (closer to when)
     // process starts but cant make it work like that (yet)
@@ -84,7 +89,8 @@ void BladePoolServer::process_message(rdma_cm_id* id,
     switch (msg->type) {
         case ALLOC:
             {
-                LOG(INFO) << "ALLOC";
+                LOG(INFO) << "ALLOC"
+                    << std::endl;
 
                 // we always return pointer to big memory pool
 
@@ -99,7 +105,8 @@ void BladePoolServer::process_message(rdma_cm_id* id,
 
                 LOG(INFO) << "Sending ack. "
                     << " remote_addr: " << remote_addr
-                    << " rkey: " << mr_pool_[0]->rkey;
+                    << " rkey: " << mr_pool_[0]->rkey
+                    << std::endl;
 
                 // send async message
                 send_message(id, sizeof(BladeMessage));

@@ -22,11 +22,8 @@ AuthenticationToken AuthenticationClient::authenticate() {
     AllocatorMessageGenerator::auth1(con_ctx.send_msg, app_id);
 
     // post receive
-    TEST_NZ(post_receive(id_));
     LOG(INFO) << "Sending auth1 msg size: " << sizeof(AllocatorMessage);
-    send_message_sync(id_, sizeof(AllocatorMessage));
-
-    sem_post(&con_ctx.recv_sem);
+    send_receive_message_sync(id_, sizeof(AllocatorMessage));
 
     AllocatorMessage* msg =
         reinterpret_cast<AllocatorMessage*>(con_ctx.recv_msg);

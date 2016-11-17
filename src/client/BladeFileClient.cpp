@@ -41,10 +41,8 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename, uint64_t siz
             filename,
             size);
 
-    // post receive
-    TEST_NZ(post_receive(id_));
     LOG(INFO) << "Sending alloc msg size: " << sizeof(BladeFileMessage);
-    send_message_sync(id_, sizeof(BladeFileMessage));
+    send_receive_message_sync(id_, sizeof(BladeFileMessage));
 
     BladeFileMessage* msg =
         reinterpret_cast<BladeFileMessage*>(con_ctx.recv_msg);
@@ -94,7 +92,7 @@ bool BladeFileClient::write(const FileAllocRec& alloc_rec,
         return false;
 
     std::memcpy(con_ctx.send_msg, data, length);
-    write_rdma(id_, length,
+    write_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
 
     return true;
@@ -137,7 +135,7 @@ bool BladeFileClient::read(const FileAllocRec& alloc_rec,
         << " remote_addr: " << alloc_rec->remote_addr
         << " rkey: " << alloc_rec->peer_rkey;
 
-    read_rdma(id_, length,
+    read_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
 
     {

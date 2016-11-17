@@ -3,34 +3,48 @@
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_
 
-#include <boost/thread/condition.hpp>
-#include <boost/thread/mutex.hpp>
+#include <semaphore.h>
 
 namespace sirius {
 
 class Semaphore {
 public:
-    Semaphore()
-        : count_()
-    {}
+    Semaphore(int initialCount = 0) {
+        sem_init(&m_sema, 0, initialCount);
+    }
 
-    void notify() {
-        boost::mutex::scoped_lock lock(mutex_);
-        ++count_;
-        condition_.notify_one();
+    virtual ~Semaphore() {
+        sem_destroy(&m_sema);
     }
 
     void wait() {
-        boost::mutex::scoped_lock lock(mutex_);
-        while(!count_)
-            condition_.wait(lock);
-        --count_;
+        int rc;
+        do {
+            rc = sem_wait(&m_sema);
+        }
+        while (rc == -1 && errno == EINTR);
     }
 
+    void signal() {
+        sem_post(&m_sema);
+    }
+
+    void signal(int count) {
+        while (count-- > 0) {
+            sem_post(&m_sema);
+        }
+    }
+    
+    bool trywait() {
+        int ret = sem_trywait(&m_sema);
+        return ret != 1;
+    }
 private:
-    boost::mutex mutex_;
-    boost::condition_variable condition_;
-    unsigned long count_;
+    sem_t m_sema;
+
+    Semaphore(const Semaphore& other) = delete;
+    Semaphore& operator=(const Semaphore& other) = delete;
+
 };
 
 }
