@@ -12,13 +12,13 @@ FullBladeObjectStore::FullBladeObjectStore(const std::string& bladeIP,
     client.connect(bladeIP, port);
 }
 
-Object FullBladeObjectStore::get(ObjectID id) {
+Object FullBladeObjectStore::get(const ObjectID& id) const {
     // We do not implement this because
     // this store does not cache locally
     return 0;
 }
 
-void FullBladeObjectStore::get(ObjectID id, void*& ptr) {
+void FullBladeObjectStore::get(ObjectID id, void*& ptr) const {
     BladeLocation loc;
     if (objects_.find(id, loc)) {
         readToLocal(loc, ptr);
@@ -40,7 +40,7 @@ bool FullBladeObjectStore::put(Object obj, uint64_t size, ObjectID id) {
     }
 }
 
-bool FullBladeObjectStore::readToLocal(BladeLocation loc, void* ptr) {
+bool FullBladeObjectStore::readToLocal(BladeLocation loc, void* ptr) const {
     client.read_sync(loc.allocRec, 0, loc.size, ptr);
     return true;
 }
@@ -57,7 +57,7 @@ bool FullBladeObjectStore::insertObjectLocation(ObjectID id,
     return true;
 }
 
-void FullBladeObjectStore::printStats() {
+void FullBladeObjectStore::printStats() const noexcept {
 }
 
 }  //  namespace sirius

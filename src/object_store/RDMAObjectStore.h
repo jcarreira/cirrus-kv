@@ -5,6 +5,7 @@
 
 #include "src/object_store/ObjectStore.h"
 #include "src/object_store/FullCacheStore.h"
+#include "src/object_store/EvictionPolicy.h"
 #include "src/client/BladeClient.h"
 
 namespace sirius {
@@ -12,13 +13,15 @@ namespace sirius {
 class RDMAObjectStore : public ObjectStore {
 public:
     RDMAObjectStore(const std::string& blade_addr,
-        const std::string& port);
+        const std::string& port, EvictionPolicy* ev);
+    virtual ~RDMAObjectStore();
 
     Object get(ObjectID);
     bool put(Object, uint64_t, ObjectID);
     virtual void printStats();
 
 private:
+    EvictionPolicy* ep;
     // cache of objects
     mutable FullCacheStore cache_;
     BladeClient client;

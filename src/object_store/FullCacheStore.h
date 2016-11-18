@@ -17,77 +17,55 @@
 #include "src/utils/utils.h"
 
 //#define GOOGLE
-//#define CUCKOO
+#define CUCKOO
 
 #ifdef GOOGLE
 #include <google/dense_hash_map>
 #endif
 
 static const uint64_t GB = 1024*1024*1024;
+static const size_t SIZE = 10000000; // FIX 
 
 namespace sirius {
 
-class FullCacheStore {
+class FullCacheStore : public ObjectStore {
 public:
     FullCacheStore()
-    //   : ObjectStore()
+       : ObjectStore()
     {
 #ifdef GOOGLE
         objects_.set_empty_key(ObjectID());
         sem_init(&hash_sem, 0, 1);
 #elif !defined(CUCKOO)
-        objects_ = new void*[10000000];
-        std::memset(objects_, 0, 10000000 * sizeof(void*));
+        // ugh
+        objects_ = reinterpret_cast<void**>(new size_t[SIZE]);
+        std::memset(objects_, 0, SIZE * sizeof(void*));
 #endif
+
+        // we need a serious allocation mechanism here
+        // right now we use this big hack
         alloc_mem = new char[2 * GB];
+
+        if (!alloc_mem)
+            DIE("Error allocating cache memory");
     }
 
     ~FullCacheStore() {
-#ifndef CUCKOO
-        delete[] objects_;
+#if !defined(CUCKOO) && !defined(GOOGLE)
+        if (objects_)
+            delete[] objects_;
 #endif
         if (alloc_mem)
             delete[] alloc_mem;
     }
         
-    inline Object get(const ObjectID& name) {
+    inline Object get(const ObjectID& name) const {
         return objects_[name];
     }
-        
-//    //    std::cout << "Getting name: " << name
-//    //        << std::endl;
-//
-//        Object ret;
-//#ifdef GOOGLE
-//        google::dense_hash_map<ObjectID, Object>::iterator it;
-//        sem_wait(&hash_sem);
-//        it = objects_.find(name);
-//        if (it == objects_.end()) {
-//            sem_post(&hash_sem);
-//#elif defined(CUCKOO)
-//        bool found = objects_.find(name, ret);
-//        if (!found) {
-//#else
-//        if ((ret = objects_[name]) == 0) {
-//#endif
-//            return 0;
-//        } else {
-//#ifdef GOOGLE
-//            ret = it->second;
-//            sem_post(&hash_sem);
-//#endif
-//            return ret;
-//        }
-//    }
 
     inline bool put(Object obj, uint64_t size, ObjectID name) {
-        // right now we use C++ allocator
-        // later I may use my own thing
         void *mem = 0;
         
-    //    std::cout << "Putting name: " << name
-    //        << std::endl;
-       
 #ifdef GOOGLE 
         sem_wait(&hash_sem);
         google::dense_hash_map<ObjectID, Object>::iterator it;
@@ -99,12 +77,9 @@ public:
 #else
         if (!(mem = objects_[name])) {
 #endif
-            //mem = new char[size];
             mem = reinterpret_cast<void*>(
                     reinterpret_cast<uint64_t>(alloc_mem) + mem_last_index);
             mem_last_index += size;
-            if (!mem)
-                DIE("Error allocating cache memory");
             objects_[name] = mem;
         } else {
 #ifdef GOOGLE
@@ -122,7 +97,7 @@ public:
         return true;
     }
 
-    void printStats() {
+    void printStats() const noexcept {
 #if defined(GOOGLE) || defined(CUCKOO)
         std::cout << "Cache size: " 
             << objects_.size() << std::endl;
@@ -136,21 +111,42 @@ public:
 #endif
     }
 
+    size_t getNumObjs() const noexcept {
+#if defined(GOOGLE)  || defined(CUCKOO)
+        return objects_.size();
+#else
+#error "We don't support this right now"
+#endif
+
+    }
+
+    // we assume cache is not empty
+    // we just drop 'first' object
+    bool dropRandomObj() {
+#ifdef GOOGLE
+        objects_.erase(objects_.begin());
+#elif defined(CUCKOO)
+        auto tbl = objects_.lock_table();
+        auto it = tbl.begin();
+        objects_.erase(it->first);
+#else
+#error "We dont support this"
+#endif
+        return true;
+    }
+
 private:
-    void* alloc_mem;
+    char* alloc_mem;
     uint64_t mem_last_index = 0;
 #ifdef GOOGLE
     google::dense_hash_map<ObjectID, Object> objects_;
-#elif CUCKOO
+#elif defined(CUCKOO)
     cuckoohash_map<ObjectID, Object, CityHasher<ObjectID> > objects_;
 #else
-    // assume names are integers
-//    std::vector<Object> objects_;
+    // assume names are values >= 0
     void** objects_;
 #endif
     sem_t hash_sem;
-
-    uint64_t CACHE_SIZE = 10000000;
 };
 
 }
