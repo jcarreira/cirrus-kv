@@ -136,18 +136,9 @@ int main() {
             std::istreambuf_iterator<char>(),
             data);
 
-    LOG(INFO) << "Copying done";
+    LOG(INFO) << "Copying done" << std::endl;
 
-//    sirius::BladeClient client;
-//    client.connect("10.10.49.88", PORT);
-//    sirius::AllocRec alloc1 = client.allocate(file_size);
-//
-//    {
-//        sirius::TimerFunction tf("RDMA write", true);
-//        client.write_sync(alloc1, 0, file_size, data);
-//    }
-//
-    LOG(INFO) << "Data written";
+    LOG(INFO) << "Data written" << std::endl;
 
     uint64_t count = 0;
 
@@ -174,14 +165,12 @@ int main() {
                 index++;
             uint64_t last_of_word = index;
             MyString str(start_of_word, last_of_word, data);
-            //if (str == MyString())
-            //    continue;
             wc2[i][str]++;
         }
     }
 
-    LOG(INFO) << "Words counted";
-    LOG(INFO) << "count: " << count;
+    LOG(INFO) << "Words counted" << std::endl;
+    LOG(INFO) << "count: " << count << std::endl;
 
     return 0;
 }

@@ -24,11 +24,10 @@ struct Dummy {
 };
 
 int main() {
-
     sirius::FullBladeObjectStore store("10.10.49.87", PORT);
 
-    void* d = (Dummy*)new Dummy;
-    ((Dummy*)d)->id = 42;
+    void* d = reinterpret_cast<Dummy*>(new Dummy);
+    reinterpret_cast<Dummy*>(d)->id = 42;
 
     try {
         store.put(&d, sizeof(Dummy), 1);
@@ -40,7 +39,7 @@ int main() {
     store.get(1, d2);
 
     // should be 42
-    std::cout << "d2.id: " << ((Dummy*)d2)->id << std::endl;
+    std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
 
     return 0;
 }

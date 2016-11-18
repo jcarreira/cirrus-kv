@@ -134,18 +134,8 @@ int main() {
             std::istreambuf_iterator<char>(),
             data);
 
-    LOG(INFO) << "Copying done";
-
-    //sirius::BladeClient client;
-    //client.connect("10.10.49.88", PORT);
-    //sirius::AllocRec alloc1 = client.allocate(file_size);
-
-    //{
-    //    sirius::TimerFunction tf("RDMA write", true);
-    //    client.write_sync(alloc1, 0, file_size, data);
-    //}
-
-    LOG(INFO) << "Data written";
+    LOG(INFO) << "Copying done" << std::endl;
+    LOG(INFO) << "Data written" << std::endl;
 
     uint64_t index = 0;
     uint64_t count = 0;

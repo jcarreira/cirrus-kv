@@ -4,7 +4,6 @@
 #include "src/utils/InfinibandSupport.h"
 #include "src/utils/utils.h"
 #include "src/utils/logging.h"
-#include <cstring>
 
 namespace sirius {
 
