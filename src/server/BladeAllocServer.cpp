@@ -2,13 +2,13 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <boost/interprocess/creation_tags.hpp>
 #include "src/server/BladeAllocServer.h"
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/InfinibandSupport.h"
-#include <boost/interprocess/creation_tags.hpp>
 
 namespace sirius {
 

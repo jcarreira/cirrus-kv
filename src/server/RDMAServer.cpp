@@ -217,7 +217,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     // to avoid needing this id (?)
     TEST_NZ(rdma_create_qp(id, gen_ctx_.pd, &qp_attr));
 
-    LOG(INFO) << "max_inline_data: " << qp_attr.cap.max_inline_data << std::endl;
+    LOG(INFO) << "max_inline_data: "
+        << qp_attr.cap.max_inline_data << std::endl;
 }
 
 // connection has been established by now

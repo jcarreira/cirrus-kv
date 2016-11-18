@@ -1,14 +1,15 @@
 /* Copyright 2016 Joao Carreira */
 
+#include "src/server/BladeFileAllocServer.h"
 #include <unistd.h>
 #include <errno.h>
-#include "src/server/BladeFileAllocServer.h"
+#include <boost/interprocess/creation_tags.hpp>
+#include <string>
 #include "src/common/BladeFileMessage.h"
 #include "src/common/BladeFileMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/InfinibandSupport.h"
-#include <boost/interprocess/creation_tags.hpp>
 
 namespace sirius {
 
@@ -83,56 +84,56 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             &BladeFileAllocServer::create_pool, this, big_pool_size_);
 
     switch (msg->type) {
-        case ALLOC:
-            {
-                uint64_t size = msg->data.alloc.size;
-                std::string filename = msg->data.alloc.filename;
-                
-                LOG(INFO) << "Received allocation request. " 
-                    << "filename: " << filename
-                    << "size: " << size << std::endl;
+    case ALLOC:
+        {
+           uint64_t size = msg->data.alloc.size;
+           std::string filename = msg->data.alloc.filename;
 
-                if (file_to_alloc_.find(filename) != file_to_alloc_.end()) {
-                    // file already allocated here
-                    BladeFileMessageGenerator::alloc_ack_msg(
-                            ctx->send_msg,
-                            reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
-                            big_pool_mr_->rkey);
+           LOG(INFO) << "Received allocation request. "
+                << "filename: " << filename
+                << "size: " << size << std::endl;
 
-                    LOG(INFO) << "File exists. Sending ack. " << std::endl;
-                    send_message(id, sizeof(BladeFileMessage));
-                    return;
-                }
-
-                void* ptr = allocator->allocate(size);
-
-                uint64_t remote_addr =
-                    reinterpret_cast<uint64_t>(ptr);
-
-                uint64_t alloc_id = num_allocs_++;
-                file_to_alloc_[filename] = BladeAllocation(ptr);
-
+            if (file_to_alloc_.find(filename) != file_to_alloc_.end()) {
+                // file already allocated here
                 BladeFileMessageGenerator::alloc_ack_msg(
-                        ctx->send_msg,
-                        remote_addr,
-                        big_pool_mr_->rkey);
+                       ctx->send_msg,
+                       reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
+                       big_pool_mr_->rkey);
 
-                LOG(INFO) << "Sending ack. "
-                    << " remote_addr: " << remote_addr << std::endl;
-
-                // send async message
+                LOG(INFO) << "File exists. Sending ack. " << std::endl;
                 send_message(id, sizeof(BladeFileMessage));
-
-                break;
+                return;
             }
-        case STATS:
-            BladeFileMessageGenerator::stats_msg(ctx->send_msg);
+
+            void* ptr = allocator->allocate(size);
+
+            uint64_t remote_addr =
+                reinterpret_cast<uint64_t>(ptr);
+
+            uint64_t alloc_id = num_allocs_++;
+            file_to_alloc_[filename] = BladeAllocation(ptr);
+
+            BladeFileMessageGenerator::alloc_ack_msg(
+                    ctx->send_msg,
+                    remote_addr,
+                    big_pool_mr_->rkey);
+
+            LOG(INFO) << "Sending ack. "
+                << " remote_addr: " << remote_addr << std::endl;
+
+            // send async message
             send_message(id, sizeof(BladeFileMessage));
+
             break;
-        default:
-            LOG(ERROR) << "Unknown message" << std::endl;
-            exit(-1);
-            break;
+        }
+    case STATS:
+        BladeFileMessageGenerator::stats_msg(ctx->send_msg);
+        send_message(id, sizeof(BladeFileMessage));
+        break;
+    default:
+        LOG(ERROR) << "Unknown message" << std::endl;
+        exit(-1);
+        break;
     }
 }
 
