@@ -34,7 +34,8 @@ bool BladeFileClient::authenticate(std::string address,
     return auth_token.allow;
 }
 
-FileAllocRec BladeFileClient::allocate(const std::string& filename, uint64_t size) {
+FileAllocRec BladeFileClient::allocate(const std::string& filename,
+        uint64_t size) {
     LOG(INFO) << "Allocating " << size << " bytes";
 
     BladeFileMessageGenerator::alloc_msg(con_ctx.send_msg,

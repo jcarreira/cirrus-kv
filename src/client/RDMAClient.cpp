@@ -46,10 +46,9 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
         << std::endl;
 
     {
-        LOG(INFO) << "Registering region with size: " 
+        LOG(INFO) << "Registering region with size: "
             << (RECV_MSG_SIZE/1024/1024) << " MB"
             << std::endl;
-        //TimerFunction tf("Registering memory region", true);
         TEST_Z(con_ctx.recv_msg_mr =
                 ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
                     RECV_MSG_SIZE,
@@ -193,7 +192,8 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
     }
 }
 
-void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id, uint64_t size) {
+void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
+        uint64_t size) {
     ConnectionContext *con_ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -246,15 +246,6 @@ void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     delete op_info->op_sem;
 }
 
-//// When doing async we pass the sem info up
-//RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-//        uint64_t remote_addr, uint64_t peer_rkey) {
-//    RDMAOpInfo* op_info = write_rdma(id, size, remote_addr, peer_rkey);
-//
-//    // upper layer becomes responsible for releasing info
-//    return op_info;
-//}
-
 RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey) {
     ConnectionContext *ctx =
@@ -297,13 +288,6 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     delete op_info->op_sem;
 }
 
-//RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
-//        uint64_t remote_addr, uint64_t peer_rkey) {
-//    RDMAOpInfo* op_info = read_rdma(id, size, remote_addr, peer_rkey);
-//
-//    return op_info;
-//}
-
 RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey) {
     ConnectionContext *ctx =
@@ -341,7 +325,7 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
     struct addrinfo *addr;
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = NULL;
-    
+
     LOG(INFO) << "connect(" << host << ", " << port << ")"
         << std::endl;
 

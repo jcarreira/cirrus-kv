@@ -13,7 +13,7 @@
 
 namespace sirius {
 
-#define MakeOpRet(success, OpInfo) std::make_pair((success),\
+#define MakeOpRet(success, OpInfo) std::make_pair((success), \
         reinterpret_cast<FutureBladeOp*>(OpInfo))
 
 BladeClient::BladeClient(int timeout_ms)
@@ -38,7 +38,7 @@ bool BladeClient::authenticate(std::string address,
 }
 
 AllocRec BladeClient::allocate(uint64_t size) {
-    LOG(INFO) << "Allocating " 
+    LOG(INFO) << "Allocating "
         << size << " bytes"
         << std::endl;
 
@@ -169,7 +169,7 @@ void FutureBladeOp::wait() {
 
 bool FutureBladeOp::try_wait() {
     int ret = op_info->op_sem->trywait();
-    
+
     return ret != -1;
 }
 

@@ -9,7 +9,6 @@
 #include "src/common/AllocationRecord.h"
 #include "src/utils/logging.h"
 #include "src/utils/TimerFunction.h"
-#include "src/utils/logging.h"
 
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);

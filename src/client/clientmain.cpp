@@ -13,7 +13,6 @@
 #include "src/authentication/AuthenticationToken.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/TimerFunction.h"
-#include "src/utils/logging.h"
 
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
@@ -52,10 +51,12 @@ void test_async() {
         << " peer_rkey: " << alloc1->peer_rkey
         << std::endl;
 
-    sirius::OpRet ret1 = client.write_async(alloc1, 0, std::strlen(to_send), to_send);
+    sirius::OpRet ret1 = client.write_async(alloc1, 0,
+            std::strlen(to_send), to_send);
     ret1.second->wait();
 
-    sirius::OpRet ret2 = client.read_async(alloc1, 0, std::strlen(to_send), data);
+    sirius::OpRet ret2 = client.read_async(alloc1, 0,
+            std::strlen(to_send), data);
     ret2.second->wait();
 
     if (!ret1.first || !ret2.first)
@@ -90,7 +91,7 @@ void test_allocation() {
         LOG(ERROR) << "Wrong data read" << std::endl;
         exit(-1);
     }
-    
+
     sirius::AllocRec alloc2 = client.allocate(2 * MB);
     LOG(INFO) << "Received allocation 2. id: " << alloc2->alloc_id
         << " remote_addr: " << alloc2->remote_addr
@@ -248,12 +249,12 @@ void test_destructor() {
 }
 
 int main() {
-    //test_1_client();
+    // test_1_client();
     // test_2_clients();
     // test_performance();
     // test_authentication();
     // test_destructor();
-    //test_allocation();
+    // test_allocation();
     test_async();
     return 0;
 }

@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <memory>
+#include <cstring>
 #include <rdma/rdma_cma.h>
 #include "src/common/Semaphore.h"
 
@@ -45,7 +46,9 @@ struct ConnectionContext {
         recv_msg(0),
         recv_msg_mr(0),
         peer_addr(0),
-        peer_rkey(0) {}
+        peer_rkey(0) {
+          memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
+        }
     
     void *send_msg;
     struct ibv_mr *send_msg_mr;

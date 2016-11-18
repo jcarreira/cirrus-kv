@@ -51,7 +51,7 @@ void test_allocation() {
     LOG(INFO) << "Received data 1: " << data << std::endl;
     if (strncmp(data, to_send, strlen(to_send)) != 0)
         exit(-1);
-    
+
     sirius::FileAllocRec alloc2 = client.allocate("/tmp/test", 2 * MB);
     LOG(INFO) << "Received allocation 2."
         << " remote_addr: " << alloc2->remote_addr
@@ -59,7 +59,7 @@ void test_allocation() {
 
     client.read_sync(alloc2, 0, strlen(to_send), data);
     LOG(INFO) << "Received data 2: " << data << std::endl;
-    
+
     client.write_sync(alloc1, 2, 2, "TT");
     client.read_sync(alloc1, 0, strlen(to_send), data);
     LOG(INFO) << "Received data 3: " << data << std::endl;
