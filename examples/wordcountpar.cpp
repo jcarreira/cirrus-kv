@@ -136,9 +136,9 @@ int main() {
             std::istreambuf_iterator<char>(),
             data);
 
-    LOG(INFO) << "Copying done" << std::endl;
+    sirius::LOG<sirius::INFO>("Copying done");
 
-    LOG(INFO) << "Data written" << std::endl;
+    sirius::LOG<sirius::INFO>("Data written");
 
     uint64_t count = 0;
 
@@ -151,8 +151,8 @@ int main() {
         uint64_t index = l;
 
 
-        LOG(INFO) << "Running thread " << omp_get_thread_num();
-        LOG(INFO) << "Num threads " << omp_get_num_threads();
+        sirius::LOG<sirius::INFO>("Running thread ", omp_get_thread_num());
+        sirius::LOG<sirius::INFO>("Num threads ", omp_get_num_threads());
 
         sirius::TimerFunction tf("Traverse data", true);
 
@@ -169,8 +169,8 @@ int main() {
         }
     }
 
-    LOG(INFO) << "Words counted" << std::endl;
-    LOG(INFO) << "count: " << count << std::endl;
+    sirius::LOG<sirius::INFO>("Words counted");
+    sirius::LOG<sirius::INFO>("count: ", count);
 
     return 0;
 }

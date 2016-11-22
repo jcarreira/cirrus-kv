@@ -10,9 +10,6 @@
 #include <string>
 #include <cctype>
 
-#include "src/client/BladeClient.h"
-#include "src/utils/logging.h"
-#include "src/utils/TimerFunction.h"
 #include "src/object_store/FullBladeObjectStore.h"
 
 static const uint64_t GB = (1024*1024*1024);

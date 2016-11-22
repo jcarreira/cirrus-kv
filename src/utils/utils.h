@@ -13,10 +13,14 @@
 }
 
 // die if not zero
-//#define TEST_NZ(x) do { if ( (x)) DIE("error: " #x " failed (returned non-zero)." ); } while (0)
-#define TEST_NZ(x) do { if (x) \
-          DIE("error: " #x " failed (returned non-zero)."); \
-        } while (0);
+#define TEST_NZ(x) do { if ( (x)) DIE("error: " #x " failed (returned non-zero)." ); } while (0)
+
+//template<typename T>
+//void TEST_NZ(const T& t) {
+//    if (t) {
+//        DIE("error: " #x " failed (returned non-zero).");
+//    }
+//}
 
 // die if zero
 #define TEST_Z(x)  do { if (!(x)) DIE("error: " #x " failed (returned zero/null)."); } while (0)

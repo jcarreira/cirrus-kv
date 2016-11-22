@@ -7,9 +7,6 @@
 
 namespace sirius {
 
-InfinibandSupport::InfinibandSupport() {
-}
-
 void InfinibandSupport::check_mw_support(ibv_context* ctx) {
     struct ibv_exp_device_attr device_attr;
 
@@ -19,7 +16,7 @@ void InfinibandSupport::check_mw_support(ibv_context* ctx) {
     ibv_exp_query_device(ctx, &device_attr);
     if (device_attr.exp_device_cap_flags & IBV_EXP_DEVICE_MEM_WINDOW ||
             device_attr.exp_device_cap_flags & IBV_EXP_DEVICE_MW_TYPE_2B) {
-        LOG(INFO) << "MW supported";
+        LOG<INFO>("MW supported");
     } else {
         DIE("MW not supported");
     }
@@ -34,9 +31,9 @@ void InfinibandSupport::check_odp_support(ibv_context* ctx) {
 
     ibv_exp_query_device(ctx, &device_attr);
     if (device_attr.exp_device_cap_flags & IBV_EXP_DEVICE_ODP) {
-        LOG(INFO) << "ODP supported";
+        LOG<INFO>("ODP supported");
     } else {
-        LOG(INFO) << "ODP not supported!";
+        LOG<INFO>("ODP not supported!");
     }
 }
 

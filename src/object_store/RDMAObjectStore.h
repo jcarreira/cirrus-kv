@@ -14,14 +14,14 @@ class RDMAObjectStore : public ObjectStore {
 public:
     RDMAObjectStore(const std::string& blade_addr,
         const std::string& port, EvictionPolicy* ev);
-    virtual ~RDMAObjectStore();
+    virtual ~RDMAObjectStore() = default;
 
     Object get(ObjectID);
     bool put(Object, uint64_t, ObjectID);
     virtual void printStats();
 
 private:
-    EvictionPolicy* ep;
+    std::unique_ptr<EvictionPolicy> ep;
     // cache of objects
     mutable FullCacheStore cache_;
     BladeClient client;

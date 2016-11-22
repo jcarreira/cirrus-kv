@@ -5,11 +5,10 @@
 #include "src/utils/logging.h"
 
 static const uint64_t GB = (1024*1024*1024);
-
 static const int PORT = 12345;
 
 void ctrlc_handler(int sig_num) {
-    LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num << std::endl;
+    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -20,17 +19,17 @@ void set_ctrlc_handler() {
     sigemptyset(&sig_int_handler.sa_mask);
     sig_int_handler.sa_flags = 0;
 
-    sigaction(SIGINT, &sig_int_handler, NULL);
+    sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
-int main() {
-    LOG(INFO) << "Starting RDMA server in port: " << PORT << std::endl;
+auto main() -> int {
+    sirius::LOG<sirius::INFO>("Starting RDMA server in port: ", PORT);
 
     sirius::BladePoolServer server(PORT, 10 * GB);
 
     server.init();
 
-    LOG(INFO) << "Running server's loop" << std::endl;
+    sirius::LOG<sirius::INFO>("Running server's loop");
     server.loop();
 
     return 0;

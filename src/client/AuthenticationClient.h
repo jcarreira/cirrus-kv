@@ -11,7 +11,7 @@ namespace sirius {
 class AuthenticationClient : public RDMAClient {
 public:
     AuthenticationClient(int timeout_ms = 500);
-    ~AuthenticationClient();
+    ~AuthenticationClient() = default;
 
     AuthenticationToken authenticate();
 

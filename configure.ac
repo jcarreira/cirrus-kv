@@ -18,12 +18,13 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+AX_CXX_COMPILE_STDCXX_14
 
-CXXFLAGS="-std=c++11 -fPIC"
+CXXFLAGS="-fPIC -std=c++1z"
 
 # Checks for libraries.
-AC_CHECK_LIB([ibverbs], [ibv_create_qp])
-AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
+#AC_CHECK_LIB([ibverbs], [ibv_create_qp])
+#AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
 # Checks for header files.
 AC_CHECK_HEADERS([netdb.h stdint.h stdlib.h sys/socket.h \

@@ -22,13 +22,7 @@ BladeAllocServer::BladeAllocServer(int port,
     big_pool_data_(0),
     big_pool_size_(pool_size),
     num_allocs_(0),
-    mem_allocated(0),
-    allocator(0) {
-}
-
-BladeAllocServer::~BladeAllocServer() {
-    if (allocator)
-        delete allocator;
+    mem_allocated(0) {
 }
 
 void BladeAllocServer::init() {
@@ -48,37 +42,34 @@ void BladeAllocServer::handle_disconnection(struct rdma_cm_id* id) {
 bool BladeAllocServer::create_pool(uint64_t size) {
     TimerFunction tf("create_pool");
 
-    LOG(INFO) << "Allocating memory pool of size: " << size << std::endl;
+    LOG<INFO>("Allocating memory pool of size:", size);
 
     TEST_NZ(posix_memalign(reinterpret_cast<void**>(&big_pool_data_),
                 static_cast<size_t>(sysconf(_SC_PAGESIZE)), size));
 
-    LOG(INFO) << "Creating memory region" << std::endl;
+    LOG<INFO>("Creating memory region");
     TEST_Z(big_pool_mr_ = ibv_reg_mr(
                 gen_ctx_.pd, big_pool_data_, size,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE |
                 IBV_ACCESS_REMOTE_READ));
 
-    LOG(INFO) << "Memory region created" << std::endl;
+    LOG<INFO>("Memory region created");
 
     // create allocator
-    allocator = new
+    allocator.reset(new
         boost::interprocess::managed_external_buffer(
-                boost::interprocess::create_only_t(), big_pool_data_, size);
+                boost::interprocess::create_only_t(), big_pool_data_, size));
 
     return true;
 }
 
 void BladeAllocServer::process_message(rdma_cm_id* id,
         void* message) {
-    BladeMessage* msg =
-        reinterpret_cast<BladeMessage*>(message);
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto msg = reinterpret_cast<BladeMessage*>(message);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Received message"
-        << std::endl;
+    LOG<INFO>("Received message");
 
     // create a big poll
     // and allocate data from here
@@ -90,8 +81,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
             {
                 uint64_t size = msg->data.alloc.size;
 
-                LOG(INFO) << "Received allocation request. size: " << size
-                    <<std::endl;
+                LOG<INFO>("Received allocation request. size: ", size);
                 void* ptr = allocator->allocate(size);
 
                 uint64_t remote_addr =
@@ -108,9 +98,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                         remote_addr,
                         big_pool_mr_->rkey);
 
-                LOG(INFO) << "Sending ack. "
-                    << " remote_addr: " << remote_addr
-                    << std::endl;
+                LOG<INFO>("Sending ack. ",
+                    " remote_addr:", remote_addr);
 
                 // send async message
                 send_message(id, sizeof(BladeMessage));
@@ -122,8 +111,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 send_message(id, sizeof(BladeMessage));
             break;
         default:
-            LOG(ERROR) << "Unknown message"
-                << std::endl;
+            LOG<ERROR>("Unknown message");
             exit(-1);
             break;
     }

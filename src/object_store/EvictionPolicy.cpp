@@ -8,7 +8,4 @@ EvictionPolicy::EvictionPolicy(size_t max_num_objs) :
     max_num_objs_(max_num_objs) {
 }
 
-EvictionPolicy::~EvictionPolicy() {
-}
-
 }  // namespace sirius

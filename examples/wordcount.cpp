@@ -134,8 +134,8 @@ int main() {
             std::istreambuf_iterator<char>(),
             data);
 
-    LOG(INFO) << "Copying done" << std::endl;
-    LOG(INFO) << "Data written" << std::endl;
+    sirius::LOG<sirius::INFO>("Copying done");
+    sirius::LOG<sirius::INFO>("Data written");
 
     uint64_t index = 0;
     uint64_t count = 0;
@@ -156,9 +156,9 @@ int main() {
         }
     }
 
-    LOG(INFO) << "Words counted";
-    LOG(INFO) << "size: " << wc2.size();
-    LOG(INFO) << "count: " << count;
+    sirius::LOG<sirius::INFO>("Words counted");
+    sirius::LOG<sirius::INFO>("size: ", wc2.size());
+    sirius::LOG<sirius::INFO>("count: ", count);
 
     return 0;
 }

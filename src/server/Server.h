@@ -6,7 +6,9 @@
 namespace sirius {
 
 class Server {
-
+public:
+    Server() = default;
+    Server(Server&) = delete;
 };
 
 } // sirius

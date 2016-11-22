@@ -22,13 +22,13 @@ class BladePoolServer : public RDMAServer {
 public:
     BladePoolServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
-    virtual ~BladePoolServer();
-    virtual void init();
+    virtual ~BladePoolServer() = default;
+    void init() final override;
 
 private:
-    void process_message(rdma_cm_id*, void* msg);
-    void handle_connection(struct rdma_cm_id* id);
-    void handle_disconnection(struct rdma_cm_id* id);
+    void process_message(rdma_cm_id*, void* msg) final override;
+    void handle_connection(struct rdma_cm_id* id) final override;
+    void handle_disconnection(struct rdma_cm_id* id) final override;
 
     uint32_t create_pool(uint64_t size, struct rdma_cm_id*);
 

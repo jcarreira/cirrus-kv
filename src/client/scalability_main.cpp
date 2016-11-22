@@ -15,7 +15,7 @@ static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
 
 void ctrlc_handler(int sig_num) {
-    LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;
+    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -26,7 +26,7 @@ void set_ctrlc_handler() {
     sigemptyset(&sig_int_handler.sa_mask);
     sig_int_handler.sa_flags = 0;
 
-    sigaction(SIGINT, &sig_int_handler, NULL);
+    sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
 char data[100] = {0};
@@ -34,7 +34,7 @@ char data[100] = {0};
 int main() {
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    LOG(INFO) << "Starting RDMA server in port: " << PORT;
+    sirius::LOG<sirius::INFO>("Starting RDMA server in port: ", PORT);
 
     sirius::BladeClient client1, client2;
 
@@ -44,7 +44,7 @@ int main() {
         std::cout << "Allocating " << i << "MB" << std::endl;
         sirius::AllocRec alloc1 = client1.allocate(i * MB);
 
-        LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
+        sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1->alloc_id);
 
         // average latencies
         uint64_t elapsed_cum = 0;

@@ -69,7 +69,9 @@ struct ConnectionContext {
 class RDMAClient {
 public:
     RDMAClient(int timeout_ms = 500);
-    ~RDMAClient();
+    //RDMAClient(RDMAClient&) = delete;
+    virtual ~RDMAClient();
+
     virtual void connect(const std::string& host, const std::string& port);
 
 protected:
@@ -107,7 +109,7 @@ protected:
 
     ConnectionContext con_ctx;
 
-    const size_t GB = (1024*1024*1024);
+    const size_t GB = (1024 * 1024 * 1024);
     const size_t RECV_MSG_SIZE = 2 * GB;
     const size_t SEND_MSG_SIZE = 2 * GB;
 };

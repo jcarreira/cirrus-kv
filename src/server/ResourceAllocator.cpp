@@ -25,7 +25,6 @@ ResourceAllocator::ResourceAllocator(int port,
 }
 
 ResourceAllocator::~ResourceAllocator() {
-    delete authenticator_;
 }
 
 void ResourceAllocator::init() {
@@ -34,22 +33,17 @@ void ResourceAllocator::init() {
 
 void ResourceAllocator::send_challenge(rdma_cm_id* id,
         const AllocatorMessage& msg) {
-    AuthenticationToken token =
-        AuthenticationToken::create_default_allow_token();  // allow
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto token = AuthenticationToken::create_default_allow_token();  // allow
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     AllocatorMessageGenerator::auth_ack1(
-            ctx->send_msg,
-            1,
-            42);
+            ctx->send_msg, 1, 42);
     send_message(id, sizeof(AllocatorMessage));
 }
 
 void ResourceAllocator::send_stats(rdma_cm_id* id,
         const AllocatorMessage& msg) {
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     AllocatorMessageGenerator::stats_ack(
             ctx->send_msg,
@@ -58,17 +52,15 @@ void ResourceAllocator::send_stats(rdma_cm_id* id,
 }
 
 void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
-    AllocatorMessage* msg =
-        reinterpret_cast<AllocatorMessage*>(message);
+    auto msg = reinterpret_cast<AllocatorMessage*>(message);
 
-    LOG(INFO) << "ResourceAllocator Received message";
+    LOG<INFO>("ResourceAllocator Received message");
 
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     switch (msg->type) {
         case AUTH1:
-            LOG(INFO) << "ResourceAllocator AUTH1";
+            LOG<INFO>("ResourceAllocator AUTH1");
             // we get the application public key
             // we could also get an ID here
             // ApplicationKey* ak = &msg->data.auth.application_key;
@@ -78,7 +70,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
 
             break;
         case AUTH2:
-            LOG(INFO) << "ResourceAllocator AUTH2";
+            LOG<INFO>("ResourceAllocator AUTH2");
             // we get the challenge response
             break;
         case STATS:
@@ -87,7 +79,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
         case ALLOC:
             // client wants to allocate some memory
         default:
-            LOG(ERROR) << "Unknown message";
+            LOG<ERROR>("Unknown message");
             exit(-1);
             break;
     }

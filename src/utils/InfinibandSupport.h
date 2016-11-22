@@ -11,7 +11,7 @@ namespace sirius {
 
 class InfinibandSupport {
 public:
-    InfinibandSupport();
+    InfinibandSupport() = default;
 
     void check_mw_support(ibv_context* ctx);
     void check_odp_support(ibv_context* ctx);

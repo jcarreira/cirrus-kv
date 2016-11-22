@@ -10,7 +10,7 @@ namespace sirius {
 
 class DumbQuotaManager {
 public:
-    DumbQuotaManager();
+    DumbQuotaManager() = default;
     
     bool canAllocateMemory(uint64_t app_id, uint64_t memorySize);
     bool allocateMemory(uint64_t app_id, uint64_t memorySize);

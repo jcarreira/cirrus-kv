@@ -22,9 +22,6 @@ BladePoolServer::BladePoolServer(int port,
    pool_size_(pool_size) {
 }
 
-BladePoolServer::~BladePoolServer() {
-}
-
 void BladePoolServer::init() {
     // let upper layer initialize
     // all network related things
@@ -44,18 +41,16 @@ uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     id = id;  // warnings
 
-    LOG(INFO) << "Allocating memory pool of size: "
-        << (size/1024/1024) << "MB "
-        << (size/1024/1024/1024) << "GB"
-        << std::endl;
+    LOG<INFO>("Allocating memory pool of size: ",
+        (size/1024/1024), "MB ",
+        (size/1024/1024/1024), "GB");
 
     void *data;
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&data),
                 static_cast<size_t>(sysconf(_SC_PAGESIZE)), size));
     mr_data_.push_back(data);
 
-    LOG(INFO) << "Creating memory region"
-        << std::endl;
+    LOG<INFO>("Creating memory region");
     ibv_mr* pool;
     TEST_Z(pool = ibv_reg_mr(
                 gen_ctx_.pd, data, size,
@@ -65,21 +60,17 @@ uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
 
     mr_pool_.push_back(pool);
 
-    LOG(INFO) << "Memory region created"
-        << std::endl;
+    LOG<INFO>("Memory region created");
 
     return 0;
 }
 
 void BladePoolServer::process_message(rdma_cm_id* id,
         void* message) {
-    BladeMessage* msg =
-        reinterpret_cast<BladeMessage*>(message);
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto msg = reinterpret_cast<BladeMessage*>(message);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Received message"
-        << std::endl;
+    LOG<INFO>("Received message");
 
     // we should do this as earlier as possible (closer to when)
     // process starts but cant make it work like that (yet)
@@ -89,8 +80,7 @@ void BladePoolServer::process_message(rdma_cm_id* id,
     switch (msg->type) {
         case ALLOC:
             {
-                LOG(INFO) << "ALLOC"
-                    << std::endl;
+                LOG<INFO>("ALLOC");
 
                 // we always return pointer to big memory pool
 
@@ -103,10 +93,9 @@ void BladePoolServer::process_message(rdma_cm_id* id,
                         remote_addr,
                         mr_pool_[0]->rkey);
 
-                LOG(INFO) << "Sending ack. "
-                    << " remote_addr: " << remote_addr
-                    << " rkey: " << mr_pool_[0]->rkey
-                    << std::endl;
+                LOG<INFO>("Sending ack. ",
+                    " remote_addr: ", remote_addr,
+                    " rkey: ", mr_pool_[0]->rkey);
 
                 // send async message
                 send_message(id, sizeof(BladeMessage));
@@ -118,7 +107,7 @@ void BladePoolServer::process_message(rdma_cm_id* id,
                 send_message(id, sizeof(BladeMessage));
             break;
         default:
-            LOG(ERROR) << "Unknown message";
+            LOG<ERROR>("Unknown message");
             exit(-1);
             break;
     }

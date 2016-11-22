@@ -14,7 +14,7 @@ class RDMAServer;
 class ConnectionContext {
 public:
     ConnectionContext();
-    virtual ~ConnectionContext();
+    virtual ~ConnectionContext() = default;
 
     // buffer and memory region for receiving messages
     void* recv_msg;

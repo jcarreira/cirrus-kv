@@ -33,7 +33,7 @@ private:
 class BladeClient : public RDMAClient {
 public:
     BladeClient(int timeout_ms = 500);
-    ~BladeClient();
+    ~BladeClient() = default;
 
     bool authenticate(std::string allocator_address,
         std::string port, AuthenticationToken& auth_token);

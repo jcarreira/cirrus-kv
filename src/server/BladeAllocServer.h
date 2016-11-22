@@ -30,13 +30,13 @@ class BladeAllocServer : public RDMAServer {
 public:
     BladeAllocServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
-    virtual ~BladeAllocServer();
-    virtual void init();
+    virtual ~BladeAllocServer() = default;
+    void init() final override;
 
 private:
-    void process_message(rdma_cm_id*, void* msg);
-    void handle_connection(struct rdma_cm_id* id);
-    void handle_disconnection(struct rdma_cm_id* id);
+    void process_message(rdma_cm_id*, void* msg) final override;
+    void handle_connection(struct rdma_cm_id* id) final override;
+    void handle_disconnection(struct rdma_cm_id* id) final override;
 
     bool create_pool(uint64_t size);
 
@@ -58,7 +58,7 @@ private:
     uint64_t num_allocs_;
     uint64_t mem_allocated;
 
-    boost::interprocess::managed_external_buffer* allocator;
+    std::unique_ptr<boost::interprocess::managed_external_buffer> allocator;
 };
 
 }

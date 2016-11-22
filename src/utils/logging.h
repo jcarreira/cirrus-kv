@@ -1,7 +1,2 @@
-#include <iostream>
+#include "src/utils/Log.h"
 
-#ifndef LOG
-#define INFO 1
-#define ERROR 2
-#define LOG(A) std::cout
-#endif

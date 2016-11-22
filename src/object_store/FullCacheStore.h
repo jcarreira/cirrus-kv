@@ -134,6 +134,10 @@ public:
 #endif
         return true;
     }
+    
+    bool dropLRUObj() {
+        return false;
+    }
 
 private:
     char* alloc_mem;

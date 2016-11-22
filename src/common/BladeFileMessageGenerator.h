@@ -9,8 +9,7 @@
 
 namespace sirius {
 
-class BladeFileMessageGenerator {
-public:
+struct BladeFileMessageGenerator {
     static void alloc_msg(void *data, 
             const std::string& filename, uint64_t size);
     static void alloc_ack_msg(void *data, 

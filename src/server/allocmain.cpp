@@ -7,7 +7,7 @@
 static const int PORT = 12346;
 
 void ctrlc_handler(int sig_num) {
-    LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;
+    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -18,18 +18,18 @@ void set_ctrlc_handler() {
     sigemptyset(&sig_int_handler.sa_mask);
     sig_int_handler.sa_flags = 0;
 
-    sigaction(SIGINT, &sig_int_handler, NULL);
+    sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
-int main() {
-    LOG(INFO) << "Starting resource allocator in port: " << PORT;
+auto main() -> int {
+    sirius::LOG<sirius::INFO>("Starting resource allocator in port: ", PORT);
 
     sirius::ResourceAllocator resalloc(PORT);
 
-    LOG(INFO) << "Running allocator init()";
+    sirius::LOG<sirius::INFO>("Running allocator init()");
     resalloc.init();
 
-    LOG(INFO) << "Running resource allocator loop";
+    sirius::LOG<sirius::INFO>("Running resource allocator loop");
     resalloc.loop();
 
     return 0;

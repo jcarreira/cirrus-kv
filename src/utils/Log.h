@@ -4,17 +4,36 @@
 #define _LOG_H_
 
 #include <iostream>
+#include <utility>
 
 namespace sirius {
 
-class Log : public std::ostream {
-    //std::ostream operator<<(int i) {
-    //    return std::cerr << i;// << std::flush;
-    //}
-    std::ostream& operator<<(const std::string& s) {
-        std::cerr << s << std::flush;
-    }
+struct INFO {
+    static const int value = 5;
 };
+struct ERROR {
+    static const int value = 10;
+};
+
+template<typename T, typename ... Params>
+bool LOG(Params&& ... param) {
+    auto f = [](const auto& arg) {
+        std::cout << " " << arg;
+    };
+
+ __attribute__((unused))
+    int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... }; 
+
+    std::cout << std::endl;
+
+    return true; // success
+}
+
+//class Log : public std::ostream {
+//    std::ostream& operator<<(const std::string& s) {
+//        std::cerr << s << std::flush;
+//    }
+//};
 
 } // sirius
 

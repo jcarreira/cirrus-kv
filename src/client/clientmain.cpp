@@ -19,7 +19,7 @@ static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
 
 void ctrlc_handler(int sig_num) {
-    LOG(ERROR) << "Caught CTRL-C. sig_num: " << sig_num;
+    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -30,7 +30,7 @@ void set_ctrlc_handler() {
     sigemptyset(&sig_int_handler.sa_mask);
     sig_int_handler.sa_flags = 0;
 
-    sigaction(SIGINT, &sig_int_handler, NULL);
+    sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
 void test_async() {
@@ -38,18 +38,18 @@ void test_async() {
     const char* to_send = "SIRIUS_DDC";
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    LOG(INFO) << "Testing async operations" << std::endl;
+    sirius::LOG<sirius::INFO>("Testing async operations");
 
     sirius::BladeClient client;
     client.connect("10.10.49.83", PORT);
 
-    LOG(INFO) << "Connected to blade" << std::endl;
+    sirius::LOG<sirius::INFO>("Connected to blade");
     sirius::AllocRec alloc1 = client.allocate(1 * MB);
 
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id
-        << " remote_addr: " << alloc1->remote_addr
-        << " peer_rkey: " << alloc1->peer_rkey
-        << std::endl;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+            alloc1->alloc_id,
+            " remote_addr: ", alloc1->remote_addr,
+            " peer_rkey: ", alloc1->peer_rkey);
 
     sirius::OpRet ret1 = client.write_async(alloc1, 0,
             std::strlen(to_send), to_send);
@@ -64,7 +64,7 @@ void test_async() {
 
 
     if (strncmp(data, to_send, std::strlen(to_send)) != 0) {
-        LOG(ERROR) << "Wrong data read" << std::endl;
+        sirius::LOG<sirius::ERROR>("Wrong data read");
         exit(-1);
     }
 }
@@ -77,29 +77,29 @@ void test_allocation() {
     sirius::BladeClient client;
     client.connect("10.10.49.83", PORT);
 
-    LOG(INFO) << "Connected to blade" << std::endl;
+    sirius::LOG<sirius::INFO>("Connected to blade");
     sirius::AllocRec alloc1 = client.allocate(1 * MB);
 
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id
-        << " remote_addr: " << alloc1->remote_addr
-        << " peer_rkey: " << alloc1->peer_rkey
-        << std::endl;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+            alloc1->alloc_id,
+            " remote_addr: ", alloc1->remote_addr,
+            " peer_rkey: ", alloc1->peer_rkey);
 
     client.write_sync(alloc1, 0, std::strlen(to_send), to_send);
     client.read_sync(alloc1, 0, std::strlen(to_send), data);
     if (strncmp(data, to_send, std::strlen(to_send)) != 0) {
-        LOG(ERROR) << "Wrong data read" << std::endl;
+        sirius::LOG<sirius::ERROR>("Wrong data read");
         exit(-1);
     }
 
     sirius::AllocRec alloc2 = client.allocate(2 * MB);
-    LOG(INFO) << "Received allocation 2. id: " << alloc2->alloc_id
-        << " remote_addr: " << alloc2->remote_addr
-        << " peer_rkey: " << alloc2->peer_rkey
-        << std::endl;
+    sirius::LOG<sirius::INFO>("Received allocation 2. id: ",
+        alloc2->alloc_id,
+        " remote_addr: ", alloc2->remote_addr,
+        " peer_rkey: ", alloc2->peer_rkey);
 
     client.read_sync(alloc2, 0, std::strlen(to_send), data);
-    LOG(INFO) << "Received data 2: " << data;
+    sirius::LOG<sirius::INFO>("Received data 2: ", data);
 }
 
 void test_1_client() {
@@ -108,60 +108,61 @@ void test_1_client() {
 
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    LOG(INFO) << "Connecting to server in port: " << PORT;
+    sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
 
     sirius::BladeClient client1;
     client1.connect("10.10.49.83", PORT);
 
-    LOG(INFO) << "Connected to blade";
+    sirius::LOG<sirius::INFO>("Connected to blade");
 
     sirius::AllocRec alloc1 = client1.allocate(1 * MB);
 
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+       alloc1->alloc_id);
 
     client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
-    LOG(INFO) << "Old data: " << data;
+    sirius::LOG<sirius::INFO>("Old data: ", data);
     client1.read_sync(alloc1, 0, std::strlen(to_send), data);
-    LOG(INFO) << "Received data 1: " << data;
+    sirius::LOG<sirius::INFO>("Received data 1: ", data);
 }
 
 void test_2_clients() {
     char data[1000];
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    LOG(INFO) << "Connecting to server in port: " << PORT;
+    sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
 
     sirius::BladeClient client1, client2;
 
     client1.connect("10.10.49.83", PORT);
     client2.connect("10.10.49.87", PORT);
 
-    LOG(INFO) << "Connected to blade";
+    sirius::LOG<sirius::INFO>("Connected to blade");
 
     sirius::AllocRec alloc1 = client1.allocate(1 * MB);
     sirius::AllocRec alloc2 = client2.allocate(1 * GB);
 
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
-    LOG(INFO) << "Received allocation 2. id: " << alloc2->alloc_id;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1->alloc_id);
+    sirius::LOG<sirius::INFO>("Received allocation 2. id: ", alloc2->alloc_id);
 
     unsigned int seed = 42;
     std::ostringstream oss;
     {
         oss << "data" << rand_r(&seed);
-        LOG(INFO) << "Writing " << oss.str().c_str();
+        sirius::LOG<sirius::INFO>("Writing ", oss.str().c_str());
         sirius::TimerFunction tf("client1.write");
         client1.write_sync(alloc1, 0, oss.str().size(), oss.str().c_str());
     }
 
     client2.write_sync(alloc2, 0, 5, "data2");
 
-    LOG(INFO) << "Old data: " << data;
+    sirius::LOG<sirius::INFO>("Old data: ", data);
     client1.read_sync(alloc1, 0, oss.str().size(), data);
-    LOG(INFO) << "Received data 1: " << data;
+    sirius::LOG<sirius::INFO>("Received data 1: ", data);
 
     client2.read_sync(alloc2, 0, 5, data);
-    LOG(INFO) << "Received data 2: " << data;
+    sirius::LOG<sirius::INFO>("Received data 2: ", data);
 }
 
 // test bandwidth utilization
@@ -169,7 +170,7 @@ void test_performance() {
     sirius::BladeClient client;
     client.connect("10.10.49.87", PORT);
 
-    LOG(INFO) << "Connected to blade";
+    sirius::LOG<sirius::INFO>("Connected to blade");
 
     uint64_t mem_size = 1 * GB;
 
@@ -181,7 +182,8 @@ void test_performance() {
     data[0] = 'Y';
 
     sirius::AllocRec alloc1 = client.allocate(1 * GB);  // currently ignored
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+            alloc1->alloc_id);
 
     // small write to force creation of pool
     {
@@ -214,7 +216,7 @@ void test_authentication() {
 
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    LOG(INFO) << "Connecting to server in port: " << PORT;
+    sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
 
     sirius::BladeClient client;
 
@@ -223,19 +225,20 @@ void test_authentication() {
 
     client.connect("10.10.49.87", PORT);
 
-    LOG(INFO) << "Connected to blade";
+    sirius::LOG<sirius::INFO>("Connected to blade");
 
     sirius::AllocRec alloc1 = client.allocate(1 * MB);
 
-    LOG(INFO) << "Received allocation 1. id: " << alloc1->alloc_id;
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+            alloc1->alloc_id);
 
-    srand(time(NULL));
+    srand(time(nullptr));
 
     client.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
-    LOG(INFO) << "Old data: " << data;
+    sirius::LOG<sirius::INFO>("Old data: ", data);
     client.read_sync(alloc1, 0, std::strlen(to_send), data);
-    LOG(INFO) << "Received data 1: " << data;
+    sirius::LOG<sirius::INFO>("Received data 1: ", data);
 }
 
 void test_destructor() {

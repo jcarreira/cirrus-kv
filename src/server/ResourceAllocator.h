@@ -29,7 +29,7 @@ protected:
     void send_stats(rdma_cm_id* id,
             const AllocatorMessage& msg);
 
-    Authenticator* authenticator_;
+    std::unique_ptr<Authenticator> authenticator_;
 
     // total amount of memory allocated
     uint64_t total_mem_allocated_;

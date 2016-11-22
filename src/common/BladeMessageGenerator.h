@@ -8,8 +8,7 @@
 
 namespace sirius {
 
-class BladeMessageGenerator {
-public:
+struct BladeMessageGenerator {
     static void alloc_msg(void *data, uint64_t size);
     static void alloc_ack_msg(void *data, 
             uint64_t mr_id,

@@ -17,7 +17,7 @@ public:
         int ret = pthread_setaffinity_np(thread_handle,
                 sizeof(cpu_set_t), &cpuset);
         if (ret != 0) {
-            LOG(ERROR) << "Error calling pthread_setaffinity_np: " << ret;
+            LOG<ERROR>("Error calling pthread_setaffinity_np: ", ret);
         }
     }
 };

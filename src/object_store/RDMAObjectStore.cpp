@@ -16,11 +16,6 @@ RDMAObjectStore::RDMAObjectStore(const std::string& blade_addr,
         client.connect(blade_addr, port);
 }
 
-RDMAObjectStore::~RDMAObjectStore() {
-    if (ep)
-        delete ep;
-}
-
 Object RDMAObjectStore::get(ObjectID name) {
     Object obj = cache_.get(name);
     if (obj) {

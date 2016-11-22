@@ -52,8 +52,8 @@ protected:
     std::vector<ConnectionContext*> conns_;
 
     // structures used to setup connections
-    struct rdma_cm_id *id_ = NULL;
-    struct rdma_event_channel *ec_ = NULL;
+    struct rdma_cm_id *id_ = nullptr;
+    struct rdma_event_channel *ec_ = nullptr;
 
     // port 
     int port_;

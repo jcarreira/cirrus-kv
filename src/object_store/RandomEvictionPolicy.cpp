@@ -9,9 +9,6 @@ RandomEvictionPolicy::RandomEvictionPolicy(size_t num_objs) :
     EvictionPolicy(num_objs) {
 }
 
-RandomEvictionPolicy::~RandomEvictionPolicy() {
-}
-
 bool RandomEvictionPolicy::evictIfNeeded(FullCacheStore& fc) {
     if (fc.getNumObjs() > max_num_objs_) {
         fc.dropRandomObj();

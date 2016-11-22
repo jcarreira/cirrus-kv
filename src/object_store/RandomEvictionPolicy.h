@@ -10,7 +10,7 @@ namespace sirius {
 class RandomEvictionPolicy : public EvictionPolicy {
 public:
     explicit RandomEvictionPolicy(size_t num_objs = DEFAULT_SIZE);
-    virtual ~RandomEvictionPolicy();
+    virtual ~RandomEvictionPolicy() = default;
 
     virtual bool evictIfNeeded(FullCacheStore& fc);
 

@@ -8,16 +8,13 @@ namespace sirius {
 uint64_t ConnectionContext::id_count_ = 0;
 
 ConnectionContext::ConnectionContext() :
-    recv_msg(NULL),
-    recv_msg_mr(NULL),
-    send_msg(NULL),
-    send_msg_mr(NULL),
-    server(NULL),
+    recv_msg(nullptr),
+    recv_msg_mr(nullptr),
+    send_msg(nullptr),
+    send_msg_mr(nullptr),
+    server(nullptr),
     info(0),
     context_id_(id_count_++) {
-}
-
-ConnectionContext::~ConnectionContext() {
 }
 
 }  // namespace sirius

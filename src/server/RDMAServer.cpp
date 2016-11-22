@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 
+#include <functional>
 #include <iostream>
 #include <cstring>
 #include <algorithm>
@@ -18,8 +19,8 @@ GeneralContext RDMAServer::gen_ctx_;
 RDMAServer::RDMAServer(int port, int timeout_ms) {
     port_ = port;
     timeout_ms_ = timeout_ms;
-    id_ = NULL;
-    ec_ = NULL;
+    id_ = nullptr;
+    ec_ = nullptr;
 
     std::cout.setf(std::ios::unitbuf);
 }
@@ -48,7 +49,7 @@ RDMAServer::~RDMAServer() {
 void RDMAServer::init() {
     struct sockaddr_in addr;
 
-    LOG(INFO) << "RDMAServer::init" << std::endl;
+    LOG<INFO>("RDMAServer::init");
 
     // get ready to connect
     memset(&addr, 0, sizeof(addr));
@@ -57,22 +58,20 @@ void RDMAServer::init() {
 
     // create channel and listen for incoming connections
     TEST_Z(ec_ = rdma_create_event_channel());
-    TEST_NZ(rdma_create_id(ec_, &id_, NULL, RDMA_PS_TCP));
+    TEST_NZ(rdma_create_id(ec_, &id_, nullptr, RDMA_PS_TCP));
 
-    LOG(INFO) << "Created id: "
-        << reinterpret_cast<uint64_t>(id_) << std::endl;
+    LOG<INFO>("Created id: ", reinterpret_cast<uint64_t>(id_));
 
     TEST_NZ(rdma_bind_addr(id_, (struct sockaddr *)&addr));
     TEST_NZ(rdma_listen(id_, NUM_BACKLOG));
 }
 
 void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
-    LOG(INFO) << "Sending message. size: " << size << std::endl;
+    LOG<INFO>("Sending message. size: ", size);
 
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
-    struct ibv_send_wr wr, *bad_wr = NULL;
+    struct ibv_send_wr wr, *bad_wr = nullptr;
     ibv_sge sge;
 
     memset(&wr, 0, sizeof(wr));
@@ -90,14 +89,13 @@ void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
     sge.lkey = ctx->send_msg_mr->lkey;
 
     TEST_NZ(ibv_post_send(id->qp, &wr, &bad_wr));
-    LOG(INFO) << "Message sent" << std::endl;
+    LOG<INFO>("Message sent");
 }
 
 void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
-    ConnectionContext *ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
-    struct ibv_recv_wr wr, *bad_wr = NULL;
+    struct ibv_recv_wr wr, *bad_wr = nullptr;
     struct ibv_sge sge;
 
     memset(&wr, 0, sizeof(wr));
@@ -112,8 +110,8 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
 
     TEST_NZ(ibv_post_recv(id->qp, &wr, &bad_wr));
 
-    LOG(INFO) << "Posted receive in wq. id: "
-        << reinterpret_cast<uint64_t>(id) << std::endl;
+    LOG<INFO>("Posted receive in wq. id: ",
+        reinterpret_cast<uint64_t>(id));
 }
 
 void RDMAServer::build_params(struct rdma_conn_param *params) {
@@ -135,7 +133,7 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     TEST_Z(gen_ctx_.pd = ibv_alloc_pd(gen_ctx_.ctx));
     TEST_Z(gen_ctx_.comp_channel = ibv_create_comp_channel(gen_ctx_.ctx));
     TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 10,
-                NULL, gen_ctx_.comp_channel, 0));
+                nullptr, gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
 
     //// Test this
@@ -144,7 +142,7 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
     //// TEST_Z(pd = ibv_alloc_pd(verbs));
     // TEST_Z(mw = ibv_alloc_mw(gen_ctx_.pd, IBV_MW_TYPE_1));
 
-    LOG(INFO) << "Creating polling thread" << std::endl;
+    LOG<INFO>("Creating polling thread");
     gen_ctx_.cq_poller_thread = new std::thread(&RDMAServer::poll_cq);
 
     ThreadPinning::pinThread(gen_ctx_.cq_poller_thread->native_handle(),
@@ -156,7 +154,7 @@ void* RDMAServer::poll_cq() {
     struct ibv_wc wc;
     void* cq_ctx;
 
-    LOG(INFO) << "Polling.." << std::endl;
+    LOG<INFO>("Polling..");
 
     while (1) {
         TEST_NZ(ibv_get_cq_event(gen_ctx_.comp_channel, &cq, &cq_ctx));
@@ -217,8 +215,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
     // to avoid needing this id (?)
     TEST_NZ(rdma_create_qp(id, gen_ctx_.pd, &qp_attr));
 
-    LOG(INFO) << "max_inline_data: "
-        << qp_attr.cap.max_inline_data << std::endl;
+    LOG<INFO>("max_inline_data: ",
+        qp_attr.cap.max_inline_data);
 }
 
 // connection has been established by now
@@ -229,7 +227,7 @@ void RDMAServer::handle_established(struct rdma_cm_id *id) {
 }
 
 void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
-    ConnectionContext* conn_ctx =
+    auto conn_ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
 
     ibv_dereg_mr(conn_ctx->recv_msg_mr);
@@ -237,7 +235,7 @@ void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
 }
 
 void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
-    ConnectionContext* con_ctx = new ConnectionContext;
+    auto con_ctx = new ConnectionContext;
 
     conns_.push_back(con_ctx);
     // con_ctx->context_id = ConnectionContext::generateContextId();
@@ -262,24 +260,24 @@ void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
 }
 
 void RDMAServer::on_completion(struct ibv_wc *wc) {
-    struct rdma_cm_id *id = (struct rdma_cm_id *)(uintptr_t)wc->wr_id;
-    ConnectionContext *con_ctx =
-        reinterpret_cast<ConnectionContext*>(id->context);
+    auto id = (struct rdma_cm_id *)(uintptr_t)wc->wr_id;
+    auto con_ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
-    LOG(INFO) << "Processing event.." << std::endl;
+    LOG<INFO>("Processing event..");
 
     if (wc->opcode == IBV_WC_RECV) {
-        LOG(INFO) << "Blade server received a message.." << std::endl;
+        LOG<INFO>("Blade server received a message..");
 
         // post another receive WR
         post_msg_receive(id);
-        LOG(INFO) << "Posted new receive WR" << std::endl;
+        LOG<INFO>("Posted new receive WR");
 
-        msg_handler f = &RDMAServer::process_message;
-        (con_ctx->server->*f)(id, con_ctx->recv_msg);
+        //msg_handler f = &RDMAServer::process_message;
+        std::invoke(&RDMAServer::process_message, con_ctx->server, id, con_ctx->recv_msg);
+        //(con_ctx->server->*f)(id, con_ctx->recv_msg);
 
     } else if (wc->opcode == IBV_WC_SEND) {
-        LOG(INFO) << "Blade server sent a message.." << std::endl;
+        LOG<INFO>("Blade server sent a message..");
     } else {
         DIE("Dont know what is this opcode");
     }
@@ -289,21 +287,21 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
  * Should be called after init
  */
 void RDMAServer::loop() {
-    struct rdma_cm_event *event = NULL;
+    struct rdma_cm_event *event = nullptr;
     struct rdma_conn_param cm_params;
 
     build_params(&cm_params);
 
-    LOG(INFO) << "Running loop " << std::endl;
+    LOG<INFO>("Running loop ");
     while (rdma_get_cm_event(ec_, &event) == 0) {
         struct rdma_cm_event event_copy;
 
         memcpy(&event_copy, event, sizeof(*event));
         rdma_ack_cm_event(event);
 
-        LOG(INFO) << "Checking event" << std::endl;
+        LOG<INFO>("Checking event");
         if (event_copy.event == RDMA_CM_EVENT_ADDR_RESOLVED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ADDR_RESOLVED" << std::endl;
+            LOG<INFO>("RDMA_CM_EVENT_ADDR_RESOLVED");
             // address successfully resolved
             // happens when we try to connect
             build_connection(event_copy.id);
@@ -313,23 +311,23 @@ void RDMAServer::loop() {
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
 
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ROUTE_RESOLVED" << std::endl;
+            LOG<INFO>("RDMA_CM_EVENT_ROUTE_RESOLVED");
             TEST_NZ(rdma_connect(event_copy.id, &cm_params));
 
         } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
             // Every new connection gets a new rdma_id
 
-            LOG(INFO) << "RDMA_CM_EVENT_CONNECT_REQUEST. id: "
-                << reinterpret_cast<uint64_t>(event_copy.id) << std::endl;
+            LOG<INFO>("RDMA_CM_EVENT_CONNECT_REQUEST. id: ",
+                reinterpret_cast<uint64_t>(event_copy.id));
             build_connection(event_copy.id);
             create_connection_context(event_copy.id);
             TEST_NZ(rdma_accept(event_copy.id, &cm_params));
         } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
-            LOG(INFO) << "RDMA_CM_EVENT_ESTABLISHED" << std::endl;
+            LOG<INFO>("RDMA_CM_EVENT_ESTABLISHED");
             handle_established(event_copy.id);
             handle_connection(event_copy.id);
         } else if (event_copy.event == RDMA_CM_EVENT_DISCONNECTED) {
-            LOG(INFO) << "RDMA_CM_EVENT_DISCONNECTED" << std::endl;
+            LOG<INFO>("RDMA_CM_EVENT_DISCONNECTED");
             handle_disconnection(event_copy.id);
             rdma_destroy_qp(event_copy.id);
             handle_disconnected(event_copy.id);
