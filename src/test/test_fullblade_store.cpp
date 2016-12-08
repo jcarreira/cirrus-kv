@@ -24,7 +24,7 @@ struct Dummy {
 };
 
 void test_sync() {
-    sirius::FullBladeObjectStore store("10.10.49.83", PORT);
+    sirius::ostore::FullBladeObjectStoreTempl<> store("10.10.49.83", PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -47,7 +47,7 @@ void test_sync() {
 }
 
 void test_async() {
-    sirius::FullBladeObjectStore store("10.10.49.83", PORT);
+    sirius::ostore::FullBladeObjectStoreTempl<> store("10.10.49.83", PORT);
     
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -74,10 +74,34 @@ void test_async() {
     }
 }
 
+void test_sync2() {
+    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store("10.10.49.83", PORT);
+
+    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    d->id = 42;
+
+    try {
+        store.put(d.get(), sizeof(Dummy), 1);
+    } catch(...) {
+        std::cerr << "Error inserting" << std::endl;
+    }
+
+    Dummy* d2 = new Dummy;
+    store.get(1, d2);
+
+    // should be 42
+    std::cout << "d2.id: " << d2->id << std::endl;
+
+    if (d2->id != 42) {
+        throw std::runtime_error("Wrong value");
+    }
+}
+
 auto main() -> int {
 
     //test_sync();
-    test_async();
+    //test_async();
+    test_sync2();
 
     return 0;
 }
