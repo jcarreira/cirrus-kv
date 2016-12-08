@@ -26,6 +26,9 @@ CXXFLAGS="-fPIC -std=c++1z"
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])
 #AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
+AC_CHECK_LIB([ibverbs], [main])
+AC_CHECK_LIB([rdmacm], [main])
+
 # Checks for header files.
 AC_CHECK_HEADERS([netdb.h stdint.h stdlib.h sys/socket.h \
         sys/time.h syslog.h unistd.h google/dense_hash_map])
@@ -39,7 +42,8 @@ AC_TYPE_UINT64_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([gettimeofday localtime_r memset mkdir strerror strstr])
+AC_FUNC_STRCOLL
+AC_CHECK_FUNCS([gettimeofday localtime_r memchr memmove memset mkdir stpcpy strchr strcspn strdup strerror strpbrk strrchr strspn strstr])
 AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  src/Makefile
