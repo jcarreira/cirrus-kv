@@ -33,7 +33,10 @@ struct RDMAOpInfo {
     RDMAOpInfo(struct rdma_cm_id* id_, Semaphore* s = nullptr,
             std::function<void(void)> fn = []() -> void {}
             ) :
-        id(id_), op_sem(s), apply_fn(fn) {}
+        id(id_), op_sem(s), apply_fn(fn) {
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+        }
 
     void apply() { 
         LOG<INFO>("Applying fn");
@@ -52,14 +55,18 @@ struct RDMAOpInfo {
  */ 
 struct ConnectionContext {
     ConnectionContext() :
-        send_msg(0),
-        send_msg_mr(0),
-        recv_msg(0),
-        recv_msg_mr(0),
-        peer_addr(0),
-        peer_rkey(0) {
+        send_msg(0), send_msg_mr(0), recv_msg(0),
+        recv_msg_mr(0), peer_addr(0), peer_rkey(0),
+        setup_done(false) {
           memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
         }
+
+    ~ConnectionContext() {
+        if (setup_done) {
+            ibv_dereg_mr(send_msg_mr);
+            ibv_dereg_mr(recv_msg_mr);
+        }
+    }
     
     void *send_msg;
     struct ibv_mr *send_msg_mr;
@@ -75,12 +82,53 @@ struct ConnectionContext {
     Semaphore recv_sem;
     
     GeneralContext gen_ctx_;
+    bool setup_done = false;
+};
+
+struct RDMAMem {
+    RDMAMem(const void* addr = nullptr, uint64_t size = 0,
+            ibv_mr* m = nullptr) :
+        addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m) {}
+
+    ~RDMAMem() {
+        if (registered_ && !cleared_) {
+            clear();
+        }
+    }
+
+    bool prepare(GeneralContext gctx) {
+        mr = ibv_reg_mr(gctx.pd, 
+                reinterpret_cast<void*>(addr_),
+                size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+
+        if (mr) {
+            registered_ = true;
+        }
+        return mr != nullptr;
+    }
+    
+    bool clear() {
+        if (registered_ == false)
+            throw std::runtime_error("Not registered");
+
+        int ret = ibv_dereg_mr(mr);
+
+        cleared_ = true;
+
+        return ret == 0;
+    }
+
+    // we should have a smart pointer around this mr
+    uint64_t addr_;
+    uint64_t size_;
+    struct ibv_mr *mr;
+    bool registered_ = false;
+    bool cleared_ = false;
 };
 
 class RDMAClient {
 public:
-    RDMAClient(int timeout_ms = 500);
-    //RDMAClient(RDMAClient&) = delete;
+    explicit RDMAClient(int timeout_ms = 500);
     virtual ~RDMAClient();
 
     virtual void connect(const std::string& host, const std::string& port);
@@ -98,15 +146,17 @@ protected:
 
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-            uint64_t remote_addr, uint64_t peer_rkey);
+            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
     void write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
-            uint64_t remote_addr, uint64_t peer_rkey);
+            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
     RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey,
-            std::function<void()> apply_fn = std::function<void()>());
+            const RDMAMem& mem,
+            std::function<void()> apply_fn = []() -> void {});
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
-            uint64_t remote_addr, uint64_t peer_rkey);
+            uint64_t remote_addr, uint64_t peer_rkey,
+            const RDMAMem& mem);
 
     // event poll loop
     static void *poll_cq(ConnectionContext*);
@@ -124,6 +174,9 @@ protected:
     const size_t GB = (1024 * 1024 * 1024);
     const size_t RECV_MSG_SIZE = 2 * GB;
     const size_t SEND_MSG_SIZE = 2 * GB;
+
+    RDMAMem default_recv_mem;
+    RDMAMem default_send_mem;
 };
 
 } // sirius

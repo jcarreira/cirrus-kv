@@ -39,14 +39,19 @@ public:
 
     AllocRec allocate(uint64_t size);
 
+    // writes
     std::shared_ptr<FutureBladeOp> write_async(const AllocRec& alloc_rec,
-            uint64_t offset, uint64_t length, const void* data);
+            uint64_t offset, uint64_t length, const void* data,
+            RDMAMem* mem = nullptr);
     bool write_sync(const AllocRec& alloc_rec, uint64_t offset, 
-            uint64_t length, const void* data);
+            uint64_t length, const void* data, RDMAMem* mem = nullptr);
+
+    // reads
     std::shared_ptr<FutureBladeOp> read_async(const AllocRec& alloc_rec,
-            uint64_t offset, uint64_t length, void *data);
+            uint64_t offset, uint64_t length, void *data,
+            RDMAMem* mem = nullptr);
     bool read_sync(const AllocRec& alloc_rec, uint64_t offset,
-            uint64_t length, void *data);
+            uint64_t length, void *data, RDMAMem* reg = nullptr);
 
 private:
     uint64_t remote_addr_;

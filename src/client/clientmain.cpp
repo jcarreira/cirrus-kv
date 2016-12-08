@@ -122,9 +122,10 @@ void test_1_client() {
 
     client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
-    sirius::LOG<sirius::INFO>("Old data: ", data);
     client1.read_sync(alloc1, 0, std::strlen(to_send), data);
-    sirius::LOG<sirius::INFO>("Received data 1: ", data);
+
+    if (strncmp(data, to_send, std::strlen(to_send)))
+        throw std::runtime_error("Error in test");
 }
 
 void test_2_clients() {
@@ -251,14 +252,65 @@ void test_destructor() {
     client.authenticate(controller_address, controller_port, token);
 }
 
+void test_with_registration() {
+    char data[1000];
+    const char* to_send = "SIRIUS_DDC";
+
+    snprintf(data, sizeof(data), "%s", "WRONG");
+
+    sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
+
+    sirius::BladeClient client1;
+    client1.connect("10.10.49.83", PORT);
+
+    sirius::LOG<sirius::INFO>("Connected to blade");
+
+    sirius::AllocRec alloc1 = client1.allocate(10);
+
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
+       alloc1->alloc_id);
+
+    {
+        sirius::TimerFunction tf("write with registration", true);
+        sirius::RDMAMem rmem(to_send, sizeof(to_send));
+        client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
+    }
+    {
+        sirius::TimerFunction tf("write without registration", true);
+        sirius::RDMAMem rmem(to_send, sizeof(to_send));
+        client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
+    }
+
+    {
+        sirius::TimerFunction tf("read with registration", true);
+        sirius::RDMAMem rmem(data, sizeof(data));
+        client1.read_sync(alloc1, 0, std::strlen(to_send), data, &rmem);
+    }
+    
+    if (strncmp(data, to_send, std::strlen(to_send)))
+        throw std::runtime_error("Error in test");
+
+    std::memset(data, 0, sizeof(data));
+    
+    {
+        sirius::TimerFunction tf("read without registration", true);
+        sirius::RDMAMem rmem(data, sizeof(data));
+        client1.read_sync(alloc1, 0, std::strlen(to_send), data);
+    }
+
+    if (strncmp(data, to_send, std::strlen(to_send)))
+        throw std::runtime_error("Error in test");
+}
+
 auto main() -> int {
-    test_1_client();
+    // test_1_client();
     // test_2_clients();
     // test_performance();
     // test_authentication();
     // test_destructor();
     // test_allocation();
-    //test_async();
+    // test_async();
+    test_with_registration();
     return 0;
 }
 

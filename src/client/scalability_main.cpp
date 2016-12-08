@@ -38,7 +38,7 @@ auto main() -> int {
 
     sirius::BladeClient client1, client2;
 
-    client1.connect("10.10.49.87", PORT);
+    client1.connect("10.10.49.83", PORT);
 
     for (int i = 1; i < 1024 * 10; i += (1024*10 / 50)) {
         std::cout << "Allocating " << i << "MB" << std::endl;
