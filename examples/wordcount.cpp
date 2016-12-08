@@ -13,7 +13,7 @@
 
 #include "src/client/BladeClient.h"
 #include "src/utils/TimerFunction.h"
-#include "examples/sparsehash/src/google/dense_hash_map"
+#include <google/dense_hash_map>
 #include "src/utils/logging.h"
 
 /*
@@ -100,7 +100,6 @@ class MyString {
 };
 
 namespace std {
-namespace tr1 {
 
 template<>
 struct hash<MyString> {
@@ -109,7 +108,6 @@ struct hash<MyString> {
     }
 };
 
-}  // namespace tr1
 }  // namespace std
 
 size_t get_file_size(std::string fname) {

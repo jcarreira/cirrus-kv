@@ -100,7 +100,6 @@ class MyString {
 };
 
 namespace std {
-namespace tr1 {
 
 template<>
 struct hash<MyString> {
@@ -109,7 +108,6 @@ struct hash<MyString> {
     }
 };
 
-}  // namespace tr1
 }  // namespace std
 
 size_t get_file_size(std::string fname) {
