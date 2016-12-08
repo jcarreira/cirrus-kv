@@ -89,7 +89,7 @@ int RDMAClient::post_receive(struct rdma_cm_id *id) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, true, &ctx->recv_sem);
+    auto op_info = new RDMAOpInfo(id, &ctx->recv_sem);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.sg_list = &sge;
     wr.num_sge = 1;
@@ -164,18 +164,20 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
         " opcode: ", wc->opcode,
         " byte_len: ", wc->byte_len);
 
+    op_info->apply();
+
     switch (wc->opcode) {
         case IBV_WC_RECV:
-            if (op_info->use_sem)
+            if (op_info->op_sem)
                 op_info->op_sem->signal();
             break;
         case IBV_WC_RDMA_READ:
         case IBV_WC_RDMA_WRITE:
-            if (op_info->use_sem)
+            if (op_info->op_sem)
                 op_info->op_sem->signal();
             break;
         case IBV_WC_SEND:
-            if (op_info->use_sem)
+            if (op_info->op_sem)
                 op_info->op_sem->signal();
             break;
         default:
@@ -210,7 +212,7 @@ void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, true, &ctx->send_sem);
+    auto op_info = new RDMAOpInfo(id, &ctx->send_sem);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_SEND;
     wr.sg_list = &sge;
@@ -233,7 +235,6 @@ void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     // wait until operation is completed
     op_info->op_sem->wait();
-    delete op_info->op_sem;
 }
 
 RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
@@ -246,7 +247,7 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    auto op_info = new RDMAOpInfo(id, true, new Semaphore());
+    auto op_info = new RDMAOpInfo(id, new Semaphore());
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_RDMA_WRITE;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -273,11 +274,10 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     // wait until operation is completed
     op_info->op_sem->wait();
-    delete op_info->op_sem;
 }
 
 RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
-        uint64_t remote_addr, uint64_t peer_rkey) {
+        uint64_t remote_addr, uint64_t peer_rkey, std::function<void()> apply_fn) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     struct ibv_send_wr wr, *bad_wr = nullptr;
@@ -286,7 +286,7 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    auto op_info = new RDMAOpInfo(id, true, new Semaphore());
+    auto op_info = new RDMAOpInfo(id, new Semaphore(), apply_fn);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_RDMA_READ;
     wr.wr.rdma.remote_addr = remote_addr;

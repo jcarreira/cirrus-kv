@@ -31,7 +31,7 @@ void set_ctrlc_handler() {
 
 char data[100] = {0};
 
-int main() {
+auto main() -> int {
     snprintf(data, sizeof(data), "%s", "WRONG");
 
     sirius::LOG<sirius::INFO>("Starting RDMA server in port: ", PORT);

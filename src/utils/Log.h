@@ -15,7 +15,16 @@ struct ERROR {
     static const int value = 10;
 };
 
+#if __GNUC__ >= 7
+struct FLUSH {
+};
+struct NO_FLUSH {
+};
+
+template<typename T, typename K = NO_FLUSH, typename ... Params>
+#else
 template<typename T, typename ... Params>
+#endif
 bool LOG(Params&& ... param) {
     auto f = [](const auto& arg) {
         std::cout << " " << arg;
@@ -24,16 +33,16 @@ bool LOG(Params&& ... param) {
  __attribute__((unused))
     int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... }; 
 
+#if __GNUC__ >= 7
+    if constexpr (std::is_same(K, FLUSH)) {
+        std::cout << std::endl;
+    }
+#else
     std::cout << std::endl;
+#endif
 
     return true; // success
 }
-
-//class Log : public std::ostream {
-//    std::ostream& operator<<(const std::string& s) {
-//        std::cerr << s << std::flush;
-//    }
-//};
 
 } // sirius
 

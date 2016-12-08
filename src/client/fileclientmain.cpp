@@ -66,7 +66,7 @@ void test_allocation() {
 }
 
 
-int main() {
+auto main() -> int {
     test_allocation();
     return 0;
 }

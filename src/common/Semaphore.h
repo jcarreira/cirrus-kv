@@ -3,6 +3,7 @@
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_
 
+#include <error.h>
 #include <semaphore.h>
 
 namespace sirius {
@@ -37,7 +38,9 @@ public:
     
     bool trywait() {
         int ret = sem_trywait(&m_sema);
-        return ret != 1;
+        if (ret == -1 && errno != EAGAIN)
+            throw std::runtime_error("trywait error");
+        return ret != -1; // true for success
     }
 private:
     sem_t m_sema;

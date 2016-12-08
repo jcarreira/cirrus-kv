@@ -14,7 +14,6 @@ namespace sirius {
 class FutureBladeOp;
 
 using AllocRec = std::shared_ptr<AllocationRecord>;
-using OpRet = std::pair<bool, FutureBladeOp*>;
 
 class FutureBladeOp {
 public:
@@ -40,11 +39,11 @@ public:
 
     AllocRec allocate(uint64_t size);
 
-    OpRet write_async(const AllocRec& alloc_rec,
+    std::shared_ptr<FutureBladeOp> write_async(const AllocRec& alloc_rec,
             uint64_t offset, uint64_t length, const void* data);
     bool write_sync(const AllocRec& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data);
-    OpRet read_async(const AllocRec& alloc_rec,
+    std::shared_ptr<FutureBladeOp> read_async(const AllocRec& alloc_rec,
             uint64_t offset, uint64_t length, void *data);
     bool read_sync(const AllocRec& alloc_rec, uint64_t offset,
             uint64_t length, void *data);

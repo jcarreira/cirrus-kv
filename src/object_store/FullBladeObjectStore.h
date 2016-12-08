@@ -35,13 +35,21 @@ public:
     FullBladeObjectStore(const std::string& bladeIP, const std::string& port);
 
     Object get(const ObjectID&) const;
-    void get(ObjectID, void*&) const;
+    bool get(ObjectID, void*) const;
+    std::function<bool(bool)> get_async(ObjectID, void*) const;
+
     bool put(Object, uint64_t, ObjectID);
+    std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept;
 
 private:
     bool readToLocal(BladeLocation loc, void*) const;
+    std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
+            void* ptr) const;
+
     bool writeRemote(Object obj, BladeLocation loc);
+    std::shared_ptr<FutureBladeOp> writeRemoteAsync(Object obj,
+            BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocRec& allocRec);
 

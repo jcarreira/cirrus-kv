@@ -3,12 +3,14 @@
 #ifndef _RDMA_CLIENT_H_
 #define _RDMA_CLIENT_H_
 
+#include <iostream>
 #include <string>
 #include <thread>
 #include <memory>
 #include <cstring>
 #include <rdma/rdma_cma.h>
 #include "src/common/Semaphore.h"
+#include "src/utils/logging.h"
 
 namespace sirius {
 
@@ -28,12 +30,21 @@ struct GeneralContext {
 // this is allocated when issuing and deallocated
 // for async ops this is passed up
 struct RDMAOpInfo {
-    RDMAOpInfo(struct rdma_cm_id* id_, bool use_s, Semaphore* s) :
-        id(id_), use_sem(use_s), op_sem(s) {}
+    RDMAOpInfo(struct rdma_cm_id* id_, Semaphore* s = nullptr,
+            std::function<void(void)> fn = []() -> void {}
+            ) :
+        id(id_), op_sem(s), apply_fn(fn) {}
+
+    void apply() { 
+        LOG<INFO>("Applying fn");
+        apply_fn();
+    }
 
     struct rdma_cm_id* id;
-    bool use_sem;
-    Semaphore* op_sem;
+    std::unique_ptr<Semaphore> op_sem;
+    std::function<void(void)> apply_fn;
+
+    //XXX make sure this one is deleted
 };
 
 /*
@@ -92,7 +103,8 @@ protected:
             uint64_t remote_addr, uint64_t peer_rkey);
 
     RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
-            uint64_t remote_addr, uint64_t peer_rkey);
+            uint64_t remote_addr, uint64_t peer_rkey,
+            std::function<void()> apply_fn = std::function<void()>());
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey);
 

@@ -51,15 +51,15 @@ void test_async() {
             " remote_addr: ", alloc1->remote_addr,
             " peer_rkey: ", alloc1->peer_rkey);
 
-    sirius::OpRet ret1 = client.write_async(alloc1, 0,
+    std::shared_ptr<sirius::FutureBladeOp> ret1 = client.write_async(alloc1, 0,
             std::strlen(to_send), to_send);
-    ret1.second->wait();
+    ret1->wait();
 
-    sirius::OpRet ret2 = client.read_async(alloc1, 0,
+    std::shared_ptr<sirius::FutureBladeOp> ret2 = client.read_async(alloc1, 0,
             std::strlen(to_send), data);
-    ret2.second->wait();
+    ret2->wait();
 
-    if (!ret1.first || !ret2.first)
+    if (ret1 == nullptr || ret2 == nullptr)
         exit(-1);
 
 
@@ -251,14 +251,14 @@ void test_destructor() {
     client.authenticate(controller_address, controller_port, token);
 }
 
-int main() {
-    // test_1_client();
+auto main() -> int {
+    test_1_client();
     // test_2_clients();
     // test_performance();
     // test_authentication();
     // test_destructor();
     // test_allocation();
-    test_async();
+    //test_async();
     return 0;
 }
 

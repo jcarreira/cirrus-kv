@@ -13,9 +13,6 @@
 
 namespace sirius {
 
-#define MakeOpRet(success, OpInfo) std::make_pair((success), \
-        reinterpret_cast<FutureBladeOp*>(OpInfo))
-
 BladeClient::BladeClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
 }
@@ -47,7 +44,7 @@ AllocRec BladeClient::allocate(uint64_t size) {
 
     auto msg = reinterpret_cast<BladeMessage*>(con_ctx.recv_msg);
 
-    AllocRec alloc(new AllocationRecord(
+    AllocRec alloc(std::make_shared<AllocationRecord>(
                 msg->data.alloc_ack.mr_id,
                 msg->data.alloc_ack.remote_addr,
                 msg->data.alloc_ack.peer_rkey));
@@ -80,7 +77,7 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
     return true;
 }
 
-OpRet BladeClient::write_async(
+std::shared_ptr<FutureBladeOp> BladeClient::write_async(
         const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -92,13 +89,14 @@ OpRet BladeClient::write_async(
         " rkey: ", alloc_rec->peer_rkey);
 
     if (length > SEND_MSG_SIZE)
-        return MakeOpRet(false, NULL);
+        return nullptr;
 
     std::memcpy(con_ctx.send_msg, data, length);
     auto op_info = write_rdma_async(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
+            alloc_rec->remote_addr + offset,
+            alloc_rec->peer_rkey);
 
-    return MakeOpRet(true, new FutureBladeOp(op_info));
+    return std::make_shared<FutureBladeOp>(op_info);
 }
 
 bool BladeClient::read_sync(const AllocRec& alloc_rec,
@@ -125,12 +123,12 @@ bool BladeClient::read_sync(const AllocRec& alloc_rec,
     return true;
 }
 
-OpRet BladeClient::read_async(const AllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data) {
     if (length > RECV_MSG_SIZE)
-        return MakeOpRet(false, NULL);
+        return nullptr;
 
     LOG<INFO>("reading rdma",
         " length: ", length,
@@ -138,20 +136,20 @@ OpRet BladeClient::read_async(const AllocRec& alloc_rec,
         " remote_addr: ", alloc_rec->remote_addr,
         " rkey: ", alloc_rec->peer_rkey);
 
+    void* buffer = con_ctx.recv_msg; // need this for capture list
+    auto copy_fn = [data, buffer, length]() {
+        TimerFunction tf("Memcpy (read) time", true);
+        std::memcpy(data, buffer, length);
+    };
+
     auto op_info = read_rdma_async(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey);
+            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
+            copy_fn);
 
-    {
-        TimerFunction tf("Memcpy time", true);
-        std::memcpy(data, con_ctx.recv_msg, length);
-    }
-
-    return MakeOpRet(true, new FutureBladeOp(op_info));
+    return std::make_shared<FutureBladeOp>(op_info);
 }
 
 FutureBladeOp::~FutureBladeOp() {
-    if (op_info->op_sem)
-        delete op_info->op_sem;
 }
 
 void FutureBladeOp::wait() {
@@ -159,9 +157,7 @@ void FutureBladeOp::wait() {
 }
 
 bool FutureBladeOp::try_wait() {
-    int ret = op_info->op_sem->trywait();
-
-    return ret != -1;
+    return op_info->op_sem->trywait();
 }
 
 }  // namespace sirius
