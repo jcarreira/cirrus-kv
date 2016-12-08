@@ -92,7 +92,8 @@ bool FullBladeObjectStore::readToLocal(BladeLocation loc, void* ptr) const {
     return true;
 }
 
-std::shared_ptr<FutureBladeOp> FullBladeObjectStore::readToLocalAsync(BladeLocation loc, void* ptr) const {
+std::shared_ptr<FutureBladeOp> FullBladeObjectStore::readToLocalAsync(
+        BladeLocation loc, void* ptr) const {
     auto future = client.read_async(loc.allocRec, 0, loc.size, ptr);
     return future;
 }
@@ -102,7 +103,8 @@ bool FullBladeObjectStore::writeRemote(Object obj, BladeLocation loc) {
     return true;
 }
 
-std::shared_ptr<FutureBladeOp> FullBladeObjectStore::writeRemoteAsync(Object obj, BladeLocation loc) {
+std::shared_ptr<FutureBladeOp> FullBladeObjectStore::writeRemoteAsync(
+        Object obj, BladeLocation loc) {
     auto future = client.write_async(loc.allocRec, 0, loc.size, obj);
     return future;
 }
