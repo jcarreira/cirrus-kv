@@ -32,8 +32,9 @@ RDMAClient::~RDMAClient() {
 
 void RDMAClient::build_params(struct rdma_conn_param *params) {
     memset(params, 0, sizeof(*params));
-    params->initiator_depth = params->responder_resources = 1;
-    params->rnr_retry_count = 7; /* infinite retry */
+    params->initiator_depth = params->responder_resources = 10;
+    params->rnr_retry_count = 70;
+    params->retry_count = 70;
 }
 
 void RDMAClient::setup_memory(ConnectionContext& ctx) {
@@ -79,8 +80,8 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
 
     qp_attr->cap.max_send_wr = 10;
     qp_attr->cap.max_recv_wr = 10;
-    qp_attr->cap.max_send_sge = 1;
-    qp_attr->cap.max_recv_sge = 1;
+    qp_attr->cap.max_send_sge = 10;
+    qp_attr->cap.max_recv_sge = 10;
 }
 
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
@@ -240,6 +241,8 @@ void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     // wait until operation is completed
     op_info->op_sem->wait();
+
+    delete op_info;
 }
 
 RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
