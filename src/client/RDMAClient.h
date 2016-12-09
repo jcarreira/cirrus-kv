@@ -41,13 +41,13 @@ struct RDMAOpInfo {
     void apply() { 
         LOG<INFO>("Applying fn");
         apply_fn();
+        LOG<INFO>("Applied fn");
     }
 
     struct rdma_cm_id* id;
-    std::unique_ptr<Semaphore> op_sem;
+    Semaphore* op_sem; // XXX check this
+    //std::unique_ptr<Semaphore> op_sem;
     std::function<void(void)> apply_fn;
-
-    //XXX make sure this one is deleted
 };
 
 /*
