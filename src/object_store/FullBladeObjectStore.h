@@ -25,13 +25,13 @@ namespace ostore {
 
 class BladeLocation {
 public:
-    BladeLocation(uint64_t sz, const AllocRec& ar) :
+    BladeLocation(uint64_t sz, const AllocationRecord& ar) :
         size(sz), allocRec(ar) {}
     explicit BladeLocation(uint64_t sz = 0) :
         size(sz) {}
 
     uint64_t size;
-    AllocRec allocRec;
+    AllocationRecord allocRec;
 };
 
 template<class T = void>
@@ -56,7 +56,7 @@ private:
     std::shared_ptr<FutureBladeOp> writeRemoteAsync(Object obj,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
-            uint64_t size, const AllocRec& allocRec);
+            uint64_t size, const AllocationRecord& allocRec);
 
     // hash to map oid and location
     // if oid is not found, object is not in store
@@ -120,7 +120,7 @@ bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, ObjectID id) {
         return writeRemote(obj, loc);
     } else {
         // we could merge this into a single message (?)
-        sirius::AllocRec allocRec = client.allocate(size);
+        sirius::AllocationRecord allocRec = client.allocate(size);
         insertObjectLocation(id, size, allocRec);
         return writeRemote(obj, BladeLocation(size, allocRec));
     }
@@ -132,7 +132,7 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
     BladeLocation loc;
 
     if (!objects_.find(id, loc)) {
-        sirius::AllocRec allocRec = client.allocate(size);
+        sirius::AllocationRecord allocRec = client.allocate(size);
         insertObjectLocation(id, size, allocRec);
         loc = BladeLocation(size, allocRec);
     }
@@ -178,7 +178,7 @@ std::shared_ptr<FutureBladeOp> FullBladeObjectStoreTempl<T>::writeRemoteAsync(
 
 template<class T>
 bool FullBladeObjectStoreTempl<T>::insertObjectLocation(ObjectID id,
-        uint64_t size, const AllocRec& allocRec) {
+        uint64_t size, const AllocationRecord& allocRec) {
     objects_[id] = BladeLocation(size, allocRec);
 
     return true;

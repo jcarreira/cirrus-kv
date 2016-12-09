@@ -44,12 +44,12 @@ void test_async() {
     client.connect("10.10.49.83", PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
-    sirius::AllocRec alloc1 = client.allocate(1 * MB);
+    sirius::AllocationRecord alloc1 = client.allocate(1 * MB);
 
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-            alloc1->alloc_id,
-            " remote_addr: ", alloc1->remote_addr,
-            " peer_rkey: ", alloc1->peer_rkey);
+            alloc1.alloc_id,
+            " remote_addr: ", alloc1.remote_addr,
+            " peer_rkey: ", alloc1.peer_rkey);
 
     std::shared_ptr<sirius::FutureBladeOp> ret1 = client.write_async(alloc1, 0,
             std::strlen(to_send), to_send);
@@ -78,12 +78,12 @@ void test_allocation() {
     client.connect("10.10.49.83", PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
-    sirius::AllocRec alloc1 = client.allocate(1 * MB);
+    sirius::AllocationRecord alloc1 = client.allocate(1 * MB);
 
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-            alloc1->alloc_id,
-            " remote_addr: ", alloc1->remote_addr,
-            " peer_rkey: ", alloc1->peer_rkey);
+            alloc1.alloc_id,
+            " remote_addr: ", alloc1.remote_addr,
+            " peer_rkey: ", alloc1.peer_rkey);
 
     client.write_sync(alloc1, 0, std::strlen(to_send), to_send);
     client.read_sync(alloc1, 0, std::strlen(to_send), data);
@@ -92,11 +92,11 @@ void test_allocation() {
         exit(-1);
     }
 
-    sirius::AllocRec alloc2 = client.allocate(2 * MB);
+    sirius::AllocationRecord alloc2 = client.allocate(2 * MB);
     sirius::LOG<sirius::INFO>("Received allocation 2. id: ",
-        alloc2->alloc_id,
-        " remote_addr: ", alloc2->remote_addr,
-        " peer_rkey: ", alloc2->peer_rkey);
+        alloc2.alloc_id,
+        " remote_addr: ", alloc2.remote_addr,
+        " peer_rkey: ", alloc2.peer_rkey);
 
     client.read_sync(alloc2, 0, std::strlen(to_send), data);
     sirius::LOG<sirius::INFO>("Received data 2: ", data);
@@ -115,10 +115,10 @@ void test_1_client() {
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
-    sirius::AllocRec alloc1 = client1.allocate(1 * MB);
+    sirius::AllocationRecord alloc1 = client1.allocate(1 * MB);
 
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-       alloc1->alloc_id);
+       alloc1.alloc_id);
 
     client1.write_sync(alloc1, 0, std::strlen(to_send), to_send);
 
@@ -141,11 +141,11 @@ void test_2_clients() {
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
-    sirius::AllocRec alloc1 = client1.allocate(1 * MB);
-    sirius::AllocRec alloc2 = client2.allocate(1 * GB);
+    sirius::AllocationRecord alloc1 = client1.allocate(1 * MB);
+    sirius::AllocationRecord alloc2 = client2.allocate(1 * GB);
 
-    sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1->alloc_id);
-    sirius::LOG<sirius::INFO>("Received allocation 2. id: ", alloc2->alloc_id);
+    sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1.alloc_id);
+    sirius::LOG<sirius::INFO>("Received allocation 2. id: ", alloc2.alloc_id);
 
     unsigned int seed = 42;
     std::ostringstream oss;
@@ -182,9 +182,9 @@ void test_performance() {
     memset(data, 0, mem_size);
     data[0] = 'Y';
 
-    sirius::AllocRec alloc1 = client.allocate(1 * GB);  // currently ignored
+    sirius::AllocationRecord alloc1 = client.allocate(1 * GB);  // currently ignored
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-            alloc1->alloc_id);
+            alloc1.alloc_id);
 
     // small write to force creation of pool
     {
@@ -228,10 +228,10 @@ void test_authentication() {
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
-    sirius::AllocRec alloc1 = client.allocate(1 * MB);
+    sirius::AllocationRecord alloc1 = client.allocate(1 * MB);
 
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-            alloc1->alloc_id);
+            alloc1.alloc_id);
 
     srand(time(nullptr));
 
@@ -265,10 +265,10 @@ void test_with_registration() {
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
-    sirius::AllocRec alloc1 = client1.allocate(10);
+    sirius::AllocationRecord alloc1 = client1.allocate(10);
 
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
-       alloc1->alloc_id);
+       alloc1.alloc_id);
 
     {
         sirius::TimerFunction tf("write with registration", true);

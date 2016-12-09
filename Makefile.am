@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = src examples
+SUBDIRS = src
 
 source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)

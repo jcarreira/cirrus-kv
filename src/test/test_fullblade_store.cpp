@@ -99,9 +99,9 @@ void test_sync2() {
 
 auto main() -> int {
 
-    //test_sync();
+    test_sync();
     //test_async();
-    test_sync2();
+    // test_sync2();
 
     return 0;
 }

@@ -42,9 +42,9 @@ auto main() -> int {
 
     for (int i = 1; i < 1024 * 10; i += (1024*10 / 50)) {
         std::cout << "Allocating " << i << "MB" << std::endl;
-        sirius::AllocRec alloc1 = client1.allocate(i * MB);
+        sirius::AllocationRecord alloc1 = client1.allocate(i * MB);
 
-        sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1->alloc_id);
+        sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1.alloc_id);
 
         // average latencies
         uint64_t elapsed_cum = 0;

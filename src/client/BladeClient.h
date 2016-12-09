@@ -13,8 +13,6 @@ namespace sirius {
 
 class FutureBladeOp;
 
-using AllocRec = std::shared_ptr<AllocationRecord>;
-
 class FutureBladeOp {
 public:
     FutureBladeOp(RDMAOpInfo* info) :
@@ -37,20 +35,20 @@ public:
     bool authenticate(std::string allocator_address,
         std::string port, AuthenticationToken& auth_token);
 
-    AllocRec allocate(uint64_t size);
+    AllocationRecord allocate(uint64_t size);
 
     // writes
-    std::shared_ptr<FutureBladeOp> write_async(const AllocRec& alloc_rec,
+    std::shared_ptr<FutureBladeOp> write_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length, const void* data,
             RDMAMem* mem = nullptr);
-    bool write_sync(const AllocRec& alloc_rec, uint64_t offset, 
+    bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data, RDMAMem* mem = nullptr);
 
     // reads
-    std::shared_ptr<FutureBladeOp> read_async(const AllocRec& alloc_rec,
+    std::shared_ptr<FutureBladeOp> read_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length, void *data,
             RDMAMem* mem = nullptr);
-    bool read_sync(const AllocRec& alloc_rec, uint64_t offset,
+    bool read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
 
 private:

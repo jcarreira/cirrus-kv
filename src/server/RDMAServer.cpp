@@ -116,8 +116,9 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
 
 void RDMAServer::build_params(struct rdma_conn_param *params) {
     memset(params, 0, sizeof(*params));
-    params->initiator_depth = params->responder_resources = 1;
-    params->rnr_retry_count = 7;  // infinite retry
+    params->initiator_depth = params->responder_resources = 10;
+    params->rnr_retry_count = 70;
+    params->retry_count = 70;
 }
 
 /*
@@ -132,7 +133,7 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
 
     TEST_Z(gen_ctx_.pd = ibv_alloc_pd(gen_ctx_.ctx));
     TEST_Z(gen_ctx_.comp_channel = ibv_create_comp_channel(gen_ctx_.ctx));
-    TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 10,
+    TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 100,
                 nullptr, gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
 
@@ -223,7 +224,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
 // 1. post a receive request
 // 2. publicize memory region to client
 void RDMAServer::handle_established(struct rdma_cm_id *id) {
-    post_msg_receive(id);
+    for (int i = 0; i < 4; ++i)
+        post_msg_receive(id);
 }
 
 void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {

@@ -31,7 +31,7 @@ bool BladeClient::authenticate(std::string address,
     return auth_token.allow;
 }
 
-AllocRec BladeClient::allocate(uint64_t size) {
+AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("Allocating ",
         size, " bytes");
 
@@ -44,10 +44,10 @@ AllocRec BladeClient::allocate(uint64_t size) {
 
     auto msg = reinterpret_cast<BladeMessage*>(con_ctx.recv_msg);
 
-    AllocRec alloc(std::make_shared<AllocationRecord>(
+    AllocationRecord alloc(
                 msg->data.alloc_ack.mr_id,
                 msg->data.alloc_ack.remote_addr,
-                msg->data.alloc_ack.peer_rkey));
+                msg->data.alloc_ack.peer_rkey);
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",
         msg->data.alloc_ack.remote_addr,
@@ -55,7 +55,7 @@ AllocRec BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
-bool BladeClient::write_sync(const AllocRec& alloc_rec,
+bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data,
@@ -63,8 +63,8 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
     LOG<INFO>("writing rdma",
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
         return false;
@@ -75,8 +75,8 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
         mem->prepare(con_ctx.gen_ctx_);
 
         write_rdma_sync(id_, length,
-                alloc_rec->remote_addr + offset,
-                alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
                 *mem);
 
         mem->clear();
@@ -84,7 +84,7 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
     } else {
         std::memcpy(con_ctx.send_msg, data, length);
         write_rdma_sync(id_, length,
-                alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
                 default_send_mem);
     }
 
@@ -92,7 +92,7 @@ bool BladeClient::write_sync(const AllocRec& alloc_rec,
 }
 
 std::shared_ptr<FutureBladeOp> BladeClient::write_async(
-        const AllocRec& alloc_rec,
+        const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data,
@@ -100,8 +100,8 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
     LOG<INFO>("writing rdma",
         " length: ",length,
         " offset: ",offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
         return nullptr;
@@ -113,14 +113,14 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
         mem->prepare(con_ctx.gen_ctx_);
 
         op_info = write_rdma_async(id_, length,
-                alloc_rec->remote_addr + offset,
-                alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
                 *mem);
     } else {
         std::memcpy(con_ctx.send_msg, data, length);
         op_info = write_rdma_async(id_, length,
-                alloc_rec->remote_addr + offset,
-                alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
                 default_send_mem);
     }
 
@@ -128,7 +128,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
-bool BladeClient::read_sync(const AllocRec& alloc_rec,
+bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data,
@@ -139,8 +139,8 @@ bool BladeClient::read_sync(const AllocRec& alloc_rec,
     LOG<INFO>("reading rdma",
         " length: ",length,
         " offset: ",offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
@@ -148,14 +148,14 @@ bool BladeClient::read_sync(const AllocRec& alloc_rec,
         mem->prepare(con_ctx.gen_ctx_);
 
         read_rdma_sync(id_, length,
-                alloc_rec->remote_addr + offset,
-                alloc_rec->peer_rkey, *mem);
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey, *mem);
 
         mem->clear();
     } else {
         read_rdma_sync(id_, length,
-                alloc_rec->remote_addr + offset,
-                alloc_rec->peer_rkey, default_recv_mem);
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey, default_recv_mem);
 
         {
             TimerFunction tf("Memcpy time", true);
@@ -166,7 +166,7 @@ bool BladeClient::read_sync(const AllocRec& alloc_rec,
     return true;
 }
 
-std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data,
@@ -177,8 +177,8 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocRec& alloc_rec
     LOG<INFO>("reading rdma",
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     RDMAOpInfo* op_info;
     if (mem) {
@@ -187,7 +187,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocRec& alloc_rec
         mem->prepare(con_ctx.gen_ctx_);
     
         op_info = read_rdma_async(id_, length,
-                alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
                 *mem,
                 []() -> void {});
     } else {
@@ -197,7 +197,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(const AllocRec& alloc_rec
             std::memcpy(data, buffer, length);
         };
         op_info = read_rdma_async(id_, length,
-                alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
                 default_recv_mem, copy_fn);
     }
 
