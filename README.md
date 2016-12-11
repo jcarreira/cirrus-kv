@@ -11,10 +11,15 @@ Requirements
 
 This library has been tested on Ubuntu >= 14.04.
 
-It compiles with g++ 6.2 and requires the C++17 features to compile.
-Building the library requires the autotools. Install them on Ubuntu
+It has been tested with the following environment:
+* Ubuntu 14.04
+* g++ 6.2 (needs C++17)
+* Boost
+* autotools
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool
+You can install these with
+
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev
 
 Building
 ==========
