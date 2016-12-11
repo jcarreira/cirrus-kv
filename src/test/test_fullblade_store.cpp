@@ -16,6 +16,7 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = GB/2;
 
 struct Dummy {
@@ -24,7 +25,7 @@ struct Dummy {
 };
 
 void test_sync() {
-    sirius::ostore::FullBladeObjectStoreTempl<> store("10.10.49.83", PORT);
+    sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -47,7 +48,7 @@ void test_sync() {
 }
 
 void test_async() {
-    sirius::ostore::FullBladeObjectStoreTempl<> store("10.10.49.83", PORT);
+    sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
     
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -75,7 +76,7 @@ void test_async() {
 }
 
 void test_sync2() {
-    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store("10.10.49.83", PORT);
+    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;

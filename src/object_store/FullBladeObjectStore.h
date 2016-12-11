@@ -43,6 +43,8 @@ public:
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
 
+    bool getHandle(const ObjectID&, BladeLocation&) const;
+
     bool put(Object, uint64_t, ObjectID);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept;
@@ -87,6 +89,15 @@ bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
         return true;
     } else {
         // object is not in store
+        return false;
+    }
+}
+
+template<class T>
+bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& loc) const {
+    if (objects_.find(id, loc)) {
+        return true;
+    } else {
         return false;
     }
 }
