@@ -218,8 +218,7 @@ void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, new Semaphore());
-    //auto op_info = new RDMAOpInfo(id, &ctx->send_sem);
+    auto op_info = new RDMAOpInfo(id, &ctx->send_sem);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_SEND;
     wr.sg_list = &sge;
