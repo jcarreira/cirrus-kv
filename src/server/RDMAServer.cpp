@@ -302,40 +302,58 @@ void RDMAServer::loop() {
         rdma_ack_cm_event(event);
 
         LOG<INFO>("Checking event");
-        if (event_copy.event == RDMA_CM_EVENT_ADDR_RESOLVED) {
-            LOG<INFO>("RDMA_CM_EVENT_ADDR_RESOLVED");
-            // address successfully resolved
-            // happens when we try to connect
-            build_connection(event_copy.id);
 
-            create_connection_context(event_copy.id);
+        switch (event_copy.event) {
+            case RDMA_CM_EVENT_ADDR_RESOLVED:
+                LOG<INFO>("RDMA_CM_EVENT_ADDR_RESOLVED");
+                // address successfully resolved
+                // happens when we try to connect
+                build_connection(event_copy.id);
 
-            TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
+                create_connection_context(event_copy.id);
 
-        } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            LOG<INFO>("RDMA_CM_EVENT_ROUTE_RESOLVED");
-            TEST_NZ(rdma_connect(event_copy.id, &cm_params));
+                TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
+                break;
+            case RDMA_CM_EVENT_ROUTE_RESOLVED:
+                LOG<INFO>("RDMA_CM_EVENT_ROUTE_RESOLVED");
+                TEST_NZ(rdma_connect(event_copy.id, &cm_params));
+                break;
+            case RDMA_CM_EVENT_CONNECT_REQUEST:
+                // Every new connection gets a new rdma_id
 
-        } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
-            // Every new connection gets a new rdma_id
-
-            LOG<INFO>("RDMA_CM_EVENT_CONNECT_REQUEST. id: ",
-                reinterpret_cast<uint64_t>(event_copy.id));
-            build_connection(event_copy.id);
-            create_connection_context(event_copy.id);
-            TEST_NZ(rdma_accept(event_copy.id, &cm_params));
-        } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
-            LOG<INFO>("RDMA_CM_EVENT_ESTABLISHED");
-            handle_established(event_copy.id);
-            handle_connection(event_copy.id);
-        } else if (event_copy.event == RDMA_CM_EVENT_DISCONNECTED) {
-            LOG<INFO>("RDMA_CM_EVENT_DISCONNECTED");
-            handle_disconnection(event_copy.id);
-            rdma_destroy_qp(event_copy.id);
-            handle_disconnected(event_copy.id);
-            rdma_destroy_id(event_copy.id);
-        } else {
-            DIE("unknown event\n");
+                LOG<INFO>("RDMA_CM_EVENT_CONNECT_REQUEST. id: ",
+                        reinterpret_cast<uint64_t>(event_copy.id));
+                build_connection(event_copy.id);
+                create_connection_context(event_copy.id);
+                TEST_NZ(rdma_accept(event_copy.id, &cm_params));
+                break;
+            case RDMA_CM_EVENT_ESTABLISHED:
+                LOG<INFO>("RDMA_CM_EVENT_ESTABLISHED");
+                handle_established(event_copy.id);
+                handle_connection(event_copy.id);
+                break;
+            case RDMA_CM_EVENT_DISCONNECTED:
+                LOG<INFO>("RDMA_CM_EVENT_DISCONNECTED");
+                handle_disconnection(event_copy.id);
+                rdma_destroy_qp(event_copy.id);
+                handle_disconnected(event_copy.id);
+                rdma_destroy_id(event_copy.id);
+                break;
+            case RDMA_CM_EVENT_ADDR_ERROR:
+            case RDMA_CM_EVENT_ROUTE_ERROR:
+            case RDMA_CM_EVENT_CONNECT_RESPONSE:
+            case RDMA_CM_EVENT_CONNECT_ERROR:
+            case RDMA_CM_EVENT_UNREACHABLE:
+            case RDMA_CM_EVENT_REJECTED:
+            case RDMA_CM_EVENT_DEVICE_REMOVAL:
+            case RDMA_CM_EVENT_MULTICAST_JOIN:
+            case RDMA_CM_EVENT_MULTICAST_ERROR:
+            case RDMA_CM_EVENT_ADDR_CHANGE:
+            case RDMA_CM_EVENT_TIMEWAIT_EXIT:
+                LOG<INFO>("Unhandled event code: ", event_copy.event, ". We ignore and pray for the best");
+                break;
+            default:
+                DIE("unknown event\n");
         }
     }
 }
