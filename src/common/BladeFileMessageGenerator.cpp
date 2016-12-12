@@ -12,6 +12,7 @@ void BladeFileMessageGenerator::alloc_msg(
 
     msg->type = ALLOC;
     std::memcpy(msg->data.alloc.filename, filename.c_str(), filename.size());
+    msg->data.alloc.filename[filename.size()] = '\0';
     msg->data.alloc.size = size;
 }
 
