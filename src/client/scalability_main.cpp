@@ -44,7 +44,8 @@ auto main() -> int {
         std::cout << "Allocating " << i << "MB" << std::endl;
         sirius::AllocationRecord alloc1 = client1.allocate(i * MB);
 
-        sirius::LOG<sirius::INFO>("Received allocation 1. id: ", alloc1.alloc_id);
+        sirius::LOG<sirius::INFO>(
+                "Received allocation 1. id: ", alloc1.alloc_id);
 
         // average latencies
         uint64_t elapsed_cum = 0;

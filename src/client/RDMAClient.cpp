@@ -9,13 +9,14 @@
 
 #include <string>
 #include <cstring>
+#include <atomic>
 
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
 #include "src/utils/TimerFunction.h"
 #include "src/utils/logging.h"
 
-#include "src/common/Semaphore.h"
+#include "src/common/Synchronization.h"
 
 namespace sirius {
 
@@ -37,34 +38,34 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
     params->retry_count = 70;
 }
 
-void RDMAClient::setup_memory(ConnectionContext& ctx) {
-    LOG<INFO>("Setting up memory");
+void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
-    LOG<INFO>("Memaling done");
-
-    {
-        LOG<INFO>("Registering region with size: ",
-            (RECV_MSG_SIZE / 1024 / 1024), " MB");
-        TEST_Z(con_ctx.recv_msg_mr =
-                ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
-                    RECV_MSG_SIZE,
-                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
-    }
-
-    LOG<INFO>("posix_memalign");
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
                 static_cast<size_t>(sysconf(_SC_PAGESIZE)),
                 SEND_MSG_SIZE));
-    LOG<INFO>("reg_mr");
+}
+
+void RDMAClient::setup_memory(ConnectionContext& ctx) {
+    alloc_rdma_memory(ctx);
+
+    LOG<INFO>("Registering region with size: ",
+            (RECV_MSG_SIZE / 1024 / 1024), " MB");
+    TEST_Z(con_ctx.recv_msg_mr =
+            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
+                RECV_MSG_SIZE,
+                IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
+
     TEST_Z(con_ctx.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));
 
-    default_recv_mem = RDMAMem(ctx.recv_msg, RECV_MSG_SIZE, con_ctx.recv_msg_mr);
-    default_send_mem = RDMAMem(ctx.send_msg, SEND_MSG_SIZE, con_ctx.send_msg_mr);
+    default_recv_mem = RDMAMem(ctx.recv_msg,
+            RECV_MSG_SIZE, con_ctx.recv_msg_mr);
+    default_send_mem = RDMAMem(ctx.send_msg,
+            SEND_MSG_SIZE, con_ctx.send_msg_mr);
 
     con_ctx.setup_done = true;
     LOG<INFO>("Set up memory done");
@@ -95,7 +96,7 @@ int RDMAClient::post_receive(struct rdma_cm_id *id) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, &ctx->recv_sem);
+    auto op_info = new RDMAOpInfo(id, ctx->recv_sem);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.sg_list = &sge;
     wr.num_sge = 1;
@@ -201,16 +202,21 @@ void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
     TEST_NZ(post_receive(id_));
 
     // send our RPC
-    send_message(id, size);
+
+    Lock* l = new SpinLock();
+    send_message(id, size, l);
 
     // wait for SEND completion
-    con_ctx->send_sem.wait();
+    l->wait();
+
+    LOG<INFO>("Sent is done. Waiting for receive");
 
     // Wait for reply
-    con_ctx->recv_sem.wait();
+    con_ctx->recv_sem->wait();
 }
 
-void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
+void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
+        Lock* lock) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     struct ibv_send_wr wr, *bad_wr = nullptr;
@@ -218,7 +224,9 @@ void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, &ctx->send_sem);
+    if (lock != nullptr)
+        lock->wait();
+    auto op_info = new RDMAOpInfo(id, lock);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_SEND;
     wr.sg_list = &sge;
@@ -237,16 +245,29 @@ void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
 
 void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
+        
+    LOG<INFO>("RDMAClient:: write_rdma_async");
     auto op_info = write_rdma_async(id, size, remote_addr, peer_rkey, mem);
+    LOG<INFO>("RDMAClient:: waiting");
 
     // wait until operation is completed
-    op_info->op_sem->wait();
 
-    delete op_info;
+    {
+        TimerFunction tf("waiting semaphore", true);
+        op_info->op_sem->wait();
+    }
+
+    //delete op_info->op_sem;
+    //delete op_info;
 }
 
 RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
+#if __GNUC__ >= 7
+    [[maybe_unused]]
+#else
+    __attribute__((unused))
+#endif
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     struct ibv_send_wr wr, *bad_wr = nullptr;
@@ -255,7 +276,10 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    auto op_info = new RDMAOpInfo(id, new Semaphore());
+    Lock* l = new SpinLock();
+    l->wait();
+
+    auto op_info = new RDMAOpInfo(id, l);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_RDMA_WRITE;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -278,17 +302,28 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
 
 void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
-    RDMAOpInfo* op_info = read_rdma_async(id, size, remote_addr, peer_rkey, mem);
+    RDMAOpInfo* op_info = read_rdma_async(id, size,
+            remote_addr, peer_rkey, mem);
 
     // wait until operation is completed
-    op_info->op_sem->wait();
+
+    {
+        TimerFunction tf("read_rdma_async wait for lock", true);
+        op_info->op_sem->wait();
+    }
+
+    //delete op_info->op_sem;
+    //delete op_info;
 }
 
 RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem,
         std::function<void()> apply_fn) {
-
+#if __GNUC__ >= 7
     [[maybe_unused]]
+#else
+    __attribute__((unused))
+#endif
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     struct ibv_send_wr wr, *bad_wr = nullptr;
@@ -297,7 +332,10 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    auto op_info    = new RDMAOpInfo(id, new Semaphore(), apply_fn);
+    Lock* l = new SpinLock();
+    l->wait();
+
+    auto op_info    = new RDMAOpInfo(id, l, apply_fn);
     wr.wr_id        = reinterpret_cast<uint64_t>(op_info);
     wr.opcode       = IBV_WR_RDMA_READ;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -306,10 +344,7 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     wr.num_sge      = 1;
     wr.send_flags   = IBV_SEND_SIGNALED;
 
-    //mem.prepare(ctx.gen_ctx_);
-
     sge.addr   = mem.addr_;
-    //sge.addr   = reinterpret_cast<uint64_t>(ctx->recv_msg);
     sge.length = size;
     sge.lkey   = mem.mr->lkey;
 
@@ -326,7 +361,7 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = nullptr;
 
-    LOG<INFO>("connect(", host, ", ", port, ")");
+    TimerFunction tf("connection end-to-end time", true);
 
     // use connection manager to resolve address
     TEST_NZ(getaddrinfo(host.c_str(), port.c_str(), nullptr, &addr));

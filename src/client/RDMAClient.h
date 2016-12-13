@@ -9,7 +9,7 @@
 #include <memory>
 #include <cstring>
 #include <rdma/rdma_cma.h>
-#include "src/common/Semaphore.h"
+#include "src/common/Synchronization.h"
 #include "src/utils/logging.h"
 
 namespace sirius {
@@ -30,7 +30,7 @@ struct GeneralContext {
 // this is allocated when issuing and deallocated
 // for async ops this is passed up
 struct RDMAOpInfo {
-    RDMAOpInfo(struct rdma_cm_id* id_, Semaphore* s = nullptr,
+    RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
             std::function<void(void)> fn = []() -> void {}
             ) :
         id(id_), op_sem(s), apply_fn(fn) {
@@ -45,8 +45,7 @@ struct RDMAOpInfo {
     }
 
     struct rdma_cm_id* id;
-    Semaphore* op_sem; // XXX check this
-    //std::unique_ptr<Semaphore> op_sem;
+    Lock* op_sem;
     std::function<void(void)> apply_fn;
 };
 
@@ -57,15 +56,20 @@ struct ConnectionContext {
     ConnectionContext() :
         send_msg(0), send_msg_mr(0), recv_msg(0),
         recv_msg_mr(0), peer_addr(0), peer_rkey(0),
-        setup_done(false) {
-          memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
-        }
+        setup_done(false) 
+    {
+        recv_sem = new SpinLock();
+        recv_sem->wait(); //lock
+        memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
+    }
 
     ~ConnectionContext() {
         if (setup_done) {
             ibv_dereg_mr(send_msg_mr);
             ibv_dereg_mr(recv_msg_mr);
         }
+
+        delete recv_sem;
     }
     
     void *send_msg;
@@ -78,8 +82,9 @@ struct ConnectionContext {
     uint32_t peer_rkey;
 
     // these are used for SEND and RECV
-    Semaphore send_sem;
-    Semaphore recv_sem;
+    Lock* send_sem;
+    //Semaphore send_sem;
+    Lock* recv_sem;
     
     GeneralContext gen_ctx_;
     bool setup_done = false;
@@ -134,6 +139,8 @@ public:
     virtual void connect(const std::string& host, const std::string& port);
 
 protected:
+    void alloc_rdma_memory(ConnectionContext& ctx);
+
     void build_params(struct rdma_conn_param *params);
     void setup_memory(ConnectionContext& ctx);
     void build_qp_attr(struct ibv_qp_init_attr *qp_attr, ConnectionContext*);
@@ -141,7 +148,7 @@ protected:
     void build_context(struct ibv_context *verbs, ConnectionContext*);
 
     // Message (Send/Recv)
-    void send_message(rdma_cm_id*, uint64_t size);
+    void send_message(rdma_cm_id*, uint64_t size, Lock* lock = nullptr);
     void send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)

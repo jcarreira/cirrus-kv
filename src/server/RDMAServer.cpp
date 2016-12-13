@@ -274,9 +274,8 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
         post_msg_receive(id);
         LOG<INFO>("Posted new receive WR");
 
-        //msg_handler f = &RDMAServer::process_message;
-        std::invoke(&RDMAServer::process_message, con_ctx->server, id, con_ctx->recv_msg);
-        //(con_ctx->server->*f)(id, con_ctx->recv_msg);
+        std::invoke(&RDMAServer::process_message,
+                con_ctx->server, id, con_ctx->recv_msg);
 
     } else if (wc->opcode == IBV_WC_SEND) {
         LOG<INFO>("Blade server sent a message..");
@@ -350,7 +349,9 @@ void RDMAServer::loop() {
             case RDMA_CM_EVENT_MULTICAST_ERROR:
             case RDMA_CM_EVENT_ADDR_CHANGE:
             case RDMA_CM_EVENT_TIMEWAIT_EXIT:
-                LOG<INFO>("Unhandled event code: ", event_copy.event, ". We ignore and pray for the best");
+                LOG<INFO>("Unhandled event code: ",
+                        event_copy.event,
+                        ". We ignore and pray for the best");
                 break;
             default:
                 DIE("unknown event\n");

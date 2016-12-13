@@ -9,6 +9,7 @@
 #include "src/object_store/ObjectStore.h"
 #include "src/client/BladeClient.h"
 #include "src/utils/utils.h"
+#include "src/utils/TimerFunction.h"
 #include "src/utils/logging.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"   
@@ -163,7 +164,8 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
 
 template<class T>
 bool FullBladeObjectStoreTempl<T>::readToLocal(BladeLocation loc, void* ptr) const {
-    client.read_sync(loc.allocRec, 0, loc.size, ptr);
+    RDMAMem mem(ptr, loc.size);
+    client.read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
     return true;
 }
 
@@ -176,7 +178,13 @@ std::shared_ptr<FutureBladeOp> FullBladeObjectStoreTempl<T>::readToLocalAsync(
 
 template<class T>
 bool FullBladeObjectStoreTempl<T>::writeRemote(Object obj, BladeLocation loc) {
-    client.write_sync(loc.allocRec, 0, loc.size, obj);
+    RDMAMem mem(obj, loc.size);
+
+    {
+        TimerFunction tf("writeRemote", true);
+        LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
+        client.write_sync(loc.allocRec, 0, loc.size, obj, &mem);
+    }
     return true;
 }
 

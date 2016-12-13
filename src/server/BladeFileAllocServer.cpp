@@ -104,7 +104,6 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             uint64_t remote_addr =
                 reinterpret_cast<uint64_t>(ptr);
 
-            uint64_t alloc_id = num_allocs_++;
             file_to_alloc_[filename] = BladeAllocation(ptr);
 
             BladeFileMessageGenerator::alloc_ack_msg(

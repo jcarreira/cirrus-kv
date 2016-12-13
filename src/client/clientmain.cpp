@@ -182,7 +182,7 @@ void test_performance() {
     memset(data, 0, mem_size);
     data[0] = 'Y';
 
-    sirius::AllocationRecord alloc1 = client.allocate(1 * GB);  // currently ignored
+    sirius::AllocationRecord alloc1 = client.allocate(1 * GB);
     sirius::LOG<sirius::INFO>("Received allocation 1. id: ",
             alloc1.alloc_id);
 
@@ -286,12 +286,12 @@ void test_with_registration() {
         sirius::RDMAMem rmem(data, sizeof(data));
         client1.read_sync(alloc1, 0, std::strlen(to_send), data, &rmem);
     }
-    
+
     if (strncmp(data, to_send, std::strlen(to_send)))
         throw std::runtime_error("Error in test");
 
     std::memset(data, 0, sizeof(data));
-    
+
     {
         sirius::TimerFunction tf("read without registration", true);
         sirius::RDMAMem rmem(data, sizeof(data));
