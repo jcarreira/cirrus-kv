@@ -1,19 +1,19 @@
 /* Copyright Joao Carreira 2016 */
 
 #include <stdlib.h>
+#include <cstring>
+#include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <iterator>
 #include <algorithm>
-#include <cstdint>
 #include <iostream>
 #include <map>
 #include <string>
-#include <cstring>
-#include <cctype>
 
+#include <google/dense_hash_map>
 #include "src/client/BladeClient.h"
 #include "src/utils/TimerFunction.h"
-#include <google/dense_hash_map>
 #include "src/utils/logging.h"
 
 /*
