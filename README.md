@@ -26,4 +26,3 @@ Building
 
     $ sh boostrap.sh
     $ make
-    $ make # there's an unsolved dependency
