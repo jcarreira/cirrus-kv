@@ -7,7 +7,7 @@ Sirius
 Sirius is a system for memory management in disaggregated datacenter environments.
 
 Requirements
-================
+============
 
 This library has been tested on Ubuntu >= 14.04.
 
@@ -22,7 +22,16 @@ You can install these with
     $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev
 
 Building
-==========
+=========
 
     $ sh boostrap.sh
     $ make
+
+    
+Running Tests
+=============
+
+Client, server example:
+
+    $ ./ddc/src/server/bladeallocmain&
+    $ ./ddc/src/client/clientmain
