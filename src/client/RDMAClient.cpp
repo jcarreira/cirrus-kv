@@ -42,7 +42,7 @@ void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
-    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx.send_msg),
+    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx_.send_msg),
                 static_cast<size_t>(sysconf(_SC_PAGESIZE)),
                 SEND_MSG_SIZE));
 }
@@ -52,22 +52,22 @@ void RDMAClient::setup_memory(ConnectionContext& ctx) {
 
     LOG<INFO>("Registering region with size: ",
             (RECV_MSG_SIZE / 1024 / 1024), " MB");
-    TEST_Z(con_ctx.recv_msg_mr =
-            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.recv_msg,
+    TEST_Z(con_ctx_.recv_msg_mr =
+            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.recv_msg,
                 RECV_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
-    TEST_Z(con_ctx.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx.send_msg,
+    TEST_Z(con_ctx_.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));
 
-    default_recv_mem = RDMAMem(ctx.recv_msg,
-            RECV_MSG_SIZE, con_ctx.recv_msg_mr);
-    default_send_mem = RDMAMem(ctx.send_msg,
-            SEND_MSG_SIZE, con_ctx.send_msg_mr);
+    default_recv_mem_ = RDMAMem(ctx.recv_msg,
+            RECV_MSG_SIZE, con_ctx_.recv_msg_mr);
+    default_send_mem_ = RDMAMem(ctx.send_msg,
+            SEND_MSG_SIZE, con_ctx_.send_msg_mr);
 
-    con_ctx.setup_done = true;
+    con_ctx_.setup_done = true;
     LOG<INFO>("Set up memory done");
 }
 
@@ -357,6 +357,115 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
 }
 
 void RDMAClient::connect(const std::string& host, const std::string& port) {
+    connect_rdma_cm(host, port);
+    //connect_eth(host, port);
+}
+
+void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
+    // Get device
+    int num_device;
+    struct ibv_device **dev_list;
+    dev_list = ibv_get_device_list(&num_device);
+
+    if (num_device <= 0 || dev_list == nullptr) {
+        throw std::runtime_error("Error in ibv_get_device_list");
+    }
+
+#ifdef DEBUG
+    for (int i = 0; i < num_device; ++i) {
+        std::cout << "device: ". ibv_get_device_name(dev_list[i]) << std::endl;
+    }
+#endif
+
+    // we get first one
+    struct ibv_device *ib_dev = dev_list[0];
+    struct ibv_context* dev_ctx = ibv_open_device(ib_dev);
+
+    if (nullptr == dev_ctx) {
+        throw std::runtime_error("Error opening ib device");
+    }
+
+    LOG<INFO>("Opened ib device");
+
+    ibv_query_device(dev_ctx, &con_ctx_.gen_ctx_.device_attr);
+    
+    // Check some information
+    int ret = ibv_query_port(dev_ctx, 1, &con_ctx_.gen_ctx_.port_attr);
+    ibv_query_gid(dev_ctx, 1, 0, &con_ctx_.gen_ctx_.gid);
+    
+    LOG<INFO>("Creating IB CQs");
+
+    // creates PD
+    // creates Comp channel
+    // creates CQ
+    // creates handling thread
+    build_context(dev_ctx, &con_ctx_);
+    build_qp_attr(&con_ctx_.gen_ctx_.qp_attr, &con_ctx_);
+
+    con_ctx_.qp = ibv_create_qp(con_ctx_.gen_ctx_.pd, &con_ctx_.gen_ctx_.qp_attr);
+
+    if (nullptr == con_ctx_.qp)
+        throw std::runtime_error("Error creating qp");
+
+    LOG<INFO>("Created QP");
+    // ******************
+    // Connect to client
+    // ******************
+    LOG<INFO>("Doing eth connect");
+    struct addrinfo *res;
+    struct addrinfo hints;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family   = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    ret = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
+
+    if (ret < 0) { 
+        throw std::runtime_error("Error getaddrinfo");
+    }
+
+    int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+    if (!::connect(sockfd, res->ai_addr, res->ai_addrlen)) {
+        throw std::runtime_error("Error connecting to host");
+    }
+
+    freeaddrinfo(res);
+   
+
+    LOG<INFO>("Handshaking");
+    // handshake
+
+    struct {
+        int lid        = 0;
+        int qpn        = 0;
+        int psn        = 0;
+        int rkey       = 0;
+        uint64_t vaddr = 0;
+    } handshake_msg;
+
+    handshake_msg.lid = con_ctx_.gen_ctx_.port_attr.lid;
+    handshake_msg.qpn = con_ctx_.qp->qp_num;
+    handshake_msg.psn = rand();
+    //handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
+    //handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
+
+    ret = ::send(sockfd, &handshake_msg, sizeof(handshake_msg), 0);
+    if (ret != sizeof(handshake_msg)) {
+        throw std::runtime_error("Error sending handshake");
+    }
+
+    char recv_buffer[1000];
+    ret = ::recv(sockfd, &recv_buffer, sizeof(recv_buffer), 0);
+
+    if (ret <= 0)
+        throw std::runtime_error("Error recv'ing");
+   
+
+}
+
+void RDMAClient::connect_rdma_cm(const std::string& host, const std::string& port) {
     struct addrinfo *addr;
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = nullptr;
@@ -375,7 +484,7 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
 
     freeaddrinfo(addr);
 
-    id_->context = &con_ctx;
+    id_->context = &con_ctx_;
     build_params(&cm_params);
 
     while (rdma_get_cm_event(ec_, &event) == 0) {
@@ -393,7 +502,7 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));
 
-            setup_memory(con_ctx);
+            setup_memory(con_ctx_);
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
             LOG<INFO>("resolved route");
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {

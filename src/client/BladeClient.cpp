@@ -35,7 +35,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("Allocating ",
         size, " bytes");
 
-    BladeMessageGenerator::alloc_msg(con_ctx.send_msg,
+    BladeMessageGenerator::alloc_msg(con_ctx_.send_msg,
             size);
 
     // post receive
@@ -43,7 +43,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     send_receive_message_sync(id_, sizeof(BladeMessage));
     LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
 
-    auto msg = reinterpret_cast<BladeMessage*>(con_ctx.recv_msg);
+    auto msg = reinterpret_cast<BladeMessage*>(con_ctx_.recv_msg);
 
     AllocationRecord alloc(
                 msg->data.alloc_ack.mr_id,
@@ -81,7 +81,7 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
-        mem->prepare(con_ctx.gen_ctx_);
+        mem->prepare(con_ctx_.gen_ctx_);
 
         LOG<INFO>("BladeClient:: write_rdma_sync");
         write_rdma_sync(id_, length,
@@ -94,10 +94,10 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         mem->clear();
 
     } else {
-        std::memcpy(con_ctx.send_msg, data, length);
+        std::memcpy(con_ctx_.send_msg, data, length);
         write_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                default_send_mem);
+                default_send_mem_);
     }
 
     return true;
@@ -122,18 +122,18 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
-        mem->prepare(con_ctx.gen_ctx_);
+        mem->prepare(con_ctx_.gen_ctx_);
 
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
                 *mem);
     } else {
-        std::memcpy(con_ctx.send_msg, data, length);
+        std::memcpy(con_ctx_.send_msg, data, length);
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
-                default_send_mem);
+                default_send_mem_);
     }
 
 
@@ -157,7 +157,7 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
-        mem->prepare(con_ctx.gen_ctx_);
+        mem->prepare(con_ctx_.gen_ctx_);
 
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
@@ -167,11 +167,11 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
     } else {
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
-                alloc_rec.peer_rkey, default_recv_mem);
+                alloc_rec.peer_rkey, default_recv_mem_);
 
         {
             TimerFunction tf("Memcpy time", true);
-            std::memcpy(data, con_ctx.recv_msg, length);
+            std::memcpy(data, con_ctx_.recv_msg, length);
         }
     }
 
@@ -197,21 +197,21 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
-        mem->prepare(con_ctx.gen_ctx_);
+        mem->prepare(con_ctx_.gen_ctx_);
 
         op_info = read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
                 *mem,
                 []() -> void {});
     } else {
-        void* buffer = con_ctx.recv_msg;  // need this for capture list
+        void* buffer = con_ctx_.recv_msg;  // need this for capture list
         auto copy_fn = [data, buffer, length]() {
             TimerFunction tf("Memcpy (read) time", true);
             std::memcpy(data, buffer, length);
         };
         op_info = read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                default_recv_mem, copy_fn);
+                default_recv_mem_, copy_fn);
     }
 
     return std::make_shared<FutureBladeOp>(op_info);

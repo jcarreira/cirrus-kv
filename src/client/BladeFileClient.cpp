@@ -38,7 +38,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
         uint64_t size) {
     LOG<INFO>("Allocating ", size, " bytes");
 
-    BladeFileMessageGenerator::alloc_msg(con_ctx.send_msg,
+    BladeFileMessageGenerator::alloc_msg(con_ctx_.send_msg,
             filename,
             size);
 
@@ -46,7 +46,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     send_receive_message_sync(id_, sizeof(BladeFileMessage));
 
     BladeFileMessage* msg =
-        reinterpret_cast<BladeFileMessage*>(con_ctx.recv_msg);
+        reinterpret_cast<BladeFileMessage*>(con_ctx_.recv_msg);
 
     FileAllocRec alloc(new FileAllocationRecord(
                 msg->data.alloc_ack.remote_addr,
@@ -70,12 +70,10 @@ bool BladeFileClient::write_sync(const FileAllocRec& alloc_rec,
     if (length > SEND_MSG_SIZE)
         return false;
 
-    // FIX: build a wrapper around memcpy
-    // to deal with memory size limitations
-    std::memcpy(con_ctx.send_msg, data, length);
+    std::memcpy(con_ctx_.send_msg, data, length);
     write_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_send_mem);
+            default_send_mem_);
 
     return true;
 }
@@ -93,10 +91,10 @@ bool BladeFileClient::write(const FileAllocRec& alloc_rec,
     if (length > SEND_MSG_SIZE)
         return false;
 
-    std::memcpy(con_ctx.send_msg, data, length);
+    std::memcpy(con_ctx_.send_msg, data, length);
     write_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_send_mem);
+            default_send_mem_);
 
     return true;
 }
@@ -116,11 +114,11 @@ bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
 
     read_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_recv_mem);
+            default_recv_mem_);
 
     {
         TimerFunction tf("Memcpy time", true);
-        std::memcpy(data, con_ctx.recv_msg, length);
+        std::memcpy(data, con_ctx_.recv_msg, length);
     }
 
     return true;
@@ -141,11 +139,11 @@ bool BladeFileClient::read(const FileAllocRec& alloc_rec,
 
     read_rdma_sync(id_, length,
             alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_recv_mem);
+            default_recv_mem_);
 
     {
         TimerFunction tf("Memcpy time", true);
-        std::memcpy(data, con_ctx.recv_msg, length);
+        std::memcpy(data, con_ctx_.recv_msg, length);
     }
 
     return true;

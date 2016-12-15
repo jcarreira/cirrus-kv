@@ -22,6 +22,10 @@ struct GeneralContext {
     struct ibv_pd *pd;
     struct ibv_cq *cq;
     struct ibv_comp_channel *comp_channel;
+    struct ibv_device_attr device_attr;
+    struct ibv_port_attr port_attr;
+    union ibv_gid gid;
+    struct ibv_qp_init_attr qp_attr;
     std::thread* cq_poller_thread;
 };
 
@@ -55,7 +59,8 @@ struct RDMAOpInfo {
 struct ConnectionContext {
     ConnectionContext() :
         send_msg(0), send_msg_mr(0), recv_msg(0),
-        recv_msg_mr(0), peer_addr(0), peer_rkey(0),
+        recv_msg_mr(0), qp(nullptr),
+        peer_addr(0), peer_rkey(0),
         setup_done(false) 
     {
         recv_sem = new SpinLock();
@@ -70,6 +75,7 @@ struct ConnectionContext {
         }
 
         delete recv_sem;
+        // XXX release send_msg and recv_msg
     }
     
     void *send_msg;
@@ -77,6 +83,8 @@ struct ConnectionContext {
 
     void* recv_msg;
     struct ibv_mr *recv_msg_mr;
+
+    struct ibv_qp* qp;
 
     uint64_t peer_addr;
     uint32_t peer_rkey;
@@ -164,6 +172,9 @@ protected:
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
+    
+    void connect_rdma_cm(const std::string& host, const std::string& port);
+    void connect_eth(const std::string& host, const std::string& port);
 
     // event poll loop
     static void *poll_cq(ConnectionContext*);
@@ -176,14 +187,14 @@ protected:
 
     int timeout_ms_;
 
-    ConnectionContext con_ctx;
+    ConnectionContext con_ctx_;
 
     const size_t GB = (1024 * 1024 * 1024);
     const size_t RECV_MSG_SIZE = 2 * GB;
     const size_t SEND_MSG_SIZE = 2 * GB;
 
-    RDMAMem default_recv_mem;
-    RDMAMem default_send_mem;
+    RDMAMem default_recv_mem_;
+    RDMAMem default_send_mem_;
 };
 
 } // sirius
