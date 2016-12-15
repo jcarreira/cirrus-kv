@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = test_fullblade_store test_mt
+bin_PROGRAMS = test_fullblade_store test_mt test_mult_clients
 LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
@@ -24,3 +24,9 @@ test_mt_CPPFLAGS              = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/s
 test_mt_LDADD                 = $(LINCLUDES) \
                                 $(LIBS)
 
+test_mult_clients_SOURCES               = test_mult_clients.cpp
+test_mult_clients_LDFLAGS               = -pthread
+test_mult_clients_CPPFLAGS              = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
+                    			-I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+test_mult_clients_LDADD                 = $(LINCLUDES) \
+                                          $(LIBS)

@@ -43,6 +43,8 @@ public:
     Object get(const ObjectID&) const;
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
+    
+    bool getHandle(ObjectID, BladeLocation& bl) const;
 
     bool getHandle(const ObjectID&, BladeLocation&) const;
 
