@@ -17,6 +17,7 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
+static const char IP[] = "169.229.49.15";
 
 void ctrlc_handler(int sig_num) {
     sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
@@ -41,7 +42,7 @@ void test_async() {
     sirius::LOG<sirius::INFO>("Testing async operations");
 
     sirius::BladeClient client;
-    client.connect("10.10.49.83", PORT);
+    client.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
     sirius::AllocationRecord alloc1 = client.allocate(1 * MB);
@@ -75,7 +76,7 @@ void test_allocation() {
     snprintf(data, sizeof(data), "%s", "WRONG");
 
     sirius::BladeClient client;
-    client.connect("10.10.49.83", PORT);
+    client.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
     sirius::AllocationRecord alloc1 = client.allocate(1 * MB);
@@ -111,7 +112,7 @@ void test_1_client() {
     sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
 
     sirius::BladeClient client1;
-    client1.connect("10.10.49.83", PORT);
+    client1.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
@@ -136,8 +137,8 @@ void test_2_clients() {
 
     sirius::BladeClient client1, client2;
 
-    client1.connect("10.10.49.83", PORT);
-    client2.connect("10.10.49.87", PORT);
+    client1.connect(IP, PORT);
+    client2.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
@@ -169,7 +170,7 @@ void test_2_clients() {
 // test bandwidth utilization
 void test_performance() {
     sirius::BladeClient client;
-    client.connect("10.10.49.87", PORT);
+    client.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
@@ -224,7 +225,7 @@ void test_authentication() {
     sirius::AuthenticationToken token(false);
     client.authenticate(controller_address, controller_port, token);
 
-    client.connect("10.10.49.87", PORT);
+    client.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
@@ -261,7 +262,7 @@ void test_with_registration() {
     sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
 
     sirius::BladeClient client1;
-    client1.connect("10.10.49.83", PORT);
+    client1.connect(IP, PORT);
 
     sirius::LOG<sirius::INFO>("Connected to blade");
 
