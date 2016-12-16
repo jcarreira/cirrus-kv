@@ -25,6 +25,23 @@ void BladeMessageGenerator::alloc_ack_msg(void *data,
     msg->data.alloc_ack.peer_rkey = rkey;
 }
 
+void BladeMessageGenerator::dealloc_msg(void *data, uint64_t addr) {
+    BladeMessage* msg =
+        reinterpret_cast<BladeMessage*>(data);
+
+    msg->type = DEALLOC;
+    msg->data.dealloc.addr = addr;
+}
+
+void BladeMessageGenerator::dealloc_ack_msg(void *data,
+        char result) {
+    BladeMessage* msg =
+        reinterpret_cast<BladeMessage*>(data);
+
+    msg->type = DEALLOC_ACK;
+    msg->data.dealloc_ack.result = result;
+}
+
 void BladeMessageGenerator::stats_msg(void *data) {
     BladeMessage* msg =
         reinterpret_cast<BladeMessage*>(data);

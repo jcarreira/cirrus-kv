@@ -51,6 +51,8 @@ public:
     bool put(Object, uint64_t, ObjectID);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept;
+    
+    bool remove(ObjectID);
 
 private:
     bool readToLocal(BladeLocation loc, void*) const;
@@ -134,7 +136,12 @@ bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, ObjectID id) {
         return writeRemote(obj, loc);
     } else {
         // we could merge this into a single message (?)
-        sirius::AllocationRecord allocRec = client.allocate(size);
+        sirius::AllocationRecord allocRec;
+        {
+            TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
+            allocRec = client.allocate(size);
+            //sirius::AllocationRecord allocRec = client.allocate(size);
+        }
         insertObjectLocation(id, size, allocRec);
         return writeRemote(obj, BladeLocation(size, allocRec));
     }
@@ -162,6 +169,16 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
         }
     };
     return fun;
+}
+
+template<class T>
+bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
+    BladeLocation loc;
+    if (objects_.find(id, loc)) {
+        client.deallocate(loc.allocRec.remote_addr);
+    } else {
+        throw std::runtime_error("Error. Trying to do inexistent object");
+    }
 }
 
 template<class T>

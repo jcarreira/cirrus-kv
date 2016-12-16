@@ -10,6 +10,8 @@ namespace sirius {
 enum msg_type { 
     ALLOC, ALLOC_ACK,
     STATS, STATS_ACK,
+    ALLOC_COALESCED, ALLOC_COALESCED_ACK,
+    DEALLOC, DEALLOC_ACK
 };
 
 struct BladeMessage {
@@ -23,7 +25,17 @@ struct BladeMessage {
             uint64_t remote_addr;
             uint64_t peer_rkey;
         } alloc_ack;
+        struct {
+            uint64_t addr;
+        } dealloc;
+        struct {
+            char result;
+        } dealloc_ack;
     } data;
+};
+
+struct BladeMessageBig : public BladeMessage {
+    char data[1024];
 };
 
 } // sirius

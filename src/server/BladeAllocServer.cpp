@@ -106,6 +106,22 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 break;
             }
+        case DEALLOC:
+            {
+                uint64_t addr = msg->data.dealloc.addr;
+
+                allocator->deallocate(reinterpret_cast<void*>(addr));
+
+                BladeMessageGenerator::dealloc_ack_msg(ctx->send_msg,
+                        true);
+
+                LOG<INFO>("Deallocated addr: ", addr);
+
+                // send async message
+                send_message(id, sizeof(BladeMessage));
+
+                break;
+            }
         case STATS:
                 BladeMessageGenerator::stats_msg(ctx->send_msg);
                 send_message(id, sizeof(BladeMessage));

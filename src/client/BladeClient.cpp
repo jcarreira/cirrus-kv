@@ -63,6 +63,24 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
+bool BladeClient::deallocate(uint64_t addr) {
+    LOG<INFO>("Deallocating addr: ", addr);
+
+    BladeMessageGenerator::dealloc_msg(con_ctx_.send_msg,
+            addr);
+
+    // post receive
+    LOG<INFO>("Sending dealloc msg size: ", sizeof(BladeMessage));
+    send_receive_message_sync(id_, sizeof(BladeMessage));
+    LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
+
+    auto msg = reinterpret_cast<BladeMessage*>(con_ctx_.recv_msg);
+
+    if (msg->data.dealloc_ack.result == 0)
+        throw std::runtime_error("Error with deallocation");
+    return true;
+}
+
 bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -78,16 +96,18 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         return false;
 
     if (mem) {
+        TimerFunction tf("BladeClient::write_sync", true);
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
         mem->prepare(con_ctx_.gen_ctx_);
+
 
         LOG<INFO>("BladeClient:: write_rdma_sync");
         write_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
                 *mem);
-        
+
         LOG<INFO>("BladeClient:: write_rdma_sync done");
 
         mem->clear();
