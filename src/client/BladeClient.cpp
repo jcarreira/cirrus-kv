@@ -63,11 +63,11 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
-bool BladeClient::deallocate(uint64_t addr) {
-    LOG<INFO>("Deallocating addr: ", addr);
+bool BladeClient::deallocate(const AllocationRecord& ar) {
+    LOG<INFO>("Deallocating addr: ", ar.remote_addr);
 
     BladeMessageGenerator::dealloc_msg(con_ctx_.send_msg,
-            addr);
+            ar.remote_addr);
 
     // post receive
     LOG<INFO>("Sending dealloc msg size: ", sizeof(BladeMessage));

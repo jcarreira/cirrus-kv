@@ -36,7 +36,7 @@ public:
         std::string port, AuthenticationToken& auth_token);
 
     AllocationRecord allocate(uint64_t size);
-    bool deallocate(uint64_t addr);
+    bool deallocate(const AllocationRecord& ar);
 
     // writes
     std::shared_ptr<FutureBladeOp> write_async(const AllocationRecord& alloc_rec,

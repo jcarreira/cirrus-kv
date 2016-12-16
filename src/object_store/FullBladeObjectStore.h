@@ -175,7 +175,7 @@ template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     BladeLocation loc;
     if (objects_.find(id, loc)) {
-        client.deallocate(loc.allocRec.remote_addr);
+        client.deallocate(loc.allocRec);
     } else {
         throw std::runtime_error("Error. Trying to do inexistent object");
     }
