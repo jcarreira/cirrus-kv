@@ -7,8 +7,6 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
-CXXFLAGS=-O3
-
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_AWK
@@ -20,7 +18,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AX_CXX_COMPILE_STDCXX_14
 
-CXXFLAGS="-fPIC -std=c++1z"
+CXXFLAGS="-O3 -fPIC -std=c++1z"
 
 # Checks for libraries.
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])
