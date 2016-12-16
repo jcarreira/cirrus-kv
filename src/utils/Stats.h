@@ -6,6 +6,7 @@
 namespace sirius {
 
 class Stats {
+public:
     Stats();
 
     void add(double d);
@@ -15,6 +16,8 @@ class Stats {
     double sd() const;
     double getPercentile(double p) const;
     double total() const;
+
+    int getCount() const;
 private:
     mutable std::vector<double> data;
 

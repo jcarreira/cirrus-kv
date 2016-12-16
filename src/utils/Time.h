@@ -11,12 +11,14 @@ std::string getTimeNow();
 
 class TimerFunction {
 public:
-    TimerFunction(const std::string& name, bool print = false)
+    TimerFunction(const std::string& name = "", bool print = false)
         : name_ (name),
         t0(Time::now()),
         print_(print) { }
 
     ~TimerFunction();
+
+    void reset();
 
     uint64_t getUsElapsed() const;
 

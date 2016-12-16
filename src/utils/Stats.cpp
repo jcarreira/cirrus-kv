@@ -35,6 +35,10 @@ double Stats::total() const {
     return sum;
 }
 
+int Stats::getCount() const {
+    return count;
+}
+
 double Stats::getPercentile(double p) const {
     if(data.size() == 0)
         throw std::runtime_error("No data");

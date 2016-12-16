@@ -17,6 +17,10 @@ TimerFunction::~TimerFunction() {
         << std::endl;
 }
 
+void TimerFunction::reset() {
+    t0 = Time::now();
+}
+
 uint64_t TimerFunction::getUsElapsed() const {
     auto t1 = Time::now();
     us d_us = std::chrono::duration_cast<us>(t1 - t0);
