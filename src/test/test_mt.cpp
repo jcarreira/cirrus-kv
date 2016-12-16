@@ -15,7 +15,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint64_t MB = (1024*1024);

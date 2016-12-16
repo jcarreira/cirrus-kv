@@ -26,7 +26,7 @@ void set_ctrlc_handler() {
 auto main() -> int {
     sirius::LOG<sirius::INFO>("Starting BladeAllocServer in port: ", PORT);
 
-    sirius::BladeAllocServer server(PORT, 1 * GB);
+    sirius::BladeAllocServer server(PORT, 10 * GB);
 
     server.init();
 

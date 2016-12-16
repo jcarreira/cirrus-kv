@@ -5,7 +5,10 @@
 
 #include <error.h>
 #include <semaphore.h>
-#include "src/utils/logging.h"
+#include <atomic>
+#include <stdexcept>
+#include <errno.h>
+//#include "src/utils/logging.h"
 #include "src/common/Decls.h"
 
 namespace sirius {

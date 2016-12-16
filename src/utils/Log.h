@@ -5,6 +5,8 @@
 
 #include <iostream>
 #include <utility>
+#include "src/utils/Time.h"
+#include "src/common/Synchronization.h"
 
 namespace sirius {
 
@@ -18,17 +20,24 @@ struct ERROR {
 #if __GNUC__ >= 7
 struct FLUSH {
 };
+
 struct NO_FLUSH {
 };
-
+    
 template<typename T, typename K = NO_FLUSH, typename ... Params>
 #else
 template<typename T, typename ... Params>
 #endif
 bool LOG(Params&& ... param) {
+//    static SpinLock sl;
+//    sl.wait();
+
     auto f = [](const auto& arg) {
         std::cout << " " << arg;
     };
+
+    // print timestamp
+    std::cout << getTimeNow();
 
  __attribute__((unused))
     int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... }; 
@@ -40,6 +49,7 @@ bool LOG(Params&& ... param) {
 #else
     std::cout << std::endl;
 #endif
+//    sl.signal();
 
     return true; // success
 }

@@ -1,6 +1,4 @@
-/* Copyright 2016 Joao Carreira */
-
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include <iostream>
 
 namespace sirius {
@@ -25,4 +23,14 @@ uint64_t TimerFunction::getUsElapsed() const {
     return d_us.count();
 }
 
-}  // namespace sirius
+std::string getTimeNow() {
+    //std::chrono::time_point<std::chrono::high_resolution_clock,
+    //    std::chrono::milliseconds> start = std::chrono::system_clock::now();
+    auto t = std::chrono::system_clock::now();
+    auto t2 = std::chrono::time_point_cast<std::chrono::milliseconds>(t);
+
+    auto res = t2.time_since_epoch().count();
+    return to_string(res);
+}
+
+} // namespace sirius

@@ -11,6 +11,7 @@
 #include <cctype>
 #include <chrono>
 #include <thread>
+#include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
 

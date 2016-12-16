@@ -10,10 +10,11 @@
 #include <string>
 #include <cstring>
 #include <atomic>
+#include <random>
 
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
 #include "src/common/Synchronization.h"
@@ -134,8 +135,14 @@ void RDMAClient::build_context(struct ibv_context *verbs,
 
     ctx->gen_ctx_.cq_poller_thread = new std::thread(poll_cq, ctx);
 
+    unsigned n_threads = std::thread::hardware_concurrency();
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> rv(1, n_threads);
+
     ThreadPinning::pinThread(ctx->gen_ctx_.cq_poller_thread->native_handle(),
-            1);  // random core
+            rv(gen));  // random core
 }
 
 void* RDMAClient::poll_cq(ConnectionContext* ctx) {

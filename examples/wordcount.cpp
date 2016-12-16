@@ -13,7 +13,7 @@
 
 #include <google/dense_hash_map>
 #include "src/client/BladeClient.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Timer.h"
 #include "src/utils/logging.h"
 
 /*

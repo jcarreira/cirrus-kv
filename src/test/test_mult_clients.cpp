@@ -15,11 +15,11 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint64_t MB = (1024*1024);
-static const int N_THREADS = 2;
+static const int N_THREADS = 20;
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
@@ -28,6 +28,8 @@ struct Dummy {
     char data[SIZE];
     int id;
 };
+
+uint64_t total_puts = 0;
 
 void test_multiple_clients() {
     sirius::TimerFunction tf("connect time", true);
@@ -53,12 +55,16 @@ void test_multiple_clients() {
 
                 if (d2->id != rnd)
                     throw std::runtime_error("mismatch");
+
+                total_puts++;
             }
         });
     }
 
     for (int i = 0; i < N_THREADS; ++i)
         threads[i]->join();
+
+    std::cout << "Total puts: " << total_puts << std::endl;
 }
 
 auto main() -> int {

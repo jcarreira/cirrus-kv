@@ -7,7 +7,7 @@
 #include "src/common/BladeFileMessageGenerator.h"
 #include "src/common/BladeFileMessage.h"
 #include "src/utils/utils.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
 

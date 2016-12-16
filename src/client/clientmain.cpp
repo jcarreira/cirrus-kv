@@ -12,12 +12,12 @@
 #include "src/utils/logging.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/client/AuthenticationClient.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-static const char IP[] = "169.229.49.15";
+static const char IP[] = "10.10.49.83";
 
 void ctrlc_handler(int sig_num) {
     sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
@@ -259,7 +259,7 @@ void test_with_registration() {
 
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    sirius::LOG<sirius::INFO>("Connecting to server in port: ", PORT);
+    sirius::LOG<sirius::INFO>("Connecting to server", IP, " in port: ", PORT);
 
     sirius::BladeClient client1;
     client1.connect(IP, PORT);

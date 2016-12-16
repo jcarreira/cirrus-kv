@@ -14,7 +14,7 @@
 #include <cstring>
 
 #include "src/client/BladeClient.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
 /*

@@ -11,7 +11,7 @@
 #include "src/common/FileAllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/client/AuthenticationClient.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
 const char PORT[] = "12345";

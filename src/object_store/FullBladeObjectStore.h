@@ -9,7 +9,7 @@
 #include "src/object_store/ObjectStore.h"
 #include "src/client/BladeClient.h"
 #include "src/utils/utils.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"   

@@ -1,12 +1,13 @@
-/* Copyright 2016 Joao Carreira */
+#ifndef _TIME_H_
+#define _TIME_H_
 
-#ifndef _TIMER_FUNCTION_H_
-#define _TIMER_FUNCTION_H_
-
-#include <string>
 #include <chrono>
+#include <string>
+#include "src/utils/StringUtils.h"
 
 namespace sirius {
+
+std::string getTimeNow();
 
 class TimerFunction {
 public:
@@ -29,6 +30,6 @@ private:
     bool print_;
 };
 
-}
+} // namespace sirius
 
-#endif // _TIMER_FUNCTION_H_
+#endif // _TIME_H_

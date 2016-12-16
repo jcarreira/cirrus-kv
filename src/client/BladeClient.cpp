@@ -7,7 +7,7 @@
 #include "src/common/BladeMessageGenerator.h"
 #include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 
@@ -54,8 +54,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
             " remote_addr: " , msg->data.alloc_ack.remote_addr,
             " peer_rkey: ", msg->data.alloc_ack.peer_rkey);
 
-    if (msg->data.alloc_ack.remote_addr == 0 ||
-            msg->data.alloc_ack.peer_rkey == 0)
+    if (msg->data.alloc_ack.remote_addr == 0)
         throw std::runtime_error("Error with allocation");
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",

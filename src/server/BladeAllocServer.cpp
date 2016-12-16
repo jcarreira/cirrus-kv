@@ -7,7 +7,7 @@
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 
 namespace sirius {
