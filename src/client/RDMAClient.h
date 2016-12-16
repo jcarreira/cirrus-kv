@@ -189,9 +189,14 @@ protected:
 
     ConnectionContext con_ctx_;
 
-    const size_t GB = (1024 * 1024 * 1024);
+    const size_t GB            = (1024 * 1024 * 1024);
     const size_t RECV_MSG_SIZE = 2 * GB;
     const size_t SEND_MSG_SIZE = 2 * GB;
+    const size_t CQ_DEPTH      = 4 * 1024;
+    const size_t MAX_SEND_WR   = 100;
+    const size_t MAX_RECV_WR   = 100;
+    const size_t MAX_SEND_SGE  = 100;
+    const size_t MAX_RECV_SGE  = 100;
 
     RDMAMem default_recv_mem_;
     RDMAMem default_send_mem_;

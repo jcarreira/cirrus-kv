@@ -80,10 +80,10 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
     qp_attr->recv_cq = ctx->gen_ctx_.cq;
     qp_attr->qp_type = IBV_QPT_RC;
 
-    qp_attr->cap.max_send_wr = 10;
-    qp_attr->cap.max_recv_wr = 10;
-    qp_attr->cap.max_send_sge = 10;
-    qp_attr->cap.max_recv_sge = 10;
+    qp_attr->cap.max_send_wr = MAX_SEND_WR;
+    qp_attr->cap.max_recv_wr = MAX_RECV_WR;
+    qp_attr->cap.max_send_sge = MAX_SEND_SGE;
+    qp_attr->cap.max_recv_sge = MAX_RECV_SGE;
 }
 
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
@@ -130,7 +130,7 @@ void RDMAClient::build_context(struct ibv_context *verbs,
     TEST_Z(ctx->gen_ctx_.comp_channel =
             ibv_create_comp_channel(ctx->gen_ctx_.ctx));
     TEST_Z(ctx->gen_ctx_.cq = ibv_create_cq(ctx->gen_ctx_.ctx,
-                10, nullptr, ctx->gen_ctx_.comp_channel, 0));
+                CQ_DEPTH, nullptr, ctx->gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(ctx->gen_ctx_.cq, 0));
 
     ctx->gen_ctx_.cq_poller_thread = new std::thread(poll_cq, ctx);
