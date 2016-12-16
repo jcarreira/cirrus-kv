@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = object_store
+SUBDIRS = object_store raw
 
