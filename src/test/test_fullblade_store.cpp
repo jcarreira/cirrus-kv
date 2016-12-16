@@ -12,18 +12,23 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <unistd.h>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/utils/Time.h"
+#include "src/utils/Stats.h"
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
-static const uint32_t SIZE = GB/2;
+static const uint32_t SIZE = 1024;
 
 struct Dummy {
     char data[SIZE];
     int id;
 };
+
+//#define CHECK_RESULTS
 
 void test_sync() {
     sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
@@ -76,34 +81,85 @@ void test_async() {
     }
 }
 
-void test_sync2() {
+void test_sync_100() {
     sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    sirius::Stats stats;
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
+    Dummy* d2 = reinterpret_cast<Dummy*>(::operator new(sizeof(Dummy)));
 
-    try {
+    // warm up
+    for (int i = 0; i < 100; ++i) {
         store.put(d.get(), sizeof(Dummy), 1);
-    } catch(...) {
-        std::cerr << "Error inserting" << std::endl;
     }
 
-    Dummy* d2 = new Dummy;
-    store.get(1, d2);
+    // real benchmark
+    for (int i = 0; i < 100; ++i) {
+        sirius::TimerFunction tf("", false);
+        store.put(d.get(), sizeof(Dummy), 1);
+#ifdef CHECK_RESULTS
+        store.get(1, d2);
+        if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+            throw std::runtime_error("Wrong value");
+        }
+#endif
 
-    // should be 42
-    std::cout << "d2.id: " << d2->id << std::endl;
-
-    if (d2->id != 42) {
-        throw std::runtime_error("Wrong value");
+        uint64_t elapsed = tf.getUsElapsed();
+        stats.add(elapsed);
     }
+
+    std::cout << "avg: " << stats.avg() << std::endl;
+    std::cout << "sd: " << stats.sd() << std::endl;
+    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
+}
+
+void test_async_N(int N) {
+    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    sirius::Stats stats;
+
+    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    sirius::TimerFunction tfs[N];
+    d->id = 42;
+
+    std::function<bool(bool)> futures[N];
+
+    for (int i = 0; i < N; ++i) {
+        tfs[i].reset();
+        std::cout << "put" << std::endl;
+        futures[i] = store.put_async(d.get(), sizeof(Dummy), 1);
+    }
+
+    bool done[N];
+    std::memset(done, 0, sizeof(done));
+    int total_done = 0;
+
+    while (total_done != N) {
+        for (int i = 0; i < N;++i) {
+            if (!done[i]) {
+                bool ret = futures[i](false);
+                if (ret) {
+                    done[i] = true;
+                    total_done++;
+                    auto elapsed = tfs[i].getUsElapsed();
+                    stats.add(elapsed);
+                }
+            }
+        }
+    }
+
+    std::cout << "count: " << stats.getCount() << std::endl;
+    std::cout << "avg: " << stats.avg() << std::endl;
+    std::cout << "sd: " << stats.sd() << std::endl;
+    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
 auto main() -> int {
 
-    test_sync();
+    test_async_N(10000);
+    //test_sync_100();
+    //test_sync();
     //test_async();
-    // test_sync2();
 
     return 0;
 }
