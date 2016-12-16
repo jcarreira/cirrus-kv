@@ -176,6 +176,11 @@ protected:
     void connect_rdma_cm(const std::string& host, const std::string& port);
     void connect_eth(const std::string& host, const std::string& port);
 
+    void fetchadd_rdma_sync(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
+    RDMAOpInfo* fetchadd_rdma_async(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
+
     // event poll loop
     static void *poll_cq(ConnectionContext*);
     static void on_completion(struct ibv_wc *wc);

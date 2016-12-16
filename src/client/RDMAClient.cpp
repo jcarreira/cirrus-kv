@@ -363,6 +363,60 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     return op_info;
 }
 
+void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
+        
+    LOG<INFO>("RDMAClient:: fetchadd_rdma_sync");
+    auto op_info = fetchadd_rdma_async(id, remote_addr, peer_rkey, value);
+    LOG<INFO>("RDMAClient:: waiting");
+
+    // wait until operation is completed
+    {
+        TimerFunction tf("waiting semaphore", true);
+        op_info->op_sem->wait();
+    }
+
+    delete op_info->op_sem;
+    delete op_info;
+}
+
+// Fetch and add
+RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
+#if __GNUC__ >= 7
+    [[maybe_unused]]
+#else
+    __attribute__((unused))
+#endif
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
+
+    struct ibv_send_wr wr, *bad_wr = nullptr;
+    struct ibv_sge sge;
+
+    memset(&wr, 0, sizeof(wr));
+    memset(&sge, 0, sizeof(sge));
+
+    Lock* l = new SpinLock();
+    l->wait();
+
+    auto op_info = new RDMAOpInfo(id, l);
+    wr.wr_id = reinterpret_cast<uint64_t>(op_info);
+    wr.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
+    wr.wr.atomic.remote_addr = remote_addr;
+    wr.wr.atomic.rkey = peer_rkey;
+    wr.wr.atomic.compare_add = peer_rkey;
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    wr.send_flags = IBV_SEND_SIGNALED;
+
+    if (ibv_post_send(id->qp, &wr, &bad_wr)) {
+        LOG<ERROR>("Error post_send.",
+            " errno: ", errno);
+    }
+
+    return op_info;
+}
+
 void RDMAClient::connect(const std::string& host, const std::string& port) {
     connect_rdma_cm(host, port);
     //connect_eth(host, port);

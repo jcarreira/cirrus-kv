@@ -18,7 +18,7 @@ public:
     FutureBladeOp(RDMAOpInfo* info) :
         op_info(info) {}
     
-    virtual ~FutureBladeOp();
+    virtual ~FutureBladeOp() = default;
 
     void wait();
     bool try_wait();
@@ -45,12 +45,19 @@ public:
     bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data, RDMAMem* mem = nullptr);
 
+    // XXX We may not need a shared ptr here
     // reads
     std::shared_ptr<FutureBladeOp> read_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length, void *data,
             RDMAMem* mem = nullptr);
     bool read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
+    
+    // fetch and add atomic
+    std::shared_ptr<FutureBladeOp> fetchadd_async(const AllocationRecord& alloc_rec,
+            uint64_t offset, uint64_t value);
+    bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
+            uint64_t value);
 
 private:
     uint64_t remote_addr_;

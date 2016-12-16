@@ -155,7 +155,6 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 default_send_mem_);
     }
 
-
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
@@ -236,7 +235,33 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
-FutureBladeOp::~FutureBladeOp() {
+bool BladeClient::fetchadd_sync(const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t value) {
+    LOG<INFO>("fetchadd (sync) rdma",
+            " offset: ", offset,
+            " value: ", value);
+
+    fetchadd_rdma_sync(id_,
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            value);
+
+    return true;
+}
+
+std::shared_ptr<FutureBladeOp> BladeClient::fetchadd_async(
+        const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t value) {
+    LOG<INFO>("fetchadd (sync) rdma",
+            " offset: ", offset,
+            " value: ", value);
+
+    RDMAOpInfo* op_info = fetchadd_rdma_async(id_,
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            value);
+
+    return std::make_shared<FutureBladeOp>(op_info);
 }
 
 void FutureBladeOp::wait() {
