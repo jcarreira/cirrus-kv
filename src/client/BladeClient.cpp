@@ -141,6 +141,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
+        mem->size_ = length;
         mem->prepare(con_ctx_.gen_ctx_);
 
         op_info = write_rdma_async(id_, length,
@@ -175,6 +176,7 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->mr = nullptr;
+        mem->size_ = length;
         mem->prepare(con_ctx_.gen_ctx_);
 
         read_rdma_sync(id_, length,

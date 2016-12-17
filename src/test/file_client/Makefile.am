@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = test_file
+bin_PROGRAMS = test_file test_file_async
 LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
@@ -14,5 +14,12 @@ test_file_LDFLAGS  = -pthread
 test_file_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
                      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_file_LDADD    = $(LINCLUDES) \
+                        $(LIBS)
+
+test_file_async_SOURCES  = test_file_async.cpp
+test_file_async_LDFLAGS  = -pthread
+test_file_async_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
+                        -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+test_file_async_LDADD    = $(LINCLUDES) \
                         $(LIBS)
 

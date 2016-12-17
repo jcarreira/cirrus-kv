@@ -78,10 +78,11 @@ bool BladeFileClient::write_sync(const FileAllocRec& alloc_rec,
     return true;
 }
 
-bool BladeFileClient::write(const FileAllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeFileClient::write_async(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
-        const void* data) {
+        const void* data,
+        RDMAMem& mem) {
     LOG<INFO>("writing rdma",
         " length: ", length,
         " offset: ", offset,
@@ -89,16 +90,21 @@ bool BladeFileClient::write(const FileAllocRec& alloc_rec,
         " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
-        return false;
+        return nullptr;
 
-    RDMAMem mem(data, length);
-    mem.prepare(con_ctx_.gen_ctx_);
-    write_rdma_sync(id_, length,
+    mem.addr_ = reinterpret_cast<uint64_t>(data);
+    mem.size_ = length;
+    mem.mr = 0;
+    
+    TEST_NZ(mem.prepare(con_ctx_.gen_ctx_));
+    
+    RDMAOpInfo* op_info = write_rdma_async(id_, length,
             alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
             mem);
-    mem.clear();
 
-    return true;
+    // client does mem.clear() or let object be destroyed
+
+    return std::make_shared<FutureBladeOp>(op_info);
 }
 
 bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
@@ -124,27 +130,34 @@ bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
     return true;
 }
 
-bool BladeFileClient::read(const FileAllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeFileClient::read_async(const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
-        void *data) {
+        const void *data,
+        RDMAMem& mem) {
     if (length > RECV_MSG_SIZE)
-        return false;
+        return nullptr;
 
-    LOG<INFO>("reading rdma",
+    LOG<INFO>("reading (async) rdma"
         " length: ", length,
         " offset: ", offset,
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
-
-    RDMAMem mem(data, length);
+    
+    mem.addr_ = reinterpret_cast<uint64_t>(data);
+    mem.size_ = length;
+    mem.mr = 0;
     mem.prepare(con_ctx_.gen_ctx_);
-    read_rdma_sync(id_, length,
+
+    mem.prepare(con_ctx_.gen_ctx_);
+    RDMAOpInfo* op_info = read_rdma_async(id_, length,
             alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
             mem);
-    mem.clear();
 
-    return true;
+    // client of this function needs to call mem.clear()
+    // or let RDMAMem be destroyed
+
+    return std::make_shared<FutureBladeOp>(op_info);
 }
 
 }  // namespace sirius

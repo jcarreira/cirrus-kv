@@ -8,6 +8,10 @@
 #include "src/common/FileAllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"
 
+
+// XXX hack. We use the FutureBladeOp. Need to refactor this
+#include "src/client/BladeClient.h"
+
 namespace sirius {
 
 using FileAllocRec = FileAllocationRecord;
@@ -22,14 +26,16 @@ public:
 
     FileAllocRec allocate(const std::string& filename, uint64_t size);
 
-    bool write(const FileAllocRec& alloc_rec, uint64_t offset, 
-            uint64_t length, const void* data);
     bool write_sync(const FileAllocRec& alloc_rec, uint64_t offset, 
             uint64_t length, const void* data);
-    bool read(const FileAllocRec& alloc_rec, uint64_t offset,
-            uint64_t length, void *data);
+    std::shared_ptr<FutureBladeOp> write_async(const FileAllocRec& alloc_rec, uint64_t offset, 
+            uint64_t length, const void* data, RDMAMem&);
+
+
     bool read_sync(const FileAllocRec& alloc_rec, uint64_t offset,
             uint64_t length, void *data);
+    std::shared_ptr<FutureBladeOp> read_async(const FileAllocRec& alloc_rec, uint64_t offset,
+            uint64_t length, const void* data, RDMAMem&);
 
 private:
     uint64_t remote_addr_;
