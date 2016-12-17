@@ -197,11 +197,11 @@ protected:
     const size_t GB            = (1024 * 1024 * 1024);
     const size_t RECV_MSG_SIZE = 2 * GB;
     const size_t SEND_MSG_SIZE = 2 * GB;
-    const size_t CQ_DEPTH      = 4 * 1024;
-    const size_t MAX_SEND_WR   = 100;
-    const size_t MAX_RECV_WR   = 100;
-    const size_t MAX_SEND_SGE  = 100;
-    const size_t MAX_RECV_SGE  = 100;
+    const size_t CQ_DEPTH      = 1000;
+    const size_t MAX_SEND_WR   = 200;
+    const size_t MAX_RECV_WR   = 200;
+    const size_t MAX_SEND_SGE  = 2;
+    const size_t MAX_RECV_SGE  = 2;
 
     RDMAMem default_recv_mem_;
     RDMAMem default_send_mem_;
