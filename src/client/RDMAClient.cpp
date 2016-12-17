@@ -382,7 +382,7 @@ void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
 
 // Fetch and add
 RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
-        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t /*value*/) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else

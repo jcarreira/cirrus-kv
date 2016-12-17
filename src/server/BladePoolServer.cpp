@@ -28,18 +28,14 @@ void BladePoolServer::init() {
     RDMAServer::init();
 }
 
-void BladePoolServer::handle_connection(struct rdma_cm_id* id) {
-    id = id;
+void BladePoolServer::handle_connection(struct rdma_cm_id* /* id */) {
 }
 
-void BladePoolServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id;
+void BladePoolServer::handle_disconnection(struct rdma_cm_id* /* id */) {
 }
 
-uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
+uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* /*id*/) {
     TimerFunction tf("create_pool", true);
-
-    id = id;  // warnings
 
     LOG<INFO>("Allocating memory pool of size: ",
         (size/1024/1024), "MB ",

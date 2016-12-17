@@ -8,7 +8,7 @@ namespace sirius {
 class DumbAuthenticator : public Authenticator {
 public:
     DumbAuthenticator(){}
-    bool allowApplication(const AppId& app_id) { 
+    bool allowApplication(const AppId& /* app_id */) { 
         return true; 
     }
 private:

@@ -32,7 +32,9 @@ void ResourceAllocator::init() {
 }
 
 void ResourceAllocator::send_challenge(rdma_cm_id* id,
-        const AllocatorMessage& msg) {
+        const AllocatorMessage& /*msg*/) {
+
+    __attribute__((unused))
     auto token = AuthenticationToken::create_default_allow_token();  // allow
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -42,7 +44,7 @@ void ResourceAllocator::send_challenge(rdma_cm_id* id,
 }
 
 void ResourceAllocator::send_stats(rdma_cm_id* id,
-        const AllocatorMessage& msg) {
+        const AllocatorMessage& /*msg*/) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     AllocatorMessageGenerator::stats_ack(
@@ -56,6 +58,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
 
     LOG<INFO>("ResourceAllocator Received message");
 
+    __attribute__((unused))
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     switch (msg->type) {

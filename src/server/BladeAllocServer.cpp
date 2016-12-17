@@ -31,12 +31,10 @@ void BladeAllocServer::init() {
     RDMAServer::init();
 }
 
-void BladeAllocServer::handle_connection(struct rdma_cm_id* id) {
-    id = id;
+void BladeAllocServer::handle_connection(struct rdma_cm_id* /*id*/) {
 }
 
-void BladeAllocServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id;
+void BladeAllocServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
 bool BladeAllocServer::create_pool(uint64_t size) {
