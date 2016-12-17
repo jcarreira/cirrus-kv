@@ -42,8 +42,8 @@ void test_allocation() {
     sirius::FileAllocRec alloc1 = client.allocate("/tmp/test", 1 * MB);
 
     sirius::LOG<sirius::INFO>("Received allocation 1",
-        " remote_addr: ", alloc1->remote_addr,
-        " peer_rkey: ", alloc1->peer_rkey);
+        " remote_addr: ", alloc1.remote_addr,
+        " peer_rkey: ", alloc1.peer_rkey);
 
     const char* to_send = "SIRIUS_DDC";
     client.write_sync(alloc1, 0, strlen(to_send), to_send);
@@ -54,8 +54,8 @@ void test_allocation() {
 
     sirius::FileAllocRec alloc2 = client.allocate("/tmp/test", 2 * MB);
     sirius::LOG<sirius::INFO>("Received allocation 2.",
-        " remote_addr: ", alloc2->remote_addr,
-        " peer_rkey: ", alloc2->peer_rkey);
+        " remote_addr: ", alloc2.remote_addr,
+        " peer_rkey: ", alloc2.peer_rkey);
 
     client.read_sync(alloc2, 0, strlen(to_send), data);
     sirius::LOG<sirius::INFO>("Received data 2: ", data);

@@ -10,12 +10,12 @@
 
 namespace sirius {
 
-using FileAllocRec = std::shared_ptr<FileAllocationRecord>;
+using FileAllocRec = FileAllocationRecord;
 
 class BladeFileClient : public RDMAClient {
 public:
     BladeFileClient(int timeout_ms = 500);
-    ~BladeFileClient();
+    ~BladeFileClient() = default;
 
     bool authenticate(std::string allocator_address,
         std::string port, AuthenticationToken& auth_token);

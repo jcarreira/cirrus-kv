@@ -17,9 +17,6 @@ BladeFileClient::BladeFileClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
 }
 
-BladeFileClient::~BladeFileClient() {
-}
-
 bool BladeFileClient::authenticate(std::string address,
         std::string port, AuthenticationToken& auth_token) {
     LOG<INFO>("BladeFileClient authenticating");
@@ -48,9 +45,9 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     BladeFileMessage* msg =
         reinterpret_cast<BladeFileMessage*>(con_ctx_.recv_msg);
 
-    FileAllocRec alloc(new FileAllocationRecord(
+    FileAllocRec alloc(
                 msg->data.alloc_ack.remote_addr,
-                msg->data.alloc_ack.peer_rkey));
+                msg->data.alloc_ack.peer_rkey);
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",
         msg->data.alloc_ack.remote_addr);
@@ -64,16 +61,19 @@ bool BladeFileClient::write_sync(const FileAllocRec& alloc_rec,
     LOG<INFO>("writing rdma",
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
         return false;
 
-    std::memcpy(con_ctx_.send_msg, data, length);
+    RDMAMem mem(data, length);
+    mem.prepare(con_ctx_.gen_ctx_);
+
     write_rdma_sync(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_send_mem_);
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            mem);
+    mem.clear();
 
     return true;
 }
@@ -85,16 +85,18 @@ bool BladeFileClient::write(const FileAllocRec& alloc_rec,
     LOG<INFO>("writing rdma",
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
         return false;
 
-    std::memcpy(con_ctx_.send_msg, data, length);
+    RDMAMem mem(data, length);
+    mem.prepare(con_ctx_.gen_ctx_);
     write_rdma_sync(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_send_mem_);
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            mem);
+    mem.clear();
 
     return true;
 }
@@ -109,17 +111,15 @@ bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
     LOG<INFO>("reading rdma"
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
+    RDMAMem mem(data, length);
+    mem.prepare(con_ctx_.gen_ctx_);
     read_rdma_sync(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_recv_mem_);
-
-    {
-        TimerFunction tf("Memcpy time", true);
-        std::memcpy(data, con_ctx_.recv_msg, length);
-    }
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            mem);
+    mem.clear();
 
     return true;
 }
@@ -134,17 +134,15 @@ bool BladeFileClient::read(const FileAllocRec& alloc_rec,
     LOG<INFO>("reading rdma",
         " length: ", length,
         " offset: ", offset,
-        " remote_addr: ", alloc_rec->remote_addr,
-        " rkey: ", alloc_rec->peer_rkey);
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
 
+    RDMAMem mem(data, length);
+    mem.prepare(con_ctx_.gen_ctx_);
     read_rdma_sync(id_, length,
-            alloc_rec->remote_addr + offset, alloc_rec->peer_rkey,
-            default_recv_mem_);
-
-    {
-        TimerFunction tf("Memcpy time", true);
-        std::memcpy(data, con_ctx_.recv_msg, length);
-    }
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            mem);
+    mem.clear();
 
     return true;
 }
