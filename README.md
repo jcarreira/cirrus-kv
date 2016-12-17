@@ -20,6 +20,12 @@ It has been tested with the following environment:
 You can install these with
 
     $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev
+    
+Make sure the compilation is done with g++-6. *update-alternatives* can be used:
+
+    $ sudo apt-get install g++-6
+    $ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 100
+    $ sudo update-alternatives --config g++ # choose g++-6
 
 Building
 =========
