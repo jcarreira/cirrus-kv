@@ -53,6 +53,7 @@ AC_CONFIG_FILES([Makefile
                  src/server/Makefile
                  src/test/object_store/Makefile
                  src/test/raw/Makefile
+                 src/test/file_client/Makefile
                  src/test/Makefile])
 
 AC_OUTPUT
