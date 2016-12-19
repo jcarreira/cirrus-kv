@@ -201,7 +201,7 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
     }
 }
 
-void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
+bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
         uint64_t size) {
     auto con_ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -211,7 +211,8 @@ void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
     // send our RPC
 
     Lock* l = new SpinLock();
-    send_message(id, size, l);
+    if (!send_message(id, size, l))
+        return false;
 
     // wait for SEND completion
     l->wait();
@@ -220,9 +221,11 @@ void RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
 
     // Wait for reply
     con_ctx->recv_sem->wait();
+
+    return true;
 }
 
-void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
+bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
         Lock* lock) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -244,10 +247,7 @@ void RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
     sge.length = size;
     sge.lkey = ctx->send_msg_mr->lkey;
 
-    if (ibv_post_send(id->qp, &wr, &bad_wr)) {
-        LOG<ERROR>("Error post_send.",
-            " errno: ", errno);
-    }
+    return post_send(id->qp, &wr, &bad_wr);
 }
 
 void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
@@ -266,6 +266,21 @@ void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     //delete op_info->op_sem;
     //delete op_info;
+}
+
+bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
+    if (outstanding_send_wr == MAX_SEND_WR) {
+        return false;
+    }
+
+    if (ibv_post_send(qp, wr, bad_wr)) {
+        LOG<ERROR>("Error post_send.",
+            " errno: ", errno);
+    }
+
+    outstanding_send_wr++;
+
+    return true;
 }
 
 RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
@@ -299,10 +314,8 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     sge.length = size;
     sge.lkey = mem.mr->lkey;
 
-    if (ibv_post_send(id->qp, &wr, &bad_wr)) {
-        LOG<ERROR>("Error post_send.",
-            " errno: ", errno);
-    }
+    if (!post_send(id->qp, &wr, &bad_wr))
+        return nullptr;
 
     return op_info;
 }
@@ -355,11 +368,9 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     sge.length = size;
     sge.lkey   = mem.mr->lkey;
 
-    if (ibv_post_send(id->qp, &wr, &bad_wr)) {
-        LOG<ERROR>("Error post_send.",
-            " errno: ", errno);
-    }
-
+    if (!post_send(id->qp, &wr, &bad_wr))
+        return nullptr;
+    
     return op_info;
 }
 
@@ -409,10 +420,8 @@ RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
 
-    if (ibv_post_send(id->qp, &wr, &bad_wr)) {
-        LOG<ERROR>("Error post_send.",
-            " errno: ", errno);
-    }
+    if (!post_send(id->qp, &wr, &bad_wr))
+        return nullptr;
 
     return op_info;
 }

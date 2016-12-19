@@ -156,8 +156,8 @@ protected:
     void build_context(struct ibv_context *verbs, ConnectionContext*);
 
     // Message (Send/Recv)
-    void send_message(rdma_cm_id*, uint64_t size, Lock* lock = nullptr);
-    void send_receive_message_sync(rdma_cm_id*, uint64_t size);
+    bool send_message(rdma_cm_id*, uint64_t size, Lock* lock = nullptr);
+    bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
@@ -185,6 +185,7 @@ protected:
     static void *poll_cq(ConnectionContext*);
     static void on_completion(struct ibv_wc *wc);
 
+    bool post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr);
     int post_receive(struct rdma_cm_id *id);
 
     struct rdma_cm_id *id_;
@@ -194,14 +195,18 @@ protected:
 
     ConnectionContext con_ctx_;
 
-    const size_t GB            = (1024 * 1024 * 1024);
-    const size_t RECV_MSG_SIZE = 2 * GB;
-    const size_t SEND_MSG_SIZE = 2 * GB;
+    const size_t MB            = (1024 * 1024);
+    const size_t GB            = (1024 * MB);
+    const size_t RECV_MSG_SIZE = 200 * MB;
+    const size_t SEND_MSG_SIZE = 200 * MB;
     const size_t CQ_DEPTH      = 1000;
     const size_t MAX_SEND_WR   = 200;
     const size_t MAX_RECV_WR   = 200;
     const size_t MAX_SEND_SGE  = 2;
     const size_t MAX_RECV_SGE  = 2;
+
+    uint64_t outstanding_send_wr = 0;
+    uint64_t outstanding_recv_wr = 0;
 
     RDMAMem default_recv_mem_;
     RDMAMem default_send_mem_;
