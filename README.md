@@ -30,7 +30,7 @@ Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 Building
 =========
 
-    $ sh boostrap.sh
+    $ ./boostrap.sh
     $ make
 
     
