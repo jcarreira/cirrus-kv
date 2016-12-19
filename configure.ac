@@ -51,9 +51,9 @@ AC_CONFIG_FILES([Makefile
                  src/object_store/Makefile
                  src/client/Makefile
                  src/server/Makefile
-                 src/test/object_store/Makefile
-                 src/test/raw/Makefile
-                 src/test/file_client/Makefile
-                 src/test/Makefile])
+                 tests/object_store/Makefile
+                 tests/raw/Makefile
+                 tests/file_client/Makefile
+                 tests/Makefile])
 
 AC_OUTPUT
