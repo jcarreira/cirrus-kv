@@ -96,21 +96,16 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         return false;
 
     if (mem) {
-        TimerFunction tf("BladeClient::write_sync", true);
-        mem->addr_ = reinterpret_cast<uint64_t>(data);
-        mem->mr = nullptr;
-        mem->prepare(con_ctx_.gen_ctx_);
+        {
+            //TimerFunction tf("BladeClient::write_sync prepare", true);
+            mem->addr_ = reinterpret_cast<uint64_t>(data);
+            mem->prepare(con_ctx_.gen_ctx_);
+        }
 
-
-        LOG<INFO>("BladeClient:: write_rdma_sync");
         write_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
                 *mem);
-
-        LOG<INFO>("BladeClient:: write_rdma_sync done");
-
-        mem->clear();
 
     } else {
         std::memcpy(con_ctx_.send_msg, data, length);
@@ -140,7 +135,6 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
     RDMAOpInfo* op_info = nullptr;
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
-        mem->mr = nullptr;
         mem->size_ = length;
         mem->prepare(con_ctx_.gen_ctx_);
 
@@ -149,6 +143,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     } else {
+        //TimerFunction tf("write_async memcpy", true);
         std::memcpy(con_ctx_.send_msg, data, length);
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
@@ -175,7 +170,6 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
 
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
-        mem->mr = nullptr;
         mem->size_ = length;
         mem->prepare(con_ctx_.gen_ctx_);
 
@@ -183,7 +177,6 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, *mem);
 
-        mem->clear();
     } else {
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
@@ -216,7 +209,6 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
     RDMAOpInfo* op_info;
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
-        mem->mr = nullptr;
         mem->prepare(con_ctx_.gen_ctx_);
 
         op_info = read_rdma_async(id_, length,

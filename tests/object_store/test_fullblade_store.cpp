@@ -20,8 +20,8 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
-static const uint32_t SIZE = 1024;
+const char IP[] = "10.10.49.84";
+static const uint32_t SIZE = 1;
 
 struct Dummy {
     char data[SIZE];
@@ -81,7 +81,7 @@ void test_async() {
     }
 }
 
-void test_sync_100() {
+void test_sync(int N) {
     sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
     sirius::Stats stats;
 
@@ -95,7 +95,7 @@ void test_sync_100() {
     }
 
     // real benchmark
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < N; ++i) {
         sirius::TimerFunction tf("", false);
         store.put(d.get(), sizeof(Dummy), 1);
 #ifdef CHECK_RESULTS
@@ -123,6 +123,13 @@ void test_async_N(int N) {
     d->id = 42;
 
     std::function<bool(bool)> futures[N];
+    
+    // warm up
+    for (int i = 0; i < N; ++i) {
+        store.put(d.get(), sizeof(Dummy), 1);
+    }
+
+    std::cout << "Warm up done" << std::endl;
 
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
@@ -156,8 +163,8 @@ void test_async_N(int N) {
 
 auto main() -> int {
 
-    test_async_N(10000);
-    //test_sync_100();
+    //test_async_N(10000);
+    test_sync(1000);
     //test_sync();
     //test_async();
 

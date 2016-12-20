@@ -11,6 +11,8 @@ public:
 
     void add(double d);
 
+    double min() const;
+    double max() const;
     double avg() const;
     double size() const;
     double sd() const;

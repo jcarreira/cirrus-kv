@@ -11,6 +11,7 @@
 #include <cstring>
 #include <atomic>
 #include <random>
+#include <cassert>
 
 #include "src/common/ThreadPinning.h"
 #include "src/utils/utils.h"
@@ -133,7 +134,7 @@ void RDMAClient::build_context(struct ibv_context *verbs,
                 CQ_DEPTH, nullptr, ctx->gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(ctx->gen_ctx_.cq, 0));
 
-    ctx->gen_ctx_.cq_poller_thread = new std::thread(poll_cq, ctx);
+    ctx->gen_ctx_.cq_poller_thread = new std::thread(&RDMAClient::poll_cq, this, ctx);
 
     unsigned n_threads = std::thread::hardware_concurrency();
 
@@ -187,10 +188,14 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
             break;
         case IBV_WC_RDMA_READ:
         case IBV_WC_RDMA_WRITE:
+            assert(outstanding_send_wr > 0);
+            outstanding_send_wr--;
             if (op_info->op_sem)
                 op_info->op_sem->signal();
             break;
         case IBV_WC_SEND:
+            assert(outstanding_send_wr > 0);
+            outstanding_send_wr--;
             if (op_info->op_sem)
                 op_info->op_sem->signal();
             break;
@@ -236,36 +241,44 @@ bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
 
     if (lock != nullptr)
         lock->wait();
-    auto op_info = new RDMAOpInfo(id, lock);
-    wr.wr_id = reinterpret_cast<uint64_t>(op_info);
-    wr.opcode = IBV_WR_SEND;
-    wr.sg_list = &sge;
-    wr.num_sge = 1;
-    wr.send_flags = IBV_SEND_SIGNALED;
 
-    sge.addr = reinterpret_cast<uint64_t>(ctx->send_msg);
+    auto op_info  = new RDMAOpInfo(id, lock);
+    wr.wr_id      = reinterpret_cast<uint64_t>(op_info);
+    wr.opcode     = IBV_WR_SEND;
+    wr.sg_list    = &sge;
+    wr.num_sge    = 1;
+    wr.send_flags = IBV_SEND_SIGNALED;
+    // XXX doesn't work for now
+    //if (size <= MAX_INLINE_DATA)
+    //    wr.send_flags |= IBV_SEND_INLINE;
+
+    sge.addr   = reinterpret_cast<uint64_t>(ctx->send_msg);
     sge.length = size;
-    sge.lkey = ctx->send_msg_mr->lkey;
+    sge.lkey   = ctx->send_msg_mr->lkey;
 
     return post_send(id->qp, &wr, &bad_wr);
 }
 
-void RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
+bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
         
-    LOG<INFO>("RDMAClient:: write_rdma_async");
+    //LOG<INFO>("RDMAClient:: write_rdma_async");
     auto op_info = write_rdma_async(id, size, remote_addr, peer_rkey, mem);
-    LOG<INFO>("RDMAClient:: waiting");
+    //LOG<INFO>("RDMAClient:: waiting");
 
-    // wait until operation is completed
+    if (nullptr == op_info) {
+        throw std::runtime_error("Error writing rdma async");
+    }
 
     {
-        TimerFunction tf("waiting semaphore", true);
+        //TimerFunction tf("waiting semaphore", true);
         op_info->op_sem->wait();
     }
 
-    //delete op_info->op_sem;
-    //delete op_info;
+    delete op_info->op_sem;
+    delete op_info;
+
+    return true;
 }
 
 bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
@@ -309,13 +322,17 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     wr.sg_list = &sge;
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
+    // XXX doesn't work for now
+    //if (size <= MAX_INLINE_DATA)
+    //    wr.send_flags |= IBV_SEND_INLINE;
 
-    sge.addr = mem.addr_;
+    sge.addr   = mem.addr_;
     sge.length = size;
-    sge.lkey = mem.mr->lkey;
+    sge.lkey   = mem.mr->lkey;
 
     if (!post_send(id->qp, &wr, &bad_wr))
-        return nullptr;
+        throw std::runtime_error("write_rdma_async: error post_send");
+        
 
     return op_info;
 }
@@ -332,8 +349,8 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         op_info->op_sem->wait();
     }
 
-    //delete op_info->op_sem;
-    //delete op_info;
+    delete op_info->op_sem;
+    delete op_info;
 }
 
 RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
@@ -363,13 +380,15 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     wr.sg_list      = &sge;
     wr.num_sge      = 1;
     wr.send_flags   = IBV_SEND_SIGNALED;
+    //if (size <= MAX_INLINE_DATA)
+    //    wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr   = mem.addr_;
     sge.length = size;
     sge.lkey   = mem.mr->lkey;
 
     if (!post_send(id->qp, &wr, &bad_wr))
-        return nullptr;
+        throw std::runtime_error("read_rdma_async: error post_send");
     
     return op_info;
 }
@@ -421,7 +440,7 @@ RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
     wr.send_flags = IBV_SEND_SIGNALED;
 
     if (!post_send(id->qp, &wr, &bad_wr))
-        return nullptr;
+        throw std::runtime_error("fetchadd_rdma_async: error post_send");
 
     return op_info;
 }

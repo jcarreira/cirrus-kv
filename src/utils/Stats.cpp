@@ -49,5 +49,21 @@ double Stats::getPercentile(double p) const {
     return data[loc];
 }
 
+double Stats::min() const {
+    if(data.size() == 0)
+        throw std::runtime_error("No data");
+
+    std::sort(data.begin(), data.end());
+    return data[0];
+}
+
+double Stats::max() const {
+    if(data.size() == 0)
+        throw std::runtime_error("No data");
+
+    std::sort(data.begin(), data.end());
+    return data[data.size() - 1];
+}
+
 } // namespace sirius
 

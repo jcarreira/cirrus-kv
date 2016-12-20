@@ -8,6 +8,7 @@
 #include <thread>
 #include <memory>
 #include <cstring>
+#include <atomic>
 #include <rdma/rdma_cma.h>
 #include "src/common/Synchronization.h"
 #include "src/utils/logging.h"
@@ -110,6 +111,13 @@ struct RDMAMem {
     }
 
     bool prepare(GeneralContext gctx) {
+        LOG<INFO>("prepare()");
+        // we don't register more than once
+        if (registered_) {
+            LOG<INFO>("already registered");
+            return true;
+        }
+
         mr = ibv_reg_mr(gctx.pd, 
                 reinterpret_cast<void*>(addr_),
                 size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
@@ -162,7 +170,7 @@ protected:
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
-    void write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
+    bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
     RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
@@ -182,8 +190,8 @@ protected:
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
 
     // event poll loop
-    static void *poll_cq(ConnectionContext*);
-    static void on_completion(struct ibv_wc *wc);
+    void *poll_cq(ConnectionContext*);
+    void on_completion(struct ibv_wc *wc);
 
     bool post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr);
     int post_receive(struct rdma_cm_id *id);
@@ -199,14 +207,17 @@ protected:
     const size_t GB            = (1024 * MB);
     const size_t RECV_MSG_SIZE = 200 * MB;
     const size_t SEND_MSG_SIZE = 200 * MB;
-    const size_t CQ_DEPTH      = 1000;
-    const size_t MAX_SEND_WR   = 200;
-    const size_t MAX_RECV_WR   = 200;
+    const size_t CQ_DEPTH      = 500;
+    const size_t MAX_SEND_WR   = 500;
+    const size_t MAX_RECV_WR   = 100;
     const size_t MAX_SEND_SGE  = 2;
     const size_t MAX_RECV_SGE  = 2;
 
-    uint64_t outstanding_send_wr = 0;
-    uint64_t outstanding_recv_wr = 0;
+    // we use the value in perftest
+    static const int MAX_INLINE_DATA = 220;
+
+    std::atomic<uint64_t> outstanding_send_wr;
+    std::atomic<uint64_t> outstanding_recv_wr;
 
     RDMAMem default_recv_mem_;
     RDMAMem default_send_mem_;
