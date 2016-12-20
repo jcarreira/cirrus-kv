@@ -41,3 +41,13 @@ Client, server example:
 
     $ ./ddc/src/server/bladeallocmain&
     $ ./ddc/src/client/clientmain
+
+Benchmarks
+=============
+
+1. Single node burst of 1000 messages (synchronous)
+```
+    Avg latency: 5.13us
+    SD: 1.49us
+    99%: 6us
+```
