@@ -65,5 +65,9 @@ double Stats::max() const {
     return data[data.size() - 1];
 }
 
+void Stats::reserve(uint64_t n) {
+    data.reserve(n);
+}
+
 } // namespace sirius
 

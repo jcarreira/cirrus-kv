@@ -2,6 +2,7 @@
 #define _STATS_H_
 
 #include <vector>
+#include <cstdint>
 
 namespace sirius {
 
@@ -20,6 +21,8 @@ public:
     double total() const;
 
     int getCount() const;
+    
+    void reserve(uint64_t);
 private:
     mutable std::vector<double> data;
 

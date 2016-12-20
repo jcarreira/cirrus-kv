@@ -20,8 +20,9 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "10.10.49.84";
 static const uint32_t SIZE = 128;
+static const uint64_t MILLION = 1000000;
 
 struct Dummy {
     char data[SIZE];
@@ -29,31 +30,49 @@ struct Dummy {
 };
 
 
-void test_sync(int N) {
+void test_sync() {
     sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
-    sirius::Stats stats;
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (int i = 0; i < N; ++i) {
-        store.put(d.get(), sizeof(Dummy), 1);
+    for (int i = 0; i < 1000; ++i) {
+        store.put(d.get(), sizeof(Dummy), i);
     }
 
     std::cout << "Warm up done" << std::endl;
 
     sirius::RDMAMem mem(d.get(), sizeof(Dummy));
-    for (int i = 0; i < N; ++i) {
+
+    sirius::Stats stats;
+    stats.reserve(MILLION);
+
+    std::cout << "Measuring latencies.." << std::endl;
+    for (uint64_t i = 0; i < MILLION; ++i) {
         sirius::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy), 1, &mem);
+        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
+    }
+    
+    uint64_t end;
+    sirius::TimerFunction start;
+    std::cout << "Measuring msgs/s.." << std::endl;
+    for (uint64_t i = 0; i < 10 * MILLION; ++i) {
+        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
+
+        if (i % 20000 == 0) {
+            if ((end = start.getUsElapsed()) > MILLION) {
+                break;
+            }
+        }
     }
 
     std::cout << "1_1 test" << std::endl;
     std::cout << "count: " << stats.getCount() << std::endl;
+    std::cout << "msg/s: " << stats.getCount() / (end * 1.0 / MILLION)  << std::endl;
     std::cout << "min: " << stats.min() << std::endl;
     std::cout << "avg: " << stats.avg() << std::endl;
     std::cout << "max: " << stats.max() << std::endl;
@@ -63,8 +82,8 @@ void test_sync(int N) {
 
 auto main() -> int {
 
-    // test burst of 1000 sync writes
-    test_sync(1000);
+    // test burst of sync writes
+    test_sync();
 
     return 0;
 }
