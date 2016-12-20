@@ -45,13 +45,15 @@ Client, server example:
 Benchmarks
 =============
 
-1. Single node burst of 1000 messages (synchronous)
+1. Single node burst of 1000 messages (synchronous) - latencies
 ```
-    Avg latency: 5.13us
-    SD: 1.49us
-    99%: 6us
+    min: 4 us
+    avg: 4 us
+    max: 53 us
+    sd: 1.610 us
+    99%: 5 us
 ```
-2. Single node burst of 1000 messages (async)
+2. Single node burst of 1000 messages (async) - latencies
 ```
     min: 50 us
     avg: 261.7 us
