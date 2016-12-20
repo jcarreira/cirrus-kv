@@ -62,7 +62,7 @@ Benchmarks
     sd: 118.149 us
     99%: 459 us
 ```
-* Single node contention 10 source clients to same server 128 byte put (sync)
+* Single node contention 10 source clients 128 byte put (sync)
 ```
     Average (us) per msg: 16
     MSG/s: 61715.9
@@ -70,4 +70,9 @@ Benchmarks
 ```
     Average (us) per msg: 9 # with 6 clients
     MSG/s: 105298
+```
+* Single node contention 6 source clients 128 byte put (async)
+```
+    Average (us) per msg: 11
+    MSG/s: 87242.9
 ```
