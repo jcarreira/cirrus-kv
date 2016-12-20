@@ -62,3 +62,8 @@ Benchmarks
     sd: 118.149 us
     99%: 459 us
 ```
+3. Single node contention between 10 clients 128 byte put (sync)
+```
+    Average (us) per msg: 16
+    MSG/s: 61715.9
+```
