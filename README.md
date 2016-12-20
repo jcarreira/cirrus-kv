@@ -45,7 +45,7 @@ Client, server example:
 Benchmarks
 =============
 
-1. Single node burst of 128 Byte messages (synchronous) - latencies
+1. Single node burst of 128 byte put (synchronous) - latencies
 ```
     msg/s: 922552
     min: 2
@@ -54,7 +54,7 @@ Benchmarks
     sd: 0.840948
     99%: 5
 ```
-2. Single node burst of 1000 messages (async) - latencies
+2. Single node burst of 128 byte put (async) - latencies
 ```
     min: 50 us
     avg: 261.7 us
