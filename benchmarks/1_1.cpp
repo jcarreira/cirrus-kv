@@ -58,12 +58,13 @@ void test_sync() {
     }
     
     uint64_t end;
-    sirius::TimerFunction start;
     std::cout << "Measuring msgs/s.." << std::endl;
-    for (uint64_t i = 0; i < 10 * MILLION; ++i) {
+    uint64_t i = 0;
+    sirius::TimerFunction start;
+    for (; i < 10 * MILLION; ++i) {
         store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
 
-        if (i % 20000 == 0) {
+        if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -72,7 +73,7 @@ void test_sync() {
 
     std::cout << "1_1 test" << std::endl;
     std::cout << "count: " << stats.getCount() << std::endl;
-    std::cout << "msg/s: " << stats.getCount() / (end * 1.0 / MILLION)  << std::endl;
+    std::cout << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     std::cout << "min: " << stats.min() << std::endl;
     std::cout << "avg: " << stats.avg() << std::endl;
     std::cout << "max: " << stats.max() << std::endl;
