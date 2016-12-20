@@ -51,3 +51,11 @@ Benchmarks
     SD: 1.49us
     99%: 6us
 ```
+2. Single node burst of 1000 messages (async)
+```
+    min: 50 us
+    avg: 261.7 us
+    max: 460 us
+    sd: 118.149 us
+    99%: 459 us
+```
