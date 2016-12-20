@@ -67,3 +67,7 @@ Benchmarks
     Average (us) per msg: 16
     MSG/s: 61715.9
 ```
+```
+    Average (us) per msg: 9 # with 6 clients
+    MSG/s: 105298
+```
