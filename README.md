@@ -47,12 +47,12 @@ Benchmarks
 
 * Single node burst of 128 byte put (synchronous) - latencies
 ```
-    msg/s: 922552
-    min: 2
-    avg: 5.04254
-    max: 92
-    sd: 0.840948
-    99%: 5
+    msg/s: 166427
+    min: 5
+    avg: 5.34385
+    max: 93
+    sd: 0.993202
+    99%: 6
 ```
 * Single node burst of 128 byte put (async) - latencies
 ```
