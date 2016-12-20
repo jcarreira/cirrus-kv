@@ -286,12 +286,11 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
         return false;
     }
 
+    outstanding_send_wr++;
     if (ibv_post_send(qp, wr, bad_wr)) {
         LOG<ERROR>("Error post_send.",
             " errno: ", errno);
     }
-
-    outstanding_send_wr++;
 
     return true;
 }
