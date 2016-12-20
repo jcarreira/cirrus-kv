@@ -54,6 +54,7 @@ AC_CONFIG_FILES([Makefile
                  tests/object_store/Makefile
                  tests/raw/Makefile
                  tests/file_client/Makefile
-                 tests/Makefile])
+                 tests/Makefile
+                 benchmarks/Makefile])
 
 AC_OUTPUT
