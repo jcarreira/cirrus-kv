@@ -16,6 +16,7 @@ It has been tested with the following environment:
 * g++ 6.2 (needs C++17)
 * Boost
 * autotools
+* Mellanox OFED 3.4 (requires Mellanox drivers)
 
 You can install these with
 
