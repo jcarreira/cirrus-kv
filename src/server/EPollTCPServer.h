@@ -3,6 +3,8 @@
 #ifndef _EPOLLTCP_SERVER_H_
 #define _EPOLLTCP_SERVER_H_
 
+#include <sys/epoll.h>
+
 namespace sirius {
 
 /**
@@ -12,7 +14,7 @@ namespace sirius {
   */
 class EPollTCPServer {
 public:
-    EPollTCPServer(int port);
+    EPollTCPServer(int port, int queue_len_ = 100);
     ~EPollTCPServer();
 
     /**
@@ -26,7 +28,25 @@ public:
       */
     virtual void loop();
 private:
+    /**
+      * Process request from socket
+      */
+    void process(int socket);
+    /**
+      * Configure socket to be non blocking
+      */
+    void make_non_blocking(int sock);
+    
+    epoll_event* events;
+    epoll_event ev;
+    int max_conn_;
+    int listener;
+    int queue_len_;
+    int fdmax_;
+    int port_;
+    int epfd_;
 };
 
 } // namespace sirius
 
+#endif // _EPOLLTCP_SERVER_H_

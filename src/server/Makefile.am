@@ -14,7 +14,7 @@ libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
                      ConnectionContext.cpp DumbQuotaManager.cpp \
                      ResourceAllocator.cpp BladeAllocServer.cpp \
                      BladeFileAllocServer.cpp BladeObjectStore.cpp \
-                     TCPServer.cpp
+                     TCPServer.cpp EPollTCPServer.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir)
 
 
