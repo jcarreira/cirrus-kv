@@ -13,7 +13,8 @@ bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain bladefilema
 libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
                      ConnectionContext.cpp DumbQuotaManager.cpp \
                      ResourceAllocator.cpp BladeAllocServer.cpp \
-                     BladeFileAllocServer.cpp BladeObjectStore.cpp
+                     BladeFileAllocServer.cpp BladeObjectStore.cpp \
+                     TCPServer.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir)
 
 
