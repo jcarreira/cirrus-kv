@@ -2,7 +2,7 @@
 
 #include "src/common/BladeMessageGenerator.h"
 
-namespace sirius {
+namespace cirrus {
 
 void BladeMessageGenerator::alloc_msg(void *data, uint64_t size) {
     BladeMessage* msg =
@@ -56,4 +56,4 @@ void BladeMessageGenerator::stats_ack_msg(void *data) {
     msg->type = STATS_ACK;
 }
 
-}  // namespace sirius
+}  // namespace cirrus

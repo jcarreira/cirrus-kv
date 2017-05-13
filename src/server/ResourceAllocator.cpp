@@ -15,7 +15,7 @@
  * (e.g., allocate resources)
  */
 
-namespace sirius {
+namespace cirrus {
 
 ResourceAllocator::ResourceAllocator(int port,
         int timeout_ms) :
@@ -88,4 +88,4 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus

@@ -132,14 +132,14 @@ int main() {
             std::istreambuf_iterator<char>(),
             data);
 
-    sirius::LOG<sirius::INFO>("Copying done");
-    sirius::LOG<sirius::INFO>("Data written");
+    cirrus::LOG<cirrus::INFO>("Copying done");
+    cirrus::LOG<cirrus::INFO>("Data written");
 
     uint64_t index = 0;
     uint64_t count = 0;
 
     {
-        sirius::TimerFunction tf("Traverse data", true);
+        cirrus::TimerFunction tf("Traverse data", true);
         while (data[index]) {
             while (data[index] == ' ')
                 ++index;
@@ -154,9 +154,9 @@ int main() {
         }
     }
 
-    sirius::LOG<sirius::INFO>("Words counted");
-    sirius::LOG<sirius::INFO>("size: ", wc2.size());
-    sirius::LOG<sirius::INFO>("count: ", count);
+    cirrus::LOG<cirrus::INFO>("Words counted");
+    cirrus::LOG<cirrus::INFO>("size: ", wc2.size());
+    cirrus::LOG<cirrus::INFO>("count: ", count);
 
     return 0;
 }

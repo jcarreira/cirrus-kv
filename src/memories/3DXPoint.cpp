@@ -2,7 +2,7 @@
 
 #include "src/memories/3DXPoint.h"
 
-namespace sirius {
+namespace cirrus {
 
 3DXPoint::getWriteBandwidth() {
     return write_bandwidth_;
@@ -20,4 +20,4 @@ namespace sirius {
     return write_latency_us_;
 }
 
-}  //  namespace sirius
+}  //  namespace cirrus

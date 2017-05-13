@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace sirius {
+namespace cirrus {
 
 class Stats {
 public:

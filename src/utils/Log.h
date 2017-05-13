@@ -8,7 +8,7 @@
 #include "src/utils/Time.h"
 #include "src/common/Synchronization.h"
 
-namespace sirius {
+namespace cirrus {
 
 struct INFO {
     static const int value = 5;
@@ -66,6 +66,6 @@ bool LOG(Params&& ... param) {
     return true; // success
 }
 
-} // sirius
+} // cirrus
 
 #endif // _LOG_H_

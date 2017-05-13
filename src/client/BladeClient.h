@@ -9,7 +9,7 @@
 #include "src/common/AllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"
 
-namespace sirius {
+namespace cirrus {
 
 class FutureBladeOp;
 
@@ -63,6 +63,6 @@ private:
     uint64_t remote_addr_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_CLIENT_H_

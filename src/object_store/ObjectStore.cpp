@@ -2,9 +2,9 @@
 
 #include "src/object_store/ObjectStore.h"
 
-namespace sirius {
+namespace cirrus {
 
 ObjectStore::ObjectStore() {
 }
 
-}  // namespace sirius
+}  // namespace cirrus

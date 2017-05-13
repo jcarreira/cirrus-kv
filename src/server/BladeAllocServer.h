@@ -19,7 +19,7 @@
  * We use a mem. allocator to manage mem.
  */
 
-namespace sirius {
+namespace cirrus {
 
 struct BladeAllocation {
     BladeAllocation(void* p = 0) : ptr(p){}

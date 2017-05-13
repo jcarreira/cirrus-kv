@@ -1,7 +1,7 @@
 #include "src/common/Synchronization.h"
 
-namespace sirius {
+namespace cirrus {
 
 SpinLock sl;
 
-} // namespace sirius
+} // namespace cirrus

@@ -12,7 +12,7 @@
 // XXX hack. We use the FutureBladeOp. Need to refactor this
 #include "src/client/BladeClient.h"
 
-namespace sirius {
+namespace cirrus {
 
 using FileAllocRec = FileAllocationRecord;
 
@@ -41,6 +41,6 @@ private:
     uint64_t remote_addr_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_FILE_CLIENT_H_

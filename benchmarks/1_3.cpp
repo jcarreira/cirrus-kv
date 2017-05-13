@@ -39,12 +39,12 @@ void test_multiple_clients() {
 
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([]() {
-            sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+            cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
             std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
             d->id = 42;
             // warm up
-            sirius::RDMAMem mem(d.get(), sizeof(Dummy));
+            cirrus::RDMAMem mem(d.get(), sizeof(Dummy));
             for (uint64_t i = 0; i < 100; ++i) {
                 store.put(d.get(), sizeof(Dummy), i, &mem);
             }
@@ -53,7 +53,7 @@ void test_multiple_clients() {
             count++;
             while (count != N_THREADS);
             
-            sirius::TimerFunction tf;
+            cirrus::TimerFunction tf;
             for (uint64_t i = 0; i < N_MSG; ++i) {
                 store.put(d.get(), sizeof(Dummy), i % 100, &mem);
             }

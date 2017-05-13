@@ -29,11 +29,11 @@ struct Dummy {
 };
 
 void test_async(int N) {
-    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
-    sirius::Stats stats;
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::Stats stats;
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    sirius::TimerFunction tfs[N];
+    cirrus::TimerFunction tfs[N];
     d->id = 42;
 
     std::function<bool(bool)> futures[N];

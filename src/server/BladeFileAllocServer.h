@@ -17,7 +17,7 @@
  * This server supports allocations of files
  */
 
-namespace sirius {
+namespace cirrus {
 
 class BladeFileAllocServer : public RDMAServer {
 public:

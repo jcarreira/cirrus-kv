@@ -5,7 +5,7 @@
 
 #include <sys/epoll.h>
 
-namespace sirius {
+namespace cirrus {
 
 /**
   * This class serves as a remote store that allows connection from clients through TCP
@@ -47,6 +47,6 @@ private:
     int epfd_;
 };
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif // _EPOLLTCP_SERVER_H_

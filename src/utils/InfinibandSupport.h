@@ -7,7 +7,7 @@
 #include <rdma/rdma_cma.h>
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 class InfinibandSupport {
 public:
@@ -20,6 +20,6 @@ public:
     std::once_flag odp_support_check_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _INFINIBAND_SUPPORT_H_

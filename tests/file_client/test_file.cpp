@@ -31,10 +31,10 @@ struct Dummy {
 };
 
 void test_file() {
-    sirius::BladeFileClient client;
+    cirrus::BladeFileClient client;
     client.connect(IP, PORT);
 
-    sirius::FileAllocRec allocRec = client.allocate("/tmp/teste", SIZE);
+    cirrus::FileAllocRec allocRec = client.allocate("/tmp/teste", SIZE);
 
     client.write_sync(allocRec, 0, 6, "TESTE");
 

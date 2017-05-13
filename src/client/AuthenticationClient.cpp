@@ -6,7 +6,7 @@
 #include "src/utils/utils.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 AuthenticationClient::AuthenticationClient(int timeout_ms) :
     RDMAClient(timeout_ms) {
@@ -28,4 +28,4 @@ AuthenticationToken AuthenticationClient::authenticate() {
     return AuthenticationToken(true);
 }
 
-}  // namespace sirius
+}  // namespace cirrus

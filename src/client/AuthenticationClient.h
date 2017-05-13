@@ -6,7 +6,7 @@
 #include "src/client/RDMAClient.h"
 #include "src/authentication/AuthenticationToken.h"
 
-namespace sirius {
+namespace cirrus {
 
 class AuthenticationClient : public RDMAClient {
 public:
@@ -18,6 +18,6 @@ public:
 private:
 };
 
-} // sirius
+} // cirrus
 
 #endif // _AUTH_CLIENT_H_

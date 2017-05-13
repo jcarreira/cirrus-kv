@@ -11,7 +11,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 
-namespace sirius {
+namespace cirrus {
 
 static const int SIZE = 1000000;
 
@@ -128,5 +128,5 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus
 

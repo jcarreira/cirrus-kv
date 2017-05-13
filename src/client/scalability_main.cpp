@@ -15,7 +15,7 @@ static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
 
 void ctrlc_handler(int sig_num) {
-    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
+    cirrus::LOG<cirrus::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -34,23 +34,23 @@ char data[100] = {0};
 auto main() -> int {
     snprintf(data, sizeof(data), "%s", "WRONG");
 
-    sirius::LOG<sirius::INFO>("Starting RDMA server in port: ", PORT);
+    cirrus::LOG<cirrus::INFO>("Starting RDMA server in port: ", PORT);
 
-    sirius::BladeClient client1, client2;
+    cirrus::BladeClient client1, client2;
 
     client1.connect("10.10.49.83", PORT);
 
     for (int i = 1; i < 1024 * 10; i += (1024*10 / 50)) {
         std::cout << "Allocating " << i << "MB" << std::endl;
-        sirius::AllocationRecord alloc1 = client1.allocate(i * MB);
+        cirrus::AllocationRecord alloc1 = client1.allocate(i * MB);
 
-        sirius::LOG<sirius::INFO>(
+        cirrus::LOG<cirrus::INFO>(
                 "Received allocation 1. id: ", alloc1.alloc_id);
 
         // average latencies
         uint64_t elapsed_cum = 0;
         for (int j = 0; j < 20; ++j) {
-            sirius::TimerFunction tf("client1.write");
+            cirrus::TimerFunction tf("client1.write");
             client1.write_sync(alloc1, 0, 5, "data1");
             elapsed_cum += tf.getUsElapsed();
         }

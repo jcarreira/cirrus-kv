@@ -4,7 +4,7 @@
 #include <thread>
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 class ThreadPinning {
 public:

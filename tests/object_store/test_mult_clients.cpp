@@ -32,7 +32,7 @@ struct Dummy {
 uint64_t total_puts = 0;
 
 void test_multiple_clients() {
-    sirius::TimerFunction tf("connect time", true);
+    cirrus::TimerFunction tf("connect time", true);
 
     std::thread* threads[N_THREADS];
 
@@ -42,7 +42,7 @@ void test_multiple_clients() {
 
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
-            sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+            cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
             for (int i = 0; i < 100; ++i) {
                 std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
                 int rnd = std::rand();

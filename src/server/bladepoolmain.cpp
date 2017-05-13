@@ -8,7 +8,7 @@ static const uint64_t GB = (1024*1024*1024);
 static const int PORT = 12345;
 
 void ctrlc_handler(int sig_num) {
-    sirius::LOG<sirius::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
+    cirrus::LOG<cirrus::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
     exit(EXIT_FAILURE);
 }
 
@@ -23,13 +23,13 @@ void set_ctrlc_handler() {
 }
 
 auto main() -> int {
-    sirius::LOG<sirius::INFO>("Starting RDMA server in port: ", PORT);
+    cirrus::LOG<cirrus::INFO>("Starting RDMA server in port: ", PORT);
 
-    sirius::BladePoolServer server(PORT, 10 * GB);
+    cirrus::BladePoolServer server(PORT, 10 * GB);
 
     server.init();
 
-    sirius::LOG<sirius::INFO>("Running server's loop");
+    cirrus::LOG<cirrus::INFO>("Running server's loop");
     server.loop();
 
     return 0;

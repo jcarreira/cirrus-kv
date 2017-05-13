@@ -31,12 +31,12 @@ struct Dummy {
 };
 
 void test_file() {
-    sirius::BladeFileClient client;
+    cirrus::BladeFileClient client;
     client.connect(IP, PORT);
 
-    sirius::FileAllocRec allocRec = client.allocate("/tmp/teste", SIZE);
+    cirrus::FileAllocRec allocRec = client.allocate("/tmp/teste", SIZE);
 
-    sirius::RDMAMem mem;
+    cirrus::RDMAMem mem;
     char input[10] = "TESTE";
     auto fut = client.write_async(allocRec, 0, 6, input, mem);
 

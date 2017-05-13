@@ -1,6 +1,6 @@
 /* Copyright Joao Carreira 2016 */
 
-namespace sirius {
+namespace cirrus {
 
 class 3DXPoint : public Memory {
 public:
@@ -16,4 +16,4 @@ private:
     const uint64_t write_bandwidth_ = 10 GB;
 };
 
-}  // namespace sirius
+}  // namespace cirrus

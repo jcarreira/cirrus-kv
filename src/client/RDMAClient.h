@@ -13,7 +13,7 @@
 #include "src/common/Synchronization.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 /*
  * One GeneralContext for all connections
@@ -223,7 +223,7 @@ protected:
     RDMAMem default_send_mem_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _RDMA_CLIENT_H_
 

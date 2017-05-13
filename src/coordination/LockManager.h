@@ -5,12 +5,12 @@
 
 #include "src/coordination/LockManager.h"
 
-namespace sirius {
+namespace cirrus {
 
 class LockManager {
     LockManager::LockManager();
 };
 
-}  // namespace sirius
+}  // namespace cirrus
 
 #endif  // _LOCK_MANAGER_H_

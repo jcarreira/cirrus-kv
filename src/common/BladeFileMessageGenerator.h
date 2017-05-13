@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <string>
 
-namespace sirius {
+namespace cirrus {
 
 struct BladeFileMessageGenerator {
     static void alloc_msg(void *data, 
@@ -19,7 +19,7 @@ struct BladeFileMessageGenerator {
     static void stats_ack_msg(void *data);
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_FILE_MESSAGE_GENERATOR_H_
 

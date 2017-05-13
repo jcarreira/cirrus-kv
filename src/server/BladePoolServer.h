@@ -16,7 +16,7 @@
  * to that big pool
  */
 
-namespace sirius {
+namespace cirrus {
 
 class BladePoolServer : public RDMAServer {
 public:

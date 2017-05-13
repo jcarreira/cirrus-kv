@@ -3,7 +3,7 @@
 #ifndef _APPLICATION_RECORD_H_
 #define _APPLICATION_RECORD_H_
 
-namespace sirius {
+namespace cirrus {
 
 class ApplicationRecord {
 public:
@@ -19,7 +19,7 @@ private:
     std::vector<Allocation> allocations_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _APPLICATION_RECORD_H_
 

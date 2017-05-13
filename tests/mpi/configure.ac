@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(SIRIUS, 0.1, joao@berkeley.edu)
+AC_INIT(CIRRUS, 0.1, joao@berkeley.edu)
 AM_INIT_AUTOMAKE
 
 # Checks for programs.

@@ -8,7 +8,7 @@
 #include "src/object_store/EvictionPolicy.h"
 #include "src/client/BladeClient.h"
 
-namespace sirius {
+namespace cirrus {
 
 class RDMAObjectStore : public ObjectStore {
 public:

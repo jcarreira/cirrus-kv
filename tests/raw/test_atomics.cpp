@@ -31,11 +31,11 @@ struct Dummy {
 };
 
 void test_fetchadd() {
-    sirius::BladeClient client;
+    cirrus::BladeClient client;
     
     client.connect(IP, PORT);
 
-    sirius::AllocationRecord allocRec = client.allocate(SIZE);
+    cirrus::AllocationRecord allocRec = client.allocate(SIZE);
 
     client.fetchadd_sync(allocRec, 0, 42);
 

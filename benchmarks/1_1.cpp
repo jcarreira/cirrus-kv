@@ -31,7 +31,7 @@ struct Dummy {
 
 
 void test_sync() {
-    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -44,14 +44,14 @@ void test_sync() {
 
     std::cout << "Warm up done" << std::endl;
 
-    sirius::RDMAMem mem(d.get(), sizeof(Dummy));
+    cirrus::RDMAMem mem(d.get(), sizeof(Dummy));
 
-    sirius::Stats stats;
+    cirrus::Stats stats;
     stats.reserve(MILLION);
 
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
-        sirius::TimerFunction tf;
+        cirrus::TimerFunction tf;
         store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
@@ -60,7 +60,7 @@ void test_sync() {
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
-    sirius::TimerFunction start;
+    cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
         store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
 

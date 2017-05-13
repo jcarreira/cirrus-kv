@@ -20,7 +20,7 @@
 
 #include "src/common/Synchronization.h"
 
-namespace sirius {
+namespace cirrus {
 
 RDMAClient::RDMAClient(int timeout_ms) {
     id_ = nullptr;
@@ -37,7 +37,7 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
     memset(params, 0, sizeof(*params));
     params->initiator_depth = params->responder_resources = 10;
     params->rnr_retry_count = 70;
-    params->retry_count = 70;
+    params->retry_count = 7;
 }
 
 void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
@@ -609,4 +609,4 @@ void RDMAClient::connect_rdma_cm(const std::string& host, const std::string& por
     LOG<INFO>("Connection successful");
 }
 
-}  // namespace sirius
+}  // namespace cirrus

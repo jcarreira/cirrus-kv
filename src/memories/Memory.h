@@ -3,7 +3,7 @@
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
-namespace sirius {
+namespace cirrus {
 
 struct Memory {
     virtual uint64_t getReadLatency() const = 0;
@@ -12,4 +12,4 @@ struct Memory {
     virtual uint64_t getWriteBandwidth() const = 0;
 };
 
-}  // namespace sirius
+}  // namespace cirrus

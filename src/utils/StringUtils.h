@@ -3,7 +3,7 @@
 
 #include <sstream>
 
-namespace sirius {
+namespace cirrus {
 
 template<typename ... Params>
 std::string to_string(Params&& ... param) {
@@ -19,6 +19,6 @@ std::string to_string(Params&& ... param) {
     return ss.str();
 }
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif

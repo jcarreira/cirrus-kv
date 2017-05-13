@@ -11,7 +11,7 @@
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 BladeFileClient::BladeFileClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
@@ -160,4 +160,4 @@ std::shared_ptr<FutureBladeOp> BladeFileClient::read_async(const FileAllocRec& a
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
-}  // namespace sirius
+}  // namespace cirrus

@@ -3,7 +3,7 @@
 #ifndef _DUMB_AUTHENTICATOR_H_
 #define _DUMB_AUTHENTICATOR_H_
 
-namespace sirius {
+namespace cirrus {
 
 class DumbAuthenticator : public Authenticator {
 public:
@@ -14,6 +14,6 @@ public:
 private:
 };
 
-} // sirius
+} // cirrus
 
 #endif // _DUMB_AUTHENTICATOR_H_

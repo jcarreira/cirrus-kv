@@ -11,7 +11,7 @@
 //#include "src/utils/logging.h"
 #include "src/common/Decls.h"
 
-namespace sirius {
+namespace cirrus {
 
 class Lock {
 public:

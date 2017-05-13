@@ -1,7 +1,7 @@
 #include "src/utils/Time.h"
 #include <iostream>
 
-namespace sirius {
+namespace cirrus {
 
 TimerFunction::~TimerFunction() {
     if (!print_)
@@ -37,4 +37,4 @@ std::string getTimeNow() {
     return to_string(res);
 }
 
-} // namespace sirius
+} // namespace cirrus

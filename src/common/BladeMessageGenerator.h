@@ -6,7 +6,7 @@
 #include "src/common/BladeMessage.h"
 #include <stdint.h>
 
-namespace sirius {
+namespace cirrus {
 
 struct BladeMessageGenerator {
     // allocation
@@ -25,7 +25,7 @@ struct BladeMessageGenerator {
     static void stats_ack_msg(void *data);
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_MESSAGE_GENERATOR_H_
 

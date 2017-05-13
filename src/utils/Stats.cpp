@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace sirius {
+namespace cirrus {
 
 Stats::Stats() {
 
@@ -69,5 +69,5 @@ void Stats::reserve(uint64_t n) {
     data.reserve(n);
 }
 
-} // namespace sirius
+} // namespace cirrus
 

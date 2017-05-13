@@ -3,7 +3,7 @@
 #ifndef _TCP_SERVER_H_
 #define _TCP_SERVER_H_
 
-namespace sirius {
+namespace cirrus {
 
 /**
   * This class serves as a remote store that allows connection from clients through TCP
@@ -37,6 +37,6 @@ private:
     int server_sock_;
 };
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif // _TCP_SERVER_H_

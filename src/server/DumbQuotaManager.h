@@ -6,7 +6,7 @@
 #include "QuotaManager.h"
 #include <map>
 
-namespace sirius {
+namespace cirrus {
 
 class DumbQuotaManager {
 public:
@@ -19,6 +19,6 @@ private:
     std::map<uint64_t, uint64_t> apps_to_mem;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _DUMB_QUOTA_MANAGER_H_

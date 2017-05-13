@@ -31,7 +31,7 @@ struct Dummy {
 //#define CHECK_RESULTS
 
 void test_sync() {
-    sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -54,7 +54,7 @@ void test_sync() {
 }
 
 void test_async() {
-    sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
     
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -82,8 +82,8 @@ void test_async() {
 }
 
 void test_sync(int N) {
-    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
-    sirius::Stats stats;
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::Stats stats;
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
@@ -96,7 +96,7 @@ void test_sync(int N) {
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
-        sirius::TimerFunction tf("", false);
+        cirrus::TimerFunction tf("", false);
         store.put(d.get(), sizeof(Dummy), 1);
 #ifdef CHECK_RESULTS
         store.get(1, d2);
@@ -115,11 +115,11 @@ void test_sync(int N) {
 }
 
 void test_async_N(int N) {
-    sirius::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
-    sirius::Stats stats;
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::Stats stats;
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    sirius::TimerFunction tfs[N];
+    cirrus::TimerFunction tfs[N];
     d->id = 42;
 
     std::function<bool(bool)> futures[N];

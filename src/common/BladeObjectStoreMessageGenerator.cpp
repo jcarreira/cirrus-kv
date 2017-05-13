@@ -2,7 +2,7 @@
 
 #include "src/common/BladeObjectStoreMessageGenerator.h"
 
-namespace sirius {
+namespace cirrus {
 
 void BladeObjectStoreMessageGenerator::subscribe_msg(
         void *data, uint64_t id) {
@@ -75,4 +75,4 @@ void BladeObjectStoreMessageGenerator::flush_ack_msg(
     msg->type = FLUSH_ACK;
 }
 
-} // namespace sirius
+} // namespace cirrus

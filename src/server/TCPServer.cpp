@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 TCPServer::TCPServer(int port, int queue_len) {
     port_ = port;
@@ -64,4 +64,4 @@ void TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
 }
 
-} // namespace sirius
+} // namespace cirrus

@@ -13,7 +13,7 @@
 #include <map>
 #include <boost/interprocess/managed_external_buffer.hpp>
 
-namespace sirius {
+namespace cirrus {
 
 struct BladeAllocation {
     BladeAllocation(void* p = 0) : ptr(p){}

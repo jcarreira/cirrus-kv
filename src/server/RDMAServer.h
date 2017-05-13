@@ -12,7 +12,7 @@
 #include <mutex>
 #include <memory>
 
-namespace sirius {
+namespace cirrus {
     
 class RDMAServer : public Server {
 public:
@@ -78,6 +78,6 @@ protected:
     std::once_flag gen_ctx_flag;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _RDMA_SERVER_H_

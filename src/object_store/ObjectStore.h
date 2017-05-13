@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-namespace sirius {
+namespace cirrus {
 
 using ObjectID = uint64_t;
 using Object = void*;

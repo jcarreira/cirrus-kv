@@ -2,9 +2,9 @@
 
 #include "src/coordination/LockManager.h"
 
-namespace sirius {
+namespace cirrus {
 
 LockManager::LockManager() {
 }
 
-}  // namespace sirius
+}  // namespace cirrus

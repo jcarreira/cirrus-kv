@@ -5,7 +5,7 @@
 
 #include "GrantingKey.h"
 
-namespace sirius {
+namespace cirrus {
 
 class AuthenticationToken {
 public:

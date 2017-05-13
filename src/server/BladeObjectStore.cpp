@@ -10,7 +10,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 
-namespace sirius {
+namespace cirrus {
 
 using BOMG = BladeObjectStoreMessageGenerator;
 
@@ -164,5 +164,5 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus
 

@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-namespace sirius {
+namespace cirrus {
 
 enum msg_type { 
     ALLOC, ALLOC_ACK,
@@ -26,7 +26,7 @@ struct BladeFileMessage {
     } data;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_FILE_MESSAGE_H_
 

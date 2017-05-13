@@ -3,7 +3,7 @@
 #include "src/common/BladeFileMessageGenerator.h"
 #include <cstring>
 
-namespace sirius {
+namespace cirrus {
 
 void BladeFileMessageGenerator::alloc_msg(
         void *data, const std::string& filename, uint64_t size) {
@@ -41,4 +41,4 @@ void BladeFileMessageGenerator::stats_ack_msg(void *data) {
     msg->type = STATS_ACK;
 }
 
-}  // namespace sirius
+}  // namespace cirrus

@@ -5,7 +5,7 @@
 #include "src/object_store/FullCacheStore.h"
 #include "src/utils/utils.h"
 
-namespace sirius {
+namespace cirrus {
 
 FullCacheStore::FullCacheStore() :
     ObjectStore() {
@@ -98,4 +98,4 @@ void FullCacheStore::printStats() {
 #endif
 }
 
-}  //  namespace sirius
+}  //  namespace cirrus

@@ -5,7 +5,7 @@
 #include <string>
 #include "src/utils/StringUtils.h"
 
-namespace sirius {
+namespace cirrus {
 
 std::string getTimeNow();
 
@@ -32,6 +32,6 @@ private:
     bool print_;
 };
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif // _TIME_H_

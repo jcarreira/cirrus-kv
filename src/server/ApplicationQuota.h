@@ -8,7 +8,7 @@
  * can allocate in this domain
  */
 
-namespace sirius {
+namespace cirrus {
 
 class ApplicationQuota {
 public:
@@ -21,7 +21,7 @@ private:
     uint64_t memory_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _APPLICATION_QUOTA_H_
 

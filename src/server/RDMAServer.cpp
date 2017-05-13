@@ -12,7 +12,7 @@
 #include "src/common/ThreadPinning.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 GeneralContext RDMAServer::gen_ctx_;
 
@@ -366,4 +366,4 @@ void RDMAServer::handle_connection(struct rdma_cm_id* /*id*/) {
 void RDMAServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
-}  // namespace sirius
+}  // namespace cirrus

@@ -2,13 +2,13 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(SIRIUS, 0.1, joao@berkeley.edu)
+AC_INIT(CIRRUS, 0.1, joao@berkeley.edu)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
-AC_PROG_CXX
+AC_PROG_CXX([g++-6])
 AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_CPP

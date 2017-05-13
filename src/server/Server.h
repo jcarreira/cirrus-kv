@@ -3,7 +3,7 @@
 #ifndef _SERVER_H_
 #define _SERVER_H_
 
-namespace sirius {
+namespace cirrus {
 
 class Server {
 public:
@@ -11,6 +11,6 @@ public:
     Server(Server&) = delete;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _SERVER_H_

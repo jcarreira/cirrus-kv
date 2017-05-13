@@ -2,7 +2,7 @@
 
 #include "src/server/DumbQuotaManager.h"
 
-namespace sirius {
+namespace cirrus {
 
 bool DumbQuotaManager::canAllocateMemory(uint64_t app_id, uint64_t memorySize) {
     app_id = app_id;
@@ -18,5 +18,5 @@ bool DumbQuotaManager::allocateMemory(uint64_t app_id, uint64_t memorySize) {
     return true;
 }
 
-}  // namespace sirius
+}  // namespace cirrus
 

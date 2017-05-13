@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 EPollTCPServer::EPollTCPServer(int port, int queue_len) {
     port_ = port;
@@ -127,4 +127,4 @@ void EPollTCPServer::process(int socket) {
     LOG<INFO>("Processing request from socket: ", socket);
 }
 
-} // namespace sirius
+} // namespace cirrus

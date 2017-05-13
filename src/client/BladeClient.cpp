@@ -11,7 +11,7 @@
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 
-namespace sirius {
+namespace cirrus {
 
 BladeClient::BladeClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
@@ -266,4 +266,4 @@ bool FutureBladeOp::try_wait() {
     return op_info->op_sem->trywait();
 }
 
-}  // namespace sirius
+}  // namespace cirrus

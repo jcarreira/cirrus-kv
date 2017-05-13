@@ -6,7 +6,7 @@
 #include "src/object_store/RandomEvictionPolicy.h"
 #include "src/utils/utils.h"
 
-namespace sirius {
+namespace cirrus {
 
 RDMAObjectStore::RDMAObjectStore(const std::string& blade_addr,
         const std::string& port,
@@ -38,5 +38,5 @@ void RDMAObjectStore::printStats() {
     cache_.printStats();
 }
 
-}  //  namespace sirius
+}  //  namespace cirrus
 

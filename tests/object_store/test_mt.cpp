@@ -24,7 +24,7 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
     
-sirius::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
 struct Dummy {
     char data[SIZE];
@@ -32,7 +32,7 @@ struct Dummy {
 };
 
 void test_mt() {
-    sirius::TimerFunction tf("connect time", true);
+    cirrus::TimerFunction tf("connect time", true);
 
     std::thread* threads[N_THREADS];
 

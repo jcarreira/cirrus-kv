@@ -21,7 +21,7 @@
  * method put copies object from local dram to remote blade
  */
 
-namespace sirius {
+namespace cirrus {
 namespace ostore {
 
 class BladeLocation {
@@ -138,7 +138,7 @@ bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
         return writeRemote(obj, loc, mem);
     } else {
         // we could merge this into a single message (?)
-        sirius::AllocationRecord allocRec;
+        cirrus::AllocationRecord allocRec;
         {
             TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
             allocRec = client.allocate(size);
@@ -155,7 +155,7 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
     BladeLocation loc;
 
     if (!objects_.find(id, loc)) {
-        sirius::AllocationRecord allocRec = client.allocate(size);
+        cirrus::AllocationRecord allocRec = client.allocate(size);
         insertObjectLocation(id, size, allocRec);
         loc = BladeLocation(size, allocRec);
     }

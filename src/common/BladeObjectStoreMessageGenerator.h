@@ -8,7 +8,7 @@
 #include "src/common/BladeMessageGenerator.h"
 #include <stdint.h>
 
-namespace sirius {
+namespace cirrus {
 
 struct BladeObjectStoreMessageGenerator : public BladeMessageGenerator {
     // keep alive
@@ -29,7 +29,7 @@ struct BladeObjectStoreMessageGenerator : public BladeMessageGenerator {
 
 };
 
-} // sirius
+} // cirrus
 
 #endif // _BLADE_OBJECT_STORE_MESSAGE_GENERATOR_H_
 

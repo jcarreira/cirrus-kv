@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace sirius {
+namespace cirrus {
 
 void AllocatorMessageGenerator::auth1(void *data, AppId app_id) {
     AllocatorMessage* msg =
@@ -74,4 +74,4 @@ void AllocatorMessageGenerator::alloc_ack(void *data) {
     msg->type = ALLOC_ACK;
 }
 
-}  // namespace sirius
+}  // namespace cirrus

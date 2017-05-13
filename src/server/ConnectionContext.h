@@ -7,7 +7,7 @@
 #include "src/server/ConnectionInfo.h"
 #include <semaphore.h>
 
-namespace sirius {
+namespace cirrus {
 
 class RDMAServer;
 

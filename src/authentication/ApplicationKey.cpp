@@ -2,9 +2,9 @@
 
 #include "src/authentication/ApplicationKey.h"
 
-namespace sirius {
+namespace cirrus {
 
 ApplicationKey::ApplicationKey() {
 }
 
-}  // namespace sirius
+}  // namespace cirrus
