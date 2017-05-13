@@ -274,8 +274,9 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
         post_msg_receive(id);
         LOG<INFO>("Posted new receive WR");
 
-        std::invoke(&RDMAServer::process_message,
-                con_ctx->server, id, con_ctx->recv_msg);
+        con_ctx->server->process_message(id, con_ctx->recv_msg);
+        //std::invoke(&RDMAServer::process_message,
+        //        con_ctx->server, id, con_ctx->recv_msg);
 
     } else if (wc->opcode == IBV_WC_SEND) {
         LOG<INFO>("Blade server sent a message..");
