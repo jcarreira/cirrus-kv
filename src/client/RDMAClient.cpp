@@ -594,7 +594,7 @@ void RDMAClient::connect_rdma_cm(const std::string& host, const std::string& por
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
             LOG<INFO>("resolved route");
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            LOG<INFO>("Connecting (rdma_connect)");
+            LOG<INFO>("Connecting (rdma_connect) to ", host, ":", port);
             TEST_NZ(rdma_connect(event_copy.id, &cm_params));
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));

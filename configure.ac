@@ -28,7 +28,8 @@ AC_CHECK_LIB([ibverbs], [main])
 AC_CHECK_LIB([rdmacm], [main])
 
 # Checks for header files.
-AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h stdlib.h sys/types.h sys/socket.h \
+AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
+        stdlib.h sys/types.h sys/socket.h sys/epoll.h\
         sys/time.h syslog.h unistd.h google/dense_hash_map])
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -56,5 +57,7 @@ AC_CONFIG_FILES([Makefile
                  tests/file_client/Makefile
                  tests/Makefile
                  benchmarks/Makefile])
+
+AC_CONFIG_SUBDIRS([tests/mpi])
 
 AC_OUTPUT
