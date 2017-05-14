@@ -1,5 +1,6 @@
 /* Copyright Joao Carreira 2016 */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
 #include <iterator>
@@ -11,8 +12,8 @@
 #include <cctype>
 #include <chrono>
 #include <thread>
+#include <memory>
 #include <random>
-#include <unistd.h>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -37,7 +38,7 @@ void test_async(int N) {
     d->id = 42;
 
     std::function<bool(bool)> futures[N];
-    
+
     // warm up
     for (int i = 0; i < N; ++i) {
         store.put(d.get(), sizeof(Dummy), i);
@@ -55,7 +56,7 @@ void test_async(int N) {
     }
 
     while (total_done != N) {
-        for (int i = 0; i < N;++i) {
+        for (int i = 0; i < N; ++i) {
             if (!done[i]) {
                 bool ret = futures[i](true);
                 if (ret) {
@@ -77,7 +78,6 @@ void test_async(int N) {
 }
 
 auto main() -> int {
-
     // test burst of 1000 async writes
     test_async(1000);
 

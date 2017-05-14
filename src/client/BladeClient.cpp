@@ -97,7 +97,7 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
 
     if (mem) {
         {
-            //TimerFunction tf("BladeClient::write_sync prepare", true);
+            // TimerFunction tf("BladeClient::write_sync prepare", true);
             mem->addr_ = reinterpret_cast<uint64_t>(data);
             mem->prepare(con_ctx_.gen_ctx_);
         }
@@ -143,7 +143,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     } else {
-        //TimerFunction tf("write_async memcpy", true);
+        // TimerFunction tf("write_async memcpy", true);
         std::memcpy(con_ctx_.send_msg, data, length);
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,

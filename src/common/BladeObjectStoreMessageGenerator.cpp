@@ -75,4 +75,4 @@ void BladeObjectStoreMessageGenerator::flush_ack_msg(
     msg->type = FLUSH_ACK;
 }
 
-} // namespace cirrus
+}  // namespace cirrus

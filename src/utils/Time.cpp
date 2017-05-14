@@ -1,6 +1,8 @@
+/* Copyright Joao Carreira 2017 */
+
+#include <iostream>
 #include "src/utils/Time.h"
 #include "src/utils/Log.h"
-#include <iostream>
 
 namespace cirrus {
 
@@ -26,7 +28,7 @@ uint64_t TimerFunction::getUsElapsed() const {
 }
 
 std::string getTimeNow() {
-    //std::chrono::time_point<std::chrono::high_resolution_clock,
+    // std::chrono::time_point<std::chrono::high_resolution_clock,
     //    std::chrono::milliseconds> start = std::chrono::system_clock::now();
     auto t = std::chrono::system_clock::now();
     auto t2 = std::chrono::time_point_cast<std::chrono::milliseconds>(t);
@@ -35,4 +37,4 @@ std::string getTimeNow() {
     return to_string(res);
 }
 
-} // namespace cirrus
+}  // namespace cirrus

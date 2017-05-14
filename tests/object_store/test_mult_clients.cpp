@@ -23,7 +23,7 @@ static const int N_THREADS = 20;
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
-    
+
 struct Dummy {
     char data[SIZE];
     int id;

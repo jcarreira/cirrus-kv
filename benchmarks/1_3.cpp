@@ -23,7 +23,7 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.84";
 static const uint32_t SIZE = 128;
 static const uint64_t N_MSG = 1000000;
-    
+
 struct Dummy {
     char data[SIZE];
     int id;
@@ -51,13 +51,13 @@ void test_multiple_clients() {
 
             // barrier
             count++;
-            while (count != N_THREADS);
-            
+            while (count != N_THREADS) {}
+
             cirrus::TimerFunction tf;
             for (uint64_t i = 0; i < N_MSG; ++i) {
                 store.put(d.get(), sizeof(Dummy), i % 100, &mem);
             }
-            
+
             total_time += tf.getUsElapsed();
         });
     }
@@ -66,8 +66,10 @@ void test_multiple_clients() {
         threads[i]->join();
 
     std::cout << "Total time: " << total_time << std::endl;
-    std::cout << "Average (us) per msg: " << total_time / N_THREADS / N_MSG << std::endl;
-    std::cout << "MSG/s: " << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
+    std::cout << "Average (us) per msg: "
+        << total_time / N_THREADS / N_MSG << std::endl;
+    std::cout << "MSG/s: "
+        << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
 }
 
 auto main() -> int {

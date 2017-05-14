@@ -33,7 +33,6 @@ void ResourceAllocator::init() {
 
 void ResourceAllocator::send_challenge(rdma_cm_id* id,
         const AllocatorMessage& /*msg*/) {
-
     __attribute__((unused))
     auto token = AuthenticationToken::create_default_allow_token();  // allow
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);

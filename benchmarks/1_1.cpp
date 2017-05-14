@@ -1,5 +1,6 @@
 /* Copyright Joao Carreira 2016 */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
 #include <iterator>
@@ -12,7 +13,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
-#include <unistd.h>
+#include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -56,7 +57,7 @@ void test_sync() {
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
-    
+
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
@@ -82,7 +83,6 @@ void test_sync() {
 }
 
 auto main() -> int {
-
     // test burst of sync writes
     test_sync();
 

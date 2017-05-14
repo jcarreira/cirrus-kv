@@ -1,5 +1,6 @@
 /* Copyright Joao Carreira 2016 */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
 #include <iterator>
@@ -12,7 +13,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
-#include <unistd.h>
+#include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -28,7 +29,7 @@ struct Dummy {
     int id;
 };
 
-//#define CHECK_RESULTS
+// #define CHECK_RESULTS
 
 /**
   * Test simple synchronous put and get to/from the object store
@@ -61,7 +62,7 @@ void test_sync() {
   */
 void test_async() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-    
+
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
 
@@ -77,9 +78,9 @@ void test_async() {
     while (!future2(true)) {
         std::cout << "try wait" << std::endl;
     }
-        
+
     std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
-    
+
     if (reinterpret_cast<Dummy*>(d2)->id != 42) {
         throw std::runtime_error("Wrong value");
     }
@@ -135,7 +136,7 @@ void test_async_N(int N) {
     d->id = 42;
 
     std::function<bool(bool)> futures[N];
-    
+
     // warm up
     for (int i = 0; i < N; ++i) {
         store.put(d.get(), sizeof(Dummy), 1);
@@ -154,7 +155,7 @@ void test_async_N(int N) {
     int total_done = 0;
 
     while (total_done != N) {
-        for (int i = 0; i < N;++i) {
+        for (int i = 0; i < N; ++i) {
             if (!done[i]) {
                 bool ret = futures[i](false);
                 if (ret) {
@@ -174,11 +175,10 @@ void test_async_N(int N) {
 }
 
 auto main() -> int {
-
-    //test_async_N(10000);
-    //test_sync(1000);
-    //test_sync();
-    //test_async();
+    test_async_N(10000);
+    test_sync(1000);
+    test_sync();
+    test_async();
 
     return 0;
 }

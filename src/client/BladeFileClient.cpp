@@ -78,7 +78,8 @@ bool BladeFileClient::write_sync(const FileAllocRec& alloc_rec,
     return true;
 }
 
-std::shared_ptr<FutureBladeOp> BladeFileClient::write_async(const FileAllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeFileClient::write_async(
+        const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data,
@@ -95,9 +96,9 @@ std::shared_ptr<FutureBladeOp> BladeFileClient::write_async(const FileAllocRec& 
     mem.addr_ = reinterpret_cast<uint64_t>(data);
     mem.size_ = length;
     mem.mr = 0;
-    
+
     TEST_NZ(mem.prepare(con_ctx_.gen_ctx_));
-    
+
     RDMAOpInfo* op_info = write_rdma_async(id_, length,
             alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
             mem);
@@ -130,7 +131,8 @@ bool BladeFileClient::read_sync(const FileAllocRec& alloc_rec,
     return true;
 }
 
-std::shared_ptr<FutureBladeOp> BladeFileClient::read_async(const FileAllocRec& alloc_rec,
+std::shared_ptr<FutureBladeOp> BladeFileClient::read_async(
+        const FileAllocRec& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void *data,
@@ -143,7 +145,7 @@ std::shared_ptr<FutureBladeOp> BladeFileClient::read_async(const FileAllocRec& a
         " offset: ", offset,
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
-    
+
     mem.addr_ = reinterpret_cast<uint64_t>(data);
     mem.size_ = length;
     mem.mr = 0;

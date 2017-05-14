@@ -134,7 +134,8 @@ void RDMAClient::build_context(struct ibv_context *verbs,
                 CQ_DEPTH, nullptr, ctx->gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(ctx->gen_ctx_.cq, 0));
 
-    ctx->gen_ctx_.cq_poller_thread = new std::thread(&RDMAClient::poll_cq, this, ctx);
+    ctx->gen_ctx_.cq_poller_thread =
+        new std::thread(&RDMAClient::poll_cq, this, ctx);
 
     unsigned n_threads = std::thread::hardware_concurrency();
 
@@ -249,7 +250,7 @@ bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
     wr.num_sge    = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
     // XXX doesn't work for now
-    //if (size <= MAX_INLINE_DATA)
+    // if (size <= MAX_INLINE_DATA)
     //    wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr   = reinterpret_cast<uint64_t>(ctx->send_msg);
@@ -261,17 +262,16 @@ bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
 
 bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
-        
-    //LOG<INFO>("RDMAClient:: write_rdma_async");
+    LOG<INFO>("RDMAClient:: write_rdma_async");
     auto op_info = write_rdma_async(id, size, remote_addr, peer_rkey, mem);
-    //LOG<INFO>("RDMAClient:: waiting");
+    LOG<INFO>("RDMAClient:: waiting");
 
     if (nullptr == op_info) {
         throw std::runtime_error("Error writing rdma async");
     }
 
     {
-        //TimerFunction tf("waiting semaphore", true);
+        TimerFunction tf("waiting semaphore", true);
         op_info->op_sem->wait();
     }
 
@@ -322,7 +322,7 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
     // XXX doesn't work for now
-    //if (size <= MAX_INLINE_DATA)
+    // if (size <= MAX_INLINE_DATA)
     //    wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr   = mem.addr_;
@@ -331,7 +331,6 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
 
     if (!post_send(id->qp, &wr, &bad_wr))
         throw std::runtime_error("write_rdma_async: error post_send");
-        
 
     return op_info;
 }
@@ -379,7 +378,7 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     wr.sg_list      = &sge;
     wr.num_sge      = 1;
     wr.send_flags   = IBV_SEND_SIGNALED;
-    //if (size <= MAX_INLINE_DATA)
+    // if (size <= MAX_INLINE_DATA)
     //    wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr   = mem.addr_;
@@ -388,13 +387,12 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
 
     if (!post_send(id->qp, &wr, &bad_wr))
         throw std::runtime_error("read_rdma_async: error post_send");
-    
+
     return op_info;
 }
 
 void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
-        
     LOG<INFO>("RDMAClient:: fetchadd_rdma_sync");
     auto op_info = fetchadd_rdma_async(id, remote_addr, peer_rkey, value);
     LOG<INFO>("RDMAClient:: waiting");
@@ -446,7 +444,7 @@ RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
 
 void RDMAClient::connect(const std::string& host, const std::string& port) {
     connect_rdma_cm(host, port);
-    //connect_eth(host, port);
+    // connect_eth(host, port);
 }
 
 void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
@@ -476,11 +474,11 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
     LOG<INFO>("Opened ib device");
 
     ibv_query_device(dev_ctx, &con_ctx_.gen_ctx_.device_attr);
-    
+
     // Check some information
     int ret = ibv_query_port(dev_ctx, 1, &con_ctx_.gen_ctx_.port_attr);
     ibv_query_gid(dev_ctx, 1, 0, &con_ctx_.gen_ctx_.gid);
-    
+
     LOG<INFO>("Creating IB CQs");
 
     // creates PD
@@ -490,7 +488,8 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
     build_context(dev_ctx, &con_ctx_);
     build_qp_attr(&con_ctx_.gen_ctx_.qp_attr, &con_ctx_);
 
-    con_ctx_.qp = ibv_create_qp(con_ctx_.gen_ctx_.pd, &con_ctx_.gen_ctx_.qp_attr);
+    con_ctx_.qp = ibv_create_qp(con_ctx_.gen_ctx_.pd,
+                                &con_ctx_.gen_ctx_.qp_attr);
 
     if (nullptr == con_ctx_.qp)
         throw std::runtime_error("Error creating qp");
@@ -509,7 +508,7 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
 
     ret = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
 
-    if (ret < 0) { 
+    if (ret < 0) {
         throw std::runtime_error("Error getaddrinfo");
     }
 
@@ -520,7 +519,7 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
     }
 
     freeaddrinfo(res);
-   
+
 
     LOG<INFO>("Handshaking");
     // handshake
@@ -536,8 +535,8 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
     handshake_msg.lid = con_ctx_.gen_ctx_.port_attr.lid;
     handshake_msg.qpn = con_ctx_.qp->qp_num;
     handshake_msg.psn = rand();
-    //handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
-    //handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
+    // handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
+    // handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
 
     ret = ::send(sockfd, &handshake_msg, sizeof(handshake_msg), 0);
     if (ret != sizeof(handshake_msg)) {
@@ -549,11 +548,10 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
 
     if (ret <= 0)
         throw std::runtime_error("Error recv'ing");
-   
-
 }
 
-void RDMAClient::connect_rdma_cm(const std::string& host, const std::string& port) {
+void RDMAClient::connect_rdma_cm(const std::string& host,
+                                 const std::string& port) {
     struct addrinfo *addr;
     struct rdma_conn_param cm_params;
     struct rdma_cm_event *event = nullptr;

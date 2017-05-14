@@ -2,24 +2,23 @@
 
 #include "src/server/TCPServer.h"
 
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <cstring>
-#include <unistd.h>
 #include "src/utils/logging.h"
 
 namespace cirrus {
 
 TCPServer::TCPServer(int port, int queue_len) {
     port_ = port;
-    queue_len_ = queue_len; 
+    queue_len_ = queue_len;
 
     server_sock_ = 0;
 }
 
 TCPServer::~TCPServer() {
-
 }
 
 void TCPServer::init() {
@@ -37,19 +36,22 @@ void TCPServer::init() {
 
         LOG<INFO>("Created socket in TCPServer");
 
-        int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr), sizeof(serv_addr));
+        int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
+                sizeof(serv_addr));
         if (ret < 0)
-            throw std::runtime_error("Error binding in port " + to_string(port_));
+            throw std::runtime_error("Error binding in port "
+                   + to_string(port_));
 
         listen(server_sock_, queue_len_);
 }
-    
+
 void TCPServer::loop() {
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 
     while (1) {
-        int newsock = accept(server_sock_, reinterpret_cast<struct sockaddr*>(&cli_addr), &clilen);
+        int newsock = accept(server_sock_,
+                reinterpret_cast<struct sockaddr*>(&cli_addr), &clilen);
         if (newsock < 0)
             throw std::runtime_error("Error accepting socket");
 
@@ -60,8 +62,8 @@ void TCPServer::loop() {
 }
 
 void TCPServer::process(int sock) {
-    sock = 3;//warning
+    sock = 3;  // warning
     LOG<INFO>("Processing socket: ", sock);
 }
 
-} // namespace cirrus
+}  // namespace cirrus

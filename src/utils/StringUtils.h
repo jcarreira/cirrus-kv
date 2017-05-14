@@ -1,3 +1,5 @@
+/* Copyright Joao Carreira 2017 */
+
 #ifndef _STRING_UTILS_H_
 #define _STRING_UTILS_H_
 

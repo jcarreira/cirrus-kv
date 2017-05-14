@@ -6,6 +6,8 @@
   *
   */
 
+#include <mpi.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
 #include <iterator>
@@ -18,8 +20,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
-#include <unistd.h>
-#include <mpi.h>
+#include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -35,7 +36,7 @@ struct Dummy {
     int id;
 };
 
-//#define CHECK_RESULTS
+// #define CHECK_RESULTS
 
 void test_sync() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
@@ -62,7 +63,7 @@ void test_sync() {
 
 void test_async() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-    
+
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
 
@@ -78,11 +79,11 @@ void test_async() {
     while (!future2(true)) {
         std::cout << "try wait" << std::endl;
     }
-        
+
     std::cout << "done" << std::endl;
 
     std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
-    
+
     if (reinterpret_cast<Dummy*>(d2)->id != 42) {
         throw std::runtime_error("Wrong value");
     }
@@ -130,7 +131,7 @@ void test_async_N(int N) {
     d->id = 42;
 
     std::function<bool(bool)> futures[N];
-    
+
     // warm up
     for (int i = 0; i < N; ++i) {
         store.put(d.get(), sizeof(Dummy), 1);
@@ -149,7 +150,7 @@ void test_async_N(int N) {
     int total_done = 0;
 
     while (total_done != N) {
-        for (int i = 0; i < N;++i) {
+        for (int i = 0; i < N; ++i) {
             if (!done[i]) {
                 bool ret = futures[i](false);
                 if (ret) {
@@ -176,8 +177,8 @@ void init_mpi(int argc, char**argv) {
         std::cerr
             << "MPI implementation does not support multiple threads"
             << std::endl;
-//#MPI_Abort(MPI_COMM_WORLD, 1); 
-    }   
+        // MPI_Abort(MPI_COMM_WORLD, 1);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -186,7 +187,7 @@ int main(int argc, char** argv) {
     init_mpi(argc, argv);
     int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    //check_mpi_error(err);
+    // check_mpi_error(err);
 
     char name[200];
     gethostname(name, 200);

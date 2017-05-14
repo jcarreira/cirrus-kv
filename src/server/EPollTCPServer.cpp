@@ -2,12 +2,13 @@
 
 #include "src/server/EPollTCPServer.h"
 
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <cstring>
-#include <unistd.h>
-#include <fcntl.h>
+#include <string>
 #include <stdexcept>
 #include "src/utils/logging.h"
 
@@ -39,7 +40,6 @@ void EPollTCPServer::make_non_blocking(int sock) {
 }
 
 void EPollTCPServer::init() {
-
     listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener < 0) {
         throw std::runtime_error("Error creating socket");
@@ -51,15 +51,16 @@ void EPollTCPServer::init() {
     serveraddr.sin_port = htons(port_);
 
     memset(&serveraddr, 0, sizeof(serveraddr));
-    if(bind(listener, reinterpret_cast<sockaddr*>(&serveraddr),
+    if (bind(listener, reinterpret_cast<sockaddr*>(&serveraddr),
                 sizeof(serveraddr)) == -1) {
-        throw std::runtime_error(std::string("Error binding socket into port ") +
+        throw std::runtime_error(
+                std::string("Error binding socket into port ") +
                 to_string(port_));
     }
 
     make_non_blocking(listener);
 
-    if(listen(listener, queue_len_) == -1) {
+    if (listen(listener, queue_len_) == -1) {
         throw std::runtime_error("Error listening");
     }
 
@@ -79,9 +80,9 @@ void EPollTCPServer::init() {
         throw std::runtime_error("Error in epoll_ctl");
     }
 }
-    
+
 void EPollTCPServer::loop() {
-    int index = 0; // ??
+    int index = 0;  // ??
     struct sockaddr_in clientaddr;
 
     while (1) {
@@ -92,7 +93,7 @@ void EPollTCPServer::loop() {
         int client_fd = events[index].data.fd;
 
         for (index = 0; index < max_conn_; index++) {
-            if (client_fd == listener) { // new connection ??
+            if (client_fd == listener) {  // new connection ??
                 socklen_t addrlen = sizeof(clientaddr);
                 int newfd = accept(listener,
                         reinterpret_cast<sockaddr*>(&clientaddr), &addrlen);
@@ -119,7 +120,7 @@ void EPollTCPServer::loop() {
                     process(client_fd);
                 }
             }
-        } 
+        }
     }
 }
 
@@ -127,4 +128,4 @@ void EPollTCPServer::process(int socket) {
     LOG<INFO>("Processing request from socket: ", socket);
 }
 
-} // namespace cirrus
+}  // namespace cirrus

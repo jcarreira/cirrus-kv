@@ -1,3 +1,5 @@
+/* Copyright Joao Carreira 2017 */
+
 #include "src/utils/Stats.h"
 
 #include <cmath>
@@ -9,10 +11,9 @@
 namespace cirrus {
 
 Stats::Stats() {
-
 }
 
-void Stats::add(double d){
+void Stats::add(double d) {
     sum += d;
     sq_sum += d * d;
     count++;
@@ -40,7 +41,7 @@ int Stats::getCount() const {
 }
 
 double Stats::getPercentile(double p) const {
-    if(data.size() == 0)
+    if (data.size() == 0)
         throw std::runtime_error("No data");
 
     std::sort(data.begin(), data.end());
@@ -50,7 +51,7 @@ double Stats::getPercentile(double p) const {
 }
 
 double Stats::min() const {
-    if(data.size() == 0)
+    if (data.size() == 0)
         throw std::runtime_error("No data");
 
     std::sort(data.begin(), data.end());
@@ -58,7 +59,7 @@ double Stats::min() const {
 }
 
 double Stats::max() const {
-    if(data.size() == 0)
+    if (data.size() == 0)
         throw std::runtime_error("No data");
 
     std::sort(data.begin(), data.end());
@@ -69,5 +70,5 @@ void Stats::reserve(uint64_t n) {
     data.reserve(n);
 }
 
-} // namespace cirrus
+}  // namespace cirrus
 
