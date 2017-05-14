@@ -1,4 +1,5 @@
 #include "src/utils/Time.h"
+#include "src/utils/Log.h"
 #include <iostream>
 
 namespace cirrus {
@@ -11,10 +12,7 @@ TimerFunction::~TimerFunction() {
     us d_us = std::chrono::duration_cast<us>(t1 - t0);
     ms d_ms = std::chrono::duration_cast<ms>(t1 - t0);
 
-    std::cerr << name_ << ": "
-        << d_us.count() << "us "
-        << d_ms.count() << "ms"
-        << std::endl;
+    LOG<INFO>(name_, ": ", d_us.count(), "us ", d_ms.count(), "ms");
 }
 
 void TimerFunction::reset() {
