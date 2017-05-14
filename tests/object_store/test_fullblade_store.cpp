@@ -30,6 +30,9 @@ struct Dummy {
 
 //#define CHECK_RESULTS
 
+/**
+  * Test simple synchronous put and get to/from the object store
+  */
 void test_sync() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
@@ -53,6 +56,9 @@ void test_sync() {
     }
 }
 
+/**
+  * Test simple asynchronous put and get to/from the object store
+  */
 void test_async() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
     
@@ -72,8 +78,6 @@ void test_async() {
         std::cout << "try wait" << std::endl;
     }
         
-    std::cout << "done" << std::endl;
-
     std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
     
     if (reinterpret_cast<Dummy*>(d2)->id != 42) {
@@ -81,6 +85,10 @@ void test_async() {
     }
 }
 
+/**
+  * Test a batch of synchronous put and get operations
+  * Also record the latencies distributions
+  */
 void test_sync(int N) {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
     cirrus::Stats stats;
@@ -114,6 +122,10 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
+/**
+  * Test a batch of saynchronous put and get operations
+  * Also record the latencies distributions
+  */
 void test_async_N(int N) {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
     cirrus::Stats stats;
@@ -164,7 +176,7 @@ void test_async_N(int N) {
 auto main() -> int {
 
     //test_async_N(10000);
-    test_sync(1000);
+    //test_sync(1000);
     //test_sync();
     //test_async();
 
