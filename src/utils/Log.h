@@ -6,7 +6,10 @@
 #include <iostream>
 #include <utility>
 #include "src/utils/Time.h"
+#include "src/utils/StringUtils.h"
 #include "src/common/Synchronization.h"
+
+#define DEFAULT_THRESHOLD 10
 
 namespace cirrus {
 
@@ -19,8 +22,6 @@ struct ERROR {
     constexpr static const char* prefix = "[ERROR]";
 };
 
-static const int THRESHOLD = 5;
-
 #if __GNUC__ >= 7
 struct FLUSH { };
 struct NO_FLUSH { };
@@ -32,6 +33,18 @@ template<typename T, typename K = NO_FLUSH, typename TT = TIME, typename ... Par
 template<typename T, typename ... Params>
 #endif
 bool LOG(Params&& ... param) {
+
+    static int THRESHOLD = -1;
+    if (THRESHOLD == -1) {
+        if (const char* env = std::getenv("CIRRUS_LOG")) {
+            int v = string_to<int>(env);
+            if (v) {
+                THRESHOLD = v;
+            } else {
+                THRESHOLD = DEFAULT_THRESHOLD;
+            }
+        }
+    }
 
     if (T::value < THRESHOLD)
         return true;
