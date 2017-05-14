@@ -19,6 +19,14 @@ std::string to_string(Params&& ... param) {
     return ss.str();
 }
 
+template<typename T>
+T string_to(const std::string& s) {
+    std::istringstream iss(s);
+    T v;
+    iss >> v;
+    return v;
+}
+
 } // namespace cirrus
 
 #endif
