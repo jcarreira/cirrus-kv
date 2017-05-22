@@ -45,7 +45,6 @@ AC_FUNC_STRCOLL
 AC_CHECK_FUNCS([gettimeofday localtime_r memchr memmove memset mkdir stpcpy strchr strcspn strdup strerror strpbrk strrchr strspn strstr])
 AC_CONFIG_FILES([Makefile
                  examples/Makefile
-                 examples/wordcount/Makefile
                  examples/log_reg/Makefile
                  src/Makefile
                  src/authentication/Makefile
