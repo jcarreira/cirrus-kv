@@ -17,4 +17,5 @@ cd ../..
 # main compilation
 autoreconf
 automake --add-missing
+autoreconf
 ./configure
