@@ -18,7 +18,7 @@ table auth2{
 
 table auth_ack2{
   allow:byte;
-  //authentication token?
+  //authentication token? store as array? string?
 }
 
 table stats{

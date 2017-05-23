@@ -1,5 +1,5 @@
 # get third party libs
-git submodule init 
+git submodule init
 git submodule update
 
 # compile libcuckoo
@@ -11,6 +11,12 @@ make -j 10
 # compile sparsehash
 cd ../sparsehash
 ./configure
+make -j 10
+cd ../..
+
+# compile flatbuffers
+cd ../flatbuffers
+cmake -G "Unix Makefiles"
 make -j 10
 cd ../..
 
