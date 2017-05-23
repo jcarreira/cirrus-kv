@@ -1,0 +1,42 @@
+namespace Message.AllocatorMessage; //is this the name we want?
+union Data { auth1, auth_ack1, auth2, auth_ack2, stats, stats_ack, alloc, alloc_ack  }
+
+
+
+table auth1{
+  app_id:ulong;
+}
+
+table auth_ack1{
+  allow:byte;
+  challenge:long;
+}
+
+table auth2{
+  response:ulong;
+}
+
+table auth_ack2{
+  allow:byte;
+  //authentication token?
+}
+
+table stats{
+}
+
+table stats_ack{
+  total_mem_allocated:ulong;
+}
+
+table alloc{
+}
+
+table alloc_ack{
+}
+
+table AllocatorMessage {
+  id:int;
+  data:Data;
+}
+
+root_type AllocatorMessage;

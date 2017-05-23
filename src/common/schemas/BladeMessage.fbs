@@ -1,0 +1,26 @@
+namespace Message.BladeMessage; //is this the name we want?
+union Data { alloc, alloc_ack, dealloc, dealloc_ack }
+
+table alloc{
+  size:ulong;
+}
+
+table alloc_ack{
+  mr_id:ulong;
+  remote_addr:ulong;
+  peer_rkey:ulong;
+}
+
+table dealloc{
+  addr:ulong;
+}
+
+table dealloc_ack{
+  result:byte;
+}
+
+table BladeMessage {
+  data:Data;
+}
+
+root_type BladeMessage;

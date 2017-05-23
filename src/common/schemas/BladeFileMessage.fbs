@@ -1,0 +1,18 @@
+namespace Message.BladeFileMessage;
+union Data { alloc, alloc_ack }
+
+table alloc{
+  size:ulong;
+  filename:[byte];//use this, or use a string?
+}
+
+table alloc_ack{
+  remote_addr:ulong;
+  peer_rkey:ulong;
+}
+
+table BladeFileMessage {
+  data:Data;
+}
+
+root_type BladeFileMessage;
