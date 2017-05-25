@@ -10,6 +10,7 @@
 #include "src/utils/Time.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
+#include "src/common/schemas/BladeFileMessage_generated.h"
 
 namespace cirrus {
 
