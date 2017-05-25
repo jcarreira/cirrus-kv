@@ -12,7 +12,6 @@ make -j 10
 cd ../sparsehash
 ./configure
 make -j 10
-cd ../..
 
 # compile flatbuffers
 cd ../flatbuffers
