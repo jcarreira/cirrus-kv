@@ -83,7 +83,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
         {
            //TODO: this will likely need to be changed
            uint64_t size = msg->data_as_Alloc()->size();
-           std::string filename = msg->data_as_Alloc()->filename();
+           std::string filename = msg->data_as_Alloc()->filename()->str();
 
            LOG<INFO>("Received allocation request. ",
                 "filename: ", filename,
@@ -104,7 +104,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data);
+                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck.Union(), data);
 
 
                 LOG<INFO>("File exists. Sending ack. ");
@@ -131,7 +131,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                    remote_addr,
                    big_pool_mr_->rkey);
 
-            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data);
+            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck.Union(), data);
 
 
 
