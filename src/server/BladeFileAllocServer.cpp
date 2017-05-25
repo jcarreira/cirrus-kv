@@ -81,6 +81,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
     switch (msg->data_type()) {
     case ALLOC:
         {
+           //TODO: this will likely need to be changed
            uint64_t size = msg->data_as_alloc()->size();
            std::string filename = msg->data_as_alloc()->filename();
 
@@ -98,7 +99,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
                 //Create a new flatbuffer
                 //TODO: rename this so it isn't ugly
-                auto data = Createalloc_ack(
+                auto data = CreateAllocAck(
                        builder,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
@@ -119,7 +120,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
             file_to_alloc_[filename] = BladeAllocation(ptr);
 
-            auto data = Createalloc_ack(
+            auto data = CreateAllocAck(
                    builder,
                    remote_addr,
                    big_pool_mr_->rkey);
