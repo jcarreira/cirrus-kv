@@ -11,6 +11,7 @@
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
 #include "src/common/schemas/BladeFileMessage_generated.h"
+using namespace Message::BladeFileMessage;
 
 namespace cirrus {
 
@@ -37,24 +38,30 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     LOG<INFO>("Allocating ", size, " bytes");
 
 
-    //Code to create message goes here
-    BladeFileMessageGenerator::alloc_msg(con_ctx_.send_msg,
-            filename,
-            size);
+    //TODO: Add in the new allocator
 
-    LOG<INFO>("Sending alloc msg size: ", sizeof(BladeFileMessage));
-    //Message request sent here?
-    send_receive_message_sync(id_, sizeof(BladeFileMessage));
+    flatbuffers::FlatBufferBuilder builder(50);
 
-    BladeFileMessage* msg =
-        reinterpret_cast<BladeFileMessage*>(con_ctx_.recv_msg);
+    auto serialized_filename = builder.CreateString(filename);
+    auto data = createAlloc(builder, size, serialized_filename);
+
+    auto alloc_msg = CreateBladeFileMessage(builder, ALLOC, data);
+
+
+    int message_size = builder.GetSize();
+    LOG<INFO>("Sending alloc msg size: ", message_size);
+
+    send_receive_message_sync(id_, message_size);
+
+    //receive ack flatbuffer in response
+    auto msg = GetBladeFileMessage(con_ctx_.recv_msg);
 
     FileAllocRec alloc(
-                msg->data.alloc_ack.remote_addr,
-                msg->data.alloc_ack.peer_rkey);
+                msg->data_as_AllocAck()->remote_addr(),
+                msg->data_as_AllocAck()->peer_rkey());
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",
-        msg->data.alloc_ack.remote_addr);
+        msg->data_as_AllocAck()->remote_addr();
     return alloc;
 }
 
