@@ -3,7 +3,7 @@ union Data { alloc, alloc_ack }
 
 table alloc{
   size:ulong;
-  filename:[byte];//use this, or use a string?
+  filename:string;
 }
 
 table alloc_ack{
