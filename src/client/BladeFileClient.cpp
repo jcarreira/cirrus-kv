@@ -46,7 +46,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     auto serialized_filename = builder.CreateString(filename);
     auto data = createAlloc(builder, size, serialized_filename);
 
-    auto alloc_msg = CreateBladeFileMessage(builder, ALLOC, data);
+    auto alloc_msg = CreateBladeFileMessage(builder, Data_Alloc, data);
 
 
 

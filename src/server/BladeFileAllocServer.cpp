@@ -104,7 +104,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = CreateBladeFileMessage(builder, ALLOC_ACK, data);
+                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data);
 
 
                 LOG<INFO>("File exists. Sending ack. ");
@@ -131,7 +131,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                    remote_addr,
                    big_pool_mr_->rkey);
 
-            auto ack_msg = CreateBladeFileMessage(builder, ALLOC_ACK, data);
+            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data);
 
 
 
