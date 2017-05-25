@@ -10,6 +10,7 @@
 #include "src/utils/Time.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
+#include "src/common/schemas/BladeFileMessage_generated.h"
 
 namespace cirrus {
 
@@ -35,11 +36,14 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
         uint64_t size) {
     LOG<INFO>("Allocating ", size, " bytes");
 
+
+    //Code to create message goes here
     BladeFileMessageGenerator::alloc_msg(con_ctx_.send_msg,
             filename,
             size);
 
     LOG<INFO>("Sending alloc msg size: ", sizeof(BladeFileMessage));
+    //Message request sent here?
     send_receive_message_sync(id_, sizeof(BladeFileMessage));
 
     BladeFileMessage* msg =
