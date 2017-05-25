@@ -109,7 +109,13 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
                 LOG<INFO>("File exists. Sending ack. ");
 
-                send_message(id, builder.GetSize());
+
+                int message_size = builder.GetSize();
+                //copy message over
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+                send_message(id, message_size);
                 return;
             }
 
@@ -132,8 +138,13 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             LOG<INFO>("Sending ack. ",
                 " remote_addr: ", remote_addr);
 
+            int message_size = builder.GetSize();
+            //copy message over
+            std::memcpy(ctx->send_msg,
+                        builder.GetBufferPointer(),
+                        message_size);
             // send async message
-            send_message(id, builder.GetSize());
+            send_message(id, message_size);
 
             break;
         }

@@ -49,8 +49,14 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     auto alloc_msg = CreateBladeFileMessage(builder, ALLOC, data);
 
 
+
     int message_size = builder.GetSize();
     LOG<INFO>("Sending alloc msg size: ", message_size);
+
+    //copy message over
+    std::memcpy(ctx->send_msg,
+                builder.GetBufferPointer(),
+                message_size);
 
     send_receive_message_sync(id_, message_size);
 
