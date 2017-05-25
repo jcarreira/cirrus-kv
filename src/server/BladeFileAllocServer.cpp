@@ -82,8 +82,8 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
     case ALLOC:
         {
            //TODO: this will likely need to be changed
-           uint64_t size = msg->data_as_alloc()->size();
-           std::string filename = msg->data_as_alloc()->filename();
+           uint64_t size = msg->data_as_Alloc()->size();
+           std::string filename = msg->data_as_Alloc()->filename();
 
            LOG<INFO>("Received allocation request. ",
                 "filename: ", filename,
