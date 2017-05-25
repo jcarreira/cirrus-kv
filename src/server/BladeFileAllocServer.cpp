@@ -79,7 +79,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
     auto msg = GetBladeFileMessage(message);
     switch (msg->data_type()) {
-    case ALLOC:
+    case Data_Alloc:
         {
            //TODO: this will likely need to be changed
            uint64_t size = msg->data_as_Alloc()->size();
