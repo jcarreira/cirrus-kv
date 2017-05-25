@@ -1,21 +1,21 @@
 namespace Message.BladeMessage; //is this the name we want?
 union Data { alloc, alloc_ack, dealloc, dealloc_ack }
 
-table alloc{
+table Alloc{
   size:ulong;
 }
 
-table alloc_ack{
+table AllocAck{
   mr_id:ulong;
   remote_addr:ulong;
   peer_rkey:ulong;
 }
 
-table dealloc{
+table Dealloc{
   addr:ulong;
 }
 
-table dealloc_ack{
+table DeallocAck{
   result:byte;
 }
 

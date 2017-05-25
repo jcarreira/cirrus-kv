@@ -3,20 +3,20 @@ union Data { auth1, auth_ack1, auth2, auth_ack2, stats, stats_ack, alloc, alloc_
 
 
 
-table auth1{
+table Auth1{
   app_id:ulong;
 }
 
-table auth_ack1{
+table AuthAck1{
   allow:byte;
   challenge:long;
 }
 
-table auth2{
+table Auth2{
   response:ulong;
 }
 
-table auth_ack2{
+table AuthAck2{
   allow:byte;
   //authentication token? store as array? string?
 }
@@ -24,14 +24,14 @@ table auth_ack2{
 table stats{
 }
 
-table stats_ack{
+table StatsAck{
   total_mem_allocated:ulong;
 }
 
-table alloc{
+table Alloc{
 }
 
-table alloc_ack{
+table AllocAck{
 }
 
 table AllocatorMessage {

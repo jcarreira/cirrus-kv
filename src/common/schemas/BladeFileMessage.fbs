@@ -1,12 +1,12 @@
 namespace Message.BladeFileMessage;
 union Data { alloc, alloc_ack }
 
-table alloc{
+table Alloc{
   size:ulong;
   filename:string;
 }
 
-table alloc_ack{
+table AllocAck{
   remote_addr:ulong;
   peer_rkey:ulong;
 }

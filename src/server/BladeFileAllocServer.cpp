@@ -10,6 +10,9 @@
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
+#include "src/common/schemas/BladeFileMessage_generated.h"
+using namespace Message::BladeFileMessage;
+
 
 namespace cirrus {
 
@@ -65,35 +68,48 @@ bool BladeFileAllocServer::create_pool(uint64_t size) {
 
 void BladeFileAllocServer::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = reinterpret_cast<BladeFileMessage*>(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
 
-    // create a big poll
+    // create a big pool
     // and allocate data from here
     std::call_once(pool_flag_,
             &BladeFileAllocServer::create_pool, this, big_pool_size_);
 
-    switch (msg->type) {
+    auto msg = GetBladeFileMessage(message);
+    switch (msg->data_type()) {
     case ALLOC:
         {
-           uint64_t size = msg->data.alloc.size;
-           std::string filename = msg->data.alloc.filename;
+           //TODO: this will likely need to be changed
+           uint64_t size = msg->data_as_alloc()->size();
+           std::string filename = msg->data_as_alloc()->filename();
 
            LOG<INFO>("Received allocation request. ",
                 "filename: ", filename,
                 "size: ", size);
 
+            //TODO: base size?
+            //TODO: Pass in an "allocator"
+
+            flatbuffers::FlatBufferBuilder builder(50);
+
             if (file_to_alloc_.find(filename) != file_to_alloc_.end()) {
                 // file already allocated here
-                BladeFileMessageGenerator::alloc_ack_msg(
-                       ctx->send_msg,
+
+                //Create a new flatbuffer
+                //TODO: rename this so it isn't ugly
+                auto data = CreateAllocAck(
+                       builder,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
+                auto ack_msg = CreateBladeFileMessage(builder, ALLOC_ACK, data);
+
+
                 LOG<INFO>("File exists. Sending ack. ");
-                send_message(id, sizeof(BladeFileMessage));
+
+                send_message(id, builder.GetSize());
                 return;
             }
 
@@ -104,16 +120,20 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
             file_to_alloc_[filename] = BladeAllocation(ptr);
 
-            BladeFileMessageGenerator::alloc_ack_msg(
-                    ctx->send_msg,
-                    remote_addr,
-                    big_pool_mr_->rkey);
+            auto data = CreateAllocAck(
+                   builder,
+                   remote_addr,
+                   big_pool_mr_->rkey);
+
+            auto ack_msg = CreateBladeFileMessage(builder, ALLOC_ACK, data);
+
+
 
             LOG<INFO>("Sending ack. ",
                 " remote_addr: ", remote_addr);
 
             // send async message
-            send_message(id, sizeof(BladeFileMessage));
+            send_message(id, builder.GetSize());
 
             break;
         }
@@ -129,4 +149,3 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 }
 
 }  // namespace cirrus
-
