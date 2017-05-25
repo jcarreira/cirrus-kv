@@ -61,8 +61,8 @@ struct alloc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint64_t size() const {
     return GetField<uint64_t>(VT_SIZE, 0);
   }
-  const flatbuffers::Vector<int8_t> *filename() const {
-    return GetPointer<const flatbuffers::Vector<int8_t> *>(VT_FILENAME);
+  const flatbuffers::String *filename() const {
+    return GetPointer<const flatbuffers::String *>(VT_FILENAME);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -79,7 +79,7 @@ struct allocBuilder {
   void add_size(uint64_t size) {
     fbb_.AddElement<uint64_t>(alloc::VT_SIZE, size, 0);
   }
-  void add_filename(flatbuffers::Offset<flatbuffers::Vector<int8_t>> filename) {
+  void add_filename(flatbuffers::Offset<flatbuffers::String> filename) {
     fbb_.AddOffset(alloc::VT_FILENAME, filename);
   }
   allocBuilder(flatbuffers::FlatBufferBuilder &_fbb)
@@ -97,7 +97,7 @@ struct allocBuilder {
 inline flatbuffers::Offset<alloc> Createalloc(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t size = 0,
-    flatbuffers::Offset<flatbuffers::Vector<int8_t>> filename = 0) {
+    flatbuffers::Offset<flatbuffers::String> filename = 0) {
   allocBuilder builder_(_fbb);
   builder_.add_size(size);
   builder_.add_filename(filename);
@@ -107,11 +107,11 @@ inline flatbuffers::Offset<alloc> Createalloc(
 inline flatbuffers::Offset<alloc> CreateallocDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t size = 0,
-    const std::vector<int8_t> *filename = nullptr) {
+    const char *filename = nullptr) {
   return Message::BladeFileMessage::Createalloc(
       _fbb,
       size,
-      filename ? _fbb.CreateVector<int8_t>(*filename) : 0);
+      filename ? _fbb.CreateString(filename) : 0);
 }
 
 struct alloc_ack FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
