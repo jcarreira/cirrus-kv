@@ -9,25 +9,25 @@
 namespace Message {
 namespace BladeFileMessage {
 
-struct alloc;
+struct Alloc;
 
-struct alloc_ack;
+struct AllocAck;
 
 struct BladeFileMessage;
 
 enum Data {
   Data_NONE = 0,
-  Data_alloc = 1,
-  Data_alloc_ack = 2,
+  Data_Alloc = 1,
+  Data_AllocAck = 2,
   Data_MIN = Data_NONE,
-  Data_MAX = Data_alloc_ack
+  Data_MAX = Data_AllocAck
 };
 
 inline const char **EnumNamesData() {
   static const char *names[] = {
     "NONE",
-    "alloc",
-    "alloc_ack",
+    "Alloc",
+    "AllocAck",
     nullptr
   };
   return names;
@@ -42,18 +42,18 @@ template<typename T> struct DataTraits {
   static const Data enum_value = Data_NONE;
 };
 
-template<> struct DataTraits<alloc> {
-  static const Data enum_value = Data_alloc;
+template<> struct DataTraits<Alloc> {
+  static const Data enum_value = Data_Alloc;
 };
 
-template<> struct DataTraits<alloc_ack> {
-  static const Data enum_value = Data_alloc_ack;
+template<> struct DataTraits<AllocAck> {
+  static const Data enum_value = Data_AllocAck;
 };
 
 bool VerifyData(flatbuffers::Verifier &verifier, const void *obj, Data type);
 bool VerifyDataVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
-struct alloc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Alloc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
     VT_SIZE = 4,
     VT_FILENAME = 6
@@ -73,48 +73,48 @@ struct alloc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct allocBuilder {
+struct AllocBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_size(uint64_t size) {
-    fbb_.AddElement<uint64_t>(alloc::VT_SIZE, size, 0);
+    fbb_.AddElement<uint64_t>(Alloc::VT_SIZE, size, 0);
   }
   void add_filename(flatbuffers::Offset<flatbuffers::String> filename) {
-    fbb_.AddOffset(alloc::VT_FILENAME, filename);
+    fbb_.AddOffset(Alloc::VT_FILENAME, filename);
   }
-  allocBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  AllocBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  allocBuilder &operator=(const allocBuilder &);
-  flatbuffers::Offset<alloc> Finish() {
+  AllocBuilder &operator=(const AllocBuilder &);
+  flatbuffers::Offset<Alloc> Finish() {
     const auto end = fbb_.EndTable(start_, 2);
-    auto o = flatbuffers::Offset<alloc>(end);
+    auto o = flatbuffers::Offset<Alloc>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<alloc> Createalloc(
+inline flatbuffers::Offset<Alloc> CreateAlloc(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t size = 0,
     flatbuffers::Offset<flatbuffers::String> filename = 0) {
-  allocBuilder builder_(_fbb);
+  AllocBuilder builder_(_fbb);
   builder_.add_size(size);
   builder_.add_filename(filename);
   return builder_.Finish();
 }
 
-inline flatbuffers::Offset<alloc> CreateallocDirect(
+inline flatbuffers::Offset<Alloc> CreateAllocDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t size = 0,
     const char *filename = nullptr) {
-  return Message::BladeFileMessage::Createalloc(
+  return Message::BladeFileMessage::CreateAlloc(
       _fbb,
       size,
       filename ? _fbb.CreateString(filename) : 0);
 }
 
-struct alloc_ack FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct AllocAck FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
     VT_REMOTE_ADDR = 4,
     VT_PEER_RKEY = 6
@@ -133,32 +133,32 @@ struct alloc_ack FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct alloc_ackBuilder {
+struct AllocAckBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_remote_addr(uint64_t remote_addr) {
-    fbb_.AddElement<uint64_t>(alloc_ack::VT_REMOTE_ADDR, remote_addr, 0);
+    fbb_.AddElement<uint64_t>(AllocAck::VT_REMOTE_ADDR, remote_addr, 0);
   }
   void add_peer_rkey(uint64_t peer_rkey) {
-    fbb_.AddElement<uint64_t>(alloc_ack::VT_PEER_RKEY, peer_rkey, 0);
+    fbb_.AddElement<uint64_t>(AllocAck::VT_PEER_RKEY, peer_rkey, 0);
   }
-  alloc_ackBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  AllocAckBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  alloc_ackBuilder &operator=(const alloc_ackBuilder &);
-  flatbuffers::Offset<alloc_ack> Finish() {
+  AllocAckBuilder &operator=(const AllocAckBuilder &);
+  flatbuffers::Offset<AllocAck> Finish() {
     const auto end = fbb_.EndTable(start_, 2);
-    auto o = flatbuffers::Offset<alloc_ack>(end);
+    auto o = flatbuffers::Offset<AllocAck>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<alloc_ack> Createalloc_ack(
+inline flatbuffers::Offset<AllocAck> CreateAllocAck(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t remote_addr = 0,
     uint64_t peer_rkey = 0) {
-  alloc_ackBuilder builder_(_fbb);
+  AllocAckBuilder builder_(_fbb);
   builder_.add_peer_rkey(peer_rkey);
   builder_.add_remote_addr(remote_addr);
   return builder_.Finish();
@@ -176,11 +176,11 @@ struct BladeFileMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return GetPointer<const void *>(VT_DATA);
   }
   template<typename T> const T *data_as() const;
-  const alloc *data_as_alloc() const {
-    return data_type() == Data_alloc ? static_cast<const alloc *>(data()) : nullptr;
+  const Alloc *data_as_Alloc() const {
+    return data_type() == Data_Alloc ? static_cast<const Alloc *>(data()) : nullptr;
   }
-  const alloc_ack *data_as_alloc_ack() const {
-    return data_type() == Data_alloc_ack ? static_cast<const alloc_ack *>(data()) : nullptr;
+  const AllocAck *data_as_AllocAck() const {
+    return data_type() == Data_AllocAck ? static_cast<const AllocAck *>(data()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -191,12 +191,12 @@ struct BladeFileMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-template<> inline const alloc *BladeFileMessage::data_as<alloc>() const {
-  return data_as_alloc();
+template<> inline const Alloc *BladeFileMessage::data_as<Alloc>() const {
+  return data_as_Alloc();
 }
 
-template<> inline const alloc_ack *BladeFileMessage::data_as<alloc_ack>() const {
-  return data_as_alloc_ack();
+template<> inline const AllocAck *BladeFileMessage::data_as<AllocAck>() const {
+  return data_as_AllocAck();
 }
 
 struct BladeFileMessageBuilder {
@@ -235,12 +235,12 @@ inline bool VerifyData(flatbuffers::Verifier &verifier, const void *obj, Data ty
     case Data_NONE: {
       return true;
     }
-    case Data_alloc: {
-      auto ptr = reinterpret_cast<const alloc *>(obj);
+    case Data_Alloc: {
+      auto ptr = reinterpret_cast<const Alloc *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case Data_alloc_ack: {
-      auto ptr = reinterpret_cast<const alloc_ack *>(obj);
+    case Data_AllocAck: {
+      auto ptr = reinterpret_cast<const AllocAck *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return false;

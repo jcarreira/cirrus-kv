@@ -1,5 +1,5 @@
 namespace Message.BladeFileMessage;
-union Data { alloc, alloc_ack }
+union Data { Alloc, AllocAck }
 
 table Alloc{
   size:ulong;

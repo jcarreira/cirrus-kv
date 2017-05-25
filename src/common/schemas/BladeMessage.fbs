@@ -1,5 +1,5 @@
 namespace Message.BladeMessage; //is this the name we want?
-union Data { alloc, alloc_ack, dealloc, dealloc_ack }
+union Data { Alloc, AllocAck, Dealloc, DeallocAck }
 
 table Alloc{
   size:ulong;

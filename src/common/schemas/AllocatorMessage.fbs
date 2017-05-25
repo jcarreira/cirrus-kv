@@ -1,5 +1,5 @@
 namespace Message.AllocatorMessage; //is this the name we want?
-union Data { auth1, auth_ack1, auth2, auth_ack2, stats, stats_ack, alloc, alloc_ack  }
+union Data { Auth1, AuthAck1, Auth2, AuthAck2, Stats, StatsAck, Alloc, AllocAck  }
 
 
 
