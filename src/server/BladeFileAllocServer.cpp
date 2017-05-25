@@ -104,11 +104,11 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck.Union(), data);
+                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data.Union());
 
 
                 LOG<INFO>("File exists. Sending ack. ");
-
+		builder.Finish(ack_msg);
 
                 int message_size = builder.GetSize();
                 //copy message over
@@ -131,8 +131,8 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                    remote_addr,
                    big_pool_mr_->rkey);
 
-            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck.Union(), data);
-
+            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data.Union());
+	    builder.Finish(ack_msg);
 
 
             LOG<INFO>("Sending ack. ",

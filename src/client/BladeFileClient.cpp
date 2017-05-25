@@ -44,17 +44,17 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     flatbuffers::FlatBufferBuilder builder(50);
 
     auto serialized_filename = builder.CreateString(filename);
-    auto data = createAlloc(builder, size, serialized_filename);
+    auto data = CreateAlloc(builder, size, serialized_filename);
 
-    auto alloc_msg = CreateBladeFileMessage(builder, Data_Alloc, data);
+    auto alloc_msg = CreateBladeFileMessage(builder, Data_Alloc, data.Union());
 
-
+    builder.Finish(alloc_msg);
 
     int message_size = builder.GetSize();
     LOG<INFO>("Sending alloc msg size: ", message_size);
 
     //copy message over
-    std::memcpy(ctx->send_msg,
+    std::memcpy(con_ctx_.send_msg,
                 builder.GetBufferPointer(),
                 message_size);
 
@@ -68,7 +68,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
                 msg->data_as_AllocAck()->peer_rkey());
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",
-        msg->data_as_AllocAck()->remote_addr();
+        msg->data_as_AllocAck()->remote_addr());
     return alloc;
 }
 
