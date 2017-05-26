@@ -4,8 +4,6 @@
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
 #include "src/server/BladeObjectStore.h"
-#include "src/common/BladeMessage.h"
-#include "src/common/BladeObjectStoreMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
@@ -169,7 +167,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 auto subscribe_ack_msg = CreateBladeObjectStoreMessage(
                                                             builder,
                                                             Data_SubAck,
-                                                            data.Union())
+                                                            data.Union());
 
                 builder.Finish(subscribe_ack_msg);
                 int message_size = builder.GetSize();
