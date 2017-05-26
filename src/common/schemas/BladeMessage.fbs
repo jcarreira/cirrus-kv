@@ -1,4 +1,4 @@
-namespace Message.BladeMessage; //is this the name we want?
+namespace cirrus.Message.BladeMessage; //is this the name we want?
 union Data { Alloc, AllocAck, Dealloc, DeallocAck }
 
 table Alloc{
