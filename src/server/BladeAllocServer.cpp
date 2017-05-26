@@ -9,6 +9,8 @@
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
+#include "src/common/schemas/BladeMessage_generated.h"
+using namespace Message::BladeMessage;
 
 namespace cirrus {
 
@@ -64,7 +66,6 @@ bool BladeAllocServer::create_pool(uint64_t size) {
 
 void BladeAllocServer::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = reinterpret_cast<BladeMessage*>(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -74,10 +75,12 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeAllocServer::create_pool, this, big_pool_size_);
 
-    switch (msg->type) {
-        case ALLOC:
+    auto msg = GetBladeMessage(message);
+
+    switch (msg->data_type()) {
+        case Data_Alloc:
             {
-                uint64_t size = msg->data.alloc.size;
+                uint64_t size = msg->data_as_Alloc()->size();
 
                 LOG<INFO>("Received allocation request. size: ", size);
                 void* ptr = allocator->allocate(size);
@@ -90,36 +93,56 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 mrs_data_.insert(ptr);
 
-                BladeMessageGenerator::alloc_ack_msg(
-                        ctx->send_msg,
-                        alloc_id,
-                        remote_addr,
-                        big_pool_mr_->rkey);
+                flatbuffers::FlatBufferBuilder builder(48);
+
+                auto data = CreateAllocAck(builder,
+                                           alloc_id,
+                                           remote_addr,
+                                           bigbig_pool_mr_->rkey);
+
+                auto alloc_ack_msg = CreateBladeMessage(builder, Data_AllocAck, data.Union());
+                builder.Finish(alloc_ack_msg);
+
+                int message_size = builder.GetSize();
+                //copy message over
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Sending ack. ",
                     " remote_addr:", remote_addr);
 
                 // send async message
-                send_message(id, sizeof(BladeMessage));
+                send_message(id, message_size);
 
                 break;
             }
-        case DEALLOC:
+        case Data_Dealloc:
             {
-                uint64_t addr = msg->data.dealloc.addr;
+                uint64_t addr = msg->data_as_Dealloc()->addr();
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                BladeMessageGenerator::dealloc_ack_msg(ctx->send_msg,
-                        true);
+                flatbuffers::FlatBufferBuilder builder(48);
+                auto data = CreateDeallocAck(builder, true);
+                auto dealloc_ack_msg = CreateBladeMessage(builder,
+                                                          Data_DeallocAck,
+                                                          data.Union());
+                builder.Finish(dealloc_ack_msg);
+                nt message_size = builder.GetSize();
+                //copy message over
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Deallocated addr: ", addr);
 
                 // send async message
-                send_message(id, sizeof(BladeMessage));
+                send_message(id, sizeof(message_size));
 
                 break;
             }
+            //TODO: stats field doesn't exist right now, won't be received
         case STATS:
                 BladeMessageGenerator::stats_msg(ctx->send_msg);
                 send_message(id, sizeof(BladeMessage));
@@ -132,4 +155,3 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 }
 
 }  // namespace cirrus
-
