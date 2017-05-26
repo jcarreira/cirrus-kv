@@ -152,7 +152,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 auto keep_alive_ack_msg = CreateBladeObjectStoreMessage(
                                                               builder,
                                                               Data_KeepAliveAck,
-                                                              data.Union())
+                                                              data.Union());
                 builder.Finish(keep_alive_ack_msg);
                 int message_size = builder.GetSize();
                 std::memcpy(ctx->send_msg,
@@ -162,13 +162,13 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 send_message(id, message_size);
                 break;
             }
-        case Data_Subscribe: {
+        case Data_Sub: {
                 uint64_t oid = msg->data_as_Sub()->oid();
 
-                auto data = CreateSubscribeAck(builder, oid);
+                auto data = CreateSubAck(builder, oid);
                 auto subscribe_ack_msg = CreateBladeObjectStoreMessage(
                                                             builder,
-                                                            Data_SubscribeAck,
+                                                            Data_SubAck,
                                                             data.Union())
 
                 builder.Finish(subscribe_ack_msg);
