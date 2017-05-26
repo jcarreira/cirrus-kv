@@ -98,7 +98,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 auto data = CreateAllocAck(builder,
                                            alloc_id,
                                            remote_addr,
-                                           bigbig_pool_mr_->rkey);
+                                           big_pool_mr_->rkey);
 
                 auto alloc_ack_msg = CreateBladeMessage(builder, Data_AllocAck, data.Union());
                 builder.Finish(alloc_ack_msg);
@@ -129,7 +129,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                                                           Data_DeallocAck,
                                                           data.Union());
                 builder.Finish(dealloc_ack_msg);
-                nt message_size = builder.GetSize();
+                int message_size = builder.GetSize();
                 //copy message over
                 std::memcpy(ctx->send_msg,
                             builder.GetBufferPointer(),
