@@ -9,6 +9,8 @@
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
+#include "src/common/schemas/BladeObjectStoreMessage_generated.h"
+using namespace Message::BladeObjectStoreMessage;
 
 namespace cirrus {
 
@@ -66,7 +68,7 @@ bool BladeObjectStore::create_pool(uint64_t size) {
 
 void BladeObjectStore::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = reinterpret_cast<BladeObjectStoreMessage*>(message);
+    auto msg = GetBladeObjectStoreMessage(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -76,9 +78,11 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeObjectStore::create_pool, this, big_pool_size_);
 
-    switch (msg->type) {
-        case ALLOC: {
-                uint64_t size = msg->data.alloc.size;
+    flatbuffers::FlatBufferBuilder builder(48);
+
+    switch (msg->data_type()) {
+        case Data_Alloc: {
+                uint64_t size = msg->data_as_Alloc()->size();
 
                 LOG<INFO>("Received allocation request. size: ", size);
                 void* ptr = allocator->allocate(size);
@@ -91,70 +95,122 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 mrs_data_.insert(ptr);
 
-                BOMG::alloc_ack_msg(
-                        ctx->send_msg,
-                        alloc_id,
-                        remote_addr,
-                        big_pool_mr_->rkey);
+                auto data = CreateAllocAck(builder,
+                                           alloc_id,
+                                           remote_addr,
+                                           big_pool_mr_->rkey);
+
+                auto alloc_ack_msg = CreateBladeObjectStoreMessage(
+                                                          builder,
+                                                          Data_AllocAck,
+                                                          data.Union());
+                builder.Finish(alloc_ack_msg);
+
+                int message_size = builder.GetSize();
+                //copy message over
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Sending ack. ",
                     " remote_addr:", remote_addr);
 
                 // send async message
-                send_message(id, sizeof(BladeObjectStoreMessage));
+                send_message(id, message_size);
 
                 break;
             }
-        case DEALLOC: {
-                uint64_t addr = msg->data.dealloc.addr;
+        case Data_Dealloc: {
+                uint64_t addr = msg->data_as_Dealloc()->addr();
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                BOMG::dealloc_ack_msg(ctx->send_msg,
-                        true);
+                auto data = CreateDeallocAck(builder, true);
+                auto dealloc_ack_msg = CreateBladeObjectStoreMessage(builder,
+                                                          Data_DeallocAck,
+                                                          data.Union());
+                builder.Finish(dealloc_ack_msg);
+                int message_size = builder.GetSize();
+                //copy message over
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Deallocated addr: ", addr);
 
                 // send async message
-                send_message(id, sizeof(BladeObjectStoreMessage));
+                send_message(id, sizeof(message_size));
 
                 break;
             }
-        case STATS: {
-                BOMG::stats_msg(ctx->send_msg);
-                send_message(id, sizeof(BladeObjectStoreMessage));
+        case Data_KeepAlive: {
+                uint64_t rand = msg->data_as_KeepAlive()->rand();
+
+                flatbuffers::FlatBufferBuilder builder(48);
+
+                auto data = CreateKeepAliveAck(builder, rand);
+                auto keep_alive_ack_msg = CreateBladeObjectStoreMessage(
+                                                              builder,
+                                                              Data_KeepAliveAck,
+                                                              data.Union())
+                builder.Finish(keep_alive_ack_msg);
+                int message_size = builder.GetSize();
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+
+                send_message(id, message_size);
                 break;
             }
-        case KEEP_ALIVE: {
-                uint64_t rand = msg->data.keep_alive.rand;
-                BOMG::keep_alive_ack_msg(
-                        ctx->send_msg,
-                        rand);
-                send_message(id, sizeof(BladeObjectStoreMessage));
+        case Data_Subscribe: {
+                uint64_t oid = msg->data_as_Sub()->oid();
+
+                auto data = CreateSubscribeAck(builder, oid);
+                auto subscribe_ack_msg = CreateBladeObjectStoreMessage(
+                                                            builder,
+                                                            Data_SubscribeAck,
+                                                            data.Union())
+
+                builder.Finish(subscribe_ack_msg);
+                int message_size = builder.GetSize();
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+
+                send_message(id, message_size);
+
                 break;
             }
-        case SUBSCRIBE: {
-                uint64_t oid = msg->data.sub.oid;
-                BOMG::subscribe_ack_msg(
-                        ctx->send_msg,
-                        oid);
-                send_message(id, sizeof(BladeObjectStoreMessage));
+        case Data_Flush: {
+                uint64_t oid = msg->data_as_Flush()->oid();
+                auto data = CreateFlushAck(builder, oid);
+                auto flush_ack_msg = CreateBladeObjectStoreMessage(builder,
+                                                                  Data_FlushAck,
+                                                                  data.Union());
+
+                builder.Finish(flush_ack_msg);
+                int message_size = builder.GetSize();
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+
+                send_message(id, message_size);
                 break;
             }
-        case FLUSH: {
-                uint64_t oid = msg->data.flush.oid;
-                BOMG::flush_ack_msg(
-                        ctx->send_msg,
-                        oid);
-                send_message(id, sizeof(BladeObjectStoreMessage));
-                break;
-            }
-        case LOCK: {
-                uint64_t oid = msg->data.lock.id;
-                BOMG::lock_ack_msg(
-                        ctx->send_msg,
-                        oid);
-                send_message(id, sizeof(BladeObjectStoreMessage));
+        case Data_Lock: {
+                uint64_t oid = msg->data_as_Lock()->id();
+                auto data = CreateLockAck(builder, oid);
+                auto lock_ack_msg = CreateBladeObjectStoreMessage(builder,
+                                                                  Data_LockAck,
+                                                                  data.Union());
+
+                builder.Finish(lock_ack_msg);
+                int message_size = builder.GetSize();
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+
+                send_message(id, message_size);
                 break;
             }
         default:
@@ -165,4 +221,3 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 }
 
 }  // namespace cirrus
-

@@ -1,5 +1,5 @@
 namespace Message.BladeObjectStoreMessage;
-union Data { Alloc, AllocAck, Dealloc, DeallocAck, KeepAlive, KeepAliveAck, Sub, Flush, Lock, LockAck }
+union Data { Alloc, AllocAck, Dealloc, DeallocAck, KeepAlive, KeepAliveAck, Sub, SubAck, Flush, FlushAck, Lock, LockAck }
 
 table Alloc{
   size:ulong;
@@ -32,7 +32,15 @@ table Sub{
   addr:string; //20 char vector?
 }
 
+table SubAck{
+  oid:ulong;
+}
+
 table Flush{
+  oid:ulong;
+}
+
+table FlushAck{
   oid:ulong;
 }
 
