@@ -12,8 +12,6 @@ using namespace Message::BladeObjectStoreMessage;
 
 namespace cirrus {
 
-using BOMG = BladeObjectStoreMessageGenerator;
-
 static const int SIZE = 1000000;
 
 BladeObjectStore::BladeObjectStore(int port,
