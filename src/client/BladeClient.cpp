@@ -8,7 +8,6 @@
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
-#include "src/common/BladeMessage.h"
 #include "src/common/schemas/BladeMessage_generated.h"
 using namespace Message::BladeMessage;
 namespace cirrus {
@@ -39,7 +38,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     auto data = CreateAlloc(builder, size);
     auto alloc_msg = CreateBladeMessage(builder, Data_Alloc, data.Union());
     builder.Finish(alloc_msg);
-
+    LOG<INFO>("Created alloc message with type: ", GetBladeMessage(builder.GetBufferPointer())->data_type());
     int message_size = builder.GetSize();
     //copy message over
     std::memcpy(con_ctx_.send_msg,
@@ -48,9 +47,9 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
 
 
     // post receive
-    LOG<INFO>("Sending alloc msg size: ", sizeof(BladeMessage));
-    send_receive_message_sync(id_, sizeof(BladeMessage));
-    LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
+    LOG<INFO>("Sending alloc msg size: ", message_size);
+    send_receive_message_sync(id_, message_size);
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
 
     auto msg = GetBladeMessage(con_ctx_.recv_msg);
 
@@ -79,7 +78,7 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
     auto data = CreateDealloc(builder, ar.remote_addr);
     auto dealloc_msg = CreateBladeMessage(builder, Data_Dealloc, data.Union());
     builder.Finish(dealloc_msg);
-
+    LOG<INFO>("Created dealloc message with type: ", GetBladeMessage(builder.GetBufferPointer())->data_type());
     int message_size = builder.GetSize();
     //copy message over
     std::memcpy(con_ctx_.send_msg,
@@ -88,9 +87,9 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
 
 
     // post receive
-    LOG<INFO>("Sending dealloc msg size: ", sizeof(BladeMessage));
+    LOG<INFO>("Sending dealloc msg size: ", message_size);
     send_receive_message_sync(id_, message_size);
-    LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
 
     auto msg = GetBladeMessage(con_ctx_.recv_msg);
 

@@ -7,7 +7,6 @@
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
-#include "src/common/BladeMessage.h"
 #include "src/common/schemas/BladeMessage_generated.h"
 using namespace Message::BladeMessage;
 
@@ -141,10 +140,6 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 break;
             }
-	case STATS:
-	    LOG<ERROR>("Shouldn't be here");
-	    exit(-1);
-	    break;
         default:
             LOG<ERROR>("Unknown message", " type:", msg->data_type());
             exit(-1);
