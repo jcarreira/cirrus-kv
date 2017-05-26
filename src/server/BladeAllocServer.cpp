@@ -4,8 +4,6 @@
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
 #include "src/server/BladeAllocServer.h"
-#include "src/common/BladeMessage.h"
-#include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
@@ -142,11 +140,6 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 break;
             }
-            //TODO: stats field doesn't exist right now, won't be received
-        case STATS:
-                BladeMessageGenerator::stats_msg(ctx->send_msg);
-                send_message(id, sizeof(BladeMessage));
-            break;
         default:
             LOG<ERROR>("Unknown message");
             exit(-1);

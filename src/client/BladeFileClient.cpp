@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include <string>
 #include <cstring>
-#include "src/common/BladeFileMessageGenerator.h"
-#include "src/common/BladeFileMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/client/AuthenticationClient.h"
@@ -37,9 +35,6 @@ bool BladeFileClient::authenticate(std::string address,
 FileAllocRec BladeFileClient::allocate(const std::string& filename,
         uint64_t size) {
     LOG<INFO>("Allocating ", size, " bytes");
-
-
-    //TODO: Add in the new allocator
 
     flatbuffers::FlatBufferBuilder builder(50);
 

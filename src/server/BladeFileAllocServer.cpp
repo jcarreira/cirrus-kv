@@ -81,7 +81,6 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
     switch (msg->data_type()) {
     case Data_Alloc:
         {
-           //TODO: this will likely need to be changed
            uint64_t size = msg->data_as_Alloc()->size();
            std::string filename = msg->data_as_Alloc()->filename()->str();
 
@@ -89,16 +88,12 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                 "filename: ", filename,
                 "size: ", size);
 
-            //TODO: base size?
-            //TODO: Pass in an "allocator"
-
             flatbuffers::FlatBufferBuilder builder(50);
 
             if (file_to_alloc_.find(filename) != file_to_alloc_.end()) {
                 // file already allocated here
 
                 //Create a new flatbuffer
-                //TODO: rename this so it isn't ugly
                 auto data = CreateAllocAck(
                        builder,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
@@ -148,10 +143,6 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
             break;
         }
-    case STATS:
-        BladeFileMessageGenerator::stats_msg(ctx->send_msg);
-        send_message(id, sizeof(BladeFileMessage));
-        break;
     default:
         LOG<ERROR>("Unknown message");
         exit(-1);

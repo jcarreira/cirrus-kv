@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include <string>
 #include <cstring>
-#include "src/common/BladeMessageGenerator.h"
-#include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
