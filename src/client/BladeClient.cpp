@@ -9,7 +9,7 @@
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-using namespace Message::BladeMessage;
+using namespace cirrus::Message::BladeMessage;
 namespace cirrus {
 
 BladeClient::BladeClient(int timeout_ms)

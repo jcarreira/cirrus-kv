@@ -7,7 +7,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-using namespace Message::BladeMessage;
+using namespace cirrus::Message::BladeMessage;
 
 namespace cirrus {
 

@@ -8,7 +8,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeObjectStoreMessage_generated.h"
-using namespace Message::BladeObjectStoreMessage;
+using namespace cirrus::Message::BladeObjectStoreMessage;
 
 namespace cirrus {
 
@@ -174,7 +174,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                             message_size);
 
                 send_message(id, message_size);
-                
+
                 break;
             }
         case Data_Flush: {

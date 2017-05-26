@@ -9,7 +9,7 @@
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/logging.h"
 #include "src/common/schemas/BladeFileMessage_generated.h"
-using namespace Message::BladeFileMessage;
+using namespace cirrus::Message::BladeFileMessage;
 
 
 namespace cirrus {
