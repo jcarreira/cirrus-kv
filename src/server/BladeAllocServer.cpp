@@ -141,7 +141,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 break;
             }
         default:
-            LOG<ERROR>("Unknown message");
+            LOG<ERROR>("Unknown message", " type:", msg->data_type());
             exit(-1);
             break;
     }
