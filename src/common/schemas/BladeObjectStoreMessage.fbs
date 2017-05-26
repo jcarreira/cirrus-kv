@@ -1,5 +1,5 @@
 namespace Message.BladeObjectStoreMessage;
-union Data { Alloc, AllocAck, Dealloc, DeallocAck }
+union Data { Alloc, AllocAck, Dealloc, DeallocAck, KeepAlive, KeepAliveAck, Sub, Flush, Lock, LockAck }
 
 table Alloc{
   size:ulong;
