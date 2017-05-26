@@ -1,0 +1,51 @@
+namespace Message.BladeObjectStoreMessage;
+union Data { Alloc, AllocAck, Dealloc, DeallocAck }
+
+table Alloc{
+  size:ulong;
+}
+
+table AllocAck{
+  mr_id:ulong;
+  remote_addr:ulong;
+  peer_rkey:ulong;
+}
+
+table Dealloc{
+  addr:ulong;
+}
+
+table DeallocAck{
+  result:byte;
+}
+
+table KeepAlive{
+  rand:ulong;
+}
+
+table KeepAliveAck{
+  rand:ulong;
+}
+
+table Sub{
+  oid:ulong;
+  addr:string; //20 char vector?
+}
+
+table Flush{
+  oid:ulong;
+}
+
+table Lock{
+  id:ulong;
+}
+
+table LockAck{
+  id:ulong;
+}
+
+table BladeObjectStoreMessage {
+  data:Data;
+}
+
+root_type BladeObjectStoreMessage;
