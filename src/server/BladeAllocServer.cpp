@@ -75,6 +75,8 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
     auto msg = GetBladeMessage(message);
 
+    flatbuffers::FlatBufferBuilder builder(48);
+
     switch (msg->data_type()) {
         case Data_Alloc:
             {
@@ -90,8 +92,6 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 id_to_alloc_[alloc_id] = BladeAllocation(ptr);
 
                 mrs_data_.insert(ptr);
-
-                flatbuffers::FlatBufferBuilder builder(48);
 
                 auto data = CreateAllocAck(builder,
                                            alloc_id,
@@ -121,7 +121,6 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                flatbuffers::FlatBufferBuilder builder(48);
                 auto data = CreateDeallocAck(builder, true);
                 auto dealloc_ack_msg = CreateBladeMessage(builder,
                                                           Data_DeallocAck,
@@ -136,7 +135,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 LOG<INFO>("Deallocated addr: ", addr);
 
                 // send async message
-                send_message(id, sizeof(message_size));
+                send_message(id, message_size);
 
                 break;
             }

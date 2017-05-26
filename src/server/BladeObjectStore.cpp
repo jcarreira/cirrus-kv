@@ -135,7 +135,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 LOG<INFO>("Deallocated addr: ", addr);
 
                 // send async message
-                send_message(id, sizeof(message_size));
+                send_message(id, message_size);
 
                 break;
             }
@@ -174,7 +174,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                             message_size);
 
                 send_message(id, message_size);
-
+                
                 break;
             }
         case Data_Flush: {
