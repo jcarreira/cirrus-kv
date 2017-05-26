@@ -5,8 +5,6 @@
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
 #include <string>
-#include "src/common/BladeFileMessage.h"
-#include "src/common/BladeFileMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
