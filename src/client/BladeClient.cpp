@@ -39,7 +39,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     auto data = CreateAlloc(builder, size);
     auto alloc_msg = CreateBladeMessage(builder, Data_Alloc, data.Union());
     builder.Finish(alloc_msg);
-    LOG<INFO>("Created alloc message with type: ", GetBladeMessage(builder.GetBufferPointer())->data_type());
+
     int message_size = builder.GetSize();
 
     // Copy message contents into send buffer
@@ -80,9 +80,8 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
     auto data = CreateDealloc(builder, ar.remote_addr);
     auto dealloc_msg = CreateBladeMessage(builder, Data_Dealloc, data.Union());
     builder.Finish(dealloc_msg);
-    LOG<INFO>("Created dealloc message with type: ", GetBladeMessage(builder.GetBufferPointer())->data_type());
     int message_size = builder.GetSize();
-    //copy message over
+    // Copy message into send buffer
     std::memcpy(con_ctx_.send_msg,
                 builder.GetBufferPointer(),
                 message_size);

@@ -104,7 +104,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 int message_size = builder.GetSize();
 
-                //copy message over
+                // Copy message into send buffer
                 std::memcpy(ctx->send_msg,
                             builder.GetBufferPointer(),
                             message_size);
@@ -128,7 +128,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                                                           data.Union());
                 builder.Finish(dealloc_ack_msg);
                 int message_size = builder.GetSize();
-                //copy message over
+                // Copy message into send buffer
                 std::memcpy(ctx->send_msg,
                             builder.GetBufferPointer(),
                             message_size);
