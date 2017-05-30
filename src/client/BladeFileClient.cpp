@@ -36,11 +36,13 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
         uint64_t size) {
     LOG<INFO>("Allocating ", size, " bytes");
 
+    // Initialize the FlatBufferBuilder, then build the buffer's contents
     flatbuffers::FlatBufferBuilder builder(50);
 
     auto serialized_filename = builder.CreateString(filename);
     auto data = CreateAlloc(builder, size, serialized_filename);
 
+    // Create the message
     auto alloc_msg = CreateBladeFileMessage(builder, Data_Alloc, data.Union());
 
     builder.Finish(alloc_msg);
@@ -48,7 +50,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     int message_size = builder.GetSize();
     LOG<INFO>("Sending alloc msg size: ", message_size);
 
-    //copy message over
+    // Copy message into send buffer
     std::memcpy(con_ctx_.send_msg,
                 builder.GetBufferPointer(),
                 message_size);

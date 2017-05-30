@@ -73,10 +73,13 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeAllocServer::create_pool, this, big_pool_size_);
 
+    // Read in the new message
     auto msg = GetBladeMessage(message);
 
+    // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(48);
 
+    // Check message type
     switch (msg->data_type()) {
         case Data_Alloc:
             {
@@ -98,7 +101,9 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                                            remote_addr,
                                            big_pool_mr_->rkey);
 
-                auto alloc_ack_msg = CreateBladeMessage(builder, Data_AllocAck, data.Union());
+                auto alloc_ack_msg = CreateBladeMessage(builder,
+                                                        Data_AllocAck,
+                                                        data.Union());
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();

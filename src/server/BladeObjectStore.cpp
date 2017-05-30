@@ -103,6 +103,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();
+
                 //copy message over
                 std::memcpy(ctx->send_msg,
                             builder.GetBufferPointer(),
@@ -141,8 +142,6 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
             }
         case Data_KeepAlive: {
                 uint64_t rand = msg->data_as_KeepAlive()->rand();
-
-                flatbuffers::FlatBufferBuilder builder(48);
 
                 auto data = CreateKeepAliveAck(builder, rand);
                 auto keep_alive_ack_msg = CreateBladeObjectStoreMessage(
