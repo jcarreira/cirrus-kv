@@ -97,11 +97,13 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data.Union());
+                auto ack_msg = CreateBladeFileMessage(builder,
+                                                      Data_AllocAck,
+                                                      data.Union());
 
+                builder.Finish(ack_msg);
 
                 LOG<INFO>("File exists. Sending ack. ");
-		builder.Finish(ack_msg);
 
                 int message_size = builder.GetSize();
                 //copy message over
@@ -119,13 +121,14 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
             file_to_alloc_[filename] = BladeAllocation(ptr);
 
-            auto data = CreateAllocAck(
-                   builder,
-                   remote_addr,
-                   big_pool_mr_->rkey);
+            auto data = CreateAllocAck(builder,
+                                       remote_addr,
+                                       big_pool_mr_->rkey);
 
-            auto ack_msg = CreateBladeFileMessage(builder, Data_AllocAck, data.Union());
-	    builder.Finish(ack_msg);
+            auto ack_msg = CreateBladeFileMessage(builder,
+                                                  Data_AllocAck,
+                                                  data.Union());
+	          builder.Finish(ack_msg);
 
 
             LOG<INFO>("Sending ack. ",
@@ -136,6 +139,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             std::memcpy(ctx->send_msg,
                         builder.GetBufferPointer(),
                         message_size);
+
             // send async message
             send_message(id, message_size);
 

@@ -34,13 +34,15 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("Allocating ",
         size, " bytes");
 
+    // Create message using flatbuffers
     flatbuffers::FlatBufferBuilder builder(48);
     auto data = CreateAlloc(builder, size);
     auto alloc_msg = CreateBladeMessage(builder, Data_Alloc, data.Union());
     builder.Finish(alloc_msg);
     LOG<INFO>("Created alloc message with type: ", GetBladeMessage(builder.GetBufferPointer())->data_type());
     int message_size = builder.GetSize();
-    //copy message over
+
+    // Copy message contents into send buffer
     std::memcpy(con_ctx_.send_msg,
                 builder.GetBufferPointer(),
                 message_size);
