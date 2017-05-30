@@ -17,10 +17,11 @@ It has been tested with the following environment:
 * Boost
 * autotools
 * Mellanox OFED 3.4 (requires Mellanox drivers)
+* cpplint
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev && sudo pip install cpplint
     
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
