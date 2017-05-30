@@ -12,6 +12,8 @@
 
 namespace cirrus {
 
+static const int initial_buffer_size = 50;
+
 BladeClient::BladeClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
 }
@@ -35,7 +37,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
         size, " bytes");
 
     // Create message using flatbuffers
-    flatbuffers::FlatBufferBuilder builder(48);
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
     auto data = message::BladeMessage::CreateAlloc(builder, size);
     auto alloc_msg = message::BladeMessage::CreateBladeMessage(builder,
                               message::BladeMessage::Data_Alloc, data.Union());
@@ -77,7 +79,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
 bool BladeClient::deallocate(const AllocationRecord& ar) {
     LOG<INFO>("Deallocating addr: ", ar.remote_addr);
 
-    flatbuffers::FlatBufferBuilder builder(48);
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
     auto data = message::BladeMessage::CreateDealloc(builder, ar.remote_addr);
     auto dealloc_msg = message::BladeMessage::CreateBladeMessage(builder,
                             message::BladeMessage::Data_Dealloc, data.Union());

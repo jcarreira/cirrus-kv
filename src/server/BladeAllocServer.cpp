@@ -12,6 +12,7 @@
 namespace cirrus {
 
 static const int SIZE = 1000000;
+static const int initial_buffer_size = 50;
 
 BladeAllocServer::BladeAllocServer(int port,
         uint64_t pool_size,
@@ -76,7 +77,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     auto msg = message::BladeMessage::GetBladeMessage(message);
 
     // Instantiate the builder
-    flatbuffers::FlatBufferBuilder builder(48);
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
     // Check message type
     switch (msg->data_type()) {

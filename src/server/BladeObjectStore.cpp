@@ -12,6 +12,7 @@
 namespace cirrus {
 
 static const int SIZE = 1000000;
+static const int initial_buffer_size = 50;
 
 BladeObjectStore::BladeObjectStore(int port,
         uint64_t pool_size,
@@ -74,8 +75,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeObjectStore::create_pool, this, big_pool_size_);
 
-    // 50 Bytes is the initial buffer size, grows if necessary.
-    flatbuffers::FlatBufferBuilder builder(50);
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
     switch (msg->data_type()) {
         case message::BladeObjectStoreMessage::Data_Alloc: {

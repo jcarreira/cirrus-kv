@@ -11,6 +11,7 @@
 namespace cirrus {
 
 static const int SIZE = 1000000;
+static const int initial_buffer_size = 50;
 
 BladePoolServer::BladePoolServer(int port,
         uint64_t pool_size,
@@ -90,7 +91,7 @@ void BladePoolServer::process_message(rdma_cm_id* id,
 
 
 
-                flatbuffers::FlatBufferBuilder builder(48);
+                flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
                 auto data =  message::BladeMessage::CreateAllocAck(builder,
                                            mr_id,
