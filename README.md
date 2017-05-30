@@ -38,9 +38,11 @@ Building
 Running Tests
 =============
 
-To run tests, run the following command from the top level of the project
+To run tests, run the following command from the top level of the project:
 
     $ make check
+    
+To create additional tests, add them to the TESTS variable in the top level Makefile.am . Tests are currently located in the tests directory.
 
 
 Benchmarks
