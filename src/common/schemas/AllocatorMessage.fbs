@@ -21,7 +21,7 @@ table AuthAck2{
   //authentication token? store as array? string?
 }
 
-table stats{
+table Stats{
 }
 
 table StatsAck{

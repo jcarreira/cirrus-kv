@@ -37,7 +37,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     // Create message using flatbuffers
     flatbuffers::FlatBufferBuilder builder(48);
     auto data = Message::BladeMessage::CreateAlloc(builder, size);
-    auto alloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Data_Alloc, data.Union());
+    auto alloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Message::BladeMessage::Data_Alloc, data.Union());
     builder.Finish(alloc_msg);
 
     int message_size = builder.GetSize();
@@ -78,7 +78,7 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
 
     flatbuffers::FlatBufferBuilder builder(48);
     auto data = Message::BladeMessage::CreateDealloc(builder, ar.remote_addr);
-    auto dealloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Data_Dealloc, data.Union());
+    auto dealloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Message::BladeMessage::Data_Dealloc, data.Union());
     builder.Finish(dealloc_msg);
     int message_size = builder.GetSize();
     // Copy message into send buffer
