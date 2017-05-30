@@ -11,11 +11,9 @@ public:
     virtual ~ApplicationRecord();
 
     void addAllocation(const Allocation& alloc);
-    void setQuota(const ApplicationQuota& quota);
 
 private:
     uint64_t app_id_;
-    ApplicationQuota quota_;
     std::vector<Allocation> allocations_;
 };
 

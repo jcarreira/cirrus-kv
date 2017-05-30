@@ -1,7 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
 #include "src/server/ResourceAllocator.h"
-#include "src/authentication/DumbAuthenticator.h"
 #include "src/authentication/ApplicationKey.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/common/AllocatorMessageGenerator.h"
@@ -20,7 +19,6 @@ namespace cirrus {
 ResourceAllocator::ResourceAllocator(int port,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
-    authenticator_(new DumbAuthenticator()),
     total_mem_allocated_(0) {
 }
 
