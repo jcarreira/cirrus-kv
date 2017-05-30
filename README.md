@@ -38,10 +38,10 @@ Building
 Running Tests
 =============
 
-Client, server example:
+To run tests, run the following command from the top level of the project
 
-    $ ./ddc/src/server/bladeallocmain&
-    $ ./ddc/src/client/clientmain
+    $ make check
+
 
 Benchmarks
 =============
