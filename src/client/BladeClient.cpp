@@ -9,7 +9,9 @@
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-using namespace cirrus::Message::BladeMessage;
+
+Message::BladeMessage
+
 namespace cirrus {
 
 BladeClient::BladeClient(int timeout_ms)
@@ -36,8 +38,8 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
 
     // Create message using flatbuffers
     flatbuffers::FlatBufferBuilder builder(48);
-    auto data = CreateAlloc(builder, size);
-    auto alloc_msg = CreateBladeMessage(builder, Data_Alloc, data.Union());
+    auto data = Message::BladeMessage::CreateAlloc(builder, size);
+    auto alloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Data_Alloc, data.Union());
     builder.Finish(alloc_msg);
 
     int message_size = builder.GetSize();
@@ -53,7 +55,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     send_receive_message_sync(id_, message_size);
     LOG<INFO>("send_receive_message_sync done: ", message_size);
 
-    auto msg = GetBladeMessage(con_ctx_.recv_msg);
+    auto msg = Message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
 
     AllocationRecord alloc(
                 msg->data_as_AllocAck()->mr_id(),
@@ -77,8 +79,8 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
     LOG<INFO>("Deallocating addr: ", ar.remote_addr);
 
     flatbuffers::FlatBufferBuilder builder(48);
-    auto data = CreateDealloc(builder, ar.remote_addr);
-    auto dealloc_msg = CreateBladeMessage(builder, Data_Dealloc, data.Union());
+    auto data = Message::BladeMessage::CreateDealloc(builder, ar.remote_addr);
+    auto dealloc_msg = Message::BladeMessage::CreateBladeMessage(builder, Data_Dealloc, data.Union());
     builder.Finish(dealloc_msg);
     int message_size = builder.GetSize();
     // Copy message into send buffer
@@ -92,7 +94,7 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
     send_receive_message_sync(id_, message_size);
     LOG<INFO>("send_receive_message_sync done: ", message_size);
 
-    auto msg = GetBladeMessage(con_ctx_.recv_msg);
+    auto msg = Message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
 
     if (msg->data_as_DeallocAck()->result() == 0)
         throw std::runtime_error("Error with deallocation");
