@@ -5,4 +5,4 @@ source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)
 
 check_style:
-	find . -name "*.cpp" | xargs python scripts/cpplint.py
+	find . -path ./third_party -prune -o  -name "*.cpp" | xargs python scripts/cpplint.py
