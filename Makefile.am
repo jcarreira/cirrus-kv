@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = foreign
+AUTOMAKE_OPTIONS = foreign serial-tests
 SUBDIRS = src tests benchmarks
 TESTS = ./tests/basic_test.py
 source_dir = src/

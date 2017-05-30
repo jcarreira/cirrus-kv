@@ -4,6 +4,8 @@ import sys
 import subprocess
 import time
 
+# NOTE: all pathnames start from the top directory where make check is run
+
 # Launch the server in the background
 print("Starting server.")
 server = subprocess.Popen(["./src/server/bladeallocmain"])
