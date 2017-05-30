@@ -91,7 +91,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             if (file_to_alloc_.find(filename) != file_to_alloc_.end()) {
                 // file already allocated here
 
-                //Create a new flatbuffer
+                // Create a new flatbuffer
                 auto data = CreateAllocAck(
                        builder,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
@@ -106,7 +106,7 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                 LOG<INFO>("File exists. Sending ack. ");
 
                 int message_size = builder.GetSize();
-                //copy message over
+                // Copy message into send buffer
                 std::memcpy(ctx->send_msg,
                             builder.GetBufferPointer(),
                             message_size);
@@ -128,14 +128,14 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
             auto ack_msg = CreateBladeFileMessage(builder,
                                                   Data_AllocAck,
                                                   data.Union());
-	          builder.Finish(ack_msg);
+            builder.Finish(ack_msg);
 
 
             LOG<INFO>("Sending ack. ",
                 " remote_addr: ", remote_addr);
 
             int message_size = builder.GetSize();
-            //copy message over
+            // Copy message into send buffer
             std::memcpy(ctx->send_msg,
                         builder.GetBufferPointer(),
                         message_size);

@@ -57,7 +57,7 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
 
     send_receive_message_sync(id_, message_size);
 
-    //receive ack flatbuffer in response
+    // Receive ack flatbuffer in response
     auto msg = GetBladeFileMessage(con_ctx_.recv_msg);
 
     FileAllocRec alloc(
