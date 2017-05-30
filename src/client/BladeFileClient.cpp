@@ -38,10 +38,13 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     flatbuffers::FlatBufferBuilder builder(50);
 
     auto serialized_filename = builder.CreateString(filename);
-    auto data = message::BladeFileMessage::CreateAlloc(builder, size, serialized_filename);
+    auto data = message::BladeFileMessage::CreateAlloc(builder,
+                                                       size,
+                                                       serialized_filename);
 
     // Create the message
-    auto alloc_msg = message::BladeFileMessage::CreateBladeFileMessage(builder, message::BladeFileMessage::Data_Alloc, data.Union());
+    auto alloc_msg = message::BladeFileMessage::CreateBladeFileMessage(builder,
+                          message::BladeFileMessage::Data_Alloc, data.Union());
 
     builder.Finish(alloc_msg);
 
@@ -56,7 +59,8 @@ FileAllocRec BladeFileClient::allocate(const std::string& filename,
     send_receive_message_sync(id_, message_size);
 
     // Receive ack flatbuffer in response
-    auto msg = message::BladeFileMessage::GetBladeFileMessage(con_ctx_.recv_msg);
+    auto msg = message::BladeFileMessage::GetBladeFileMessage(
+                                                            con_ctx_.recv_msg);
 
     FileAllocRec alloc(
                 msg->data_as_AllocAck()->remote_addr(),

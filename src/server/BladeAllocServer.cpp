@@ -100,9 +100,11 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                                            remote_addr,
                                            big_pool_mr_->rkey);
 
-                auto alloc_ack_msg = message::BladeMessage::CreateBladeMessage(builder,
-                                                        message::BladeMessage::Data_AllocAck,
-                                                        data.Union());
+                auto alloc_ack_msg =
+                    message::BladeMessage::CreateBladeMessage(builder,
+                                          message::BladeMessage::Data_AllocAck,
+                                          data.Union());
+
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();
@@ -125,10 +127,13 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                auto data = message::BladeMessage::CreateDeallocAck(builder, true);
-                auto dealloc_ack_msg = message::BladeMessage::CreateBladeMessage(builder,
-                                                          message::BladeMessage::Data_DeallocAck,
-                                                          data.Union());
+                auto data = message::BladeMessage::CreateDeallocAck(
+                                                                builder, true);
+                auto dealloc_ack_msg =
+                            message::BladeMessage::CreateBladeMessage(builder,
+                                        message::BladeMessage::Data_DeallocAck,
+                                        data.Union());
+                                        
                 builder.Finish(dealloc_ack_msg);
                 int message_size = builder.GetSize();
                 // Copy message into send buffer

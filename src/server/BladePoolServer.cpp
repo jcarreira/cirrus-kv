@@ -97,9 +97,11 @@ void BladePoolServer::process_message(rdma_cm_id* id,
                                            remote_addr,
                                            mr_pool_[0]->rkey);
 
-                auto alloc_ack_msg =  message::BladeMessage::CreateBladeMessage(builder,
-                                                         message::BladeMessage::Data_AllocAck,
-                                                         data.Union());
+                auto alloc_ack_msg =
+                              message::BladeMessage::CreateBladeMessage(builder,
+                              message::BladeMessage::Data_AllocAck,
+                              data.Union());
+                              
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();

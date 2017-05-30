@@ -95,9 +95,9 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = message::BladeFileMessage::CreateBladeFileMessage(builder,
-                                                      message::BladeFileMessage::Data_AllocAck,
-                                                      data.Union());
+                auto ack_msg =
+                      message::BladeFileMessage::CreateBladeFileMessage(builder,
+                      message::BladeFileMessage::Data_AllocAck, data.Union());
 
                 builder.Finish(ack_msg);
 
@@ -123,9 +123,10 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                                        remote_addr,
                                        big_pool_mr_->rkey);
 
-            auto ack_msg = message::BladeFileMessage::CreateBladeFileMessage(builder,
-                                                  message::BladeFileMessage::Data_AllocAck,
-                                                  data.Union());
+            auto ack_msg = message::BladeFileMessage::CreateBladeFileMessage(
+                            builder, message::BladeFileMessage::Data_AllocAck,
+                            data.Union());
+
             builder.Finish(ack_msg);
 
 
