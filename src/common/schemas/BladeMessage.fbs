@@ -1,4 +1,5 @@
-namespace cirrus.message.BladeMessage; //is this the name we want?
+namespace cirrus.message.BladeMessage;
+
 union Data { Alloc, AllocAck, Dealloc, DeallocAck }
 
 table Alloc{

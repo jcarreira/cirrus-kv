@@ -74,7 +74,8 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeObjectStore::create_pool, this, big_pool_size_);
 
-    flatbuffers::FlatBufferBuilder builder(48);
+    // 50 Bytes is the initial buffer size, grows if necessary.
+    flatbuffers::FlatBufferBuilder builder(50);
 
     switch (msg->data_type()) {
         case message::BladeObjectStoreMessage::Data_Alloc: {

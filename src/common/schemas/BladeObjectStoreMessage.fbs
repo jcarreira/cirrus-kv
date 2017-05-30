@@ -1,4 +1,5 @@
 namespace cirrus.message.BladeObjectStoreMessage;
+
 union Data { Alloc, AllocAck, Dealloc, DeallocAck, KeepAlive, KeepAliveAck, Sub, SubAck, Flush, FlushAck, Lock, LockAck }
 
 table Alloc{
