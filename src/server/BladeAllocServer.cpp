@@ -8,7 +8,6 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-using namespace cirrus::Message::BladeMessage;
 
 namespace cirrus {
 
@@ -74,14 +73,14 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
             &BladeAllocServer::create_pool, this, big_pool_size_);
 
     // Read in the new message
-    auto msg = GetBladeMessage(message);
+    auto msg = message::BladeMessage::GetBladeMessage(message);
 
     // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(48);
 
     // Check message type
     switch (msg->data_type()) {
-        case Data_Alloc:
+        case message::BladeMessage::Data_Alloc:
             {
                 uint64_t size = msg->data_as_Alloc()->size();
 
@@ -96,13 +95,13 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 mrs_data_.insert(ptr);
 
-                auto data = CreateAllocAck(builder,
+                auto data = message::BladeMessage::CreateAllocAck(builder,
                                            alloc_id,
                                            remote_addr,
                                            big_pool_mr_->rkey);
 
-                auto alloc_ack_msg = CreateBladeMessage(builder,
-                                                        Data_AllocAck,
+                auto alloc_ack_msg = message::BladeMessage::CreateBladeMessage(builder,
+                                                        message::BladeMessage::Data_AllocAck,
                                                         data.Union());
                 builder.Finish(alloc_ack_msg);
 
@@ -120,15 +119,15 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 break;
             }
-        case Data_Dealloc:
+        case message::BladeMessage::Data_Dealloc:
             {
                 uint64_t addr = msg->data_as_Dealloc()->addr();
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                auto data = CreateDeallocAck(builder, true);
-                auto dealloc_ack_msg = CreateBladeMessage(builder,
-                                                          Data_DeallocAck,
+                auto data = message::BladeMessage::CreateDeallocAck(builder, true);
+                auto dealloc_ack_msg = message::BladeMessage::CreateBladeMessage(builder,
+                                                          message::BladeMessage::Data_DeallocAck,
                                                           data.Union());
                 builder.Finish(dealloc_ack_msg);
                 int message_size = builder.GetSize();

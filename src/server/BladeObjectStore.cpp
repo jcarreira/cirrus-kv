@@ -8,7 +8,6 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeObjectStoreMessage_generated.h"
-using namespace cirrus::Message::BladeObjectStoreMessage;
 
 namespace cirrus {
 
@@ -64,7 +63,7 @@ bool BladeObjectStore::create_pool(uint64_t size) {
 
 void BladeObjectStore::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = GetBladeObjectStoreMessage(message);
+    auto msg = message::BladeObjectStoreMessage::GetBladeObjectStoreMessage(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -77,7 +76,7 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
     flatbuffers::FlatBufferBuilder builder(48);
 
     switch (msg->data_type()) {
-        case Data_Alloc: {
+        case message::BladeObjectStoreMessage::Data_Alloc: {
                 uint64_t size = msg->data_as_Alloc()->size();
 
                 LOG<INFO>("Received allocation request. size: ", size);
@@ -91,14 +90,14 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 mrs_data_.insert(ptr);
 
-                auto data = CreateAllocAck(builder,
+                auto data = message::BladeObjectStoreMessage::CreateAllocAck(builder,
                                            alloc_id,
                                            remote_addr,
                                            big_pool_mr_->rkey);
 
-                auto alloc_ack_msg = CreateBladeObjectStoreMessage(
+                auto alloc_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(
                                                           builder,
-                                                          Data_AllocAck,
+                                                          message::BladeObjectStoreMessage::Data_AllocAck,
                                                           data.Union());
                 builder.Finish(alloc_ack_msg);
 
@@ -117,14 +116,14 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 break;
             }
-        case Data_Dealloc: {
+        case message::BladeObjectStoreMessage::Data_Dealloc: {
                 uint64_t addr = msg->data_as_Dealloc()->addr();
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                auto data = CreateDeallocAck(builder, true);
-                auto dealloc_ack_msg = CreateBladeObjectStoreMessage(builder,
-                                                          Data_DeallocAck,
+                auto data = message::BladeObjectStoreMessage::CreateDeallocAck(builder, true);
+                auto dealloc_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(builder,
+                                                          message::BladeObjectStoreMessage::Data_DeallocAck,
                                                           data.Union());
                 builder.Finish(dealloc_ack_msg);
                 int message_size = builder.GetSize();
@@ -140,13 +139,13 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 break;
             }
-        case Data_KeepAlive: {
+        case message::BladeObjectStoreMessage::Data_KeepAlive: {
                 uint64_t rand = msg->data_as_KeepAlive()->rand();
 
-                auto data = CreateKeepAliveAck(builder, rand);
-                auto keep_alive_ack_msg = CreateBladeObjectStoreMessage(
+                auto data = message::BladeObjectStoreMessage::CreateKeepAliveAck(builder, rand);
+                auto keep_alive_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(
                                                               builder,
-                                                              Data_KeepAliveAck,
+                                                              message::BladeObjectStoreMessage::Data_KeepAliveAck,
                                                               data.Union());
                 builder.Finish(keep_alive_ack_msg);
                 int message_size = builder.GetSize();
@@ -157,13 +156,13 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 send_message(id, message_size);
                 break;
             }
-        case Data_Sub: {
+        case message::BladeObjectStoreMessage::Data_Sub: {
                 uint64_t oid = msg->data_as_Sub()->oid();
 
-                auto data = CreateSubAck(builder, oid);
-                auto subscribe_ack_msg = CreateBladeObjectStoreMessage(
+                auto data = message::BladeObjectStoreMessage::CreateSubAck(builder, oid);
+                auto subscribe_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(
                                                             builder,
-                                                            Data_SubAck,
+                                                            message::BladeObjectStoreMessage::Data_SubAck,
                                                             data.Union());
 
                 builder.Finish(subscribe_ack_msg);
@@ -176,11 +175,11 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
 
                 break;
             }
-        case Data_Flush: {
+        case message::BladeObjectStoreMessage::Data_Flush: {
                 uint64_t oid = msg->data_as_Flush()->oid();
-                auto data = CreateFlushAck(builder, oid);
-                auto flush_ack_msg = CreateBladeObjectStoreMessage(builder,
-                                                                  Data_FlushAck,
+                auto data = message::BladeObjectStoreMessage::CreateFlushAck(builder, oid);
+                auto flush_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(builder,
+                                                                  message::BladeObjectStoreMessage::Data_FlushAck,
                                                                   data.Union());
 
                 builder.Finish(flush_ack_msg);
@@ -192,11 +191,11 @@ void BladeObjectStore::process_message(rdma_cm_id* id,
                 send_message(id, message_size);
                 break;
             }
-        case Data_Lock: {
+        case message::BladeObjectStoreMessage::Data_Lock: {
                 uint64_t oid = msg->data_as_Lock()->id();
-                auto data = CreateLockAck(builder, oid);
-                auto lock_ack_msg = CreateBladeObjectStoreMessage(builder,
-                                                                  Data_LockAck,
+                auto data = message::BladeObjectStoreMessage::CreateLockAck(builder, oid);
+                auto lock_ack_msg = message::BladeObjectStoreMessage::CreateBladeObjectStoreMessage(builder,
+                                                                  message::BladeObjectStoreMessage::Data_LockAck,
                                                                   data.Union());
 
                 builder.Finish(lock_ack_msg);

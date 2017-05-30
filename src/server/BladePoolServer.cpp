@@ -7,7 +7,6 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-using namespace cirrus::Message::BladeMessage;
 
 namespace cirrus {
 
@@ -64,7 +63,7 @@ uint32_t BladePoolServer::create_pool(uint64_t size,
 
 void BladePoolServer::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = GetBladeMessage(message);
+    auto msg = message::BladeMessage::GetBladeMessage(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -75,7 +74,7 @@ void BladePoolServer::process_message(rdma_cm_id* id,
             &BladePoolServer::create_pool, this, pool_size_, id);
 
     switch (msg->data_type()) {
-        case Data_Alloc:
+        case  message::BladeMessage::Data_Alloc:
             {
                 LOG<INFO>("ALLOC");
 
@@ -93,14 +92,14 @@ void BladePoolServer::process_message(rdma_cm_id* id,
 
                 flatbuffers::FlatBufferBuilder builder(48);
 
-                auto data = CreateAllocAck(builder,
+                auto data =  message::BladeMessage::CreateAllocAck(builder,
                                            mr_id,
                                            remote_addr,
                                            mr_pool_[0]->rkey);
 
-                auto alloc_ack_msg = CreateBladeMessage(builder,
-                                                        Data_AllocAck,
-                                                        data.Union());
+                auto alloc_ack_msg =  message::BladeMessage::CreateBladeMessage(builder,
+                                                         message::BladeMessage::Data_AllocAck,
+                                                         data.Union());
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();

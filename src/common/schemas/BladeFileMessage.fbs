@@ -1,4 +1,4 @@
-namespace cirrus.Message.BladeFileMessage;
+namespace cirrus.message.BladeFileMessage;
 union Data { Alloc, AllocAck }
 
 table Alloc{

@@ -9,8 +9,6 @@
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 #include "src/common/schemas/BladeFileMessage_generated.h"
-using namespace cirrus::Message::BladeFileMessage;
-
 
 namespace cirrus {
 
@@ -75,9 +73,9 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeFileAllocServer::create_pool, this, big_pool_size_);
 
-    auto msg = GetBladeFileMessage(message);
+    auto msg = message::BladeFileMessage::GetBladeFileMessage(message);
     switch (msg->data_type()) {
-    case Data_Alloc:
+    case message::BladeFileMessage::Data_Alloc:
         {
            uint64_t size = msg->data_as_Alloc()->size();
            std::string filename = msg->data_as_Alloc()->filename()->str();
@@ -92,13 +90,13 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
                 // file already allocated here
 
                 // Create a new flatbuffer
-                auto data = CreateAllocAck(
+                auto data = message::BladeFileMessage::CreateAllocAck(
                        builder,
                        reinterpret_cast<uint64_t>(file_to_alloc_[filename].ptr),
                        big_pool_mr_->rkey);
 
-                auto ack_msg = CreateBladeFileMessage(builder,
-                                                      Data_AllocAck,
+                auto ack_msg = message::BladeFileMessage::CreateBladeFileMessage(builder,
+                                                      message::BladeFileMessage::Data_AllocAck,
                                                       data.Union());
 
                 builder.Finish(ack_msg);
@@ -121,12 +119,12 @@ void BladeFileAllocServer::process_message(rdma_cm_id* id,
 
             file_to_alloc_[filename] = BladeAllocation(ptr);
 
-            auto data = CreateAllocAck(builder,
+            auto data = message::BladeFileMessage::CreateAllocAck(builder,
                                        remote_addr,
                                        big_pool_mr_->rkey);
 
-            auto ack_msg = CreateBladeFileMessage(builder,
-                                                  Data_AllocAck,
+            auto ack_msg = message::BladeFileMessage::CreateBladeFileMessage(builder,
+                                                  message::BladeFileMessage::Data_AllocAck,
                                                   data.Union());
             builder.Finish(ack_msg);
 

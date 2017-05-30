@@ -1,4 +1,4 @@
-namespace cirrus.Message.AllocatorMessage; //is this the name we want?
+namespace cirrus.message.AllocatorMessage; //is this the name we want?
 union Data { Auth1, AuthAck1, Auth2, AuthAck2, Stats, StatsAck, Alloc, AllocAck  }
 
 
