@@ -101,7 +101,7 @@ void BladePoolServer::process_message(rdma_cm_id* id,
                               message::BladeMessage::CreateBladeMessage(builder,
                               message::BladeMessage::Data_AllocAck,
                               data.Union());
-                              
+
                 builder.Finish(alloc_ack_msg);
 
                 int message_size = builder.GetSize();

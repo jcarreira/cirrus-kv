@@ -133,7 +133,7 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                             message::BladeMessage::CreateBladeMessage(builder,
                                         message::BladeMessage::Data_DeallocAck,
                                         data.Union());
-                                        
+
                 builder.Finish(dealloc_ack_msg);
                 int message_size = builder.GetSize();
                 // Copy message into send buffer

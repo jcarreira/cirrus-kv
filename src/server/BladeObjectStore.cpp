@@ -63,7 +63,8 @@ bool BladeObjectStore::create_pool(uint64_t size) {
 
 void BladeObjectStore::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = message::BladeObjectStoreMessage::GetBladeObjectStoreMessage(message);
+    auto msg =
+          message::BladeObjectStoreMessage::GetBladeObjectStoreMessage(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
