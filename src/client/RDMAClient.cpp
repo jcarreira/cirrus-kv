@@ -601,6 +601,10 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));
             break;
+        } else {
+          LOG<ERROR>("Unexpected event type while connecting, " ,
+                                                        "server may be down.");
+          exit(-1);
         }
     }
 
