@@ -9,7 +9,7 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/common \
 		-L$(top_srcdir)/src/object_store \
 		-L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
-    -L$(top_srcdir)/src/iterator
+		-L$(top_srcdir)/src/iterator
 
 test_fullblade_store_SOURCES  = test_fullblade_store.cpp
 test_fullblade_store_LDFLAGS  = -pthread

@@ -15,29 +15,23 @@
 namespace cirrus {
 
 class StoreIterator {
+  public:
+    StoreIterator(int first_id, int last_id, int current_id,
+                          cirrus::ostore::FullBladeObjectStoreTempl<> *store) :
+        first_id(first_id), last_id(last_id), current_id(current_id),
+                            store(store){}
     int first_id;
     int last_id;
     int current_id;
-    cirrus::ostore::FullBladeObjectStoreTempl<> store;
+    cirrus::ostore::FullBladeObjectStoreTempl<> *store;
 
-    StoreIterator(int first_id, int, last_id, int current_id,
-                          cirrus::ostore::FullBladeObjectStoreTempl<> store) :
-        first_id(first_id), last_id(last_id), current_id(current_id),
-                            store(store){}
-  public:
-    StoreIterator(int first_id, int, last_id,
-                          cirrus::ostore::FullBladeObjectStoreTempl<> store) :
-          first_id(first_id), last_id(last_id), store(store), current_id(0) {}
-
-
-
-  int operator*();
-  StoreIterator& operator++();
-  StoreIterator& begin();
-  StoreIterator& end();
-  bool operator!=(const StoreIterator& it);
-  bool operator==(const StoreIterator& it);
-  int get_curr_id();
+    int operator*();
+    StoreIterator& operator++();
+    StoreIterator begin() const;
+    StoreIterator end() const;
+    bool operator!=(const StoreIterator& it) const;
+    bool operator==(const StoreIterator& it) const;
+    int get_curr_id() const;
 
 
 };
