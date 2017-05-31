@@ -7,8 +7,6 @@ namespace cirrus {
 
 
 StoreIterator StoreIterator::begin() const {
-   // StoreIterator iter(first_id, last_id, first_id, store);
-   // return iter;
     return StoreIterator(first_id, last_id, first_id, store);
 }
 
@@ -19,19 +17,16 @@ StoreIterator StoreIterator::end() const {
 int StoreIterator::operator*() {
     int retval;
     store->get(current_id, &retval);
-    printf("returning value %d\n", retval);
     return retval;
 }
 
 StoreIterator& StoreIterator::operator++() {
   current_id++;
-  printf("regular ++ operator called\n");
   return *this;
 }
 
 StoreIterator& StoreIterator::operator++(int /*i */) {
   current_id ++;
-  printf("id incremented to %d\n", current_id);
   return *this;
 }
 
