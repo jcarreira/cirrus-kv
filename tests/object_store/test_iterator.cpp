@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/iterator/iterator.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -29,7 +30,7 @@ const char IP[] = "10.10.49.83";
 /**
   * Test simple synchronous put and get to/from the object store
   */
-void test_sync() {
+void test_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
     for (int i = 0; i < 10; i++) {
@@ -57,8 +58,35 @@ void test_sync() {
     }
 }
 
+void test_iterator() {
+    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+
+    // Put items in the store
+    for (int i = 0; i < 10; i++) {
+      try {
+          store.put(&i, sizeof(int), i);
+      } catch(...) {
+          std::cerr << "Error inserting" << std::endl;
+      }
+    }
+
+    // Use iterator to retrieve
+    //inclusive values
+    cirrus::StoreIterator iter(0, 9, 0, &store);
+    int j = 0;
+
+    for (auto it = iter.begin(); it != iter.end(); it++) {
+      int val = *it;
+      if (val != j) {
+        throw std::runtime_error("Wrong value");
+      }
+      j++;
+    }
+}
+
 auto main() -> int {
-    test_sync();
+    test_simple();
+    test_iterator();
 
     return 0;
 }
