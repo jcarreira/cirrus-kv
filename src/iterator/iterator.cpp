@@ -17,12 +17,21 @@ StoreIterator StoreIterator::end() const {
 }
 
 int StoreIterator::operator*() {
-  int retval;
-  return store->get(current_id, &retval);
+    int retval;
+    store->get(current_id, &retval);
+    printf("returning value %d\n", retval);
+    return retval;
 }
 
 StoreIterator& StoreIterator::operator++() {
   current_id++;
+  printf("regular ++ operator called\n");
+  return *this;
+}
+
+StoreIterator& StoreIterator::operator++(int /*i */) {
+  current_id ++;
+  printf("id incremented to %d\n", current_id);
   return *this;
 }
 

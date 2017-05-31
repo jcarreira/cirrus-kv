@@ -27,6 +27,7 @@ class StoreIterator {
 
     int operator*();
     StoreIterator& operator++();
+    StoreIterator& operator++(int i); 
     StoreIterator begin() const;
     StoreIterator end() const;
     bool operator!=(const StoreIterator& it) const;

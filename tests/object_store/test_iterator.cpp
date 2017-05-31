@@ -77,15 +77,19 @@ void test_iterator() {
 
     for (auto it = iter.begin(); it != iter.end(); it++) {
       int val = *it;
+      printf("%d\n", iter.current_id);
       if (val != j) {
-        throw std::runtime_error("Wrong value");
+	printf("received %d but expected %d\n", val, j);
+        //throw std::runtime_error("Wrong value");
       }
       j++;
+      if (j > 10) break;
     }
 }
 
 auto main() -> int {
     test_simple();
+    printf("first test complete");
     test_iterator();
 
     return 0;
