@@ -53,8 +53,9 @@ AC_CONFIG_FILES([Makefile
                  src/object_store/Makefile
                  src/client/Makefile
                  src/server/Makefile
+                 src/iterator/Makefile
                  tests/object_store/Makefile
-                 tests/raw/Makefile                
+                 tests/raw/Makefile
                  tests/Makefile
                  benchmarks/Makefile])
 

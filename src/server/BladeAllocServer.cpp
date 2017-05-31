@@ -132,4 +132,3 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 }
 
 }  // namespace cirrus
-
