@@ -45,6 +45,9 @@ To run tests, run the following command from the top level of the project:
     
 To create additional tests, add them to the TESTS variable in the top level Makefile.am . Tests are currently located in the tests directory.
 
+Additional tests are also in the tests directory. To run some, place the test name after a modification of the LD\_Path, as follows:
+    $ LD_LIBRARY_PATH=/data/tyler/ddc/third_party/libcuckoo/cityhash-1.1.1/src/.libs ./test_fullblade_store
+Take note of the ip given in the tests. .83 is f1, .84 f2, etc.
 
 Benchmarks
 =============
