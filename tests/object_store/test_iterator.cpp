@@ -16,7 +16,8 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
-#include "src/iterator/iterator.h"
+#include "src/cache_manager/CacheManager.h"
+#include "src/iterator/Iterator.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -60,11 +61,12 @@ void test_simple() {
 
 void test_iterator() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+    cirrus::CacheManager cm(&store);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
       try {
-          store.put(&i, sizeof(int), i);
+          cm.put(i, i);
       } catch(...) {
           std::cerr << "Error inserting" << std::endl;
       }
@@ -72,13 +74,13 @@ void test_iterator() {
 
     // Use iterator to retrieve
     //inclusive values
-    cirrus::StoreIterator iter(0, 9, 0, &store);
+    cirrus::StoreIterator iter(0, 9, 0, &cm);
     int j = 0;
 
     for (auto it = iter.begin(); it != iter.end(); it++) {
-      int val = *it;
-      if (val != j) {
-	printf("received %d but expected %d\n", val, j);
+      int *val = *it;
+      if (*val != j) {
+	      printf("received %d but expected %d\n", val, j);
         throw std::runtime_error("Wrong value");
       }
       j++;

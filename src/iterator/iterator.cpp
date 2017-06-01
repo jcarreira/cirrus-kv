@@ -1,6 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
-#include "src/iterator/iterator.h"
+#include "src/iterator/Iterator.h"
 #include "src/cache_manager/cache_manager.h"
 
 namespace cirrus {
