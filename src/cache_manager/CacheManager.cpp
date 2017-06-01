@@ -43,13 +43,15 @@ bool CacheManager::put(int oid, int val) {
 void CacheManager::prefetch(int oid) {
     //set up local copy
     //call async get
-    struct cache_entry entry;
-    entry.fetched_async = true;
-    cache[oid] = entry;
-    struct cache_entry *entry_ptr = &(*cache.find(oid)).second;
-    auto future = store->get_async(oid, &entry_ptr->val);
-
-    entry_ptr->future = future;
+    //only pull if it is not already in the cache
+    if (cache.find(oid) == cache.end()) {
+        struct cache_entry entry;
+        entry.fetched_async = true;
+        cache[oid] = entry;
+        struct cache_entry *entry_ptr = &(*cache.find(oid)).second;
+        auto future = store->get_async(oid, &entry_ptr->val);
+        entry_ptr->future = future;
+    }
 }
 
 }
