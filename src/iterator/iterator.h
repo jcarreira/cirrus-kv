@@ -3,7 +3,7 @@
 #ifndef _ITERATOR_H_
 #define _ITERATOR_H_
 
-#include "src/object_store/FullBladeObjectStore.h"
+#include "src/cache_manager/cache_manager.h"
 
 
 /*
@@ -17,13 +17,13 @@ namespace cirrus {
 class StoreIterator {
   public:
     StoreIterator(int first_id, int last_id, int current_id,
-                          cirrus::ostore::FullBladeObjectStoreTempl<> *store) :
+                          cirrus::CacheManager *cm) :
         first_id(first_id), last_id(last_id), current_id(current_id),
-                            store(store){}
+                            cm(cm){}
     int first_id;
     int last_id;
     int current_id;
-    cirrus::ostore::FullBladeObjectStoreTempl<> *store;
+    cirrus::CacheManager *cm;
 
     int operator*();
     StoreIterator& operator++();
