@@ -6,3 +6,6 @@ DEFAULT_INCLUDES = -I$(source_dir)
 
 check_style:
 	find . -name "*.cpp" | xargs cpplint
+
+benchmark:
+	./benchmarks/run_benchmarks.py

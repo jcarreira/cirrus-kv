@@ -14,6 +14,7 @@
 #include <thread>
 #include <random>
 #include <memory>
+#include <fstream>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -21,7 +22,7 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.84";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t MILLION = 1000000;
 
@@ -72,14 +73,18 @@ void test_sync() {
         }
     }
 
-    std::cout << "1_1 test" << std::endl;
-    std::cout << "count: " << stats.getCount() << std::endl;
-    std::cout << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    std::cout << "min: " << stats.min() << std::endl;
-    std::cout << "avg: " << stats.avg() << std::endl;
-    std::cout << "max: " << stats.max() << std::endl;
-    std::cout << "sd: " << stats.sd() << std::endl;
-    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
+    
+    std::ofstream outfile;
+    outfile.open("1_1.log");
+    outfile << "1_1 test" << std::endl;
+    outfile << "count: " << stats.getCount() << std::endl;
+    outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "min: " << stats.min() << std::endl;
+    outfile << "avg: " << stats.avg() << std::endl;
+    outfile << "max: " << stats.max() << std::endl;
+    outfile << "sd: " << stats.sd() << std::endl;
+    outfile << "99%: " << stats.getPercentile(0.99) << std::endl;
+    outfile.close();
 }
 
 auto main() -> int {

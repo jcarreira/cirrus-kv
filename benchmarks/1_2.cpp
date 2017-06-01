@@ -14,6 +14,7 @@
 #include <thread>
 #include <memory>
 #include <random>
+#include <fstream>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -68,13 +69,16 @@ void test_async(int N) {
             }
         }
     }
+    std::ofstream outfile;
+    outfile.open("1_2.log");
 
-    std::cout << "count: " << stats.getCount() << std::endl;
-    std::cout << "min: " << stats.min() << std::endl;
-    std::cout << "avg: " << stats.avg() << std::endl;
-    std::cout << "max: " << stats.max() << std::endl;
-    std::cout << "sd: " << stats.sd() << std::endl;
-    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
+    outfile << "count: " << stats.getCount() << std::endl;
+    outfile << "min: " << stats.min() << std::endl;
+    outfile << "avg: " << stats.avg() << std::endl;
+    outfile << "max: " << stats.max() << std::endl;
+    outfile << "sd: " << stats.sd() << std::endl;
+    outfile << "99%: " << stats.getPercentile(0.99) << std::endl;
+    outfile.close();
 }
 
 auto main() -> int {

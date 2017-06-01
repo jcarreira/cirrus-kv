@@ -20,7 +20,7 @@
 static const uint64_t MILLION = 1000000;
 static const int N_THREADS = 10;
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.84";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t N_MSG = 1000000;
 
