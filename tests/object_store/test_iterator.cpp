@@ -78,15 +78,43 @@ void test_iterator() {
     for (auto it = iter.begin(); it != iter.end(); it++) {
       int val = *it;
       if (val != j) {
+	printf("received %d but expected %d\n", val, j);
         throw std::runtime_error("Wrong value");
       }
       j++;
     }
 }
 
+void test_other_format() {
+    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+
+    // Put items in the store
+    for (int i = 0; i < 10; i++) {
+      try {
+          store.put(&i, sizeof(int), i);
+      } catch(...) {
+          std::cerr << "Error inserting" << std::endl;
+      }
+    }
+
+    // Use iterator to retrieve
+    //inclusive values
+    cirrus::StoreIterator iter(0, 9, 0, &store);
+    int j = 0;
+
+    for (const auto & it: iter) {
+      int val = it;
+      if (val != j) {
+	printf("received %d but expected %d\n", val, j);
+        throw std::runtime_error("Wrong value");
+      }
+      j++;
+    }
+}
 auto main() -> int {
     test_simple();
+    printf("first test complete");
     test_iterator();
-
+    test_other_format();
     return 0;
 }

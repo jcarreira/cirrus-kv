@@ -26,6 +26,11 @@ StoreIterator& StoreIterator::operator++() {
   return *this;
 }
 
+StoreIterator& StoreIterator::operator++(int /*i */) {
+  current_id ++;
+  return *this;
+}
+
 bool StoreIterator::operator!=(const StoreIterator& it) const {
   return current_id != it.get_curr_id();
 }
