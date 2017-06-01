@@ -9,22 +9,24 @@ int* CacheManager::get(int oid) {
   // check if entry exists for the oid in cache
   // if entry exists, return if it is there, otherwise wait
   // return pointer
-  if (cache.find(oid) != cache.end()) {
-    struct cache_entry *entry = &(*cache.find(oid)).second;
+    if (cache.find(oid) != cache.end()) {
+        struct cache_entry *entry = &(*cache.find(oid)).second;
 
-    if (entry->fetched_async) {
-      entry->future(false);
+        if (entry->fetched_async) {
+            printf("retrieving item stored asynchronously.\n\n");
+            entry->future(false);
+        }
+        printf("value from cache is %d\n\n\n\n", entry->val);
+        return &entry->val;
+
+    } else {
+        //set up entry, pull synnchronously
+        struct cache_entry entry;
+        entry.fetched_async = false;
+        store->get(oid, &entry.val);
+        cache[oid] = entry;
+        return &((*cache.find(oid)).second.val);
     }
-    return &entry->val;
-
-  } else {
-    //set up entry, pull synnchronously
-    struct cache_entry entry;
-    entry.fetched_async = false;
-    store->get(oid, &entry.val);
-    cache[oid] = entry;
-    return &((*cache.find(oid)).second.val);
-  }
 }
 
 
@@ -43,11 +45,11 @@ void CacheManager::prefetch(int oid) {
     //call async get
     struct cache_entry entry;
     entry.fetched_async = true;
-
-    auto future = store->get_async(oid, &entry.val);
-
-    entry.future = future;
     cache[oid] = entry;
+    struct cache_entry *entry_ptr = &(*cache.find(oid)).second;
+    auto future = store->get_async(oid, &entry_ptr->val);
+
+    entry_ptr->future = future;
 }
 
 }
