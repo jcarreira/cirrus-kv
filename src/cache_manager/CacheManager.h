@@ -17,6 +17,12 @@ namespace cirrus {
 
 class CacheManager {
   public:
+
+    struct cache_entry {
+      bool fetched_async;
+      std::function<bool(bool)> future;
+      int val;
+    };
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<> *store) :
                             store(store){}
     int* get(int oid);
@@ -27,11 +33,6 @@ class CacheManager {
     cirrus::ostore::FullBladeObjectStoreTempl<> *store;
     std::map<int, struct cache_entry> cache;
 
-  struct cache_entry {
-    bool fetched_async;
-    std::function<bool(bool)> future;
-    int val;
-  };
 };
 
 

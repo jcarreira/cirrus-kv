@@ -2,14 +2,15 @@ AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = test_fullblade_store test_mt test_mult_clients test_iterator
 
 LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
-               -lauthentication -lutils -lcommon -literator
+               -lauthentication -lutils -lcommon -literator -lcachemanager
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
 		-L$(top_srcdir)/src/object_store \
 		-L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
-		-L$(top_srcdir)/src/iterator
+		-L$(top_srcdir)/src/iterator \
+		-L$(top_srcdir)/src/cache_manager
 
 test_fullblade_store_SOURCES  = test_fullblade_store.cpp
 test_fullblade_store_LDFLAGS  = -pthread
