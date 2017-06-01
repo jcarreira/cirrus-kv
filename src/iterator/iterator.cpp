@@ -1,24 +1,24 @@
 /* Copyright 2016 Joao Carreira */
 
 #include "src/iterator/iterator.h"
-#include "src/object_store/FullBladeObjectStore.h"
+#include "src/cache_manager/cache_manager.h"
 
 namespace cirrus {
 
 
 StoreIterator StoreIterator::begin() const {
-   // StoreIterator iter(first_id, last_id, first_id, store);
-   // return iter;
-    return StoreIterator(first_id, last_id, first_id, store);
+  return StoreIterator(first_id, last_id, first_id, store);
 }
 
 StoreIterator StoreIterator::end() const {
   return StoreIterator(first_id, last_id, last_id + 1, store);
 }
 
-int StoreIterator::operator*() {
-  int retval;
-  return store->get(current_id, &retval);
+int* StoreIterator::operator*() {
+  if (current_id < last_id) {
+    cm->prefetch(current_id + 1);
+  }
+  return cm->get(current_id);
 }
 
 StoreIterator& StoreIterator::operator++() {
