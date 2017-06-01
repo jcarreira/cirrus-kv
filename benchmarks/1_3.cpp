@@ -70,6 +70,16 @@ void test_multiple_clients() {
         << total_time / N_THREADS / N_MSG << std::endl;
     std::cout << "MSG/s: "
         << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
+
+    std::ofstream outfile;
+    outfile.open("1_3.log");
+
+    outfile << "Total time: " << total_time << std::endl;
+    outfile << "Average (us) per msg: "
+        << total_time / N_THREADS / N_MSG << std::endl;
+    outfile << "MSG/s: "
+        << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
+    outfile.close();
 }
 
 auto main() -> int {
