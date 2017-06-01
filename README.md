@@ -53,10 +53,6 @@ To run benchmarks execute the following command from the top of the project dire
     $ make benchmark
 This will leave log files for each benchmark run in the top directory. To add additional benchmarks, modify the script `run_benchmarks.py`, located in the benchmarks directory. The benchmarks are currently set to run locally, but may be set to run using a remote server by manually changing the ip address in the benchmark files. However, this then makes it so that the benchmarks must be manually launched from the command line after starting the server remotely. Additionally, the log files will be left in the benchmarks directory.
 
-Note: ensure that the `LD_LIBRARY_PATH` variable contains LOCATION/ddc/third_party/libcuckoo/cityhash-1.1.1/src/.libs . This can be done with the following command:
-
-    $ export LD_LIBRARY_PATH=/data/tyler/ddc/third_party/libcuckoo/cityhash-1.1.1/src/.libs:$LD_LIBRARY_PATH
-
 * Single node burst of 128 byte put (synchronous) - latencies
 ```
     msg/s: 166427
