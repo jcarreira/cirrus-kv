@@ -5,13 +5,12 @@
 
 #include <string>
 
+namespace cirrus {
+
 /** A class that allows us to share access to data.
   * Apps can pass around DataPointers instead of
   * shipping data
   */
-
-namespace cirrus {
-
 class DataPointer {
     DataPointer(std::string blade_addr,
             std::string blade_port,
