@@ -8,11 +8,12 @@
 #include <thread>
 #include <memory>
 #include <cstring>
+#include <atomic>
 #include <rdma/rdma_cma.h>
-#include "src/common/Semaphore.h"
+#include "src/common/Synchronization.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 /*
  * One GeneralContext for all connections
@@ -22,6 +23,10 @@ struct GeneralContext {
     struct ibv_pd *pd;
     struct ibv_cq *cq;
     struct ibv_comp_channel *comp_channel;
+    struct ibv_device_attr device_attr;
+    struct ibv_port_attr port_attr;
+    union ibv_gid gid;
+    struct ibv_qp_init_attr qp_attr;
     std::thread* cq_poller_thread;
 };
 
@@ -30,7 +35,7 @@ struct GeneralContext {
 // this is allocated when issuing and deallocated
 // for async ops this is passed up
 struct RDMAOpInfo {
-    RDMAOpInfo(struct rdma_cm_id* id_, Semaphore* s = nullptr,
+    RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
             std::function<void(void)> fn = []() -> void {}
             ) :
         id(id_), op_sem(s), apply_fn(fn) {
@@ -41,13 +46,12 @@ struct RDMAOpInfo {
     void apply() { 
         LOG<INFO>("Applying fn");
         apply_fn();
+        LOG<INFO>("Applied fn");
     }
 
     struct rdma_cm_id* id;
-    std::unique_ptr<Semaphore> op_sem;
+    Lock* op_sem;
     std::function<void(void)> apply_fn;
-
-    //XXX make sure this one is deleted
 };
 
 /*
@@ -56,16 +60,23 @@ struct RDMAOpInfo {
 struct ConnectionContext {
     ConnectionContext() :
         send_msg(0), send_msg_mr(0), recv_msg(0),
-        recv_msg_mr(0), peer_addr(0), peer_rkey(0),
-        setup_done(false) {
-          memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
-        }
+        recv_msg_mr(0), qp(nullptr),
+        peer_addr(0), peer_rkey(0),
+        setup_done(false) 
+    {
+        recv_sem = new SpinLock();
+        recv_sem->wait(); //lock
+        memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
+    }
 
     ~ConnectionContext() {
         if (setup_done) {
             ibv_dereg_mr(send_msg_mr);
             ibv_dereg_mr(recv_msg_mr);
         }
+
+        delete recv_sem;
+        // XXX release send_msg and recv_msg
     }
     
     void *send_msg;
@@ -74,12 +85,15 @@ struct ConnectionContext {
     void* recv_msg;
     struct ibv_mr *recv_msg_mr;
 
+    struct ibv_qp* qp;
+
     uint64_t peer_addr;
     uint32_t peer_rkey;
 
     // these are used for SEND and RECV
-    Semaphore send_sem;
-    Semaphore recv_sem;
+    Lock* send_sem;
+    //Semaphore send_sem;
+    Lock* recv_sem;
     
     GeneralContext gen_ctx_;
     bool setup_done = false;
@@ -97,6 +111,13 @@ struct RDMAMem {
     }
 
     bool prepare(GeneralContext gctx) {
+        LOG<INFO>("prepare()");
+        // we don't register more than once
+        if (registered_) {
+            LOG<INFO>("already registered");
+            return true;
+        }
+
         mr = ibv_reg_mr(gctx.pd, 
                 reinterpret_cast<void*>(addr_),
                 size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
@@ -134,6 +155,8 @@ public:
     virtual void connect(const std::string& host, const std::string& port);
 
 protected:
+    void alloc_rdma_memory(ConnectionContext& ctx);
+
     void build_params(struct rdma_conn_param *params);
     void setup_memory(ConnectionContext& ctx);
     void build_qp_attr(struct ibv_qp_init_attr *qp_attr, ConnectionContext*);
@@ -141,13 +164,13 @@ protected:
     void build_context(struct ibv_context *verbs, ConnectionContext*);
 
     // Message (Send/Recv)
-    void send_message(rdma_cm_id*, uint64_t size);
-    void send_receive_message_sync(rdma_cm_id*, uint64_t size);
+    bool send_message(rdma_cm_id*, uint64_t size, Lock* lock = nullptr);
+    bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
-    void write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
+    bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
     RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
@@ -157,11 +180,20 @@ protected:
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
+    
+    void connect_rdma_cm(const std::string& host, const std::string& port);
+    void connect_eth(const std::string& host, const std::string& port);
+
+    void fetchadd_rdma_sync(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
+    RDMAOpInfo* fetchadd_rdma_async(struct rdma_cm_id *id,
+        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
 
     // event poll loop
-    static void *poll_cq(ConnectionContext*);
-    static void on_completion(struct ibv_wc *wc);
+    void *poll_cq(ConnectionContext*);
+    void on_completion(struct ibv_wc *wc);
 
+    bool post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr);
     int post_receive(struct rdma_cm_id *id);
 
     struct rdma_cm_id *id_;
@@ -169,17 +201,29 @@ protected:
 
     int timeout_ms_;
 
-    ConnectionContext con_ctx;
+    ConnectionContext con_ctx_;
 
-    const size_t GB = (1024 * 1024 * 1024);
-    const size_t RECV_MSG_SIZE = 2 * GB;
-    const size_t SEND_MSG_SIZE = 2 * GB;
+    const size_t MB            = (1024 * 1024);
+    const size_t GB            = (1024 * MB);
+    const size_t RECV_MSG_SIZE = 200 * MB;
+    const size_t SEND_MSG_SIZE = 200 * MB;
+    const size_t CQ_DEPTH      = 500;
+    const size_t MAX_SEND_WR   = 500;
+    const size_t MAX_RECV_WR   = 100;
+    const size_t MAX_SEND_SGE  = 2;
+    const size_t MAX_RECV_SGE  = 2;
 
-    RDMAMem default_recv_mem;
-    RDMAMem default_send_mem;
+    // we use the value in perftest
+    static const int MAX_INLINE_DATA = 220;
+
+    std::atomic<uint64_t> outstanding_send_wr;
+    std::atomic<uint64_t> outstanding_recv_wr;
+
+    RDMAMem default_recv_mem_;
+    RDMAMem default_send_mem_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _RDMA_CLIENT_H_
 

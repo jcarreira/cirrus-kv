@@ -13,7 +13,7 @@
 #include <memory>
 #include <semaphore.h>
 
-namespace sirius {
+namespace cirrus {
 
 class ResourceAllocator : public RDMAServer {
 public:
@@ -35,7 +35,7 @@ protected:
     uint64_t total_mem_allocated_;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _RESOURCE_ALLOCATOR_H_
 

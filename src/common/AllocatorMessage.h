@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace sirius {
+namespace cirrus {
 
 enum auth_msg_type {
     AUTH1, AUTH_ACK1, AUTH2, AUTH_ACK2,
@@ -50,6 +50,6 @@ struct AllocatorMessage {
     } data;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _ALLOCATORMESSAGE_H_

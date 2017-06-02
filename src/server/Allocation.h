@@ -8,7 +8,7 @@
  * reserved by one app
  */
 
-namespace sirius {
+namespace cirrus {
 
 class Allocation {
 public:
@@ -18,7 +18,7 @@ private:
 
 };
 
-} // sirius
+} // cirrus
 
 #endif // _ALLOCATION_H_
 

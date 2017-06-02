@@ -7,10 +7,10 @@
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 
-namespace sirius {
+namespace cirrus {
 
 static const int SIZE = 1000000;
 
@@ -31,12 +31,10 @@ void BladeAllocServer::init() {
     RDMAServer::init();
 }
 
-void BladeAllocServer::handle_connection(struct rdma_cm_id* id) {
-    id = id;
+void BladeAllocServer::handle_connection(struct rdma_cm_id* /*id*/) {
 }
 
-void BladeAllocServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id;
+void BladeAllocServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
 bool BladeAllocServer::create_pool(uint64_t size) {
@@ -106,6 +104,22 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 break;
             }
+        case DEALLOC:
+            {
+                uint64_t addr = msg->data.dealloc.addr;
+
+                allocator->deallocate(reinterpret_cast<void*>(addr));
+
+                BladeMessageGenerator::dealloc_ack_msg(ctx->send_msg,
+                        true);
+
+                LOG<INFO>("Deallocated addr: ", addr);
+
+                // send async message
+                send_message(id, sizeof(BladeMessage));
+
+                break;
+            }
         case STATS:
                 BladeMessageGenerator::stats_msg(ctx->send_msg);
                 send_message(id, sizeof(BladeMessage));
@@ -117,5 +131,5 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus
 

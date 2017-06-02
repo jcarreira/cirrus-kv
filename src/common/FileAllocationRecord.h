@@ -3,7 +3,7 @@
 #ifndef _FILE_ALLOCATION_RECORD_H_
 #define _FILE_ALLOCATION_RECORD_H_
 
-namespace sirius {
+namespace cirrus {
 
 struct FileAllocationRecord {
     uint64_t remote_addr;

@@ -6,7 +6,7 @@
 #include "src/authentication/ApplicationKey.h"
 #include "src/common/AllocatorMessage.h"
 
-namespace sirius {
+namespace cirrus {
 
 class Authenticator {
 public:
@@ -14,6 +14,6 @@ public:
 private:
 };
 
-} // sirius
+} // cirrus
 
 #endif  // _AUTHENTICATOR_H_

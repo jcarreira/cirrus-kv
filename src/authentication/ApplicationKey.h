@@ -3,7 +3,7 @@
 #ifndef _APPLICATION_KEY_H_
 #define _APPLICATION_KEY_H_
 
-namespace sirius {
+namespace cirrus {
 
 class ApplicationKey {
 public:
@@ -11,6 +11,6 @@ public:
 private:
 };
 
-} // sirius
+} // cirrus
 
 #endif // _APPLICATION_KEY_H_

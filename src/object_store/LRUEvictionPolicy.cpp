@@ -3,7 +3,7 @@
 #include "src/object_store/LRUEvictionPolicy.h"
 #include "src/object_store/FullCacheStore.h"
 
-namespace sirius {
+namespace cirrus {
 
 LRUEvictionPolicy::LRUEvictionPolicy(size_t num_objs) :
     EvictionPolicy(num_objs) {
@@ -20,4 +20,4 @@ bool LRUEvictionPolicy::evictIfNeeded(FullCacheStore& fc) {
     return false;
 }
 
-}  // namespace sirius
+}  // namespace cirrus

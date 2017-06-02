@@ -26,7 +26,7 @@
 static const uint64_t GB = 1024*1024*1024;
 static const size_t SIZE = 10000000; // FIX 
 
-namespace sirius {
+namespace cirrus {
 
 class FullCacheStore : public ObjectStore {
 public:

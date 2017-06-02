@@ -5,7 +5,7 @@
 
 #include "src/object_store/EvictionPolicy.h"
 
-namespace sirius {
+namespace cirrus {
 
 class LRUEvictionPolicy : public EvictionPolicy {
 public:
@@ -18,6 +18,6 @@ private:
     static const size_t DEFAULT_SIZE = 1000;
 };
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif // _LRU_EVICTION_POLICY_H_

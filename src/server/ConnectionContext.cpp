@@ -3,7 +3,7 @@
 #include "src/server/ConnectionContext.h"
 #include "src/utils/utils.h"
 
-namespace sirius {
+namespace cirrus {
 
 uint64_t ConnectionContext::id_count_ = 0;
 
@@ -17,4 +17,4 @@ ConnectionContext::ConnectionContext() :
     context_id_(id_count_++) {
 }
 
-}  // namespace sirius
+}  // namespace cirrus

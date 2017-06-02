@@ -1,7 +1,6 @@
 /* Copyright 2016 Joao Carreira */
 
 #include "src/server/ResourceAllocator.h"
-#include "src/authentication/DumbAuthenticator.h"
 #include "src/authentication/ApplicationKey.h"
 #include "src/authentication/AuthenticationToken.h"
 #include "src/common/AllocatorMessageGenerator.h"
@@ -15,12 +14,11 @@
  * (e.g., allocate resources)
  */
 
-namespace sirius {
+namespace cirrus {
 
 ResourceAllocator::ResourceAllocator(int port,
         int timeout_ms) :
     RDMAServer(port, timeout_ms),
-    authenticator_(new DumbAuthenticator()),
     total_mem_allocated_(0) {
 }
 
@@ -32,7 +30,8 @@ void ResourceAllocator::init() {
 }
 
 void ResourceAllocator::send_challenge(rdma_cm_id* id,
-        const AllocatorMessage& msg) {
+        const AllocatorMessage& /*msg*/) {
+    __attribute__((unused))
     auto token = AuthenticationToken::create_default_allow_token();  // allow
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
@@ -42,7 +41,7 @@ void ResourceAllocator::send_challenge(rdma_cm_id* id,
 }
 
 void ResourceAllocator::send_stats(rdma_cm_id* id,
-        const AllocatorMessage& msg) {
+        const AllocatorMessage& /*msg*/) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     AllocatorMessageGenerator::stats_ack(
@@ -56,6 +55,7 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
 
     LOG<INFO>("ResourceAllocator Received message");
 
+    __attribute__((unused))
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     switch (msg->type) {
@@ -85,4 +85,4 @@ void ResourceAllocator::process_message(rdma_cm_id* id, void* message) {
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus

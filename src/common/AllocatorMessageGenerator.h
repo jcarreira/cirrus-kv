@@ -7,7 +7,7 @@
 #include "src/authentication/ApplicationKey.h"
 #include <stdint.h>
 
-namespace sirius {
+namespace cirrus {
 
 class AllocatorMessageGenerator {
 public:
@@ -24,7 +24,7 @@ public:
     static void alloc_ack(void *data);
 };
 
-} // sirius
+} // cirrus
 
 #endif // _ALLOC_MESSAGE_GENERATOR_H_
 

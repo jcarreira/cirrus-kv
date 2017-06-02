@@ -5,7 +5,7 @@
 #include "src/utils/utils.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 void InfinibandSupport::check_mw_support(ibv_context* ctx) {
     struct ibv_exp_device_attr device_attr;
@@ -37,4 +37,4 @@ void InfinibandSupport::check_odp_support(ibv_context* ctx) {
     }
 }
 
-}  // namespace  sirius
+}  // namespace  cirrus

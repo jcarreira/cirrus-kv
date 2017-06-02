@@ -4,6 +4,7 @@
 #define _UTILS_H_
 
 #include <cstdio>
+#include <errno.h>
 
 #define DIE(s) { \
     fprintf(stderr, s);\
@@ -13,7 +14,11 @@
 }
 
 // die if not zero
-#define TEST_NZ(x) do { if ( (x)) DIE("error: " #x " failed (returned non-zero)." ); } while (0)
+#define TEST_NZ(x) do { \
+    if ((x)) { \
+        printf("errno: %d\n", errno); \
+        DIE("error: " #x " failed (returned non-zero).");}\
+} while (0)
 
 //template<typename T>
 //void TEST_NZ(const T& t) {
@@ -23,6 +28,10 @@
 //}
 
 // die if zero
-#define TEST_Z(x)  do { if (!(x)) DIE("error: " #x " failed (returned zero/null)."); } while (0)
+#define TEST_Z(x)  do { \
+    if (!(x)) { \
+        printf("errno: %d\n", errno); \
+        DIE("error: " #x " failed (returned zero/null).");}\
+} while (0)
 
 #endif // _UTILS_H_

@@ -12,7 +12,7 @@
 #include "src/common/ThreadPinning.h"
 #include "src/utils/logging.h"
 
-namespace sirius {
+namespace cirrus {
 
 GeneralContext RDMAServer::gen_ctx_;
 
@@ -116,8 +116,9 @@ void RDMAServer::post_msg_receive(struct rdma_cm_id *id) {
 
 void RDMAServer::build_params(struct rdma_conn_param *params) {
     memset(params, 0, sizeof(*params));
-    params->initiator_depth = params->responder_resources = 1;
-    params->rnr_retry_count = 7;  // infinite retry
+    params->initiator_depth = params->responder_resources = 10;
+    params->rnr_retry_count = 70;
+    params->retry_count = 70;
 }
 
 /*
@@ -132,7 +133,7 @@ void RDMAServer::build_gen_context(struct ibv_context *verbs) {
 
     TEST_Z(gen_ctx_.pd = ibv_alloc_pd(gen_ctx_.ctx));
     TEST_Z(gen_ctx_.comp_channel = ibv_create_comp_channel(gen_ctx_.ctx));
-    TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 10,
+    TEST_Z(gen_ctx_.cq = ibv_create_cq(gen_ctx_.ctx, 100,
                 nullptr, gen_ctx_.comp_channel, 0));
     TEST_NZ(ibv_req_notify_cq(gen_ctx_.cq, 0));
 
@@ -223,7 +224,8 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
 // 1. post a receive request
 // 2. publicize memory region to client
 void RDMAServer::handle_established(struct rdma_cm_id *id) {
-    post_msg_receive(id);
+    for (int i = 0; i < 4; ++i)
+        post_msg_receive(id);
 }
 
 void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
@@ -272,10 +274,7 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
         post_msg_receive(id);
         LOG<INFO>("Posted new receive WR");
 
-        //msg_handler f = &RDMAServer::process_message;
-        std::invoke(&RDMAServer::process_message, con_ctx->server, id, con_ctx->recv_msg);
-        //(con_ctx->server->*f)(id, con_ctx->recv_msg);
-
+        con_ctx->server->process_message(id, con_ctx->recv_msg);
     } else if (wc->opcode == IBV_WC_SEND) {
         LOG<INFO>("Blade server sent a message..");
     } else {
@@ -300,50 +299,68 @@ void RDMAServer::loop() {
         rdma_ack_cm_event(event);
 
         LOG<INFO>("Checking event");
-        if (event_copy.event == RDMA_CM_EVENT_ADDR_RESOLVED) {
-            LOG<INFO>("RDMA_CM_EVENT_ADDR_RESOLVED");
-            // address successfully resolved
-            // happens when we try to connect
-            build_connection(event_copy.id);
 
-            create_connection_context(event_copy.id);
+        switch (event_copy.event) {
+            case RDMA_CM_EVENT_ADDR_RESOLVED:
+                LOG<INFO>("RDMA_CM_EVENT_ADDR_RESOLVED");
+                // address successfully resolved
+                // happens when we try to connect
+                build_connection(event_copy.id);
 
-            TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
+                create_connection_context(event_copy.id);
 
-        } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            LOG<INFO>("RDMA_CM_EVENT_ROUTE_RESOLVED");
-            TEST_NZ(rdma_connect(event_copy.id, &cm_params));
+                TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
+                break;
+            case RDMA_CM_EVENT_ROUTE_RESOLVED:
+                LOG<INFO>("RDMA_CM_EVENT_ROUTE_RESOLVED");
+                TEST_NZ(rdma_connect(event_copy.id, &cm_params));
+                break;
+            case RDMA_CM_EVENT_CONNECT_REQUEST:
+                // Every new connection gets a new rdma_id
 
-        } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_REQUEST) {
-            // Every new connection gets a new rdma_id
-
-            LOG<INFO>("RDMA_CM_EVENT_CONNECT_REQUEST. id: ",
-                reinterpret_cast<uint64_t>(event_copy.id));
-            build_connection(event_copy.id);
-            create_connection_context(event_copy.id);
-            TEST_NZ(rdma_accept(event_copy.id, &cm_params));
-        } else if (event_copy.event == RDMA_CM_EVENT_ESTABLISHED) {
-            LOG<INFO>("RDMA_CM_EVENT_ESTABLISHED");
-            handle_established(event_copy.id);
-            handle_connection(event_copy.id);
-        } else if (event_copy.event == RDMA_CM_EVENT_DISCONNECTED) {
-            LOG<INFO>("RDMA_CM_EVENT_DISCONNECTED");
-            handle_disconnection(event_copy.id);
-            rdma_destroy_qp(event_copy.id);
-            handle_disconnected(event_copy.id);
-            rdma_destroy_id(event_copy.id);
-        } else {
-            DIE("unknown event\n");
+                LOG<INFO>("RDMA_CM_EVENT_CONNECT_REQUEST. id: ",
+                        reinterpret_cast<uint64_t>(event_copy.id));
+                build_connection(event_copy.id);
+                create_connection_context(event_copy.id);
+                TEST_NZ(rdma_accept(event_copy.id, &cm_params));
+                break;
+            case RDMA_CM_EVENT_ESTABLISHED:
+                LOG<INFO>("RDMA_CM_EVENT_ESTABLISHED");
+                handle_established(event_copy.id);
+                handle_connection(event_copy.id);
+                break;
+            case RDMA_CM_EVENT_DISCONNECTED:
+                LOG<INFO>("RDMA_CM_EVENT_DISCONNECTED");
+                handle_disconnection(event_copy.id);
+                rdma_destroy_qp(event_copy.id);
+                handle_disconnected(event_copy.id);
+                rdma_destroy_id(event_copy.id);
+                break;
+            case RDMA_CM_EVENT_ADDR_ERROR:
+            case RDMA_CM_EVENT_ROUTE_ERROR:
+            case RDMA_CM_EVENT_CONNECT_RESPONSE:
+            case RDMA_CM_EVENT_CONNECT_ERROR:
+            case RDMA_CM_EVENT_UNREACHABLE:
+            case RDMA_CM_EVENT_REJECTED:
+            case RDMA_CM_EVENT_DEVICE_REMOVAL:
+            case RDMA_CM_EVENT_MULTICAST_JOIN:
+            case RDMA_CM_EVENT_MULTICAST_ERROR:
+            case RDMA_CM_EVENT_ADDR_CHANGE:
+            case RDMA_CM_EVENT_TIMEWAIT_EXIT:
+                LOG<INFO>("Unhandled event code: ",
+                        event_copy.event,
+                        ". We ignore and pray for the best");
+                break;
+            default:
+                DIE("unknown event\n");
         }
     }
 }
 
-void RDMAServer::handle_connection(struct rdma_cm_id* id) {
-    id = id;  // compiler warning
+void RDMAServer::handle_connection(struct rdma_cm_id* /*id*/) {
 }
 
-void RDMAServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id;  // compiler warning
+void RDMAServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
-}  // namespace sirius
+}  // namespace cirrus

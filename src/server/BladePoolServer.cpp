@@ -6,10 +6,10 @@
 #include "src/common/BladeMessage.h"
 #include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
-#include "src/utils/TimerFunction.h"
+#include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
 
-namespace sirius {
+namespace cirrus {
 
 static const int SIZE = 1000000;
 
@@ -28,18 +28,15 @@ void BladePoolServer::init() {
     RDMAServer::init();
 }
 
-void BladePoolServer::handle_connection(struct rdma_cm_id* id) {
-    id = id;
+void BladePoolServer::handle_connection(struct rdma_cm_id* /* id */) {
 }
 
-void BladePoolServer::handle_disconnection(struct rdma_cm_id* id) {
-    id = id;
+void BladePoolServer::handle_disconnection(struct rdma_cm_id* /* id */) {
 }
 
-uint32_t BladePoolServer::create_pool(uint64_t size, struct rdma_cm_id* id) {
+uint32_t BladePoolServer::create_pool(uint64_t size,
+        struct rdma_cm_id* /*id*/) {
     TimerFunction tf("create_pool", true);
-
-    id = id;  // warnings
 
     LOG<INFO>("Allocating memory pool of size: ",
         (size/1024/1024), "MB ",
@@ -113,4 +110,4 @@ void BladePoolServer::process_message(rdma_cm_id* id,
     }
 }
 
-}  // namespace sirius
+}  // namespace cirrus

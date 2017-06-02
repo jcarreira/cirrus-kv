@@ -9,7 +9,7 @@
 // Apps can pass around DataPointers instead of
 // shipping data
 
-namespace sirius {
+namespace cirrus {
 
 class DataPointer {
     DataPointer(std::string blade_addr,
@@ -23,6 +23,6 @@ private:
     uint64_t remote_addr_;
 };
 
-}  // namespace sirius
+}  // namespace cirrus
 
 #endif // _DATA_POINTER_H_

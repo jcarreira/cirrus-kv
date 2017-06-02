@@ -5,7 +5,7 @@
 
 #include <thread>
 
-namespace sirius {
+namespace cirrus {
 
 class GeneralContext {
 public:
@@ -23,6 +23,6 @@ public:
     std::thread* cq_poller_thread;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _RDMA_SERVER_H_

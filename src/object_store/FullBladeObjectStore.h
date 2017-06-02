@@ -9,6 +9,7 @@
 #include "src/object_store/ObjectStore.h"
 #include "src/client/BladeClient.h"
 #include "src/utils/utils.h"
+#include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"   
@@ -20,18 +21,18 @@
  * method put copies object from local dram to remote blade
  */
 
-namespace sirius {
+namespace cirrus {
 namespace ostore {
 
 class BladeLocation {
 public:
-    BladeLocation(uint64_t sz, const AllocRec& ar) :
+    BladeLocation(uint64_t sz, const AllocationRecord& ar) :
         size(sz), allocRec(ar) {}
     explicit BladeLocation(uint64_t sz = 0) :
         size(sz) {}
 
     uint64_t size;
-    AllocRec allocRec;
+    AllocationRecord allocRec;
 };
 
 template<class T = void>
@@ -39,24 +40,30 @@ class FullBladeObjectStoreTempl : public ObjectStore {
 public:
     FullBladeObjectStoreTempl(const std::string& bladeIP, const std::string& port);
 
-    Object get(const ObjectID&) const;
+    Object get(const ObjectID&) const override;
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
+    
+    bool getHandle(ObjectID, BladeLocation& bl) const;
 
-    bool put(Object, uint64_t, ObjectID);
+    bool getHandle(const ObjectID&, BladeLocation&) const;
+
+    bool put(Object, uint64_t, ObjectID, RDMAMem* mem = nullptr);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
-    virtual void printStats() const noexcept;
+    virtual void printStats() const noexcept override;
+    
+    bool remove(ObjectID);
 
 private:
     bool readToLocal(BladeLocation loc, void*) const;
     std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
             void* ptr) const;
 
-    bool writeRemote(Object obj, BladeLocation loc);
+    bool writeRemote(Object obj, BladeLocation loc, RDMAMem* mem = nullptr);
     std::shared_ptr<FutureBladeOp> writeRemoteAsync(Object obj,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
-            uint64_t size, const AllocRec& allocRec);
+            uint64_t size, const AllocationRecord& allocRec);
 
     // hash to map oid and location
     // if oid is not found, object is not in store
@@ -92,6 +99,15 @@ bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
 }
 
 template<class T>
+bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& loc) const {
+    if (objects_.find(id, loc)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
     BladeLocation loc;
@@ -114,15 +130,22 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, ObjectID id) {
+bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, 
+        ObjectID id, RDMAMem* mem) {
     BladeLocation loc;
+    
     if (objects_.find(id, loc)) {
-        return writeRemote(obj, loc);
+        return writeRemote(obj, loc, mem);
     } else {
         // we could merge this into a single message (?)
-        sirius::AllocRec allocRec = client.allocate(size);
+        cirrus::AllocationRecord allocRec;
+        {
+            TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
+            allocRec = client.allocate(size);
+        }
         insertObjectLocation(id, size, allocRec);
-        return writeRemote(obj, BladeLocation(size, allocRec));
+        LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
+        return writeRemote(obj, BladeLocation(size, allocRec), mem);
     }
 }
 
@@ -132,13 +155,14 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
     BladeLocation loc;
 
     if (!objects_.find(id, loc)) {
-        sirius::AllocRec allocRec = client.allocate(size);
+        cirrus::AllocationRecord allocRec = client.allocate(size);
         insertObjectLocation(id, size, allocRec);
         loc = BladeLocation(size, allocRec);
     }
 
     auto future = writeRemoteAsync(obj, loc);
 
+    //TimerFunction tf("create lambda", true);
     auto fun = [future](bool try_wait) -> bool {
         if (try_wait) {
             return future->try_wait();
@@ -151,8 +175,19 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
 }
 
 template<class T>
+bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
+    BladeLocation loc;
+    if (objects_.find(id, loc)) {
+        client.deallocate(loc.allocRec);
+    } else {
+        throw std::runtime_error("Error. Trying to do inexistent object");
+    }
+}
+
+template<class T>
 bool FullBladeObjectStoreTempl<T>::readToLocal(BladeLocation loc, void* ptr) const {
-    client.read_sync(loc.allocRec, 0, loc.size, ptr);
+    RDMAMem mem(ptr, loc.size);
+    client.read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
     return true;
 }
 
@@ -164,8 +199,18 @@ std::shared_ptr<FutureBladeOp> FullBladeObjectStoreTempl<T>::readToLocalAsync(
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::writeRemote(Object obj, BladeLocation loc) {
-    client.write_sync(loc.allocRec, 0, loc.size, obj);
+bool FullBladeObjectStoreTempl<T>::writeRemote(Object obj,
+        BladeLocation loc, RDMAMem* mem) {
+
+//    LOG<INFO>("FullBladeObjectStoreTempl::writeRemote");
+    RDMAMem mm(obj, loc.size);
+
+    {
+        //TimerFunction tf("writeRemote", true);
+        //LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
+        client.write_sync(loc.allocRec, 0, loc.size, obj,
+                nullptr == mem ? &mm : mem);
+    }
     return true;
 }
 
@@ -178,7 +223,7 @@ std::shared_ptr<FutureBladeOp> FullBladeObjectStoreTempl<T>::writeRemoteAsync(
 
 template<class T>
 bool FullBladeObjectStoreTempl<T>::insertObjectLocation(ObjectID id,
-        uint64_t size, const AllocRec& allocRec) {
+        uint64_t size, const AllocationRecord& allocRec) {
     objects_[id] = BladeLocation(size, allocRec);
 
     return true;

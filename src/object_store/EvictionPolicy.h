@@ -7,7 +7,7 @@
 
 #include <cstddef>
 
-namespace sirius {
+namespace cirrus {
 
 class EvictionPolicy {
 public:
@@ -20,6 +20,6 @@ protected:
     size_t max_num_objs_;
 };
 
-} // namespace sirius
+} // namespace cirrus
 
 #endif

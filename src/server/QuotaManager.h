@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-namespace sirius {
+namespace cirrus {
 
 class QuotaManager {
 public:
@@ -15,6 +15,6 @@ public:
     virtual void allocateMemory(uint64_t app_id, uint64_t memorySize) = 0;
 };
 
-} // sirius
+} // cirrus
 
 #endif // _QUOTA_MANAGER_H_

@@ -8,12 +8,13 @@ DEFAULT_LIB= -L. -lserver -lrdmacm -libverbs\
             -L../common/ -lcommon
 
 noinst_LIBRARIES = libserver.a
-bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain bladefilemain
+bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain objectstoremain
 
 libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
-                     ConnectionContext.cpp DumbQuotaManager.cpp \
+                     ConnectionContext.cpp \
                      ResourceAllocator.cpp BladeAllocServer.cpp \
-                     BladeFileAllocServer.cpp
+                     BladeObjectStore.cpp \
+                     TCPServer.cpp EPollTCPServer.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir)
 
 
@@ -29,12 +30,6 @@ bladeallocmain_LDFLAGS  = -pthread
 bladeallocmain_CPPFLAGS = -ggdb -I$(top_srcdir)
 bladeallocmain_LDADD    = $(DEFAULT_LIB)
 
-bladefilemain_DEPENDENCIES = libserver.a
-bladefilemain_SOURCES  = bladefilemain.cpp
-bladefilemain_LDFLAGS  = -pthread
-bladefilemain_CPPFLAGS = -ggdb -I$(top_srcdir)
-bladefilemain_LDADD    = $(DEFAULT_LIB)
-
 allocmain_DEPENDENCIES = libserver.a
 allocmain_SOURCES  = allocmain.cpp
 allocmain_LDFLAGS  = -pthread
@@ -47,5 +42,8 @@ controllermain_LDFLAGS  = -pthread
 controllermain_CPPFLAGS = -ggdb -I$(top_srcdir)
 controllermain_LDADD    = $(DEFAULT_LIB)
 
-
-
+objectstoremain_DEPENDENCIES = libserver.a
+objectstoremain_SOURCES  = objectstoremain.cpp
+objectstoremain_LDFLAGS  = -pthread
+objectstoremain_CPPFLAGS = -ggdb -I$(top_srcdir)
+objectstoremain_LDADD    = $(DEFAULT_LIB)

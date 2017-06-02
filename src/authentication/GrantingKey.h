@@ -3,7 +3,7 @@
 #ifndef _GRANTING_KEY_H_
 #define _GRANTING_KEY_H_
 
-namespace sirius {
+namespace cirrus {
 
 class GrantingKey {
 public:
@@ -17,6 +17,6 @@ public:
     char data_[KEY_SIZE];
 };
 
-} // sirius
+} // cirrus
 
 #endif // _GRANTING_KEY_H_

@@ -2,7 +2,7 @@
 
 #include "src/common/BladeMessageGenerator.h"
 
-namespace sirius {
+namespace cirrus {
 
 void BladeMessageGenerator::alloc_msg(void *data, uint64_t size) {
     BladeMessage* msg =
@@ -25,6 +25,23 @@ void BladeMessageGenerator::alloc_ack_msg(void *data,
     msg->data.alloc_ack.peer_rkey = rkey;
 }
 
+void BladeMessageGenerator::dealloc_msg(void *data, uint64_t addr) {
+    BladeMessage* msg =
+        reinterpret_cast<BladeMessage*>(data);
+
+    msg->type = DEALLOC;
+    msg->data.dealloc.addr = addr;
+}
+
+void BladeMessageGenerator::dealloc_ack_msg(void *data,
+        char result) {
+    BladeMessage* msg =
+        reinterpret_cast<BladeMessage*>(data);
+
+    msg->type = DEALLOC_ACK;
+    msg->data.dealloc_ack.result = result;
+}
+
 void BladeMessageGenerator::stats_msg(void *data) {
     BladeMessage* msg =
         reinterpret_cast<BladeMessage*>(data);
@@ -39,4 +56,4 @@ void BladeMessageGenerator::stats_ack_msg(void *data) {
     msg->type = STATS_ACK;
 }
 
-}  // namespace sirius
+}  // namespace cirrus
