@@ -1,0 +1,40 @@
+namespace cirrus.message.AllocatorMessage;
+
+union Data { Auth1, AuthAck1, Auth2, AuthAck2, Stats, StatsAck, Alloc, AllocAck  }
+
+table Auth1{
+  app_id:ulong;
+}
+
+table AuthAck1{
+  allow:byte;
+  challenge:long;
+}
+
+table Auth2{
+  response:ulong;
+}
+
+table AuthAck2{
+  allow:byte;
+}
+
+table Stats{
+}
+
+table StatsAck{
+  total_mem_allocated:ulong;
+}
+
+table Alloc{
+}
+
+table AllocAck{
+}
+
+table AllocatorMessage {
+  id:int;
+  data:Data;
+}
+
+root_type AllocatorMessage;
