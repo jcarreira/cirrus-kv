@@ -10,9 +10,9 @@ core
 *.out
 *.txt
 config.*
+Makefile
 *.tgz
 tags
-Makefile
 configure
 aclocal.m4
 autom4te.cache/

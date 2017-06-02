@@ -3,15 +3,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include "src/server/BladePoolServer.h"
-#include "src/common/BladeMessage.h"
-#include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
+#include "src/common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
 
 static const int SIZE = 1000000;
+static const int initial_buffer_size = 50;
 
 BladePoolServer::BladePoolServer(int port,
         uint64_t pool_size,
@@ -64,7 +64,7 @@ uint32_t BladePoolServer::create_pool(uint64_t size,
 
 void BladePoolServer::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = reinterpret_cast<BladeMessage*>(message);
+    auto msg = message::BladeMessage::GetBladeMessage(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -74,8 +74,8 @@ void BladePoolServer::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladePoolServer::create_pool, this, pool_size_, id);
 
-    switch (msg->type) {
-        case ALLOC:
+    switch (msg->data_type()) {
+        case  message::BladeMessage::Data_Alloc:
             {
                 LOG<INFO>("ALLOC");
 
@@ -84,25 +84,38 @@ void BladePoolServer::process_message(rdma_cm_id* id,
                 uint64_t mr_id = 42;
                 uint64_t remote_addr =
                     reinterpret_cast<uint64_t>(mr_data_[0]);
-                BladeMessageGenerator::alloc_ack_msg(
-                        ctx->send_msg,
-                        mr_id,
-                        remote_addr,
-                        mr_pool_[0]->rkey);
 
                 LOG<INFO>("Sending ack. ",
                     " remote_addr: ", remote_addr,
                     " rkey: ", mr_pool_[0]->rkey);
 
+
+
+                flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+
+                auto data =  message::BladeMessage::CreateAllocAck(builder,
+                                           mr_id,
+                                           remote_addr,
+                                           mr_pool_[0]->rkey);
+
+                auto alloc_ack_msg =
+                              message::BladeMessage::CreateBladeMessage(builder,
+                              message::BladeMessage::Data_AllocAck,
+                              data.Union());
+
+                builder.Finish(alloc_ack_msg);
+
+                int message_size = builder.GetSize();
+                // Copy message into send buffer
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
+
                 // send async message
-                send_message(id, sizeof(BladeMessage));
+                send_message(id, message_size);
 
                 break;
             }
-        case STATS:
-                BladeMessageGenerator::stats_msg(ctx->send_msg);
-                send_message(id, sizeof(BladeMessage));
-            break;
         default:
             LOG<ERROR>("Unknown message");
             exit(-1);

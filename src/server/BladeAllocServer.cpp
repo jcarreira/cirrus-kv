@@ -4,15 +4,15 @@
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
 #include "src/server/BladeAllocServer.h"
-#include "src/common/BladeMessage.h"
-#include "src/common/BladeMessageGenerator.h"
 #include "src/utils/logging.h"
 #include "src/utils/Time.h"
 #include "src/utils/InfinibandSupport.h"
+#include "src/common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
 
 static const int SIZE = 1000000;
+static const int initial_buffer_size = 50;
 
 BladeAllocServer::BladeAllocServer(int port,
         uint64_t pool_size,
@@ -64,7 +64,6 @@ bool BladeAllocServer::create_pool(uint64_t size) {
 
 void BladeAllocServer::process_message(rdma_cm_id* id,
         void* message) {
-    auto msg = reinterpret_cast<BladeMessage*>(message);
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     LOG<INFO>("Received message");
@@ -74,10 +73,17 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
     std::call_once(pool_flag_,
             &BladeAllocServer::create_pool, this, big_pool_size_);
 
-    switch (msg->type) {
-        case ALLOC:
+    // Read in the new message
+    auto msg = message::BladeMessage::GetBladeMessage(message);
+
+    // Instantiate the builder
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+
+    // Check message type
+    switch (msg->data_type()) {
+        case message::BladeMessage::Data_Alloc:
             {
-                uint64_t size = msg->data.alloc.size;
+                uint64_t size = msg->data_as_Alloc()->size();
 
                 LOG<INFO>("Received allocation request. size: ", size);
                 void* ptr = allocator->allocate(size);
@@ -90,46 +96,64 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 mrs_data_.insert(ptr);
 
-                BladeMessageGenerator::alloc_ack_msg(
-                        ctx->send_msg,
-                        alloc_id,
-                        remote_addr,
-                        big_pool_mr_->rkey);
+                auto data = message::BladeMessage::CreateAllocAck(builder,
+                                           alloc_id,
+                                           remote_addr,
+                                           big_pool_mr_->rkey);
+
+                auto alloc_ack_msg =
+                    message::BladeMessage::CreateBladeMessage(builder,
+                                          message::BladeMessage::Data_AllocAck,
+                                          data.Union());
+
+                builder.Finish(alloc_ack_msg);
+
+                int message_size = builder.GetSize();
+                // Copy message into send buffer
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Sending ack. ",
                     " remote_addr:", remote_addr);
 
                 // send async message
-                send_message(id, sizeof(BladeMessage));
+                send_message(id, message_size);
 
                 break;
             }
-        case DEALLOC:
+        case message::BladeMessage::Data_Dealloc:
             {
-                uint64_t addr = msg->data.dealloc.addr;
+                uint64_t addr = msg->data_as_Dealloc()->addr();
 
                 allocator->deallocate(reinterpret_cast<void*>(addr));
 
-                BladeMessageGenerator::dealloc_ack_msg(ctx->send_msg,
-                        true);
+                auto data = message::BladeMessage::CreateDeallocAck(
+                                                                builder, true);
+                auto dealloc_ack_msg =
+                            message::BladeMessage::CreateBladeMessage(builder,
+                                        message::BladeMessage::Data_DeallocAck,
+                                        data.Union());
+
+                builder.Finish(dealloc_ack_msg);
+                int message_size = builder.GetSize();
+                // Copy message into send buffer
+                std::memcpy(ctx->send_msg,
+                            builder.GetBufferPointer(),
+                            message_size);
 
                 LOG<INFO>("Deallocated addr: ", addr);
 
                 // send async message
-                send_message(id, sizeof(BladeMessage));
+                send_message(id, message_size);
 
                 break;
             }
-        case STATS:
-                BladeMessageGenerator::stats_msg(ctx->send_msg);
-                send_message(id, sizeof(BladeMessage));
-            break;
         default:
-            LOG<ERROR>("Unknown message");
+            LOG<ERROR>("Unknown message", " type:", msg->data_type());
             exit(-1);
             break;
     }
 }
 
 }  // namespace cirrus
-
