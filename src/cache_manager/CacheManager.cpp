@@ -9,15 +9,12 @@ int* CacheManager::get(int oid) {
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
-    printf("getting at oid %d \n\n\n\n", oid);
     if (cache.find(oid) != cache.end()) {
         struct cache_entry& entry = cache.find(oid)->second;
 
         if (entry.fetched_async) {
-            printf("retrieving item stored asynchronously.\n\n");
             entry.future(false);
         }
-        printf("value from cache is %d\n\n\n\n", entry.val);
         return &entry.val;
 
     } else {
@@ -39,7 +36,6 @@ void CacheManager::prefetch(int oid) {
     //set up local copy
     //call async get
     //only pull if it is not already in the cache
-    printf("prefetching oid %d \n\n\n\n", oid);
     if (cache.find(oid) == cache.end()) {
         struct cache_entry& entry = cache[oid];
         entry.fetched_async = true;
