@@ -4,7 +4,7 @@ import sys
 import subprocess
 import time
 
-# NOTE: all pathnames start from the top directory where make check is run
+# NOTE: all pathnames start from the top directory where make benchmark is run
 
 
 benchmarks = [["./benchmarks/1_2"], ["./benchmarks/1_1"]]
