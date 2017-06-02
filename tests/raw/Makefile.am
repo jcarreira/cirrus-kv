@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = test_atomics
-LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
+LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \

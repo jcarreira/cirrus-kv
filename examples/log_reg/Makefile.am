@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = log_reg
 
-LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
+LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 
 log_reg_SOURCES  = log_reg.cpp

@@ -4,7 +4,7 @@ bin_PROGRAMS = test_mpi
 
 TOP_DIR = $(top_srcdir)/../../
 
-LIBS         = -lobjstore -lcityhash -lclient -libverbs -lrdmacm\
+LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 		-L$(TOP_DIR)/src/client/ \
