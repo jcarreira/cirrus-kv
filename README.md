@@ -50,6 +50,10 @@ To create additional tests, add them to the TESTS variable in the top level Make
 Benchmarks
 =============
 
+To run benchmarks execute the following command from the top of the project directory
+    $ make benchmark
+This will leave log files for each benchmark run in the top directory. To add additional benchmarks, modify the script `run_benchmarks.py`, located in the benchmarks directory. The benchmarks are currently set to run locally, but may be set to run using a remote server by manually changing the ip address in the benchmark files. However, this then makes it so that the benchmarks must be manually launched from the command line after starting the server remotely. Additionally, the log files will be left in the benchmarks directory.
+
 * Single node burst of 128 byte put (synchronous) - latencies
 ```
     msg/s: 166427
