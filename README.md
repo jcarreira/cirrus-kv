@@ -4,7 +4,7 @@ Cirrus
 [![Travis Build Status](https://travis-ci.org/jcarreira/ddc.svg?branch=master)](https://travis-ci.org/jcarreira/ddc)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/10708/badge.svg)](https://scan.coverity.com/projects/jcarreira-ddc)
 
-Cirrus is a system for memory management in disaggregated datacenter environments.
+Cirrus is a remote data access system for interacting with disaggregated memory from uInstances in a performant fashion.
 
 Requirements
 ============
@@ -18,11 +18,12 @@ It has been tested with the following environment:
 * autotools
 * Mellanox OFED 3.4 (requires Mellanox drivers)
 * cmake
+* cpplint
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake
-
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint
+    
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
     $ sudo apt-get install g++-6
@@ -39,10 +40,12 @@ Building
 Running Tests
 =============
 
-Client, server example:
+To run tests, run the following command from the top level of the project:
 
-    $ ./ddc/src/server/bladeallocmain&
-    $ ./ddc/src/client/clientmain
+    $ make check
+    
+To create additional tests, add them to the TESTS variable in the top level Makefile.am . Tests are currently located in the tests directory.
+
 
 Benchmarks
 =============

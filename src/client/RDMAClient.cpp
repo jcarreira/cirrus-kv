@@ -601,6 +601,18 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));
             break;
+        } else if (event_copy.event == RDMA_CM_EVENT_UNREACHABLE) {
+            LOG<ERROR>("Server unreachable.");
+            exit(-1);
+        } else if (event_copy.event == RDMA_CM_EVENT_REJECTED) {
+            LOG<ERROR>("Connection Rejected. Server may not be running.");
+            exit(-1);
+        } else if (event_copy.event == RDMA_CM_EVENT_CONNECT_ERROR) {
+            LOG<ERROR>("Error establishing connection.");
+            exit(-1);
+        } else {
+           LOG<ERROR>("Unexpected event type when connecting.");
+           exit(-1);
         }
     }
 
