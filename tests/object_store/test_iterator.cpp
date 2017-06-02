@@ -81,8 +81,7 @@ void test_iterator() {
     for (auto it = iter.begin(); it != iter.end(); it++) {
       int *val = *it;
       if (*val != j) {
-        printf("received %d but expected %d\n", *val, j);
-        printf("helloooooooooooo \n \n \n \n \n \n \n \n");
+	      printf("received %d but expected %d\n", *val, j);
         throw std::runtime_error("Wrong value");
       }
       j++;

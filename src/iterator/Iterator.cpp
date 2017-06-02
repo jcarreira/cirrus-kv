@@ -18,8 +18,6 @@ int* StoreIterator::operator*() {
   if (current_id < last_id) {
     cm->prefetch(current_id + 1);
   }
-  //int* ptr = cm->get(current_id);
-  //printf("value retrieved from cm is %d\n", *ptr);
   return cm->get(current_id);
 }
 
