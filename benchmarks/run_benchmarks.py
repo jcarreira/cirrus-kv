@@ -6,38 +6,29 @@ import time
 
 # NOTE: all pathnames start from the top directory where make check is run
 
-# Launch the server in the background
-print("Starting server.")
-server = subprocess.Popen(["./src/server/bladeallocmain"])
 
-# Sleep to give server time to start
-print("Started server, sleeping.")
-time.sleep(2)
-print("Sleep finished, launching client.")
+benchmarks = [["./benchmarks/1_2"], ["./benchmarks/1_1"]]
+server_name =  ["./src/server/bladeallocmain"]
 
-child = subprocess.Popen(["./benchmarks/1_2"], stdout=subprocess.PIPE)
-streamdata = child.communicate()[0]
-rc = child.returncode
-print("Benchmark 1_2 complete")
-server.kill()
+for benchmark in benchmarks:
+	
+	# Launch the server in the background
+	print("Starting server.")
+	server = subprocess.Popen(server_name)
 
-if (rc != 0):
-	sys.exit(rc)
+	# Sleep to give server time to start
+	print("Started server, sleeping.")
+	time.sleep(2)
+	print("Sleep finished, launching client.")
 
-print("Starting server.")
-time.sleep(2)
-server = subprocess.Popen(["./src/server/bladeallocmain"])
+	child = subprocess.Popen(benchmark, stdout=subprocess.PIPE)
+	streamdata = child.communicate()[0]
+	rc = child.returncode
+	print("Benchmark " + benchmark[0] + " complete\n")
+	server.kill()
 
-# Sleep to give server time to start
-print("Started server, sleeping.")
-time.sleep(2)
-print("Sleep finished, launching benchmark 1_1.")
-
-child = subprocess.Popen(["./benchmarks/1_1"], stdout=subprocess.PIPE)
-streamdata = child.communicate()[0]
-rc = child.returncode
-
-server.kill()
-
-sys.exit(rc)
-
+	#give server time to die
+	time.sleep(1)
+	if (rc != 0):
+		print("Benchmark " + benchmark[0] + " failed\n")
+		sys.exit(rc)
