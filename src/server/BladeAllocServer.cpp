@@ -37,6 +37,11 @@ void BladeAllocServer::handle_connection(struct rdma_cm_id* /*id*/) {
 void BladeAllocServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
+/**
+  * @brief Allocates the initial memory pool.
+  * @param size the size of the memory pool being created.
+  * @return true
+  */
 bool BladeAllocServer::create_pool(uint64_t size) {
     TimerFunction tf("create_pool");
 
@@ -62,6 +67,15 @@ bool BladeAllocServer::create_pool(uint64_t size) {
     return true;
 }
 
+/**
+  * @brief Processes incoming RDMA messages.
+  * Depending on the type of the message, responds differently. This function
+  * handles allocation and deallocation.
+  * @param id the rdma_cm_id used for communication
+  * @param message a pointer to the buffer containing the new message.
+  * @see allocate()
+  * @see deallocate()
+  */
 void BladeAllocServer::process_message(rdma_cm_id* id,
         void* message) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);

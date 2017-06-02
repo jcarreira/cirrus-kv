@@ -13,6 +13,9 @@
 
 namespace cirrus {
 
+/**
+  * A class providing a general outline of a lock. Purely virtual.
+  */
 class Lock {
 public:
     Lock() {
@@ -21,18 +24,24 @@ public:
     virtual ~Lock() {
     }
 
-    virtual void wait() = 0;
+    virtual void wait() = 0; /** A pure virtual member. */
+    virtual void signal() = 0; /** A pure virtual member. */
+    virtual void signal(int count) = 0; /** A pure virtual member. */
 
-    virtual void signal() = 0;
-
-    virtual void signal(int count) = 0;
-
-    // return true if lock has succeeded    
+    /**
+      * A pure virtual member.
+      * @return true if lock has succeeded
+      */
     virtual bool trywait() = 0;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(Lock);
 };
 
+/**
+  * A class that extends the Lock class. Makes use of sem_t and its
+  * associated methods to fullfill the functions of the lock class.
+  */
 class PosixSemaphore : public Lock {
 public:
     PosixSemaphore(int initialCount = 0) : Lock() {
@@ -43,6 +52,9 @@ public:
         sem_destroy(&m_sema);
     }
 
+    /**
+      * @brief Waits until entered into semaphore.
+      */
     void wait() override final {
         int rc;
         do {
@@ -51,16 +63,23 @@ public:
         while (rc == -1 && errno == EINTR);
     }
 
+    /**
+      * @brief Posts to one waiter
+      */
     void signal() override final {
         sem_post(&m_sema);
     }
 
+    /**
+      * @brief Posts to count waiters
+      * @param count number of waiters to wake
+      */
     void signal(int count) override final {
         while (count-- > 0) {
             sem_post(&m_sema);
         }
     }
-    
+
     bool trywait() override final {
         int ret = sem_trywait(&m_sema);
         if (ret == -1 && errno != EAGAIN) {
@@ -72,23 +91,33 @@ private:
     sem_t m_sema;
 };
 
+/**
+  * A lock that extends the Lock class. Utilizes spin waiting.
+  */
 class SpinLock : public Lock {
 public:
-    SpinLock() : 
+    SpinLock() :
         Lock()
     { }
 
     virtual ~SpinLock() = default;
 
+    /**
+      * This function busywaits until it obtains the lock.
+      */
     void wait() override final {
         while (lock.test_and_set(std::memory_order_acquire))
             ;
     }
-    
+
+    /**
+      * This function attempts to obtain the lock once.
+      * @return true if the lock was obtained, false otherwise.
+      */
     bool trywait() override final {
         return lock.test_and_set(std::memory_order_acquire) == 0;
     }
-    
+
     void signal(__attribute__((unused)) int count) override final {
         throw std::runtime_error("Not implemented");
     }

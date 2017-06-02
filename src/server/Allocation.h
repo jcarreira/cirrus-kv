@@ -3,10 +3,10 @@
 #ifndef _ALLOCATION_H_
 #define _ALLOCATION_H_
 
-/*
- * This base class describes a resource
- * reserved by one app
- */
+/**
+  * This base class describes a resource
+  * reserved by one app
+  */
 
 namespace cirrus {
 
@@ -21,4 +21,3 @@ private:
 } // cirrus
 
 #endif // _ALLOCATION_H_
-

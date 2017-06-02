@@ -115,7 +115,7 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
 }
 
 /**
-  * @brief Write synchronously
+  * @brief Write synchronously.
   * A function that writes data to the remote store synchronously. Reads from
   * data and passes length bytes.
   * @param alloc_rec the AllocationRecord corresponding to an adequately sized
@@ -163,7 +163,7 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
 }
 
 /**
-  * @brief Write asynchronously
+  * @brief Write asynchronously.
   * A function that writes data to the remote store asynchronously. Reads from
   * data and passes length bytes.
   * @param alloc_rec the AllocationRecord corresponding to an adequately sized
@@ -214,7 +214,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
 }
 
 /**
-  * @brief Read synchronously
+  * @brief Read synchronously.
   * A function that reads data from the remote store synchronously. Reads
   * length bytes offset by offset bytes from data.
   * @param alloc_rec the AllocationRecord containing the necessary info
@@ -262,7 +262,7 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
 }
 
 /**
-  * @brief Read asynchronously
+  * @brief Read asynchronously.
   * A function that reads data from the remote store asynchronously. Reads
   * length bytes offset by offset bytes from the remote address.
   * @param alloc_rec the AllocationRecord containing the necessary info
@@ -343,7 +343,7 @@ std::shared_ptr<FutureBladeOp> BladeClient::fetchadd_async(
 
 
 /**
-  * @brief Wait for operation to finish
+  * @brief Wait for operation to finish.
   * A function that calls the FutureBladeOp's operation's wait() method.
   * Waits until the operation is complete.
   * @see RDMAOpInfo
@@ -354,7 +354,7 @@ void FutureBladeOp::wait() {
 }
 
 /**
-  * @brief Check operation status
+  * @brief Check operation status.
   * A function that calls the FutureBladeOp's operation's try_wait() method.
   * Returns instantly with the status of the operation.
   * @return true if operation is finished, false otherwise

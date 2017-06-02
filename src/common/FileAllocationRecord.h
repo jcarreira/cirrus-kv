@@ -6,6 +6,9 @@
 namespace cirrus {
 
 struct FileAllocationRecord {
+    /**
+      * The remote address where this file is stored.
+      */
     uint64_t remote_addr;
     uint64_t peer_rkey;
 

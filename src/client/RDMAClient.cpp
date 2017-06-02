@@ -34,7 +34,7 @@ RDMAClient::~RDMAClient() {
 }
 
 /**
-  * @brief Initializes rdma params
+  * @brief Initializes rdma params.
   * This method takes a pointer to a struct rdma_conn_param and assigns initial
   * values.
   * @param params the struct rdma_conn_param to be initialized.
@@ -214,7 +214,7 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
 }
 
 /**
-  * @brief Sends + Receives synchronously
+  * @brief Sends + Receives synchronously.
   * This function sends a message and then waits for a reply.
   * @param id a pointer to a struct rdma_cm_id that holds the message to send
   * @param size the size of the message being sent
@@ -246,7 +246,7 @@ bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
 }
 
 /**
-  * @brief Sends an RDMA message
+  * @brief Sends an RDMA message.
   * This function sends a message using RDMA.
   * @param id a pointer to a struct rdma_cm_id that holds the message to send
   * @param size the size of the message being sent
@@ -285,7 +285,7 @@ bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
 
 
 /**
-  * @brief Writes over RDMA synchronously
+  * @brief Writes over RDMA synchronously.
   * This function writes synchronously using RDMA. It will not return
   * until the message is sent.
   * @param id a pointer to a struct rdma_cm_id that holds the message to send
@@ -317,7 +317,7 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 }
 
 /**
-  * @brief Posts send request
+  * @brief Posts send request.
   * This function calls the function ibv_post_send() to post a wr (work request)
   * to the send queue.
   * @param qp the qp of the struct rdma_cm_id
@@ -341,7 +341,7 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
 
 
 /**
-  * @brief Writes over RDMA asynchronously
+  * @brief Writes over RDMA asynchronously.
   * This function writes asynchronously using RDMA. It will return immediately
   * after posting the send request
   * @param id a pointer to a struct rdma_cm_id that holds the message to send
@@ -393,7 +393,7 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
 }
 
 /**
-  * @brief Reads over RDMA synchronously
+  * @brief Reads over RDMA synchronously.
   * This function reads synchronously using RDMA. It will not return
   * until the read is complete.
   * @param id a pointer to a struct rdma_cm_id that holds the message to send
@@ -420,7 +420,7 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
 
 /**
-  * @brief Reads over RDMA asynchronously
+  * @brief Reads over RDMA asynchronously.
   * This function reads asynchronously using RDMA. It will return immediately
   * after posting the read request
   * @param id a pointer to a struct rdma_cm_id that holds the message to send

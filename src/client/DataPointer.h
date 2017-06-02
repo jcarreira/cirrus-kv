@@ -5,9 +5,10 @@
 
 #include <string>
 
-// We use a DataPointer to share access to data
-// Apps can pass around DataPointers instead of
-// shipping data
+/** A class that allows us to share access to data.
+  * Apps can pass around DataPointers instead of
+  * shipping data
+  */
 
 namespace cirrus {
 
