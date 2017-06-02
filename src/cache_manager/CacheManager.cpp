@@ -5,7 +5,7 @@
 
 namespace cirrus {
 
-int* CacheManager::get(int oid) {
+int& CacheManager::get(int oid) {
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
@@ -15,14 +15,15 @@ int* CacheManager::get(int oid) {
         if (entry.fetched_async) {
             entry.future(false);
         }
-        return &entry.val;
+        return *entry.ptr;
 
     } else {
         //set up entry, pull synchronously
         struct cache_entry& entry = cache[oid];
         entry.fetched_async = false;
-        store->get(oid, &entry.val);
-        return &entry.val;
+        entry.ptr = new int;
+        store->get(oid, entry.ptr);
+        return *entry.ptr;
     }
 }
 
@@ -39,7 +40,8 @@ void CacheManager::prefetch(int oid) {
     if (cache.find(oid) == cache.end()) {
         struct cache_entry& entry = cache[oid];
         entry.fetched_async = true;
-        auto future = store->get_async(oid, &entry.val);
+        entry.ptr = new int;
+        auto future = store->get_async(oid, entry.ptr);
         entry.future = future;
     }
 }

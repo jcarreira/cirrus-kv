@@ -21,11 +21,11 @@ class CacheManager {
     struct cache_entry {
       bool fetched_async;
       std::function<bool(bool)> future;
-      int val;
+      int* ptr;
     };
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<> *store) :
                             store(store){}
-    int* get(int oid);
+    int& get(int oid);
     bool put(int oid, int val);
     void prefetch(int oid);
 

@@ -14,7 +14,7 @@ StoreIterator StoreIterator::end() const {
   return StoreIterator(first_id, last_id, last_id + 1, cm);
 }
 
-int* StoreIterator::operator*() {
+int& StoreIterator::operator*() { 
   if (current_id < last_id) {
     cm->prefetch(current_id + 1);
   }

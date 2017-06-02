@@ -25,7 +25,7 @@ class StoreIterator {
     int current_id;
     cirrus::CacheManager *cm;
 
-    int* operator*();
+    int& operator*();
     StoreIterator& operator++();
     StoreIterator& operator++(int i); 
     StoreIterator begin() const;
