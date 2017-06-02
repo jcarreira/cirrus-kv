@@ -4,7 +4,7 @@ Cirrus
 [![Travis Build Status](https://travis-ci.org/jcarreira/ddc.svg?branch=master)](https://travis-ci.org/jcarreira/ddc)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/10708/badge.svg)](https://scan.coverity.com/projects/jcarreira-ddc)
 
-Cirrus is a system for memory management in disaggregated datacenter environments.
+Cirrus is a remote data access system for interacting with disaggregated memory from uInstances in a performant fashion.
 
 Requirements
 ============
@@ -17,11 +17,12 @@ It has been tested with the following environment:
 * Boost
 * autotools
 * Mellanox OFED 3.4 (requires Mellanox drivers)
+* cmake
 * cpplint
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev && sudo pip install cpplint
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint
     
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
@@ -35,7 +36,7 @@ Building
     $ ./boostrap.sh
     $ make
 
-    
+
 Running Tests
 =============
 

@@ -56,7 +56,8 @@ AC_CONFIG_FILES([Makefile
                  tests/object_store/Makefile
                  tests/raw/Makefile                
                  tests/Makefile
-                 benchmarks/Makefile])
+                 benchmarks/Makefile
+		 src/common/schemas/Makefile])
 
 AC_CONFIG_SUBDIRS([tests/mpi])
 

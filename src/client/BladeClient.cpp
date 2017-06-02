@@ -4,14 +4,15 @@
 #include <unistd.h>
 #include <string>
 #include <cstring>
-#include "src/common/BladeMessageGenerator.h"
-#include "src/common/BladeMessage.h"
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
+#include "src/common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
+
+static const int initial_buffer_size = 50;
 
 BladeClient::BladeClient(int timeout_ms)
     : RDMAClient(timeout_ms), remote_addr_(0) {
@@ -35,48 +36,69 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("Allocating ",
         size, " bytes");
 
-    BladeMessageGenerator::alloc_msg(con_ctx_.send_msg,
-            size);
+    // Create message using flatbuffers
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+    auto data = message::BladeMessage::CreateAlloc(builder, size);
+    auto alloc_msg = message::BladeMessage::CreateBladeMessage(builder,
+                              message::BladeMessage::Data_Alloc, data.Union());
+    builder.Finish(alloc_msg);
+
+    int message_size = builder.GetSize();
+
+    // Copy message contents into send buffer
+    std::memcpy(con_ctx_.send_msg,
+                builder.GetBufferPointer(),
+                message_size);
+
 
     // post receive
-    LOG<INFO>("Sending alloc msg size: ", sizeof(BladeMessage));
-    send_receive_message_sync(id_, sizeof(BladeMessage));
-    LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
+    LOG<INFO>("Sending alloc msg size: ", message_size);
+    send_receive_message_sync(id_, message_size);
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
 
-    auto msg = reinterpret_cast<BladeMessage*>(con_ctx_.recv_msg);
+    auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
 
     AllocationRecord alloc(
-                msg->data.alloc_ack.mr_id,
-                msg->data.alloc_ack.remote_addr,
-                msg->data.alloc_ack.peer_rkey);
+                msg->data_as_AllocAck()->mr_id(),
+                msg->data_as_AllocAck()->remote_addr(),
+                msg->data_as_AllocAck()->peer_rkey());
 
-    LOG<INFO>("Received allocation. mr_id: ", msg->data.alloc_ack.mr_id,
-            " remote_addr: " , msg->data.alloc_ack.remote_addr,
-            " peer_rkey: ", msg->data.alloc_ack.peer_rkey);
+    LOG<INFO>("Received allocation. mr_id: ", msg->data_as_AllocAck()->mr_id(),
+            " remote_addr: " , msg->data_as_AllocAck()->remote_addr(),
+            " peer_rkey: ", msg->data_as_AllocAck()->peer_rkey());
 
-    if (msg->data.alloc_ack.remote_addr == 0)
+    if (msg->data_as_AllocAck()->remote_addr() == 0)
         throw std::runtime_error("Error with allocation");
 
     LOG<INFO>("Received allocation from Blade. remote_addr: ",
-        msg->data.alloc_ack.remote_addr,
-        " mr_id: ", msg->data.alloc_ack.mr_id);
+        msg->data_as_AllocAck()->remote_addr(),
+        " mr_id: ", msg->data_as_AllocAck()->mr_id());
     return alloc;
 }
 
 bool BladeClient::deallocate(const AllocationRecord& ar) {
     LOG<INFO>("Deallocating addr: ", ar.remote_addr);
 
-    BladeMessageGenerator::dealloc_msg(con_ctx_.send_msg,
-            ar.remote_addr);
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+    auto data = message::BladeMessage::CreateDealloc(builder, ar.remote_addr);
+    auto dealloc_msg = message::BladeMessage::CreateBladeMessage(builder,
+                            message::BladeMessage::Data_Dealloc, data.Union());
+    builder.Finish(dealloc_msg);
+    int message_size = builder.GetSize();
+    // Copy message into send buffer
+    std::memcpy(con_ctx_.send_msg,
+                builder.GetBufferPointer(),
+                message_size);
+
 
     // post receive
-    LOG<INFO>("Sending dealloc msg size: ", sizeof(BladeMessage));
-    send_receive_message_sync(id_, sizeof(BladeMessage));
-    LOG<INFO>("send_receive_message_sync done: ", sizeof(BladeMessage));
+    LOG<INFO>("Sending dealloc msg size: ", message_size);
+    send_receive_message_sync(id_, message_size);
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
 
-    auto msg = reinterpret_cast<BladeMessage*>(con_ctx_.recv_msg);
+    auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
 
-    if (msg->data.dealloc_ack.result == 0)
+    if (msg->data_as_DeallocAck()->result() == 0)
         throw std::runtime_error("Error with deallocation");
     return true;
 }
