@@ -68,6 +68,16 @@ void test_async(int N) {
             }
         }
     }
+    std::ofstream outfile;
+    outfile.open("1_2.log");
+
+    outfile << "count: " << stats.getCount() << std::endl;
+    outfile << "min: " << stats.min() << std::endl;
+    outfile << "avg: " << stats.avg() << std::endl;
+    outfile << "max: " << stats.max() << std::endl;
+    outfile << "sd: " << stats.sd() << std::endl;
+    outfile << "99%: " << stats.getPercentile(0.99) << std::endl;
+    outfile.close();
 
     std::cout << "count: " << stats.getCount() << std::endl;
     std::cout << "min: " << stats.min() << std::endl;

@@ -1,0 +1,27 @@
+namespace cirrus.message.BladeMessage;
+
+union Data { Alloc, AllocAck, Dealloc, DeallocAck }
+
+table Alloc{
+  size:ulong;
+}
+
+table AllocAck{
+  mr_id:ulong;
+  remote_addr:ulong;
+  peer_rkey:ulong;
+}
+
+table Dealloc{
+  addr:ulong;
+}
+
+table DeallocAck{
+  result:byte;
+}
+
+table BladeMessage {
+  data:Data;
+}
+
+root_type BladeMessage;

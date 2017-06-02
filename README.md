@@ -4,7 +4,7 @@ Cirrus
 [![Travis Build Status](https://travis-ci.org/jcarreira/ddc.svg?branch=master)](https://travis-ci.org/jcarreira/ddc)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/10708/badge.svg)](https://scan.coverity.com/projects/jcarreira-ddc)
 
-Cirrus is a system for memory management in disaggregated datacenter environments.
+Cirrus is a remote data access system for interacting with disaggregated memory from uInstances in a performant fashion.
 
 Requirements
 ============
@@ -17,11 +17,12 @@ It has been tested with the following environment:
 * Boost
 * autotools
 * Mellanox OFED 3.4 (requires Mellanox drivers)
+* cmake
 * cpplint
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev && sudo pip install cpplint
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint
     
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
@@ -35,7 +36,7 @@ Building
     $ ./boostrap.sh
     $ make
 
-    
+
 Running Tests
 =============
 
@@ -48,6 +49,10 @@ To create additional tests, add them to the TESTS variable in the top level Make
 
 Benchmarks
 =============
+
+To run benchmarks execute the following command from the top of the project directory
+    $ make benchmark
+This will leave log files for each benchmark run in the top directory. To add additional benchmarks, modify the script `run_benchmarks.py`, located in the benchmarks directory. The benchmarks are currently set to run locally, but may be set to run using a remote server by manually changing the ip address in the benchmark files. However, this then makes it so that the benchmarks must be manually launched from the command line after starting the server remotely. Additionally, the log files will be left in the benchmarks directory.
 
 * Single node burst of 128 byte put (synchronous) - latencies
 ```

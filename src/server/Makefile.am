@@ -15,7 +15,7 @@ libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
                      ResourceAllocator.cpp BladeAllocServer.cpp \
                      BladeObjectStore.cpp \
                      TCPServer.cpp EPollTCPServer.cpp
-libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir)
+libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include
 
 
 bladepoolmain_DEPENDENCIES = libserver.a
