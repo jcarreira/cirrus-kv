@@ -55,9 +55,9 @@ struct RDMAOpInfo {
     std::function<void(void)> apply_fn;
 };
 
-/*
- * One ConnectionContext per connection
- */
+/**
+  * Struct to maintain connection context. One ConnectionContext per connection
+  */
 struct ConnectionContext {
     ConnectionContext() :
         send_msg(0), send_msg_mr(0), recv_msg(0),
@@ -100,6 +100,9 @@ struct ConnectionContext {
     bool setup_done = false;
 };
 
+/**
+  * A struct representing a portion of RDMA memory.
+  */
 struct RDMAMem {
     RDMAMem(const void* addr = nullptr, uint64_t size = 0,
             ibv_mr* m = nullptr) :
@@ -111,6 +114,11 @@ struct RDMAMem {
         }
     }
 
+    /**
+      * Registers the RDMA memory
+      * @param gctx the GeneralContext for all connections
+      * @return Whether memory was successfully registered
+      */
     bool prepare(GeneralContext gctx) {
         LOG<INFO>("prepare()");
         // we don't register more than once
@@ -129,6 +137,10 @@ struct RDMAMem {
         return mr != nullptr;
     }
 
+    /**
+      * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
+      * @return Whether memory was successfully cleared.
+      */
     bool clear() {
         if (registered_ == false)
             throw std::runtime_error("Not registered");
@@ -141,11 +153,11 @@ struct RDMAMem {
     }
 
     // we should have a smart pointer around this mr
-    uint64_t addr_;
-    uint64_t size_;
-    struct ibv_mr *mr;
-    bool registered_ = false;
-    bool cleared_ = false;
+    uint64_t addr_; /**< Address of the memory */
+    uint64_t size_; /**< Size of the memory */
+    struct ibv_mr *mr; /**< Pointer to ibv_mr for this memory */
+    bool registered_ = false; /**< If the memory is registered. */
+    bool cleared_ = false; /**< If the memory is cleared. */
 };
 
 /**

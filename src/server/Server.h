@@ -5,6 +5,9 @@
 
 namespace cirrus {
 
+/**
+  * Parent class for all servers.
+  */
 class Server {
 public:
     Server() = default;
