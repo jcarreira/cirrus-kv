@@ -29,3 +29,11 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 1_3_LDADD    = $(LINCLUDES) \
                $(LIBS)
+
+exhaustion_SOURCES  = mem_exhaustion.cpp
+exhaustion_LDFLAGS  = -pthread
+exhaustion_CPPFLAGS = -ggdb -I$(top_srcdir) \
+                      -I$(top_srcdir)/examples/sparsehash/src/ \
+                      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+exhaustion_LDADD    = $(LINCLUDES) \
+                      $(LIBS)
