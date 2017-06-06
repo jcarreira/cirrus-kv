@@ -51,9 +51,9 @@ struct Dummy_10M {
 
 
 void test_sync_128() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy_128> store(IP, PORT);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    std::unique_ptr<Dummy_128> d = std::make_unique<Dummy_128>();
     d->id = 42;
 
     // warm up
@@ -102,9 +102,9 @@ void test_sync_128() {
 }
 
 void test_sync_4K() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy_4K> store(IP, PORT);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    std::unique_ptr<Dummy_4K> d = std::make_unique<Dummy_4K>();
     d->id = 42;
 
     // warm up
@@ -153,9 +153,9 @@ void test_sync_4K() {
 }
 
 void test_sync_50() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy_50> store(IP, PORT);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    std::unique_ptr<Dummy_50> d = std::make_unique<Dummy_50>();
     d->id = 42;
 
     // warm up
@@ -204,9 +204,9 @@ void test_sync_50() {
 }
 
 void test_sync_1M() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy_1M> store(IP, PORT);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    std::unique_ptr<Dummy_1M> d = std::make_unique<Dummy_1M>();
     d->id = 42;
 
     // warm up
@@ -255,9 +255,9 @@ void test_sync_1M() {
 }
 
 void test_sync_10M() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy_10M> store(IP, PORT);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    std::unique_ptr<Dummy_10M> d = std::make_unique<Dummy_10M>();
     d->id = 42;
 
     // warm up
