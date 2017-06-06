@@ -15,7 +15,6 @@ class Exception : public std::exception {
         std::string msg;
 };
 
-
 }
 
 #endif // _EXCEPTION_H_
