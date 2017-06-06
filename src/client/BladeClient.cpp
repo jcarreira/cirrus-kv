@@ -9,6 +9,7 @@
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
 #include "src/common/Exception.h"
+#include "src/common/schemas/BladeMessage_generated.h"
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
