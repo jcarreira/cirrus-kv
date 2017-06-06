@@ -6,29 +6,28 @@ import time
 
 # NOTE: all pathnames start from the top directory where make benchmark is run
 
-
 benchmarks = [["./benchmarks/1_2"], ["./benchmarks/1_1"]]
 server_name =  ["./src/server/bladeallocmain"]
 
 for benchmark in benchmarks:
 	
-	# Launch the server in the background
-	print("Starting server.")
-	server = subprocess.Popen(server_name)
+    # Launch the server in the background
+    print("Starting server.")
+    server = subprocess.Popen(server_name)
 
-	# Sleep to give server time to start
-	print("Started server, sleeping.")
-	time.sleep(2)
-	print("Sleep finished, launching client.")
+    # Sleep to give server time to start
+    print("Started server, sleeping.")
+    time.sleep(2)
+    print("Sleep finished, launching client.")
 
-	child = subprocess.Popen(benchmark, stdout=subprocess.PIPE)
-	streamdata = child.communicate()[0]
-	rc = child.returncode
-	print("Benchmark " + benchmark[0] + " complete\n")
-	server.kill()
+    child = subprocess.Popen(benchmark, stdout=subprocess.PIPE)
+    streamdata = child.communicate()[0]
+    rc = child.returncode
+    print("Benchmark " + benchmark[0] + " complete\n")
+    server.kill()
 
-	#give server time to die
-	time.sleep(1)
-	if (rc != 0):
-		print("Benchmark " + benchmark[0] + " failed\n")
-		sys.exit(rc)
+    #give server time to die
+    time.sleep(1)
+    if (rc != 0):
+        print("Benchmark " + benchmark[0] + " failed\n")
+        sys.exit(rc)
