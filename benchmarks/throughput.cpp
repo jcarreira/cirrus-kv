@@ -74,7 +74,7 @@ void test_sync_128() {
     for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
 
-        if (i % 100 == 0) {
+        if (i % (10 * numRuns) == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -116,7 +116,7 @@ void test_sync_4K() {
     for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_4K), i % 1000, &mem);
 
-        if (i % 100 == 0) {
+        if (i % 15000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -158,7 +158,7 @@ void test_sync_50() {
     for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_50), i % 1000, &mem);
 
-        if (i % 100 == 0) {
+        if (i % 15000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -200,7 +200,7 @@ void test_sync_1M() {
     for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_1M), i % 1000, &mem);
 
-        if (i % 100 == 0) {
+        if (i % 15000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -242,7 +242,7 @@ void test_sync_10M() {
     for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_10M), i % 1000, &mem);
 
-        if (i % 100 == 0) {
+        if (i % 15000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
