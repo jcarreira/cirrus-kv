@@ -29,21 +29,6 @@ struct Dummy_128 {
     int id;
 };
 
-struct Dummy_256 {
-    char data[256];
-    int id;
-};
-
-struct Dummy_512 {
-    char data[512];
-    int id;
-};
-
-struct Dummy_1K {
-    char data[1024];
-    int id;
-};
-
 struct Dummy_4K {
     char data[4096];
     int id;
@@ -59,6 +44,11 @@ struct Dummy_1M {
     int id;
 };
 
+struct Dummy_10M {
+    char data[10 * 1048576];
+    int id;
+};
+
 
 void test_sync_128() {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
@@ -111,7 +101,7 @@ void test_sync_128() {
     outfile.close();
 }
 
-void test_sync_128() {
+void test_sync_4K() {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
@@ -120,12 +110,12 @@ void test_sync_128() {
     // warm up
     std::cout << "Warming up" << std::endl;
     for (int i = 0; i < 1000; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i);
+        store.put(d.get(), sizeof(Dummy_4K), i);
     }
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_128));
+    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_4K));
 
     cirrus::Stats stats;
     stats.reserve(MILLION);
@@ -133,7 +123,7 @@ void test_sync_128() {
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_4K), i % 1000, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -143,7 +133,7 @@ void test_sync_128() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_4K), i % 1000, &mem);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
@@ -157,12 +147,12 @@ void test_sync_128() {
     outfile << "throughput 128 test" << std::endl;
     outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * sizeof(Dummy_128)) / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(Dummy_4K)) / (end * 1.0 / MILLION)  << std::endl;
 
     outfile.close();
 }
 
-void test_sync_128() {
+void test_sync_50() {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
@@ -171,12 +161,12 @@ void test_sync_128() {
     // warm up
     std::cout << "Warming up" << std::endl;
     for (int i = 0; i < 1000; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i);
+        store.put(d.get(), sizeof(Dummy_50), i);
     }
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_128));
+    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_50));
 
     cirrus::Stats stats;
     stats.reserve(MILLION);
@@ -184,7 +174,7 @@ void test_sync_128() {
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_50), i % 1000, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -194,7 +184,7 @@ void test_sync_128() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_50), i % 1000, &mem);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
@@ -204,16 +194,16 @@ void test_sync_128() {
     }
 
     std::ofstream outfile;
-    outfile.open("throughput_128.log");
-    outfile << "throughput 128 test" << std::endl;
+    outfile.open("throughput_50K.log");
+    outfile << "throughput 50 test" << std::endl;
     outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * sizeof(Dummy_128)) / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(Dummy_50)) / (end * 1.0 / MILLION)  << std::endl;
 
     outfile.close();
 }
 
-void test_sync_128() {
+void test_sync_1M() {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
 
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
@@ -222,12 +212,12 @@ void test_sync_128() {
     // warm up
     std::cout << "Warming up" << std::endl;
     for (int i = 0; i < 1000; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i);
+        store.put(d.get(), sizeof(Dummy_1M), i);
     }
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_128));
+    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_1M));
 
     cirrus::Stats stats;
     stats.reserve(MILLION);
@@ -235,7 +225,7 @@ void test_sync_128() {
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_1M), i % 1000, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -245,7 +235,7 @@ void test_sync_128() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
+        store.put(d.get(), sizeof(Dummy_1M), i % 1000, &mem);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
@@ -255,11 +245,62 @@ void test_sync_128() {
     }
 
     std::ofstream outfile;
-    outfile.open("throughput_128.log");
-    outfile << "throughput 128 test" << std::endl;
+    outfile.open("throughput_1M.log");
+    outfile << "throughput 1M test" << std::endl;
     outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * sizeof(Dummy_128)) / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(Dummy_1M)) / (end * 1.0 / MILLION)  << std::endl;
+
+    outfile.close();
+}
+
+void test_sync_10M() {
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+
+    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    d->id = 42;
+
+    // warm up
+    std::cout << "Warming up" << std::endl;
+    for (int i = 0; i < 1000; ++i) {
+        store.put(d.get(), sizeof(Dummy_10M), i);
+    }
+
+    std::cout << "Warm up done" << std::endl;
+
+    cirrus::RDMAMem mem(d.get(), sizeof(Dummy_10M));
+
+    cirrus::Stats stats;
+    stats.reserve(MILLION);
+
+    std::cout << "Measuring latencies.." << std::endl;
+    for (uint64_t i = 0; i < MILLION; ++i) {
+        cirrus::TimerFunction tf;
+        store.put(d.get(), sizeof(Dummy_10M), i % 1000, &mem);
+        uint64_t elapsed_us = tf.getUsElapsed();
+        stats.add(elapsed_us);
+    }
+
+    uint64_t end;
+    std::cout << "Measuring msgs/s.." << std::endl;
+    uint64_t i = 0;
+    cirrus::TimerFunction start;
+    for (; i < 10 * MILLION; ++i) {
+        store.put(d.get(), sizeof(Dummy_10M), i % 1000, &mem);
+
+        if (i % 100000 == 0) {
+            if ((end = start.getUsElapsed()) > MILLION) {
+                break;
+            }
+        }
+    }
+
+    std::ofstream outfile;
+    outfile.open("throughput_10M.log");
+    outfile << "throughput 10M test" << std::endl;
+    outfile << "count: " << stats.getCount() << std::endl;
+    outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(Dummy_10M)) / (end * 1.0 / MILLION)  << std::endl;
 
     outfile.close();
 }
@@ -270,6 +311,7 @@ auto main() -> int {
     test_sync_4K();
     test_sync_50();
     test_sync_1M();
+    test_sync_10M();
 
     return 0;
 }
