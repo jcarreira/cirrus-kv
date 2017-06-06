@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = 1_1 1_2 1_3
+bin_PROGRAMS = 1_1 1_2 1_3 throughput
 LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
@@ -29,3 +29,10 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 1_3_LDADD    = $(LINCLUDES) \
                $(LIBS)
+
+ throughput_SOURCES  = throughput.cpp
+ throughput_LDFLAGS  = -pthread
+ throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
+                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+ throughput_LDADD    = $(LINCLUDES) \
+                        $(LIBS)
