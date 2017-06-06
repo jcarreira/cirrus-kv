@@ -8,8 +8,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
-#include "src/common/schemas/BladeMessage_generated.h"
-
+#include "src/common/Exception.h"
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
@@ -57,6 +56,12 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("send_receive_message_sync done: ", message_size);
 
     auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
+
+    if (msg->data_as_AllocAck()->remote_addr() == 0) {
+      //throw error message
+      LOG<ERROR>("Server threw exception when allocating memory.");
+      throw cirrus::Exception("Server threw exception when allocating memory.");
+    }
 
     AllocationRecord alloc(
                 msg->data_as_AllocAck()->mr_id(),
