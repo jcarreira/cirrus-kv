@@ -96,8 +96,9 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                   id_to_alloc_[alloc_id] = BladeAllocation(ptr);
                   mrs_data_.insert(ptr);
 
-                } catch (const boost::exception& e) {
-                  ptr = nullptr;
+                } catch (const boost::interprocess::bad_alloc& e) {
+                  /* Catch any alloc requests which failed. */
+		  ptr = nullptr;
                   alloc_id = 0;
                 }
 
