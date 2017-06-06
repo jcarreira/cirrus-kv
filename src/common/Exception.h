@@ -5,10 +5,10 @@
 
 namespace cirrus {
 
-class Exception: public std::exception {
+class Exception : public std::exception {
     public:
         Exception(std::string msg): msg(msg) {}
-        const char* what() {
+        const char* what() const throw() {
           return msg.c_str();
         }
     private:
