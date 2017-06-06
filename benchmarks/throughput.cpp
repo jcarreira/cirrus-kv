@@ -21,7 +21,8 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "10.10.49.84";
+static const uint64_t numRuns = 2000;
 static const uint64_t MILLION = 1000000;
 
 struct Dummy_128 {
@@ -66,25 +67,14 @@ void test_sync_128() {
 
     cirrus::RDMAMem mem(d.get(), sizeof(Dummy_128));
 
-    cirrus::Stats stats;
-    stats.reserve(MILLION);
-
-    std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
-        cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
-        uint64_t elapsed_us = tf.getUsElapsed();
-        stats.add(elapsed_us);
-    }
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
+    for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_128), i % 1000, &mem);
 
-        if (i % 100000 == 0) {
+        if (i % 100 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -94,7 +84,6 @@ void test_sync_128() {
     std::ofstream outfile;
     outfile.open("throughput_128.log");
     outfile << "throughput 128 test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(Dummy_128)) / (end * 1.0 / MILLION)  << std::endl;
 
@@ -120,22 +109,14 @@ void test_sync_4K() {
     cirrus::Stats stats;
     stats.reserve(MILLION);
 
-    std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
-        cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_4K), i % 1000, &mem);
-        uint64_t elapsed_us = tf.getUsElapsed();
-        stats.add(elapsed_us);
-    }
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
+    for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_4K), i % 1000, &mem);
 
-        if (i % 100000 == 0) {
+        if (i % 100 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -143,9 +124,8 @@ void test_sync_4K() {
     }
 
     std::ofstream outfile;
-    outfile.open("throughput_128.log");
-    outfile << "throughput 128 test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
+    outfile.open("throughput_4k.log");
+    outfile << "throughput 4k test" << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(Dummy_4K)) / (end * 1.0 / MILLION)  << std::endl;
 
@@ -171,22 +151,14 @@ void test_sync_50() {
     cirrus::Stats stats;
     stats.reserve(MILLION);
 
-    std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
-        cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_50), i % 1000, &mem);
-        uint64_t elapsed_us = tf.getUsElapsed();
-        stats.add(elapsed_us);
-    }
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
+    for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_50), i % 1000, &mem);
 
-        if (i % 100000 == 0) {
+        if (i % 100 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -196,7 +168,6 @@ void test_sync_50() {
     std::ofstream outfile;
     outfile.open("throughput_50K.log");
     outfile << "throughput 50 test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(Dummy_50)) / (end * 1.0 / MILLION)  << std::endl;
 
@@ -222,22 +193,14 @@ void test_sync_1M() {
     cirrus::Stats stats;
     stats.reserve(MILLION);
 
-    std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
-        cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_1M), i % 1000, &mem);
-        uint64_t elapsed_us = tf.getUsElapsed();
-        stats.add(elapsed_us);
-    }
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
+    for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_1M), i % 1000, &mem);
 
-        if (i % 100000 == 0) {
+        if (i % 100 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -247,7 +210,6 @@ void test_sync_1M() {
     std::ofstream outfile;
     outfile.open("throughput_1M.log");
     outfile << "throughput 1M test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(Dummy_1M)) / (end * 1.0 / MILLION)  << std::endl;
 
@@ -273,22 +235,14 @@ void test_sync_10M() {
     cirrus::Stats stats;
     stats.reserve(MILLION);
 
-    std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
-        cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy_10M), i % 1000, &mem);
-        uint64_t elapsed_us = tf.getUsElapsed();
-        stats.add(elapsed_us);
-    }
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
+    for (; i < 10 * numRuns; ++i) {
         store.put(d.get(), sizeof(Dummy_10M), i % 1000, &mem);
 
-        if (i % 100000 == 0) {
+        if (i % 100 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
                 break;
             }
@@ -298,7 +252,6 @@ void test_sync_10M() {
     std::ofstream outfile;
     outfile.open("throughput_10M.log");
     outfile << "throughput 10M test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(Dummy_10M)) / (end * 1.0 / MILLION)  << std::endl;
 
