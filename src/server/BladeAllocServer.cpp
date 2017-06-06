@@ -87,17 +87,18 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
 
                 LOG<INFO>("Received allocation request. size: ", size);
                 void* ptr;
+		uint64_t alloc_id;
                 try {
 
-                  void* ptr = allocator->allocate(size);
-                  uint64_t alloc_id = num_allocs_++;
+                  ptr = allocator->allocate(size);
+                  alloc_id = num_allocs_++;
                   id_to_alloc_[alloc_id] = BladeAllocation(ptr);
                   id_to_alloc_[alloc_id] = BladeAllocation(ptr);
                   mrs_data_.insert(ptr);
 
                 } catch (const boost::exception& e) {
-                  void* ptr = nullptr;
-                  uint64_t alloc_id = 0;
+                  ptr = nullptr;
+                  alloc_id = 0;
                 }
 
                 uint64_t remote_addr =
