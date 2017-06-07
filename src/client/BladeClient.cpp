@@ -144,11 +144,18 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 *mem);
     } else {
         // TimerFunction tf("write_async memcpy", true);
-        std::memcpy(con_ctx_.send_msg, data, length);
+        //std::memcpy(con_ctx_.send_msg, data, length);
+
+        RDMAMem mem(data, length);
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
-                default_send_mem_);
+                mem);
+
+        //op_info = write_rdma_async(id_, length,
+        //        alloc_rec.remote_addr + offset,
+        //        alloc_rec.peer_rkey,
+        //        default_send_mem_);
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
@@ -216,14 +223,20 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
                 *mem,
                 []() -> void {});
     } else {
-        void* buffer = con_ctx_.recv_msg;  // need this for capture list
-        auto copy_fn = [data, buffer, length]() {
-            TimerFunction tf("Memcpy (read) time", true);
-            std::memcpy(data, buffer, length);
-        };
+        RDMAMem mem(data, length);
+
+        //void* buffer = con_ctx_.recv_msg;  // need this for capture list
+        //auto copy_fn = [data, buffer, length]() {
+        //    TimerFunction tf("Memcpy (read) time", true);
+        //    std::memcpy(data, buffer, length);
+        //};
         op_info = read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                default_recv_mem_, copy_fn);
+                mem,
+                []() -> void {});
+        //op_info = read_rdma_async(id_, length,
+        //        alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+        //        default_recv_mem_, copy_fn);
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
