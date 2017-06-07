@@ -12,7 +12,7 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.84";
 
 std::pair<void*, unsigned int> serializer_simple(const int& v) {
-    return std::make_pair(&v, sizeof(int));
+    return std::make_pair((void *) &v, sizeof(int));
 }
 
 int deserializer_simple(void* data, unsigned int /* size */) {
