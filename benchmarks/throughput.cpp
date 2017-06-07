@@ -15,7 +15,8 @@ static const uint64_t MILLION = 1000000;
 
 template <int size>
 void test_throughput(int numRuns) {
-    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, size>> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, size>>
+	    store(IP, PORT);
 
     std::array<char, size> *ptr = new std::array<char, size>;
 
@@ -40,7 +41,8 @@ void test_throughput(int numRuns) {
     outfile.open("throughput_" + std::to_string(size) + ".log");
     outfile << "throughput " + std::to_string(size) + " test" << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * sizeof(*ptr)) / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(*ptr)) / (end * 1.0 / MILLION)
+	    	<< std::endl;
 
     outfile.close();
 }
