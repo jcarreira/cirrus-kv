@@ -33,6 +33,6 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
  throughput_SOURCES  = throughput.cpp
  throughput_LDFLAGS  = -pthread
  throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
-                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+                       -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
  throughput_LDADD    = $(LINCLUDES) \
                         $(LIBS)
