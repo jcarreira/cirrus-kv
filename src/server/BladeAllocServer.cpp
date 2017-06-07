@@ -86,15 +86,22 @@ void BladeAllocServer::process_message(rdma_cm_id* id,
                 uint64_t size = msg->data_as_Alloc()->size();
 
                 LOG<INFO>("Received allocation request. size: ", size);
-                void* ptr = allocator->allocate(size);
+                void* ptr;
+                uint64_t alloc_id;
+                try {
+                      ptr = allocator->allocate(size);
+                      alloc_id = num_allocs_++;
+                      id_to_alloc_[alloc_id] = BladeAllocation(ptr);
+                      id_to_alloc_[alloc_id] = BladeAllocation(ptr);
+                      mrs_data_.insert(ptr);
+                } catch (const boost::interprocess::bad_alloc& e) {
+                      /* Catch any alloc requests which failed. */
+                      ptr = nullptr;
+                      alloc_id = 0;
+                }
 
                 uint64_t remote_addr =
                     reinterpret_cast<uint64_t>(ptr);
-
-                uint64_t alloc_id = num_allocs_++;
-                id_to_alloc_[alloc_id] = BladeAllocation(ptr);
-
-                mrs_data_.insert(ptr);
 
                 auto data = message::BladeMessage::CreateAllocAck(builder,
                                            alloc_id,

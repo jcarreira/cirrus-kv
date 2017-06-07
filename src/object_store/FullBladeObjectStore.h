@@ -12,7 +12,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"   
+#include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
 
 /*
@@ -38,20 +38,24 @@ public:
 template<class T = void>
 class FullBladeObjectStoreTempl : public ObjectStore {
 public:
+    // TODO: add serializer and deserializer
     FullBladeObjectStoreTempl(const std::string& bladeIP, const std::string& port);
 
-    Object get(const ObjectID&) const override;
+    // TODO: change so that it returns a T
+    // TODO: change objectstore.h as well? likely
+    T get(const ObjectID& oid) const override;
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
-    
+
     bool getHandle(ObjectID, BladeLocation& bl) const;
 
     bool getHandle(const ObjectID&, BladeLocation&) const;
 
-    bool put(Object, uint64_t, ObjectID, RDMAMem* mem = nullptr);
+    // TODO: change to put(ObjectID oid, T object, RDMAMem* mem = nullptr). Returns bool
+    bool put(ObjectID oid, T obj, RDMAMem* mem = nullptr);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
-    
+
     bool remove(ObjectID);
 
 private:
@@ -69,6 +73,7 @@ private:
     // if oid is not found, object is not in store
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
     mutable BladeClient client;
+    uint64_t size;
 };
 
 template<class T>
@@ -78,14 +83,34 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& blade
     client.connect(bladeIP, port);
 }
 
+// TODO: what do we do if object does not exist?
 template<class T>
-Object FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    // We do not implement this because
-    // this store does not cache locally
-    throw std::runtime_error("Not implemented");
-    return 0;
+T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
+
+    // pull from remote into local
+    // deserialize
+    // return a copy of the object
+
+    BladeLocation loc;
+    if (objects_.find(id, loc)) {
+        void* ptr = malloc(size);
+        if (ptr == nullptr) {
+          throw std::runtime_error("Local memory exhausted,
+                                          cannot allocate for get.");
+        }
+        readToLocal(loc, ptr);
+        return deserialize(ptr, size);
+    } else {
+        // TODO: throw exception that object does not exist remotely
+    }
+
+
+    return deserialize(data, size);
+
 }
 
+
+// TODO: remove this method
 template<class T>
 bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
     BladeLocation loc;
@@ -130,10 +155,10 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, 
+bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
         ObjectID id, RDMAMem* mem) {
     BladeLocation loc;
-    
+
     if (objects_.find(id, loc)) {
         return writeRemote(obj, loc, mem);
     } else {
@@ -237,4 +262,3 @@ void FullBladeObjectStoreTempl<T>::printStats() const noexcept {
 }
 
 #endif // _FULLBLADE_OBJECT_STORE_H_
-
