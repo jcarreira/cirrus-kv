@@ -10,11 +10,12 @@ namespace cirrus {
 using ObjectID = uint64_t;
 using Object = void*;
 
+template<class T = void>
 class ObjectStore {
 public:
     ObjectStore();
 
-    virtual Object get(const ObjectID&) const = 0;
+    virtual T get(const ObjectID&) const = 0;
 
 //    virtual bool put(Object, uint64_t size, ObjectID) = 0;
 

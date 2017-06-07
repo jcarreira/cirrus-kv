@@ -11,6 +11,7 @@
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
+#include "src/common/exception.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -38,11 +39,11 @@ public:
 template<class T = void>
 class FullBladeObjectStoreTempl : public ObjectStore {
 public:
-    // TODO: add serializer and deserializer
-    FullBladeObjectStoreTempl(const std::string& bladeIP, const std::string& port);
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
+                            const std::string& port,
+            std::function<std::pair<void*, unsigned int>(const T&)> serializer,
+            std::function<T, (void*, unsigned int)> deserializer);
 
-    // TODO: change so that it returns a T
-    // TODO: change objectstore.h as well? likely
     T get(const ObjectID& oid) const override;
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
@@ -51,8 +52,7 @@ public:
 
     bool getHandle(const ObjectID&, BladeLocation&) const;
 
-    // TODO: change to put(ObjectID oid, T object, RDMAMem* mem = nullptr). Returns bool
-    bool put(ObjectID oid, T obj, RDMAMem* mem = nullptr);
+    bool put(ObjectID id, T obj, RDMAMem* mem = nullptr);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
@@ -73,53 +73,38 @@ private:
     // if oid is not found, object is not in store
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
     mutable BladeClient client;
-    uint64_t size;
+
+    uint64_t serialized_size;
+    std::function<std::pair<void*, unsigned int>(const T&)> serializer;
+    std::function<T, (void*, unsigned int)> deserializer;
 };
 
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
-        const std::string& port) :
-    ObjectStore() {
+        const std::string& port,
+        std::function<std::pair<void*, unsigned int>(const T&)> serializer,
+        std::function<T, (void*, unsigned int)> deserializer) :
+    ObjectStore(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
 }
 
-// TODO: what do we do if object does not exist?
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-
-    // pull from remote into local
-    // deserialize
-    // return a copy of the object
-
     BladeLocation loc;
     if (objects_.find(id, loc)) {
-        void* ptr = malloc(size);
+        /* This is safe as we will only reach here if a previous put has
+           occured, thus setting the value of serialized_size. */
+        void* ptr = malloc(serialized_size);
         if (ptr == nullptr) {
           throw std::runtime_error("Local memory exhausted,
                                           cannot allocate for get.");
         }
         readToLocal(loc, ptr);
-        return deserialize(ptr, size);
+        T retval = deserialize(ptr, serialized_size);
+        free(ptr);
+        return T;
     } else {
-        // TODO: throw exception that object does not exist remotely
-    }
-
-
-    return deserialize(data, size);
-
-}
-
-
-// TODO: remove this method
-template<class T>
-bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
-    BladeLocation loc;
-    if (objects_.find(id, loc)) {
-        readToLocal(loc, reinterpret_cast<void*>(ptr));
-        return true;
-    } else {
-        // object is not in store
-        return false;
+        throw cirrus::Exception("Requested ObjectID does not exist remotely");
     }
 }
 
@@ -155,23 +140,33 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
-        ObjectID id, RDMAMem* mem) {
+bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RRDMAMem* mem) {
     BladeLocation loc;
 
+    // Approach: serialize object passed in, push it to oid
+    // serialized_size is saved in the class, it is the size of pushed objects
+
+    std::pair<void*, unsigned int> serializer_out = serializer(obj);
+    void * serial_ptr = serializer_out.first;
+    serialized_size = serializer_out.second;
+
     if (objects_.find(id, loc)) {
-        return writeRemote(obj, loc, mem);
+        bool retval = writeRemote(serial_ptr, loc, mem);
     } else {
         // we could merge this into a single message (?)
         cirrus::AllocationRecord allocRec;
         {
             TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
-            allocRec = client.allocate(size);
+            allocRec = client.allocate(serialized_size);
         }
-        insertObjectLocation(id, size, allocRec);
+        insertObjectLocation(id, serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
-        return writeRemote(obj, BladeLocation(size, allocRec), mem);
+        bool retval = writeRemote(serial_ptr,
+                                BladeLocation(serialized_size, allocRec), mem);
     }
+    free(serial_ptr);
+    return retval;
+
 }
 
 template<class T>
