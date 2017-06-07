@@ -37,7 +37,7 @@ public:
 };
 
 template<class T = void>
-class FullBladeObjectStoreTempl : public ObjectStore {
+class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
@@ -96,15 +96,15 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
            occured, thus setting the value of serialized_size. */
         void* ptr = malloc(serialized_size);
         if (ptr == nullptr) {
-          throw std::runtime_error("Local memory exhausted,
-                                          cannot allocate for get.");
+          throw std::runtime_error("Local memory exhausted,"
+                                          "cannot allocate for get.");
         }
         readToLocal(loc, ptr);
         T retval = deserialize(ptr, serialized_size);
         free(ptr);
         return T;
     } else {
-        throw cirrus::Exception("Requested ObjectID does not exist remotely");
+        throw cirrus::Exception("Requested ObjectID does not exist remotely.");
     }
 }
 
