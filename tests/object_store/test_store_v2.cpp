@@ -42,7 +42,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
-    test_store_simple()
+    test_store_simple();
 
     //TODO: add tests for other sorts of objects (structs), raw mem
 

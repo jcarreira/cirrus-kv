@@ -94,13 +94,13 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     if (objects_.find(id, loc)) {
         /* This is safe as we will only reach here if a previous put has
            occured, thus setting the value of serialized_size. */
-        void* ptr = malloc(serialized_size);
+        void* ptr = malloc(this->serialized_size);
         if (ptr == nullptr) {
           throw std::runtime_error("Local memory exhausted,"
                                           "cannot allocate for get.");
         }
         readToLocal(loc, ptr);
-        T retval = this->deserialize(ptr, serialized_size);
+        T retval = this->deserializer(ptr, serialized_size);
         free(ptr);
         return retval;
     } else {
@@ -140,7 +140,7 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RRDMAMem* mem) {
+bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     BladeLocation loc;
 
     // Approach: serialize object passed in, push it to oid
@@ -148,21 +148,21 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RRDMAMem* mem) {
 
     std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
     void * serial_ptr = serializer_out.first;
-    serialized_size = serializer_out.second;
-
+    this->serialized_size = serializer_out.second;
+    bool retval;
     if (objects_.find(id, loc)) {
-        bool retval = writeRemote(serial_ptr, loc, mem);
+        retval = writeRemote(serial_ptr, loc, mem);
     } else {
         // we could merge this into a single message (?)
         cirrus::AllocationRecord allocRec;
         {
             TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
-            allocRec = client.allocate(serialized_size);
+            allocRec = client.allocate(this->serialized_size);
         }
-        insertObjectLocation(id, serialized_size, allocRec);
+        insertObjectLocation(id, this->serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
-        bool retval = writeRemote(serial_ptr,
-                                BladeLocation(serialized_size, allocRec), mem);
+        retval = writeRemote(serial_ptr,
+                                BladeLocation(this->serialized_size, allocRec), mem);
     }
     free(serial_ptr);
     return retval;
