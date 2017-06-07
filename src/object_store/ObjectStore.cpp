@@ -4,7 +4,8 @@
 
 namespace cirrus {
 
-ObjectStore::ObjectStore() {
+template<class T>
+ObjectStore<T>::ObjectStore() {
 }
 
 }  // namespace cirrus

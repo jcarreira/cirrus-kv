@@ -11,7 +11,7 @@
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
-#include "src/common/exception.h"
+#include "src/common/Exception.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -42,7 +42,7 @@ public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
             std::function<std::pair<void*, unsigned int>(const T&)> serializer,
-            std::function<T, (void*, unsigned int)> deserializer);
+            std::function<T(void*,unsigned int)> deserializer);
 
     T get(const ObjectID& oid) const override;
     bool get(ObjectID, T*) const;
@@ -76,15 +76,15 @@ private:
 
     uint64_t serialized_size;
     std::function<std::pair<void*, unsigned int>(const T&)> serializer;
-    std::function<T, (void*, unsigned int)> deserializer;
+    std::function<T(void*, unsigned int)> deserializer;
 };
 
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
         const std::string& port,
         std::function<std::pair<void*, unsigned int>(const T&)> serializer,
-        std::function<T, (void*, unsigned int)> deserializer) :
-    ObjectStore(), serializer(serializer), deserializer(deserializer) {
+        std::function<T(void*, unsigned int)> deserializer) :
+    ObjectStore<T>(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
 }
 
@@ -100,9 +100,9 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
                                           "cannot allocate for get.");
         }
         readToLocal(loc, ptr);
-        T retval = deserialize(ptr, serialized_size);
+        T retval = this->deserialize(ptr, serialized_size);
         free(ptr);
-        return T;
+        return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
     }
@@ -146,7 +146,7 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RRDMAMem* mem) {
     // Approach: serialize object passed in, push it to oid
     // serialized_size is saved in the class, it is the size of pushed objects
 
-    std::pair<void*, unsigned int> serializer_out = serializer(obj);
+    std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
     void * serial_ptr = serializer_out.first;
     serialized_size = serializer_out.second;
 
