@@ -53,11 +53,16 @@ AC_CONFIG_FILES([Makefile
                  src/object_store/Makefile
                  src/client/Makefile
                  src/server/Makefile
+		 src/common/schemas/Makefile
                  tests/object_store/Makefile
                  tests/raw/Makefile                
                  tests/Makefile
-                 benchmarks/Makefile
-		 src/common/schemas/Makefile])
+                 benchmarks/Makefile])
+# Checks for presence of dependencies
+AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
+if test x"$CPPLINT_CHECK" != x"yes" ; then
+    AC_MSG_ERROR([Please install cpplint with 'sudo pip install cpplint' before installing.])
+fi
 
 AC_CONFIG_SUBDIRS([tests/mpi])
 
