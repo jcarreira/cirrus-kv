@@ -176,7 +176,6 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
 
-
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
