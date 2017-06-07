@@ -1,19 +1,8 @@
 /* Copyright Joao Carreira 2016 */
 
-#include <unistd.h>
-#include <stdlib.h>
 #include <fstream>
-#include <iterator>
-#include <algorithm>
-#include <cstdint>
 #include <iostream>
-#include <map>
 #include <string>
-#include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -24,31 +13,26 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.84";
 static const uint64_t MILLION = 1000000;
 
-template <unsigned int size>
-class ClassSize {
-    char array[size];
-};
-
 template <int size>
 void test_throughput(int numRuns) {
-    cirrus::ostore::FullBladeObjectStoreTempl<ClassSize<size>> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, size>> store(IP, PORT);
 
-    ClassSize<size> *cc = new ClassSize<size>;
+    std::array<char, size> *ptr = new std::array<char, size>;
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    store.put(cc, sizeof(*cc), 0);
+    store.put(ptr, sizeof(*ptr), 0);
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(cc, sizeof(*cc));
-    printf("size is %lu \n", sizeof(*cc));
+    cirrus::RDMAMem mem(ptr, sizeof(*ptr));
+    printf("size is %lu \n", sizeof(*ptr));
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * numRuns; ++i) {
-        store.put(cc, sizeof(*cc), 0, &mem);
+        store.put(ptr, sizeof(*ptr), 0, &mem);
     }
     end = start.getUsElapsed();
 
@@ -56,7 +40,7 @@ void test_throughput(int numRuns) {
     outfile.open("throughput_" + std::to_string(size) + ".log");
     outfile << "throughput " + std::to_string(size) + " test" << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * size) / (end * 1.0 / MILLION)  << std::endl;
+    outfile << "bytes/s: " << (i * sizeof(*ptr)) / (end * 1.0 / MILLION)  << std::endl;
 
     outfile.close();
 }
