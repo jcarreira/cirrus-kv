@@ -59,7 +59,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
 
     if (msg->data_as_AllocAck()->remote_addr() == 0) {
-      //throw error message
+      // Throw error message
       LOG<ERROR>("Server threw exception when allocating memory.");
       throw cirrus::Exception("Server threw exception when allocating memory.");
     }
