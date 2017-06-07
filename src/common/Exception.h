@@ -3,6 +3,9 @@
 #ifndef _EXCEPTION_H_
 #define _EXCEPTION_H_
 
+#include <string>
+#include <exception>
+
 namespace cirrus {
 
 class Exception : public std::exception {
