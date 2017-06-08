@@ -11,13 +11,17 @@ static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 
+
+/* This function simply copies an int into a new portion of memory. */
 std::pair<void*, unsigned int> serializer_simple(const int& v) {
-    return std::make_pair((void *) &v, sizeof(int));
+    void *ptr = malloc(sizeof(int));
+    std::memcpy(ptr, &v, sizeof(int));
+    return std::make_pair(ptr, sizeof(int));
 }
 
+/* Takes an int passed in and returns as object. */
 int deserializer_simple(void* data, unsigned int /* size */) {
     int *ptr = (int *) data;
-
     return int(*ptr);
 }
 
@@ -28,7 +32,6 @@ int deserializer_simple(void* data, unsigned int /* size */) {
 void test_store_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         serializer_simple, deserializer_simple);
-
     for (int oid = 0; oid <  10; oid++) {
       store.put(oid, oid);
     }
@@ -42,6 +45,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
+    printf("test starting\n");
     test_store_simple();
 
     //TODO: add tests for other sorts of objects (structs), raw mem

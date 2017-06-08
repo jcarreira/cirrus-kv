@@ -75,7 +75,10 @@ private:
     mutable BladeClient client;
 
     uint64_t serialized_size;
+
+    /* The pointer returned by the serializer should be obtained from malloc. */
     std::function<std::pair<void*, unsigned int>(const T&)> serializer;
+    /* Should return a new object based on the buffer passed in. */
     std::function<T(void*, unsigned int)> deserializer;
 };
 
@@ -105,7 +108,6 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         // Deserialize the memory at ptr and return an object
         T retval = this->deserializer(ptr, serialized_size);
         free(ptr);
-        printf("exiting get\n");
         return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
@@ -149,7 +151,6 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
 
     // Approach: serialize object passed in, push it to oid
     // serialized_size is saved in the class, it is the size of pushed objects
-
     std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
     void * serial_ptr = serializer_out.first;
     this->serialized_size = serializer_out.second;
@@ -169,7 +170,6 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
                           BladeLocation(this->serialized_size, allocRec), mem);
     }
     free(serial_ptr);
-    printf("exiting put\n");
     return retval;
 
 }
