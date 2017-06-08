@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = test_fullblade_store test_mt test_mult_clients test_store_v2 exhaustion
+bin_PROGRAMS = test_store_v2
 
 LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon

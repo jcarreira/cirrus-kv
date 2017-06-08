@@ -10,10 +10,10 @@ namespace cirrus {
 using ObjectID = uint64_t;
 using Object = void*;
 
-template<class T = void>
+template<typename T>
 class ObjectStore {
 public:
-    ObjectStore();
+    ObjectStore() {}
 
     virtual T get(const ObjectID&) const = 0;
 
