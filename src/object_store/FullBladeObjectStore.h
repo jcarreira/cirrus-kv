@@ -99,9 +99,13 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
           throw std::runtime_error("Local memory exhausted,"
                                           "cannot allocate for get.");
         }
+        // Read into the section of memory you just allocated
         readToLocal(loc, ptr);
+
+        // Deserialize the memory at ptr and return an object
         T retval = this->deserializer(ptr, serialized_size);
         free(ptr);
+        printf("exiting get\n");
         return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
@@ -162,9 +166,10 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
         insertObjectLocation(id, this->serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
         retval = writeRemote(serial_ptr,
-                                BladeLocation(this->serialized_size, allocRec), mem);
+                          BladeLocation(this->serialized_size, allocRec), mem);
     }
     free(serial_ptr);
+    printf("exiting put\n");
     return retval;
 
 }
