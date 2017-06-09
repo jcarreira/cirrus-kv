@@ -49,7 +49,7 @@ void test_exhaustion() {
 auto main() -> int {
     try {
     	test_exhaustion();
-    } catch (const cirrus::Exception & e) {
+    } catch (const cirrus::ServerMemoryErrorException & e) {
     	return 0;
     }
     /* Exception should be thrown above and caught */

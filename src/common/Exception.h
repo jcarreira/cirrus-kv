@@ -18,6 +18,12 @@ class Exception : public std::exception {
         std::string msg;
 };
 
+class ServerMemoryErrorException : public cirrus::Exception {
+    public:
+        ServerMemoryErrorException(std::string msg): 
+            cirrus::Exception(msg) {}
+};
+
 }
 
 #endif // _EXCEPTION_H_
