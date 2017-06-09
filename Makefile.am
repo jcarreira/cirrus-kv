@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign serial-tests
-SUBDIRS = src tests benchmarks 
+SUBDIRS = src tests 
 TESTS = ./tests/basic_test.py
 source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)
