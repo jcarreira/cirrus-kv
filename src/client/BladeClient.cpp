@@ -62,7 +62,7 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
       // Throw error message
       LOG<ERROR>("Server threw exception when allocating memory.");
       throw cirrus::ServerMemoryErrorException("Server threw"
-		      "exception when allocating memory.");
+               "exception when allocating memory.");
     }
 
     AllocationRecord alloc(
