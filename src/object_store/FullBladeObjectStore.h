@@ -97,17 +97,17 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     if (objects_.find(id, loc)) {
         /* This is safe as we will only reach here if a previous put has
            occured, thus setting the value of serialized_size. */
-        void* ptr = malloc(this->serialized_size);
-        if (ptr == nullptr) {
-          throw std::runtime_error("Local memory exhausted,"
-                                          "cannot allocate for get.");
-        }
+
+        /* In the case of a failed alloc, will throw std::bad_alloc */
+        void* ptr = (void *) new char[this->serialized_size];
+
         // Read into the section of memory you just allocated
         readToLocal(loc, ptr);
 
         // Deserialize the memory at ptr and return an object
         T retval = this->deserializer(ptr, serialized_size);
-        free(ptr);
+
+        delete[] ptr;
         return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
@@ -151,6 +151,8 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
 
     // Approach: serialize object passed in, push it to oid
     // serialized_size is saved in the class, it is the size of pushed objects
+
+    // TODO: convert to smart pointers?
     std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
     void * serial_ptr = serializer_out.first;
     this->serialized_size = serializer_out.second;
