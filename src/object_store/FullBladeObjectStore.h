@@ -108,7 +108,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         // Deserialize the memory at ptr and return an object
         T retval = this->deserializer(ptr, serialized_size);
 
-        delete[] ptr;
+        /* Cast back to char pointer to allow for deletion. */
+        delete[] (char *)ptr;
         return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
