@@ -98,7 +98,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         /* This is safe as we will only reach here if a previous put has
            occured, thus setting the value of serialized_size. */
 
-        /* In the case of a failed alloc, will throw std::bad_alloc */
+        /* In the case of a failed alloc, will throw std::bad_alloc. This
+           allocation provides a buffer to read the serialized object into. */
         void* ptr = (void *) new char[this->serialized_size];
 
         // Read into the section of memory you just allocated
