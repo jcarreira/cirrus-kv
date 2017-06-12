@@ -42,18 +42,19 @@ void test_multiple_clients() {
 
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
-            cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-            for (int i = 0; i < 100; ++i) {
-                std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+          cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
+                              struct_serializer_simple, struct_deserializer_simple);
+
+          for (int i = 0; i < 100; ++i) {
+                struct Dummy d;
                 int rnd = std::rand();
-                d->id = rnd;
+                d.id = rnd;
 
-                store.put(d.get(), sizeof(Dummy), 1);
-                Dummy* d2 = new Dummy;
+                store.put(1, d);
 
-                store.get(1, d2);
+                d2 = store.get(1);
 
-                if (d2->id != rnd)
+                if (d2.id != rnd)
                     throw std::runtime_error("mismatch");
 
                 total_puts++;
@@ -72,4 +73,3 @@ auto main() -> int {
 
     return 0;
 }
-
