@@ -4,13 +4,12 @@ bin_PROGRAMS = test_mpi
 
 TOP_DIR = $(top_srcdir)/../../
 
-LIBS         = -lobjstore -l:libcityhash.a -lclient -libverbs -lrdmacm\
+LIBS         =  -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 		-L$(TOP_DIR)/src/client/ \
 		-L$(TOP_DIR)/src/authentication \
 		-L$(TOP_DIR)/src/common \
-		-L$(TOP_DIR)/src/object_store \
 		-L$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 test_mpi_SOURCES  = test_mpi.cpp
