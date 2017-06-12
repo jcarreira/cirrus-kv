@@ -42,7 +42,7 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     struct Dummy *ptr = (struct Dummy *) data;
     struct Dummy retDummy;
     retDummy.id = ptr->id;
-    std::memcpy(&retDummy.data, &(ptr->data), SIZE); 
+    std::memcpy(&retDummy.data, &(ptr->data), SIZE);
     return retDummy;
 }
 
@@ -57,8 +57,8 @@ void test_multiple_clients() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([]() {
             cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-			    struct_serializer_simple,
-			    struct_deserializer_simple);
+                            struct_serializer_simple,
+                            struct_deserializer_simple);
 
             struct Dummy d;
             d.id = 42;

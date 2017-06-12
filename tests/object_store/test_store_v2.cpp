@@ -21,8 +21,9 @@ std::pair<void*, unsigned int> serializer_simple(const int& v) {
 
 /* Takes an int passed in and returns as object. */
 int deserializer_simple(void* data, unsigned int /* size */) {
-    int *ptr = (int *) data;
-    return int(*ptr);
+    int *ptr = reinterpret_cast<int *>(data);
+    int retval = *ptr;
+    return retval;
 }
 
 
@@ -48,7 +49,7 @@ auto main() -> int {
     printf("test starting\n");
     test_store_simple();
 
-    //TODO: add tests for other sorts of objects (structs), raw mem
+    // TODO(Tyler): add tests for other sorts of objects (structs), raw mem
 
     return 0;
 }
