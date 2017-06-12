@@ -21,7 +21,7 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.84";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1;
 
 struct Dummy {
@@ -29,59 +29,46 @@ struct Dummy {
     int id;
 };
 
+/* This function simply copies a struct Dummy into a new portion of memory. */
+std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
+    void *ptr = malloc(sizeof(struct Dummy));
+    std::memcpy(ptr, &v, sizeof(struct Dummy));
+    return std::make_pair(ptr, sizeof(struct Dummy));
+}
+
+/* Takes a pointer to struct Dummy passed in and returns as object. */
+struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
+    struct Dummy *ptr = (struct Dummy *) data;
+    struct Dummy retDummy;
+    retDummy.id = ptr->id;
+    std::memcpy(&retDummy.data, &(ptr->data), SIZE);
+    return retDummy;
+}
+
 // #define CHECK_RESULTS
 
 /**
   * Test simple synchronous put and get to/from the object store
   */
 void test_sync() {
-    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+  cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
+                      struct_serializer_simple, struct_deserializer_simple);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
+  struct Dummy d;
+  d.id = 42;
 
     try {
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d;
     } catch(...) {
         std::cerr << "Error inserting" << std::endl;
     }
 
-    void* d2 = ::operator new(sizeof(Dummy));
-    store.get(1, d2);
+    struct Dummy d2 = store.get(1);
 
     // should be 42
     std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
 
-    if (reinterpret_cast<Dummy*>(d2)->id != 42) {
-        throw std::runtime_error("Wrong value");
-    }
-}
-
-/**
-  * Test simple asynchronous put and get to/from the object store
-  */
-void test_async() {
-    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
-
-    auto future = store.put_async(d.get(), sizeof(Dummy), 1);
-    future(false);
-
-    void* d2 = ::operator new(sizeof(Dummy));
-    auto future2 = store.get_async(1, d2);
-
-    if (future2 == nullptr)
-        throw std::runtime_error("wrong future");
-
-    while (!future2(true)) {
-        std::cout << "try wait" << std::endl;
-    }
-
-    std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
-
-    if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+    if (d2.id != 42) {
         throw std::runtime_error("Wrong value");
     }
 }
@@ -91,25 +78,25 @@ void test_async() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
+                      struct_serializer_simple, struct_deserializer_simple);
     cirrus::Stats stats;
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    struct Dummy d;
     d->id = 42;
-    Dummy* d2 = reinterpret_cast<Dummy*>(::operator new(sizeof(Dummy)));
 
     // warm up
     for (int i = 0; i < 100; ++i) {
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
     }
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
         cirrus::TimerFunction tf("", false);
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
 #ifdef CHECK_RESULTS
-        store.get(1, d2);
-        if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+        struct Dummy d2 = store.get(1);
+        if (d2.id != 42) {
             throw std::runtime_error("Wrong value");
         }
 #endif
@@ -123,63 +110,10 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
-/**
-  * Test a batch of saynchronous put and get operations
-  * Also record the latencies distributions
-  */
-void test_async_N(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
-    cirrus::Stats stats;
-
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    cirrus::TimerFunction tfs[N];
-    d->id = 42;
-
-    std::function<bool(bool)> futures[N];
-
-    // warm up
-    for (int i = 0; i < N; ++i) {
-        store.put(d.get(), sizeof(Dummy), 1);
-    }
-
-    std::cout << "Warm up done" << std::endl;
-
-    for (int i = 0; i < N; ++i) {
-        tfs[i].reset();
-        std::cout << "put" << std::endl;
-        futures[i] = store.put_async(d.get(), sizeof(Dummy), 1);
-    }
-
-    bool done[N];
-    std::memset(done, 0, sizeof(done));
-    int total_done = 0;
-
-    while (total_done != N) {
-        for (int i = 0; i < N; ++i) {
-            if (!done[i]) {
-                bool ret = futures[i](false);
-                if (ret) {
-                    done[i] = true;
-                    total_done++;
-                    auto elapsed = tfs[i].getUsElapsed();
-                    stats.add(elapsed);
-                }
-            }
-        }
-    }
-
-    std::cout << "count: " << stats.getCount() << std::endl;
-    std::cout << "avg: " << stats.avg() << std::endl;
-    std::cout << "sd: " << stats.sd() << std::endl;
-    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
-}
 
 auto main() -> int {
-    test_async_N(10000);
     test_sync(1000);
     test_sync();
-    test_async();
 
     return 0;
 }
-
