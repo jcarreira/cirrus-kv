@@ -30,22 +30,38 @@ struct Dummy {
     int id;
 };
 
+/* This function simply copies a struct Dummy into a new portion of memory. */
+std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
+    void *ptr = malloc(sizeof(struct Dummy));
+    std::memcpy(ptr, &v, sizeof(struct Dummy));
+    return std::make_pair(ptr, sizeof(struct Dummy));
+}
+
+/* Takes a pointer to struct Dummy passed in and returns as object. */
+struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
+    struct Dummy *ptr = (struct Dummy *) data;
+    struct Dummy retDummy;
+    retDummy.id = ptr->id;
+    std::memcpy(&retDummy.data, &(ptr->data), SIZE); 
+    return retDummy;
+}
 
 void test_sync() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
+		    struct_serializer_simple, struct_deserializer_simple);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
+    struct Dummy d;
+    d.id = 42;
 
     // warm up
     std::cout << "Warming up" << std::endl;
     for (int i = 0; i < 1000; ++i) {
-        store.put(d.get(), sizeof(Dummy), i);
+        store.put(i, d);
     }
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(d.get(), sizeof(Dummy));
+    cirrus::RDMAMem mem(&d, sizeof(Dummy));
 
     cirrus::Stats stats;
     stats.reserve(MILLION);
@@ -53,7 +69,7 @@ void test_sync() {
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
+        store.put(i % 1000, d, &mem);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -63,7 +79,7 @@ void test_sync() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
+        store.put(i % 1000, d, &mem);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
