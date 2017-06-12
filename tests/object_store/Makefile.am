@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = test_fullblade_store test_mt test_mult_clients test_store_v2 exhaustion
+bin_PROGRAMS = test_store_v2 exhaustion 
 
 LIBS         = -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
@@ -40,6 +40,7 @@ test_store_v2_CPPFLAGS    = -ggdb -I$(top_srcdir)\
                             -I$(top_srcdir)/examples/sparsehash/src/ \
                     		    -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_store_v2_LDADD = $(LINCLUDES) $(LIBS)
+
 exhaustion_SOURCES  = mem_exhaustion.cpp
 exhaustion_LDFLAGS  = -pthread
 exhaustion_CPPFLAGS = -ggdb -I$(top_srcdir) \
