@@ -58,7 +58,7 @@ void test_sync() {
   d.id = 42;
 
     try {
-        store.put(1, d;
+        store.put(1, d);
     } catch(...) {
         std::cerr << "Error inserting" << std::endl;
     }
@@ -66,7 +66,7 @@ void test_sync() {
     struct Dummy d2 = store.get(1);
 
     // should be 42
-    std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
+    std::cout << "d2.id: " << d2.id << std::endl;
 
     if (d2.id != 42) {
         throw std::runtime_error("Wrong value");
@@ -83,7 +83,7 @@ void test_sync(int N) {
     cirrus::Stats stats;
 
     struct Dummy d;
-    d->id = 42;
+    d.id = 42;
 
     // warm up
     for (int i = 0; i < 100; ++i) {
