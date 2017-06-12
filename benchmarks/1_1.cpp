@@ -61,15 +61,13 @@ void test_sync() {
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(&d, sizeof(Dummy));
-
     cirrus::Stats stats;
     stats.reserve(MILLION);
 
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(i % 1000, d, &mem);
+        store.put(i % 1000, d);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -79,7 +77,7 @@ void test_sync() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(i % 1000, d, &mem);
+        store.put(i % 1000, d);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
@@ -116,4 +114,3 @@ auto main() -> int {
 
     return 0;
 }
-

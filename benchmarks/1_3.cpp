@@ -63,9 +63,8 @@ void test_multiple_clients() {
             struct Dummy d;
             d.id = 42;
             // warm up
-            cirrus::RDMAMem mem(&d, sizeof(Dummy));
             for (uint64_t i = 0; i < 100; ++i) {
-                store.put(i, d, &mem);
+                store.put(i, d);
             }
 
             // barrier
@@ -74,7 +73,7 @@ void test_multiple_clients() {
 
             cirrus::TimerFunction tf;
             for (uint64_t i = 0; i < N_MSG; ++i) {
-                store.put(i % 100, d, &mem);
+                store.put(i % 100, d);
             }
 
             total_time += tf.getUsElapsed();
@@ -106,4 +105,3 @@ auto main() -> int {
 
     return 0;
 }
-

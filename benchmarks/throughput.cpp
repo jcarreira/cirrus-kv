@@ -46,7 +46,6 @@ void test_throughput(int numRuns) {
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(&array, sizeof(array));
     printf("size is %lu \n", sizeof(array));
 
     uint64_t end;
@@ -54,7 +53,7 @@ void test_throughput(int numRuns) {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * numRuns; ++i) {
-        store.put(0, array, &mem);
+        store.put(0, array);
     }
     end = start.getUsElapsed();
 

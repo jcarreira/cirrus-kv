@@ -55,11 +55,9 @@ void test_exhaustion() {
 
     std::cout << "Done putting 1000" << std::endl;
 
-    cirrus::RDMAMem mem(&d, sizeof(Dummy));
-
     std::cout << "Putting one million objects" << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
-        store.put(i, d, &mem);
+        store.put(i, d);
     }
 }
 
