@@ -110,8 +110,8 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
-
 auto main() -> int {
+    // TODO: Add back the async tests, visible in git history
     test_sync(1000);
     test_sync();
 
