@@ -43,7 +43,7 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
   */
 void test_exhaustion() {
   cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-                      serializer_simple, deserializer_simple);
+                      struct_serializer_simple, struct_deserializer_simple);
     struct Dummy d;
     d->id = 42;
 
