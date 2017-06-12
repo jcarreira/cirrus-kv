@@ -12,27 +12,46 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.84";
 static const uint64_t MILLION = 1000000;
 
+/* This function simply copies a std::array into a new portion of memory. */
+std::pair<void*, unsigned int> array_serializer_simple(const
+                                            std::array<char, size>& v) {
+    void *ptr = malloc(sizeof(v));
+    std::memcpy(ptr, &v, sizeof(v));
+    return std::make_pair(ptr, sizeof(v));
+}
+
+/* Takes a pointer to std::array passed in and returns as object. */
+std::array<char, size> array_deserializer_simple(void* data,
+                                                    unsigned int /* size */) {
+    std::array<char, size> *ptr = (std::array<char, size> *) data;
+    std::array<char, size> retArray;
+    retArray = *ptr;
+    return retArray;
+}
+
+
 template <int size>
 void test_throughput(int numRuns) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, size>>
-	    store(IP, PORT);
+	    store(IP, PORT, array_serializer_simple, array_deserializer_simple);
 
-    std::array<char, size> *ptr = new std::array<char, size>;
+    std::array<char, size> array;
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    store.put(ptr, sizeof(*ptr), 0);
+    store.put(0, array);
 
     std::cout << "Warm up done" << std::endl;
 
-    cirrus::RDMAMem mem(ptr, sizeof(*ptr));
-    printf("size is %lu \n", sizeof(*ptr));
+    cirrus::RDMAMem mem(ptr, sizeof(array));
+    printf("size is %lu \n", sizeof(array));
+
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * numRuns; ++i) {
-        store.put(ptr, sizeof(*ptr), 0, &mem);
+        store.put(0, array, &mem);
     }
     end = start.getUsElapsed();
 
