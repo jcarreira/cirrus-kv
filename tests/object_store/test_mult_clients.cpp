@@ -29,6 +29,23 @@ struct Dummy {
     int id;
 };
 
+/* This function simply copies a struct Dummy into a new portion of memory. */
+std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
+    void *ptr = malloc(sizeof(struct Dummy));
+    std::memcpy(ptr, &v, sizeof(struct Dummy));
+    return std::make_pair(ptr, sizeof(struct Dummy));
+}
+
+/* Takes a pointer to struct Dummy passed in and returns as object. */
+struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
+    struct Dummy *ptr = (struct Dummy *) data;
+    struct Dummy retDummy;
+    retDummy.id = ptr->id;
+    std::memcpy(&retDummy.data, &(ptr->data), SIZE); 
+    return retDummy;
+}
+
+
 uint64_t total_puts = 0;
 
 void test_multiple_clients() {
@@ -43,7 +60,7 @@ void test_multiple_clients() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
           cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-                              struct_serializer_simple, struct_deserializer_simple);
+                       struct_serializer_simple, struct_deserializer_simple);
 
           for (int i = 0; i < 100; ++i) {
                 struct Dummy d;
@@ -52,7 +69,7 @@ void test_multiple_clients() {
 
                 store.put(1, d);
 
-                d2 = store.get(1);
+                struct Dummy d2 = store.get(1);
 
                 if (d2.id != rnd)
                     throw std::runtime_error("mismatch");

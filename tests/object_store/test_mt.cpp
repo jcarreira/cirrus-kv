@@ -24,16 +24,17 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
+struct Dummy {
+    char data[SIZE];
+    int id;
+};
+
 std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v);
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */);
 
 cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
                     struct_serializer_simple, struct_deserializer_simple);
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
 std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
