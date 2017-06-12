@@ -29,19 +29,36 @@ struct Dummy {
     int id;
 };
 
+/* This function simply copies a struct Dummy into a new portion of memory. */
+std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
+    void *ptr = malloc(sizeof(struct Dummy));
+    std::memcpy(ptr, &v, sizeof(struct Dummy));
+    return std::make_pair(ptr, sizeof(struct Dummy));
+}
+
+/* Takes a pointer to struct Dummy passed in and returns as object. */
+struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
+    struct Dummy *ptr = (struct Dummy *) data;
+    struct Dummy retDummy;
+    retDummy.id = ptr->id;
+    std::memcpy(&retDummy.data, &(ptr->data), SIZE); 
+    return retDummy;
+}
+
 void test_async(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
+		    struct_serializer_simple, struct_deserializer_simple);
     cirrus::Stats stats;
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    struct Dummy d;
     cirrus::TimerFunction tfs[N];
-    d->id = 42;
+    d.id = 42;
 
     std::function<bool(bool)> futures[N];
 
     // warm up
     for (int i = 0; i < N; ++i) {
-        store.put(d.get(), sizeof(Dummy), i);
+        store.put(i, d);
     }
 
     std::cout << "Warm up done" << std::endl;
@@ -52,7 +69,7 @@ void test_async(int N) {
 
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
-        futures[i] = store.put_async(d.get(), sizeof(Dummy), i);
+        futures[i] = store.put_async(&d, sizeof(Dummy), i);
     }
 
     while (total_done != N) {
