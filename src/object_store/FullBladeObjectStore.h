@@ -84,7 +84,7 @@ private:
       * to the buffer containing the serialized object as well as the size of
       * the buffer.
       */
-    std::unique_ptr<void, decltype(&::operator delete)>,
+    std::unique_ptr<void, std::function<void(void*)>*>,
                                             unsigned int>(const T&)> serializer;
 
     /**
@@ -189,7 +189,7 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     // serialized_size is saved in the class, it is the size of pushed objects
 
     std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
-    std::unique_ptr<void, decltype(&::operator delete)> serial_ptr =
+    std::unique_ptr<void, std::function<void(void*)>*> serial_ptr =
                                                           serializer_out.first;
     this->serialized_size = serializer_out.second;
     bool retval;
