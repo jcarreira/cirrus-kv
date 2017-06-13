@@ -53,9 +53,10 @@ AC_CONFIG_FILES([Makefile
                  src/object_store/Makefile
                  src/client/Makefile
                  src/server/Makefile
-		 src/common/schemas/Makefile
+                 src/cache_manager/Makefile
+		             src/common/schemas/Makefile
                  tests/object_store/Makefile
-                 tests/raw/Makefile                
+                 tests/raw/Makefile
                  tests/Makefile
                  benchmarks/Makefile])
 # Checks for presence of dependencies
