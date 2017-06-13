@@ -41,8 +41,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy;
-    retDummy.id = ptr->id;
+    struct Dummy retDummy(ptr->id);
     std::memcpy(&retDummy.data, &(ptr->data), SIZE);
     return retDummy;
 }

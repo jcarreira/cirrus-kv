@@ -15,8 +15,8 @@ static const uint64_t MILLION = 1000000;
 struct Dummy {
     char data[SIZE];
     int id;
+    Dummy(int id) : id(id) {}
 };
-
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
 std::pair<std::unique_ptr<char[]>, unsigned int>
@@ -29,8 +29,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy;
-    retDummy.id = ptr->id;
+    struct Dummy retDummy(ptr->id);
     std::memcpy(&retDummy.data, &(ptr->data), SIZE);
     return retDummy;
 }
@@ -45,8 +44,7 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
 void test_exhaustion() {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
                       struct_serializer_simple, struct_deserializer_simple);
-    struct Dummy d;
-    d.id = 42;
+    struct Dummy d(42);
 
     // warm up
     std::cout << "Putting 1000" << std::endl;
