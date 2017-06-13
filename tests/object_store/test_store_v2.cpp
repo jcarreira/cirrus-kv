@@ -13,12 +13,10 @@ const char IP[] = "10.10.49.83";
 
 
 /* This function simply copies an int into a new portion of memory. */
-std::pair<std::unique_ptr<void, std::function<void(void*)>*>, unsigned int>
+std::pair<std::unique_ptr<char[]>, unsigned int>
     serializer_simple(const int& v) {
 
-    std::unique_ptr<void, std::function<void(void*)>*>
-                          ptr(::operator new (sizeof(int)),
-                          static_cast<void (void*)>(&::operator delete)
+    std::unique_ptr<char[]> ptr(::operator new (sizeof(int));
     std::memcpy(ptr, &v, sizeof(int));
     return std::make_pair(ptr, sizeof(int));
 }

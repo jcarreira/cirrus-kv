@@ -84,8 +84,8 @@ private:
       * to the buffer containing the serialized object as well as the size of
       * the buffer.
       */
-    std::unique_ptr<void, std::function<void(void*)>*>,
-                                            unsigned int>(const T&)> serializer;
+    std::function<std::pair<std::unique_ptr<char[]>,
+                                unsigned int>(const T&)>(const T&)> serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -188,9 +188,9 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     // Approach: serialize object passed in, push it to oid
     // serialized_size is saved in the class, it is the size of pushed objects
 
-    std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
-    std::unique_ptr<void, std::function<void(void*)>*> serial_ptr =
-                                                          serializer_out.first;
+    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                        this->serializer(obj);
+    std::unique_ptr<char[]> serial_ptr = serializer_out.first;
     this->serialized_size = serializer_out.second;
     bool retval;
     if (objects_.find(id, loc)) {
