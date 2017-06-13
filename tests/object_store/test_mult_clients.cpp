@@ -31,7 +31,7 @@ struct Dummy {
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
 std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
-    void *ptr = malloc(sizeof(struct Dummy));
+    void *ptr = ::operator new (sizeof(struct Dummy));
     std::memcpy(ptr, &v, sizeof(struct Dummy));
     return std::make_pair(ptr, sizeof(struct Dummy));
 }

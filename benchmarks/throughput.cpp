@@ -16,7 +16,7 @@ static const uint64_t MILLION = 1000000;
 template <unsigned int SIZE>
 std::pair<void*, unsigned int> array_serializer_simple(
             const std::array<char, SIZE>& v) {
-    void *ptr = malloc(sizeof(v));
+    void *ptr = ::operator new (sizeof(v));
     std::memcpy(ptr, &v, sizeof(v));
     return std::make_pair(ptr, sizeof(v));
 }
