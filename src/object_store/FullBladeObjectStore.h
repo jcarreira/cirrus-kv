@@ -16,12 +16,6 @@
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
 
-/*
- * This store keeps objects in blades at all times
- * method get copies objects from blade to local nodes
- * method put copies object from local dram to remote blade
- */
-
 namespace cirrus {
 namespace ostore {
 
@@ -36,6 +30,12 @@ public:
     AllocationRecord allocRec;
 };
 
+
+/**
+  * This store keeps objects in blades at all times
+  * method get copies objects from blade to local nodes
+  * method put copies object from local dram to remote blade
+  */
 template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
@@ -69,19 +69,41 @@ private:
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocationRecord& allocRec);
 
-    // hash to map oid and location
-    // if oid is not found, object is not in store
+    /**
+      * hash to map oid and location.
+      * if oid is not found, object is not in store.
+      */
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
     mutable BladeClient client;
 
+    /** The size of serialized objects. */
     uint64_t serialized_size;
 
-    /* The pointer returned by the serializer should be obtained from malloc. */
+    /**
+      * A function that takes an object and serializes it. Returns a pointer
+      * to the buffer containing the serialized object as well as the size of
+      * the buffer.
+      */
     std::function<std::pair<void*, unsigned int>(const T&)> serializer;
-    /* Should return a new object based on the buffer passed in. */
+
+    /**
+      * A function that reads the buffer passed in and deserializes it,
+      * returning an object constructed from the information in the buffer.
+      */
     std::function<T(void*, unsigned int)> deserializer;
 };
 
+/**
+  * Constructor for new object stores.
+  * @param bladeIP the ip of the remote server.
+  * @param port the port to use to communicate with the remote server
+  * @param serializer A function that takes an object and serializes it.
+  * Returns a pointer to the buffer containing the serialized object as
+  * well as the size of the buffer.
+  * @param deserializer A function that reads the buffer passed in and
+  * deserializes it, returning an object constructed from the information
+  * in the buffer.
+  */
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
         const std::string& port,
@@ -91,6 +113,11 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& blade
     client.connect(bladeIP, port);
 }
 
+/**
+  * A function that retrieves the object at a specified object id.
+  * @param id the ObjectID that the object should be stored under.
+  * @return the object stored at id.
+  */
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     BladeLocation loc;
@@ -108,7 +135,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         // Deserialize the memory at ptr and return an object
         T retval = deserializer(ptr, serialized_size);
 
-        /* Cast back to char pointer to allow for deletion. */
+        // Free the memory we stored the serialized object in.
         ::operator delete (ptr);
         return retval;
     } else {
@@ -147,6 +174,12 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
     }
 }
 
+/**
+  * A function that puts a given object at a specified object id.
+  * @param id the ObjectID that the object should be stored under.
+  * @param obj the object to be stored.
+  * @return the success of the put.
+  */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     BladeLocation loc;
