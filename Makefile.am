@@ -5,6 +5,7 @@ source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)
 
 .PHONY: docs
+
 check_style:
 	find . -path ./third_party -prune -o  -name "*.cpp" | xargs cpplint
 
