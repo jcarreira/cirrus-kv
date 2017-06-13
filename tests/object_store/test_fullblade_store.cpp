@@ -27,6 +27,7 @@ static const uint32_t SIZE = 1;
 struct Dummy {
     char data[SIZE];
     int id;
+    Dummy(int id) : id(id) {}
 };
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
@@ -56,8 +57,7 @@ void test_sync() {
   cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
                       struct_serializer_simple, struct_deserializer_simple);
 
-  struct Dummy d;
-  d.id = 42;
+  struct Dummy d(42);
 
     try {
         store.put(1, d);
