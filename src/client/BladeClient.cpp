@@ -8,8 +8,8 @@
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 #include "src/client/AuthenticationClient.h"
+#include "src/common/Exception.h"
 #include "src/common/schemas/BladeMessage_generated.h"
-
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
@@ -63,6 +63,12 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("send_receive_message_sync done: ", message_size);
 
     auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
+
+    if (msg->data_as_AllocAck()->remote_addr() == 0) {
+      // Throw error message
+      LOG<ERROR>("Server threw exception when allocating memory.");
+      throw cirrus::Exception("Server threw exception when allocating memory.");
+    }
 
     AllocationRecord alloc(
                 msg->data_as_AllocAck()->mr_id(),
@@ -202,12 +208,15 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     } else {
-        // TimerFunction tf("write_async memcpy", true);
-        std::memcpy(con_ctx_.send_msg, data, length);
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
-                default_send_mem_);
+                *mem);
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
@@ -246,7 +255,6 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, *mem);
-
     } else {
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
@@ -299,14 +307,15 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
                 *mem,
                 []() -> void {});
     } else {
-        void* buffer = con_ctx_.recv_msg;  // need this for capture list
-        auto copy_fn = [data, buffer, length]() {
-            TimerFunction tf("Memcpy (read) time", true);
-            std::memcpy(data, buffer, length);
-        };
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
         op_info = read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                default_recv_mem_, copy_fn);
+                *mem,
+                [mem]() -> void { delete mem; });
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
