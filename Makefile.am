@@ -9,3 +9,6 @@ check_style:
 
 benchmark:
 	./benchmarks/run_benchmarks.py
+
+docs:
+	doxygen ./docs/Doxyfile
