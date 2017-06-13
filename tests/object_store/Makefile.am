@@ -38,7 +38,7 @@ test_store_v2_SOURCES     = test_store_v2.cpp
 test_store_v2_LDFLAGS     = -pthread
 test_store_v2_CPPFLAGS    = -ggdb -I$(top_srcdir)\
                             -I$(top_srcdir)/examples/sparsehash/src/ \
-                    		    -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+                            -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_store_v2_LDADD = $(LINCLUDES) $(LIBS)
 
 exhaustion_SOURCES  = mem_exhaustion.cpp

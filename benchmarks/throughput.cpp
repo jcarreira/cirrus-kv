@@ -13,32 +13,32 @@ const char IP[] = "10.10.49.84";
 static const uint64_t MILLION = 1000000;
 
 /* This function simply copies a std::array into a new portion of memory. */
-template <unsigned int size>
+template <unsigned int SIZE>
 std::pair<void*, unsigned int> array_serializer_simple(
-            const std::array<char, size>& v) {
+            const std::array<char, SIZE>& v) {
     void *ptr = malloc(sizeof(v));
     std::memcpy(ptr, &v, sizeof(v));
     return std::make_pair(ptr, sizeof(v));
 }
 
 /* Takes a pointer to std::array passed in and returns as object. */
-template <unsigned int size>
-std::array<char, size> array_deserializer_simple(void* data,
+template <unsigned int SIZE>
+std::array<char, SIZE> array_deserializer_simple(void* data,
             unsigned int /* size */) {
-    std::array<char, size> *ptr = (std::array<char, size> *) data;
-    std::array<char, size> retArray;
+    std::array<char, SIZE> *ptr = (std::array<char, SIZE> *) data;
+    std::array<char, SIZE> retArray;
     retArray = *ptr;
     return retArray;
 }
 
 
-template <unsigned int size>
+template <unsigned int SIZE>
 void test_throughput(int numRuns) {
-    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, size>>
-        store(IP, PORT, array_serializer_simple<size>,
-                array_deserializer_simple<size>);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
+        store(IP, PORT, array_serializer_simple<SIZE>,
+                array_deserializer_simple<SIZE>);
 
-    std::array<char, size> array;
+    std::array<char, SIZE> array;
 
     // warm up
     std::cout << "Warming up" << std::endl;
@@ -58,8 +58,8 @@ void test_throughput(int numRuns) {
     end = start.getUsElapsed();
 
     std::ofstream outfile;
-    outfile.open("throughput_" + std::to_string(size) + ".log");
-    outfile << "throughput " + std::to_string(size) + " test" << std::endl;
+    outfile.open("throughput_" + std::to_string(SIZE) + ".log");
+    outfile << "throughput " + std::to_string(SIZE) + " test" << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
     outfile << "bytes/s: " << (i * sizeof(array)) / (end * 1.0 / MILLION)
             << std::endl;

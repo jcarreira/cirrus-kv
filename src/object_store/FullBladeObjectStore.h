@@ -36,7 +36,7 @@ public:
     AllocationRecord allocRec;
 };
 
-template<class T = void>
+template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
@@ -106,7 +106,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         readToLocal(loc, ptr);
 
         // Deserialize the memory at ptr and return an object
-        T retval = this->deserializer(ptr, serialized_size);
+        T retval = deserializer(ptr, serialized_size);
 
         /* Cast back to char pointer to allow for deletion. */
         delete[] (char *)ptr;
