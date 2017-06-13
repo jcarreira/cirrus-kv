@@ -41,7 +41,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
-            std::function<std::pair<void*, unsigned int>(const T&)> serializer,
+            std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
             std::function<T(void*,unsigned int)> deserializer);
 
     T get(const ObjectID& oid) const override;
@@ -85,7 +85,7 @@ private:
       * the buffer.
       */
     std::function<std::pair<std::unique_ptr<char[]>,
-                                unsigned int>(const T&)>(const T&)> serializer;
+                                unsigned int>(const T&)> serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -108,7 +108,7 @@ private:
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
         const std::string& port,
-        std::function<std::pair<void*, unsigned int>(const T&)> serializer,
+        std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
@@ -189,8 +189,8 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     // serialized_size is saved in the class, it is the size of pushed objects
 
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        this->serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = serializer_out.first;
+                                                        serializer(obj);
+    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
     this->serialized_size = serializer_out.second;
     bool retval;
     if (objects_.find(id, loc)) {

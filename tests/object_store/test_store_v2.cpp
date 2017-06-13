@@ -16,9 +16,9 @@ const char IP[] = "10.10.49.83";
 std::pair<std::unique_ptr<char[]>, unsigned int>
     serializer_simple(const int& v) {
 
-    std::unique_ptr<char[]> ptr(::operator new (sizeof(int));
-    std::memcpy(ptr, &v, sizeof(int));
-    return std::make_pair(ptr, sizeof(int));
+    std::unique_ptr<char[]> ptr(new char[sizeof(int)]);
+    std::memcpy(ptr.get(), &v, sizeof(int));
+    return std::make_pair(std::move(ptr), sizeof(int));
 }
 
 /* Takes an int passed in and returns as object. */
