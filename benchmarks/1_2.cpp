@@ -27,6 +27,7 @@ static const uint32_t SIZE = 128;
 struct Dummy {
     char data[SIZE];
     int id;
+    Dummy(int id) : id(id) {}
 };
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
@@ -40,8 +41,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy;
-    retDummy.id = ptr->id;
+    struct Dummy retDummy(ptr->id);
     std::memcpy(&retDummy.data, &(ptr->data), SIZE);
     return retDummy;
 }
@@ -55,9 +55,8 @@ void test_async(int N) {
                 struct_serializer_simple, struct_deserializer_simple);
     cirrus::Stats stats;
 
-    struct Dummy d;
+    struct Dummy d(42);
     cirrus::TimerFunction tfs[N];
-    d.id = 42;
 
     std::function<bool(bool)> futures[N];
 

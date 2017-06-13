@@ -27,6 +27,7 @@ static const uint32_t SIZE = 1024;
 struct Dummy {
     char data[SIZE];
     int id;
+    Dummy(int id) : id(id) {}
 };
 
 std::pair<std::unique_ptr<char[]>, unsigned int>
@@ -48,8 +49,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy;
-    retDummy.id = ptr->id;
+    struct Dummy retDummy(ptr->id);
     std::memcpy(&retDummy.data, &(ptr->data), SIZE);
     return retDummy;
 }
@@ -71,9 +71,8 @@ void test_mt() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
             for (int i = 0; i < 100; ++i) {
-                struct Dummy d;
                 int rnd = std::rand();
-                d.id = rnd;
+	        struct Dummy d(rnd);
 
                 store.put(1, d);
                 Dummy d2 = store.get(1);

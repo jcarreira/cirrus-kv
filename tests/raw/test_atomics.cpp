@@ -27,6 +27,7 @@ static const uint32_t SIZE = 1024;
 struct Dummy {
     char data[SIZE];
     int id;
+    Dummy(int id) : id(id) {}
 };
 
 void test_fetchadd() {
@@ -46,4 +47,3 @@ auto main() -> int {
 
     return 0;
 }
-
