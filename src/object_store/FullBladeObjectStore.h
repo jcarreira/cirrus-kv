@@ -48,11 +48,7 @@ public:
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
 
-    bool getHandle(ObjectID, BladeLocation& bl) const;
-
-    bool getHandle(const ObjectID&, BladeLocation&) const;
-
-    bool put(ObjectID id, T obj, RDMAMem* mem = nullptr);
+    bool put(ObjectID id, T obj);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
@@ -145,15 +141,6 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& loc) const {
-    if (objects_.find(id, loc)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
     BladeLocation loc;
@@ -182,7 +169,7 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
   * @return the success of the put.
   */
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
+bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj) {
     BladeLocation loc;
 
     // Approach: serialize object passed in, push it to oid
@@ -194,7 +181,7 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     this->serialized_size = serializer_out.second;
     bool retval;
     if (objects_.find(id, loc)) {
-        retval = writeRemote(serial_ptr.get(), loc, mem);
+        retval = writeRemote(serial_ptr.get(), loc, nullptr);
     } else {
         // we could merge this into a single message (?)
         cirrus::AllocationRecord allocRec;
@@ -205,7 +192,8 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
         insertObjectLocation(id, this->serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
         retval = writeRemote(serial_ptr.get(),
-                          BladeLocation(this->serialized_size, allocRec), mem);
+                          BladeLocation(this->serialized_size, allocRec),
+                          nullptr);
     }
     return retval;
 
