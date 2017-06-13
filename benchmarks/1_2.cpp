@@ -45,6 +45,10 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     return retDummy;
 }
 
+/**
+  * This benchmark measures the distribution of times necessary for
+  * N asynchronous puts. 
+  */
 void test_async(int N) {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
                 struct_serializer_simple, struct_deserializer_simple);
@@ -110,4 +114,3 @@ auto main() -> int {
 
     return 0;
 }
-

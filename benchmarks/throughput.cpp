@@ -31,7 +31,12 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
     return retArray;
 }
 
-
+/**
+  * This benchmark tests the throughput of the system at various sizes
+  * of message. When given a parameter SIZE and numRuns, it stores
+  * numRuns objects of size SIZE under one objectID. The time to put the
+  * objects is recorded, and statistics are computed.
+  */
 template <unsigned int SIZE>
 void test_throughput(int numRuns) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>

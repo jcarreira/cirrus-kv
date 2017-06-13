@@ -48,6 +48,10 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
 
 uint64_t total_puts = 0;
 
+/**
+  * Checks that the system works properly when multiple clients get and put.
+  * These clients each use their own instance of the store.
+  */
 void test_multiple_clients() {
     cirrus::TimerFunction tf("connect time", true);
 

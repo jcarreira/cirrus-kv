@@ -51,6 +51,13 @@ uint64_t total_time = 0;
 
 std::atomic<int> count;
 
+/**
+  * This benchmark tests the performance of the system when multiple clients
+  * are connected to the same store. To do so, it creates ten new threads,
+  * each of which connects to the store and sends N_MSG puts spread across
+  * 100 different object ids. The time taken for these puts is then recorded
+  * and statistics computed.
+  */
 void test_multiple_clients() {
     std::thread* threads[N_THREADS];
 

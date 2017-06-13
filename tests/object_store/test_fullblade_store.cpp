@@ -48,7 +48,8 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
 // #define CHECK_RESULTS
 
 /**
-  * Test simple synchronous put and get to/from the object store
+  * Tests that simple synchronous put and get to/from the object store
+  * works properly.
   */
 void test_sync() {
   cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,

@@ -52,7 +52,11 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     return retDummy;
 }
 
-
+/**
+  * Tests that behavior is as expected when multiple threads make get and put
+  * requests to the remote store. These clients all use the same instance of
+  * the store to connect. Currently not working.
+  */
 void test_mt() {
     cirrus::TimerFunction tf("connect time", true);
 

@@ -28,7 +28,8 @@ int deserializer_simple(void* data, unsigned int /* size */) {
 
 
 /**
-  * Test simple synchronous put and get to/from the object store
+  * Test simple synchronous put and get to/from the object store.
+  * Uses simpler objects than test_fullblade_store.
   */
 void test_store_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
@@ -48,8 +49,5 @@ void test_store_simple() {
 auto main() -> int {
     printf("test starting\n");
     test_store_simple();
-
-    // TODO(Tyler): add tests for other sorts of objects (structs), raw mem
-
     return 0;
 }
