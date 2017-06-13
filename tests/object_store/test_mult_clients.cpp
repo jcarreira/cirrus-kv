@@ -68,7 +68,8 @@ void test_multiple_clients() {
                        struct_serializer_simple, struct_deserializer_simple);
 
           for (int i = 0; i < 100; ++i) {
-                struct Dummy d(std::rand());
+                int rnd = std::rand();
+		struct Dummy d(rnd);
 
                 store.put(1, d);
 
