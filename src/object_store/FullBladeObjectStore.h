@@ -100,7 +100,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 
         /* In the case of a failed alloc, will throw std::bad_alloc. This
            allocation provides a buffer to read the serialized object into. */
-        void* ptr = (void *) new char[this->serialized_size];
+        void* ptr = ::operator new (serialized_size);
 
         // Read into the section of memory you just allocated
         readToLocal(loc, ptr);
@@ -109,7 +109,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         T retval = deserializer(ptr, serialized_size);
 
         /* Cast back to char pointer to allow for deletion. */
-        delete[] (char *)ptr;
+        ::operator delete (ptr);
         return retval;
     } else {
         throw cirrus::Exception("Requested ObjectID does not exist remotely.");
