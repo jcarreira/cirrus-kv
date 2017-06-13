@@ -14,11 +14,11 @@ static const uint64_t MILLION = 1000000;
 
 /* This function simply copies a std::array into a new portion of memory. */
 template <unsigned int SIZE>
-std::pair<void*, unsigned int> array_serializer_simple(
+std::pair<std::unique_ptr<char[]>, unsigned int> array_serializer_simple(
             const std::array<char, SIZE>& v) {
-    void *ptr = ::operator new (sizeof(v));
-    std::memcpy(ptr, &v, sizeof(v));
-    return std::make_pair(ptr, sizeof(v));
+    std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
+    std::memcpy(ptr.get(), &v, sizeof(v));
+    return std::make_pair(std::move(ptr), sizeof(v));
 }
 
 /* Takes a pointer to std::array passed in and returns as object. */

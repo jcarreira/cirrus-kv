@@ -29,18 +29,20 @@ struct Dummy {
     int id;
 };
 
-std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v);
+std::pair<std::unique_ptr<char[]>, unsigned int>
+struct_serializer_simple(const struct Dummy& v);
+
 struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */);
 
 cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
                     struct_serializer_simple, struct_deserializer_simple);
 
-
 /* This function simply copies a struct Dummy into a new portion of memory. */
-std::pair<void*, unsigned int> struct_serializer_simple(const struct Dummy& v) {
-    void *ptr = ::operator new (sizeof(struct Dummy));
-    std::memcpy(ptr, &v, sizeof(struct Dummy));
-    return std::make_pair(ptr, sizeof(struct Dummy));
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                              struct_serializer_simple(const struct Dummy& v) {
+    std::unique_ptr<char[]> ptr(new char[sizeof(struct Dummy)]);
+    std::memcpy(ptr.get(), &v, sizeof(struct Dummy));
+    return std::make_pair(std::move(ptr), sizeof(struct Dummy));
 }
 
 /* Takes a pointer to struct Dummy passed in and returns as object. */
