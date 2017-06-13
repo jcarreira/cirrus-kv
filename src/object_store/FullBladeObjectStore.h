@@ -84,7 +84,8 @@ private:
       * to the buffer containing the serialized object as well as the size of
       * the buffer.
       */
-    std::function<std::pair<void*, unsigned int>(const T&)> serializer;
+    std::unique_ptr<void, decltype(&::operator delete)>,
+                                            unsigned int>(const T&)> serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -187,13 +188,13 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
     // Approach: serialize object passed in, push it to oid
     // serialized_size is saved in the class, it is the size of pushed objects
 
-    // TODO: convert to smart pointers?
     std::pair<void*, unsigned int> serializer_out = this->serializer(obj);
-    void * serial_ptr = serializer_out.first;
+    std::unique_ptr<void, decltype(&::operator delete)> serial_ptr =
+                                                          serializer_out.first;
     this->serialized_size = serializer_out.second;
     bool retval;
     if (objects_.find(id, loc)) {
-        retval = writeRemote(serial_ptr, loc, mem);
+        retval = writeRemote(serial_ptr.get(), loc, mem);
     } else {
         // we could merge this into a single message (?)
         cirrus::AllocationRecord allocRec;
@@ -203,10 +204,9 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj, RDMAMem* mem) {
         }
         insertObjectLocation(id, this->serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
-        retval = writeRemote(serial_ptr,
+        retval = writeRemote(serial_ptr.get(),
                           BladeLocation(this->serialized_size, allocRec), mem);
     }
-    free(serial_ptr);
     return retval;
 
 }
