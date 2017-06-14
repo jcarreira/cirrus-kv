@@ -46,6 +46,9 @@ RDMAServer::~RDMAServer() {
             });
 }
 
+/**
+  * Initializes the RDMAServer. 
+  */
 void RDMAServer::init() {
     struct sockaddr_in addr;
 
@@ -66,6 +69,11 @@ void RDMAServer::init() {
     TEST_NZ(rdma_listen(id_, NUM_BACKLOG));
 }
 
+/**
+  * Sends a message using RDMA. Message is sent synchronously?
+  * @param size size of the message to be sent.
+  * @param id a pointer to the struct rdma_cm_id for this connection.
+  */
 void RDMAServer::send_message(struct rdma_cm_id *id, uint64_t size) {
     LOG<INFO>("Sending message. size: ", size);
 
@@ -220,14 +228,19 @@ void RDMAServer::build_connection(struct rdma_cm_id *id) {
         qp_attr.cap.max_inline_data);
 }
 
-// connection has been established by now
-// 1. post a receive request
-// 2. publicize memory region to client
+/** Handles established connections. connection has been established by now
+  * 1. post a receive request
+  * 2. publicize memory region to client
+  */
 void RDMAServer::handle_established(struct rdma_cm_id *id) {
     for (int i = 0; i < 4; ++i)
         post_msg_receive(id);
 }
 
+/**
+  * Handles disconnected clients. Deregisters the memory allocated to send
+  * and receive messages with the client.
+  */
 void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
     auto conn_ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -236,6 +249,9 @@ void RDMAServer::handle_disconnected(struct rdma_cm_id *id) {
     ibv_dereg_mr(conn_ctx->send_msg_mr);
 }
 
+/**
+  * Instantiates a new connection context.
+  */
 void RDMAServer::create_connection_context(struct rdma_cm_id *id) {
     auto con_ctx = new ConnectionContext;
 
@@ -282,9 +298,9 @@ void RDMAServer::on_completion(struct ibv_wc *wc) {
     }
 }
 
-/*
- * Should be called after init
- */
+/**
+  * Main loop, handles client interactions. Should be called after init.
+  */
 void RDMAServer::loop() {
     struct rdma_cm_event *event = nullptr;
     struct rdma_conn_param cm_params;

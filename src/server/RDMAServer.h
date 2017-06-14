@@ -13,7 +13,10 @@
 #include <memory>
 
 namespace cirrus {
-    
+
+/**
+  * Parent class for servers that communicate over RDMA.
+  */
 class RDMAServer : public Server {
 public:
     RDMAServer(int port, int timeout_ms = 500);
@@ -55,7 +58,7 @@ protected:
     struct rdma_cm_id *id_ = nullptr;
     struct rdma_event_channel *ec_ = nullptr;
 
-    // port 
+    // port
     int port_;
     // timeout in miliseconds
     int timeout_ms_;

@@ -15,9 +15,9 @@
 
 namespace cirrus {
 
-/*
- * One GeneralContext for all connections
- */
+/**
+  * One GeneralContext for all connections
+  */
 struct GeneralContext {
     struct ibv_context *ctx;
     struct ibv_pd *pd;
@@ -30,10 +30,11 @@ struct GeneralContext {
     std::thread* cq_poller_thread;
 };
 
-// Struct used to carry information from issuing operation
-// to receiving completion
-// this is allocated when issuing and deallocated
-// for async ops this is passed up
+/** Struct used to carry information from issuing operation
+  * to receiving completion.
+  * This is allocated when issuing and deallocated
+  * for async ops this is passed up.
+  */
 struct RDMAOpInfo {
     RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
             std::function<void(void)> fn = []() -> void {}
@@ -43,7 +44,7 @@ struct RDMAOpInfo {
                 throw std::runtime_error("BUG");
         }
 
-    void apply() { 
+    void apply() {
         LOG<INFO>("Applying fn");
         apply_fn();
         LOG<INFO>("Applied fn");
@@ -54,19 +55,19 @@ struct RDMAOpInfo {
     std::function<void(void)> apply_fn;
 };
 
-/*
- * One ConnectionContext per connection
- */ 
+/**
+  * Struct to maintain connection context. One ConnectionContext per connection
+  */
 struct ConnectionContext {
     ConnectionContext() :
         send_msg(0), send_msg_mr(0), recv_msg(0),
         recv_msg_mr(0), qp(nullptr),
         peer_addr(0), peer_rkey(0),
-        setup_done(false) 
+        setup_done(false)
     {
         recv_sem = new SpinLock();
         recv_sem->wait(); //lock
-        memset(&gen_ctx_, 0, sizeof(gen_ctx_));  
+        memset(&gen_ctx_, 0, sizeof(gen_ctx_));
     }
 
     ~ConnectionContext() {
@@ -78,7 +79,7 @@ struct ConnectionContext {
         delete recv_sem;
         // XXX release send_msg and recv_msg
     }
-    
+
     void *send_msg;
     struct ibv_mr *send_msg_mr;
 
@@ -94,11 +95,14 @@ struct ConnectionContext {
     Lock* send_sem;
     //Semaphore send_sem;
     Lock* recv_sem;
-    
+
     GeneralContext gen_ctx_;
     bool setup_done = false;
 };
 
+/**
+  * A struct representing a portion of RDMA memory.
+  */
 struct RDMAMem {
     RDMAMem(const void* addr = nullptr, uint64_t size = 0,
             ibv_mr* m = nullptr) :
@@ -110,6 +114,11 @@ struct RDMAMem {
         }
     }
 
+    /**
+      * Registers the RDMA memory
+      * @param gctx the GeneralContext for all connections
+      * @return Whether memory was successfully registered
+      */
     bool prepare(GeneralContext gctx) {
         LOG<INFO>("prepare()");
         // we don't register more than once
@@ -118,7 +127,7 @@ struct RDMAMem {
             return true;
         }
 
-        mr = ibv_reg_mr(gctx.pd, 
+        mr = ibv_reg_mr(gctx.pd,
                 reinterpret_cast<void*>(addr_),
                 size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
 
@@ -127,7 +136,11 @@ struct RDMAMem {
         }
         return mr != nullptr;
     }
-    
+
+    /**
+      * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
+      * @return Whether memory was successfully cleared.
+      */
     bool clear() {
         if (registered_ == false)
             throw std::runtime_error("Not registered");
@@ -140,13 +153,17 @@ struct RDMAMem {
     }
 
     // we should have a smart pointer around this mr
-    uint64_t addr_;
-    uint64_t size_;
-    struct ibv_mr *mr;
-    bool registered_ = false;
-    bool cleared_ = false;
+    uint64_t addr_; /**< Address of the memory */
+    uint64_t size_; /**< Size of the memory */
+    struct ibv_mr *mr; /**< Pointer to ibv_mr for this memory */
+    bool registered_ = false; /**< If the memory is registered. */
+    bool cleared_ = false; /**< If the memory is cleared. */
 };
 
+/**
+  * A class containing the general outline of all clients that use RDMA
+  * for communication.
+  */
 class RDMAClient {
 public:
     explicit RDMAClient(int timeout_ms = 500);
@@ -173,14 +190,14 @@ protected:
     bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
-    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size, 
+    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
             std::function<void()> apply_fn = []() -> void {});
-    void read_rdma_sync(struct rdma_cm_id *id, uint64_t size, 
+    void read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
-    
+
     void connect_rdma_cm(const std::string& host, const std::string& port);
     void connect_eth(const std::string& host, const std::string& port);
 
@@ -226,4 +243,3 @@ protected:
 } // cirrus
 
 #endif // _RDMA_CLIENT_H_
-
