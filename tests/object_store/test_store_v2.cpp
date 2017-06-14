@@ -18,7 +18,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
     serializer_simple(const int& v) {
 
     std::unique_ptr<char[]> ptr(new char[sizeof(int)]);
-    std::memcpy(ptr.get(), &v, sizeof(int));
+    *(ptr.get()) = v;
     return std::make_pair(std::move(ptr), sizeof(int));
 }
 
@@ -50,7 +50,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
-    std::cout << "Test starting" << std::endl; 
+    std::cout << "Test starting" << std::endl;
     test_store_simple();
     return 0;
 }
