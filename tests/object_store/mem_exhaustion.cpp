@@ -15,7 +15,7 @@ static const uint64_t MILLION = 1000000;
 struct Dummy {
     char data[SIZE];
     int id;
-    Dummy(int id) : id(id) {}
+    explicit Dummy(int id) : id(id) {}
 };
 
 /* This function simply copies a struct Dummy into a new portion of memory. */

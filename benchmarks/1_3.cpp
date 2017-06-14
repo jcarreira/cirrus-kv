@@ -27,7 +27,7 @@ static const uint64_t N_MSG = 1000000;
 struct Dummy {
     char data[SIZE];
     int id;
-    Dummy(int id) : id(id) {}
+    explicit Dummy(int id) : id(id) {}
 };
 
 

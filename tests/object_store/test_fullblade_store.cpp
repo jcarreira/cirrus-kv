@@ -27,7 +27,7 @@ static const uint32_t SIZE = 1;
 struct Dummy {
     char data[SIZE];
     int id;
-    Dummy(int id) : id(id) {}
+    explicit Dummy(int id) : id(id) {}
 };
 
 /* This function simply copies a struct Dummy into a new portion of memory. */

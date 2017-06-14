@@ -27,7 +27,7 @@ static const uint32_t SIZE = 1024;
 struct Dummy {
     char data[SIZE];
     int id;
-    Dummy(int id) : id(id) {}
+    explicit Dummy(int id) : id(id) {}
 };
 
 std::pair<std::unique_ptr<char[]>, unsigned int>
