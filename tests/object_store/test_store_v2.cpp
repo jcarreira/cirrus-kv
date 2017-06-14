@@ -50,7 +50,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
-    std::cout << "Test starting\n"; 
+    std::cout << "Test starting" << std::endl; 
     test_store_simple();
     return 0;
 }
