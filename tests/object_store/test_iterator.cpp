@@ -17,7 +17,7 @@
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-unsigned int SIZE = 1;
+const unsigned int SIZE = 1;
 const char IP[] = "10.10.49.83";
 
 
@@ -27,7 +27,7 @@ void test_iterator() {
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
-  cirrus::CacheManager<cirrus::DUMMY<SIZE>> cm(&store, 10);
+  cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
 
     // Put items in the store
@@ -41,7 +41,7 @@ void test_iterator() {
     }
 
     // Use iterator to retrieve
-    cirrus::CirrusIterable iter(&cm, 1, 0, 9);
+    cirrus::CirrusIterable<cirrus::Dummy<SIZE>> iter(&cm, 1, 0, 9);
 
     int j = 0;
     for (auto it = iter.begin(); it != iter.end(); it++) {

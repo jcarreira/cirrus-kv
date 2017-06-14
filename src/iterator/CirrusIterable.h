@@ -48,16 +48,18 @@ class CirrusIterable {
 /**
   * Function that returns a cirrus::Iterator at the start of the given range.
   */
+template<class T>
 cirrus::Iterator<T> CirrusIterable<T>::begin() {
-    return new Iterator(cm, readAhead, first, last, first);
+    return new cirrus::Iterator<T>(cm, readAhead, first, last, first);
 }
 
 /**
   * Function that returns a cirrus::Iterator one past the end of the given
   * range.
   */
+template<class T>
 cirrus::Iterator<T> CirrusIterable<T>::end() {
-  return new Iterator(cm, readAhead, first, last, last + 1);
+  return new cirrus::Iterator<T>(cm, readAhead, first, last, last + 1);
 }
 
 }  // namespace cirrus

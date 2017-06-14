@@ -15,13 +15,6 @@ using ObjectID = uint64_t;
 template<class T>
 class Iterator {
  public:
-    T operator*();
-    Iterator& operator++();
-    Iterator& operator++(int i);
-    bool operator!=(const Iterator& it) const;
-    bool operator==(const Iterator& it) const;
-    ObjectID get_curr_id() const;
-
    /**
      * Constructor for the Iterator class. Assumes that all objects
      * are stored sequentially.
@@ -31,11 +24,18 @@ class Iterator {
      * dereferenced.
      * @param readAhead how many items ahead items should be prefetched.
      */
-    Iterator<T>(cirrus::CacheManager<T>* cm,
+    Iterator(cirrus::CacheManager<T>* cm,
                                 unsigned int readAhead, ObjectID first,
                                 ObjectID last, ObjectID current_id):
                                 cm(cm), readAhead(readAhead), first(first),
                                 last(last), current_id(current_id) {}
+
+    T operator*();
+    Iterator& operator++();
+    Iterator& operator++(int i);
+    bool operator!=(const Iterator& it) const;
+    bool operator==(const Iterator& it) const;
+    ObjectID get_curr_id() const;
 
  private:
     cirrus::CacheManager<T> *cm;
@@ -45,8 +45,9 @@ class Iterator {
     ObjectID current_id;
 };
 
+template<class T>
 T Iterator<T>::operator*() {
-  for (unsigned int i = 1, i <= readAhead, i++) {
+  for (unsigned int i = 1; i <= readAhead; i++) {
     // Math to make sure that prefetching loops back around
     // Formula is val = ((current_id + i) - first) % (last - first)) + first
     ObjectID tenative_fetch = current_id + i;  // calculate what we WOULD fetch
@@ -59,27 +60,32 @@ T Iterator<T>::operator*() {
   return cm->get(current_id);
 }
 
+template<class T>
 Iterator<T>& Iterator<T>::operator++() {
   current_id++;
   return *this;
 }
 
+template<class T>
 Iterator<T>& Iterator<T>::operator++(int /* i */) {
   current_id++;
   return *this;
 }
 
+template<class T>
 bool Iterator<T>::operator!=(const Iterator<T>& it) const {
   return current_id != it.get_curr_id();
 }
 
+template<class T>
 bool Iterator<T>::operator==(const Iterator<T>& it) const {
   return current_id == it.get_curr_id();
 }
 
-int Iterator<T>::get_curr_id() const {
+template<class T>
+ObjectID Iterator<T>::get_curr_id() const {
   return current_id;
-
+}
 }  // namespace cirrus
 
 #endif  // _ITERATOR_H_
