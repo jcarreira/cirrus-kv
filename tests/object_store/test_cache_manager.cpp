@@ -1,9 +1,8 @@
-/* Copyright Joao Carreira 2016 */
-
 #include <unistd.h>
 #include <stdlib.h>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/cache_manager/CacheManager.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
@@ -11,7 +10,6 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
-
 
 /* This function simply copies an int into a new portion of memory. */
 std::pair<std::unique_ptr<char[]>, unsigned int>
@@ -35,7 +33,8 @@ int deserializer_simple(void* data, unsigned int /* size */) {
   */
 void test_cache_manager_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        serializer_simple, deserializer_simple);
+                        cirrus::serializer_simple,
+                        cirrus::deserializer_simple);
 
     cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  10; oid++) {
@@ -45,7 +44,7 @@ void test_cache_manager_simple() {
     for (int oid = 0; oid <  10; oid++) {
         int retval = cm.get(oid);
         if (retval != oid) {
-          throw std::runtime_error("Wrong value returned.");
+            throw std::runtime_error("Wrong value returned.");
         }
     }
 }

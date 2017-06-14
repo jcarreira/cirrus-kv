@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include "src/common/AllocatorMessageGenerator.h"
 
 #include <cstring>

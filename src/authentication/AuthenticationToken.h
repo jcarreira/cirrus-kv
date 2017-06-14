@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _AUTHENTICATION_TOKEN_H_
 #define _AUTHENTICATION_TOKEN_H_
 

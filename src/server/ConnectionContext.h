@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CONNECTION_CONTEXT_H_
 #define _CONNECTION_CONTEXT_H_
 

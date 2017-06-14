@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <pthread.h>
 #include <thread>
 #include "src/utils/logging.h"

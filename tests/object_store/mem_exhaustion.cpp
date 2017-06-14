@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include <stdlib.h>
 #include <string>
 
@@ -12,7 +10,6 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
-
 
 /** This test aims to ensure that when the remote server no longer has room to fulfill
   * all allocations it notifies the client, which will then throw an error message.

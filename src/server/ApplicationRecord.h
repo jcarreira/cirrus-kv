@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _APPLICATION_RECORD_H_
 #define _APPLICATION_RECORD_H_
 

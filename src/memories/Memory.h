@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 

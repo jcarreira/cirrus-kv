@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include <stdlib.h>
 #include <fstream>
 #include <iterator>
@@ -24,7 +22,6 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t N_MSG = 1000000;
-
 
 uint64_t total_puts = 0;
 uint64_t total_time = 0;
