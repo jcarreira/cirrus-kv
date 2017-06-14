@@ -42,8 +42,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
-            std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
-            std::function<T(void*,unsigned int)> deserializer);
+            std::function<std::pair<std::unique_ptr<char[]>,
+            unsigned int>(const T&)> serializer,
+            std::function<T(void*, unsigned int)> deserializer);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
@@ -105,9 +106,11 @@ private:
   * in the buffer.
   */
 template<class T>
-FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
+FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
+        const std::string& bladeIP,
         const std::string& port,
-        std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
+        std::function<std::pair<std::unique_ptr<char[]>,
+        unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
@@ -323,4 +326,4 @@ void FullBladeObjectStoreTempl<T>::printStats() const noexcept {
 }
 }
 
-#endif // _FULLBLADE_OBJECT_STORE_H_
+#endif  // _FULLBLADE_OBJECT_STORE_H_

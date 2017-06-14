@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CIRRUS_ITERABLE_H_
 #define _CIRRUS_ITERABLE_H_
 
@@ -10,8 +8,8 @@ namespace cirrus {
 using ObjectID = uint64_t;
 
 /**
-  * A class that interfaces with the cache manager. Making an access will
-  * prefetch the next object.
+  * A class that interfaces with the cache manager. Returns cirrus::Iterator
+  * objects for iteration.
   */
 template<class T>
 class CirrusIterable {

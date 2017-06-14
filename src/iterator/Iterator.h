@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _ITERATOR_H_
 #define _ITERATOR_H_
 
@@ -10,7 +8,7 @@ using ObjectID = uint64_t;
 
 /**
   * A class that interfaces with the cache manager. Making an access will
-  * prefetch the next object
+  * prefetch a user defined distance ahead
   */
 template<class T>
 class Iterator {
@@ -47,6 +45,7 @@ class Iterator {
 
 template<class T>
 T Iterator<T>::operator*() {
+  // Attempts to get the next readAhead items.
   for (unsigned int i = 1; i <= readAhead; i++) {
     // Math to make sure that prefetching loops back around
     // Formula is val = ((current_id + i) - first) % (last - first)) + first
@@ -60,32 +59,55 @@ T Iterator<T>::operator*() {
   return cm->get(current_id);
 }
 
+/**
+  * A function that increments the Iterator by increasing the value of
+  * current_id. The next time the Iterator is dereferenced, an object stored
+  * under the incremented current_id will be retrieved.
+  */
 template<class T>
 Iterator<T>& Iterator<T>::operator++() {
   current_id++;
   return *this;
 }
 
+
+/**
+  * A function that increments the Iterator by increasing the value of
+  * current_id. The next time the Iterator is dereferenced, an object stored
+  * under the incremented current_id will be retrieved.
+  */
 template<class T>
 Iterator<T>& Iterator<T>::operator++(int /* i */) {
   current_id++;
   return *this;
 }
 
+/**
+  * A function that compares two Iterators. Will return true if the two
+  * iterators have different values of current_id.
+  */
 template<class T>
 bool Iterator<T>::operator!=(const Iterator<T>& it) const {
   return current_id != it.get_curr_id();
 }
 
+/**
+  * A function that compares two Iterators. Will return true if the two
+  * iterators have identical values of current_id.
+  */
 template<class T>
 bool Iterator<T>::operator==(const Iterator<T>& it) const {
   return current_id == it.get_curr_id();
 }
 
+/**
+  * A function that returns the current_id of the Iterator that calls it.
+  */
 template<class T>
 ObjectID Iterator<T>::get_curr_id() const {
   return current_id;
 }
+
 }  // namespace cirrus
 
 #endif  // _ITERATOR_H_

@@ -93,6 +93,6 @@ void CacheManager<T>::prefetch(ObjectID oid) {
 }
 
 
-}  // cirrus
+}  // namespace cirrus
 
-#endif // _CACHEMANAGER_H_
+#endif  // _CACHEMANAGER_H_
