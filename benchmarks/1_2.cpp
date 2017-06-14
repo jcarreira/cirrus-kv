@@ -23,7 +23,6 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 
-
 /**
   * This benchmark measures the distribution of times necessary for
   * N asynchronous puts.
