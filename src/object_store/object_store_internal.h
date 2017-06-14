@@ -22,7 +22,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 
 template<unsigned int SIZE>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
-struct Dummy<SIZE> struct_deserializer_simple(void* data, 
+struct Dummy<SIZE> struct_deserializer_simple(void* data,
                                               unsigned int /* size */) {
     struct Dummy<SIZE> *ptr = static_cast<struct Dummy<SIZE>*>(data);
     struct Dummy<SIZE> retDummy(ptr->id);
@@ -32,4 +32,4 @@ struct Dummy<SIZE> struct_deserializer_simple(void* data,
 
 }
 
-#endif // _OBJECT_STORE_H_
+#endif // _OBJECT_STORE_INTERNAL_H_
