@@ -46,8 +46,8 @@ public:
             std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
             std::function<T(void*,unsigned int)> deserializer);
 
-    T get(const ObjectID&) const override;
-    bool put(const ObjectID&, T) const override;
+    T get(const ObjectID& id) const override;
+    bool put(const ObjectID& id, T obj) const override;
 
     std::function<bool(bool)> get_async(ObjectID, T*) const;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);

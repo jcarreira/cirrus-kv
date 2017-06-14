@@ -15,9 +15,9 @@ class ObjectStore {
 public:
     ObjectStore() {}
 
-    virtual T get(const ObjectID&) const = 0;
+    virtual T get(const ObjectID& id) const = 0;
 
-    virtual bool put(const ObjectID&, T) = 0;
+    virtual bool put(const ObjectID& id, T obj) = 0;
 
     virtual void printStats() const noexcept = 0;
 
