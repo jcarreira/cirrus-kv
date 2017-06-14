@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -25,28 +26,6 @@ const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t MILLION = 1000000;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-    Dummy(int id) : id(id) {}
-};
-
-/* This function simply copies a struct Dummy into a new portion of memory. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                              struct_serializer_simple(const struct Dummy& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(struct Dummy)]);
-    std::memcpy(ptr.get(), &v, sizeof(struct Dummy));
-    return std::make_pair(std::move(ptr), sizeof(struct Dummy));
-}
-
-/* Takes a pointer to struct Dummy passed in and returns as object. */
-struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
-    struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy(ptr->id);
-    std::memcpy(&retDummy.data, &(ptr->data), SIZE);
-    return retDummy;
-}
-
 /**
   * This benchmarks has two aims. The first aim is to find the distribution of
   * latencies for synchronous puts. To do this it times the time taken for
@@ -55,10 +34,12 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
   * achieves by measuring the time needed for ten million puts.
   */
 void test_sync() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-            struct_serializer_simple, struct_deserializer_simple);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
+            cirrus::struct_serializer_simple<SIZE>,
+            cirrus::struct_deserializer_simple<SIZE>);
 
-    struct Dummy d(42);
+    struct cirrus::Dummy<SIZE> d(42);
 
     // warm up
     std::cout << "Warming up" << std::endl;

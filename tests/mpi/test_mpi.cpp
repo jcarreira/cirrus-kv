@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -31,34 +32,14 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-    Dummy(int id) : id(id) {}
-};
-
-/* This function simply copies a struct Dummy into a new portion of memory. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                              struct_serializer_simple(const struct Dummy& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(struct Dummy)]);
-    std::memcpy(ptr.get(), &v, sizeof(struct Dummy));
-    return std::make_pair(std::move(ptr), sizeof(struct Dummy));
-}
-
-/* Takes a pointer to struct Dummy passed in and returns as object. */
-struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
-    struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy(ptr->id);
-    std::memcpy(&retDummy.data, &(ptr->data), SIZE);
-    return retDummy;
-}
-
 // #define CHECK_RESULTS
 
 void test_sync() {
-  cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-                      struct_serializer_simple, struct_deserializer_simple);
-    struct Dummy d(42);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
+                      cirrus::struct_serializer_simple<SIZE>,
+                      cirrus::struct_deserializer_simple<SIZE>);
+    struct cirrus::Dummy<SIZE> d(42);
 
     try {
         store.put(1, d);
@@ -66,7 +47,7 @@ void test_sync() {
         throw std::runtime_error("Error inserting");
     }
 
-    struct Dummy d2 = store.get(1);
+    struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
     // should be 42
     std::cout << "d2.id: " << d2.id << std::endl;
@@ -106,11 +87,13 @@ void test_async() {
 #endif
 
 void test_sync(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-                      struct_serializer_simple, struct_deserializer_simple);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+         store(IP, PORT,
+                      cirrus::struct_serializer_simple<SIZE>,
+                      cirrus::truct_deserializer_simple<SIZE>);
     cirrus::Stats stats;
 
-    struct Dummy d(42);
+    struct cirrus::Dummy<SIZE> d(42);
 
     // warm up
     for (int i = 0; i < 100; ++i) {
@@ -122,7 +105,7 @@ void test_sync(int N) {
         cirrus::TimerFunction tf("", false);
         store.put(1, d);
 #ifdef CHECK_RESULTS
-        struct Dummy d2 = store.get(1);
+        struct cirrus::Dummy<SIZE> d2 = store.get(1);
         if (d2.id != 42) {
             throw std::runtime_error("Wrong value");
         }
