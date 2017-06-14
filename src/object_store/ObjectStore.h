@@ -17,7 +17,7 @@ public:
 
     virtual T get(const ObjectID& id) const = 0;
 
-    virtual bool put(const ObjectID& id, T obj) = 0;
+    virtual bool put(const ObjectID& id, const T& obj) = 0;
 
     virtual void printStats() const noexcept = 0;
 
