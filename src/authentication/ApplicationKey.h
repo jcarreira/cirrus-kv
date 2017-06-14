@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _APPLICATION_KEY_H_
 #define _APPLICATION_KEY_H_
 

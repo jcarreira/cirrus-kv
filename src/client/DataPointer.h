@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _DATA_POINTER_H_
 #define _DATA_POINTER_H_
 

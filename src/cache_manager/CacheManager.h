@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CACHEMANAGER_H_
 #define _CACHEMANAGER_H_
 
@@ -16,7 +14,8 @@ template<class T>
 class CacheManager {
   public:
     /**
-      * Constructor for the CacheManager class.
+      * Constructor for the CacheManager class. Any object added to the cache
+      * needs to have a default constructor.
       * @param store a pointer to the ObjectStore that the CacheManager will
       * interact with. This is where all objects will be stored and retrieved
       * from.
@@ -80,16 +79,17 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
 /**
   * A function that fetches an object from the remote server and stores it in
   * the cache, but does not return the object. Should be called in advance of
-  * the object being used in order to reduce latency.
+  * the object being used in order to reduce latency. If object is already
+  * in the cache, no call will be made to the remote server.
   * @param oid the ObjectID that the object you wish to retrieve is stored
   * under.
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
-    // set up local cache entry
-    // Store object in the cache
-    struct cache_entry& entry = cache[oid];
-    entry.obj = store->get(oid);
+    if (cache.find(oid) == cache.end()) {
+      struct cache_entry& entry = cache[oid];
+      entry.obj = store->get(oid);
+    }
 }
 
 

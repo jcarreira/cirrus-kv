@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _ALLOC_MESSAGE_GENERATOR_H_
 #define _ALLOC_MESSAGE_GENERATOR_H_
 

@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include "src/client/RDMAClient.h"
 #include <unistd.h>
 #include <sys/types.h>

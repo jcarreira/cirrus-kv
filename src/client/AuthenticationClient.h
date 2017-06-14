@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _AUTH_CLIENT_H_
 #define _AUTH_CLIENT_H_
 

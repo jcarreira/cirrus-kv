@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>

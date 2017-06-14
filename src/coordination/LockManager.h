@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #ifndef _LOCK_MANAGER_H_
 #define _LOCK_MANAGER_H_
 

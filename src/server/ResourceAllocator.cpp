@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include "src/server/ResourceAllocator.h"
 #include "src/authentication/ApplicationKey.h"
 #include "src/authentication/AuthenticationToken.h"

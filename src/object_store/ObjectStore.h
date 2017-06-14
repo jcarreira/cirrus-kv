@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _OBJECT_STORE_H_
 #define _OBJECT_STORE_H_
 
@@ -21,6 +19,7 @@ public:
 
     virtual void printStats() const noexcept = 0;
 
+    virtual bool remove(ObjectID id) = 0;
 private:
 };
 

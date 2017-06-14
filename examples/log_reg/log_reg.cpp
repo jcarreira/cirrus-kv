@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #include <math.h>
 #include <fstream>
 #include <iterator>

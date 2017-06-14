@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #include <iostream>
 #include "src/utils/Time.h"
 #include "src/utils/Log.h"
