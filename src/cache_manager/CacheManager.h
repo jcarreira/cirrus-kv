@@ -34,7 +34,7 @@ class CacheManager {
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
     struct cache_entry {
       T obj;
-    };    
+    };
     std::map<ObjectID, struct cache_entry> cache;
     uint64_t max_size;
 };
@@ -80,16 +80,17 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
 /**
   * A function that fetches an object from the remote server and stores it in
   * the cache, but does not return the object. Should be called in advance of
-  * the object being used in order to reduce latency.
+  * the object being used in order to reduce latency. If object is already
+  * in the cache, no call will be made to the remote server.
   * @param oid the ObjectID that the object you wish to retrieve is stored
   * under.
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
-    // set up local cache entry
-    // Store object in the cache
-    struct cache_entry& entry = cache[oid];
-    entry.obj = store->get(oid);
+    if (cache.find(oid) == cache.end()) {
+      struct cache_entry& entry = cache[oid];
+      entry.obj = store->get(oid);
+    }
 }
 
 
