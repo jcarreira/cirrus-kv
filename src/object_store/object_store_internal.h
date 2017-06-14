@@ -31,6 +31,22 @@ struct Dummy<SIZE> struct_deserializer_simple(void* data,
     return retDummy;
 }
 
+/* This function simply copies an int into a new portion of memory. */
+std::pair<std::unique_ptr<char[]>, unsigned int>
+    serializer_simple(const int& v) {
+
+    std::unique_ptr<char[]> ptr(new char[sizeof(int)]);
+    *(ptr.get()) = v;
+    return std::make_pair(std::move(ptr), sizeof(int));
+}
+
+/* Takes an int passed in and returns as object. */
+int deserializer_simple(void* data, unsigned int /* size */) {
+    int *ptr = reinterpret_cast<int *>(data);
+    int retval = *ptr;
+    return retval;
+}
+
 }  // namespace cirrus
 
 #endif  // _OBJECT_STORE_INTERNAL_H_
