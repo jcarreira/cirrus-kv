@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "src/object_store/FullBladeObjectStore.h"
-// #include "src/object_store/object_store_internal.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/cache_manager/CacheManager.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
@@ -33,8 +33,8 @@ int deserializer_simple(void* data, unsigned int /* size */) {
   */
 void test_cache_manager_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        serializer_simple,
-                        deserializer_simple);
+                        cirrus::serializer_simple,
+                        cirrus::deserializer_simple);
 
     cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  10; oid++) {
