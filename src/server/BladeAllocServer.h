@@ -13,12 +13,6 @@
 #include <map>
 #include <boost/interprocess/managed_external_buffer.hpp>
 
-/*
- * This server supports allocations on top of a big mem pool
- * Allocations are isolated through the use of mem. windows
- * We use a mem. allocator to manage mem.
- */
-
 namespace cirrus {
 
 struct BladeAllocation {
@@ -26,6 +20,11 @@ struct BladeAllocation {
     void* ptr;
 };
 
+/**
+  * @brief This server supports allocations on top of a big mem pool.
+  * Allocations are isolated through the use of mem. windows
+  * We use a mem. allocator to manage mem.
+  */
 class BladeAllocServer : public RDMAServer {
 public:
     BladeAllocServer(int port, uint64_t pool_size,

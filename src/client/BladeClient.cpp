@@ -32,6 +32,12 @@ bool BladeClient::authenticate(std::string address,
     return auth_token.allow;
 }
 
+/**
+  * A function that requests a given number of bytes be allocated
+  * from the server.
+  * @param size the number of bytes the client is requesting be allocated
+  * @return AllocationRecord for the new AllocationRecord
+  */
 AllocationRecord BladeClient::allocate(uint64_t size) {
     LOG<INFO>("Allocating ",
         size, " bytes");
@@ -61,7 +67,8 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     if (msg->data_as_AllocAck()->remote_addr() == 0) {
       // Throw error message
       LOG<ERROR>("Server threw exception when allocating memory.");
-      throw cirrus::Exception("Server threw exception when allocating memory.");
+      throw cirrus::ServerMemoryErrorException("Server threw "
+               "exception when allocating memory.");
     }
 
     AllocationRecord alloc(
@@ -82,6 +89,11 @@ AllocationRecord BladeClient::allocate(uint64_t size) {
     return alloc;
 }
 
+/**
+  * A function that requests a given allocation be freed in the remote store.
+  * @param ar the allocation record that records the allocation to be freed.
+  * @return success
+  */
 bool BladeClient::deallocate(const AllocationRecord& ar) {
     LOG<INFO>("Deallocating addr: ", ar.remote_addr);
 
@@ -109,6 +121,18 @@ bool BladeClient::deallocate(const AllocationRecord& ar) {
     return true;
 }
 
+/**
+  * @brief Write synchronously.
+  * A function that writes data to the remote store synchronously. Reads from
+  * data and passes length bytes.
+  * @param alloc_rec the AllocationRecord corresponding to an adequately sized
+  * allocation.
+  * @param offset the offset from data at which to start reading
+  * @param length the number of bytes to send
+  * @param mem pointer to RDMAMem struct for this write
+  * @return write success
+  * @see AllocationRecord
+  */
 bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -145,6 +169,20 @@ bool BladeClient::write_sync(const AllocationRecord& alloc_rec,
     return true;
 }
 
+/**
+  * @brief Write asynchronously.
+  * A function that writes data to the remote store asynchronously. Reads from
+  * data and passes length bytes.
+  * @param alloc_rec the AllocationRecord corresponding to an adequately sized
+  * allocation.
+  * @param offset the offset from data at which to start reading
+  * @param length the number of bytes to send
+  * @param mem pointer to RDMAMem struct for this write
+  * @return std::shared_ptr<FutureBladeOp> a shared_ptr to a FutureBladeOp
+  * that the caller can then extract a future from. Null if length >
+  * the max sendable message size
+  * @see AllocationRecord
+  */
 std::shared_ptr<FutureBladeOp> BladeClient::write_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
@@ -171,17 +209,31 @@ std::shared_ptr<FutureBladeOp> BladeClient::write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     } else {
-        // TimerFunction tf("write_async memcpy", true);
-        std::memcpy(con_ctx_.send_msg, data, length);
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
         op_info = write_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey,
-                default_send_mem_);
+                *mem);
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
+/**
+  * @brief Read synchronously.
+  * A function that reads data from the remote store synchronously. Reads
+  * length bytes offset by offset bytes from data.
+  * @param alloc_rec the AllocationRecord containing the necessary info
+  * @param offset the offset from the remote_addr at which to start reading
+  * @param length the number of bytes to read
+  * @param data the location in local memory to write to
+  * @param mem pointer to RDMAMem struct for this read
+  * @return success if length is less than max receivable size
+  */
 bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -204,7 +256,6 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, *mem);
-
     } else {
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
@@ -219,6 +270,19 @@ bool BladeClient::read_sync(const AllocationRecord& alloc_rec,
     return true;
 }
 
+/**
+  * @brief Read asynchronously.
+  * A function that reads data from the remote store asynchronously. Reads
+  * length bytes offset by offset bytes from the remote address.
+  * @param alloc_rec the AllocationRecord containing the necessary info
+  * @param offset the offset from the remote_addr at which to start reading
+  * @param length the number of bytes to read
+  * @param data the location in local memory to write to
+  * @param mem pointer to RDMAMem struct for this read
+  * @return std::shared_ptr<FutureBladeOp> a shared_ptr to a FutureBladeOp
+  * that the caller can then extract a future from. Null if length >
+  * the max receivable message size
+  */
 std::shared_ptr<FutureBladeOp> BladeClient::read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
@@ -244,14 +308,15 @@ std::shared_ptr<FutureBladeOp> BladeClient::read_async(
                 *mem,
                 []() -> void {});
     } else {
-        void* buffer = con_ctx_.recv_msg;  // need this for capture list
-        auto copy_fn = [data, buffer, length]() {
-            TimerFunction tf("Memcpy (read) time", true);
-            std::memcpy(data, buffer, length);
-        };
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
         op_info = read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                default_recv_mem_, copy_fn);
+                *mem,
+                [mem]() -> void { delete mem; });
     }
 
     return std::make_shared<FutureBladeOp>(op_info);
@@ -286,10 +351,26 @@ std::shared_ptr<FutureBladeOp> BladeClient::fetchadd_async(
     return std::make_shared<FutureBladeOp>(op_info);
 }
 
+
+/**
+  * @brief Wait for operation to finish.
+  * A function that calls the FutureBladeOp's operation's wait() method.
+  * Waits until the operation is complete.
+  * @see RDMAOpInfo
+  * @see Lock
+  */
 void FutureBladeOp::wait() {
     op_info->op_sem->wait();
 }
 
+/**
+  * @brief Check operation status.
+  * A function that calls the FutureBladeOp's operation's try_wait() method.
+  * Returns instantly with the status of the operation.
+  * @return true if operation is finished, false otherwise
+  * @see RDMAOpInfo
+  * @see Lock
+  */
 bool FutureBladeOp::try_wait() {
     return op_info->op_sem->trywait();
 }

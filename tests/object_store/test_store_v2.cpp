@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -16,7 +17,7 @@ const char IP[] = "10.10.49.83";
 std::pair<std::unique_ptr<char[]>, unsigned int>
     serializer_simple(const int& v) {
     std::unique_ptr<char[]> ptr(new char[sizeof(int)]);
-    std::memcpy(ptr.get(), &v, sizeof(int));
+    *(ptr.get()) = v;
     return std::make_pair(std::move(ptr), sizeof(int));
 }
 
@@ -48,7 +49,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
-    printf("test starting\n");
+    std::cout << "Test starting" << std::endl;
     test_store_simple();
     return 0;
 }

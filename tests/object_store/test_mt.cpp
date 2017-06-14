@@ -15,6 +15,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 
 static const uint64_t GB = (1024*1024*1024);
@@ -24,35 +25,9 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-    explicit Dummy(int id) : id(id) {}
-};
-
-std::pair<std::unique_ptr<char[]>, unsigned int>
-struct_serializer_simple(const struct Dummy& v);
-
-struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */);
-
-cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT,
-                    struct_serializer_simple, struct_deserializer_simple);
-
-/* This function simply copies a struct Dummy into a new portion of memory. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                              struct_serializer_simple(const struct Dummy& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(struct Dummy)]);
-    std::memcpy(ptr.get(), &v, sizeof(struct Dummy));
-    return std::make_pair(std::move(ptr), sizeof(struct Dummy));
-}
-
-/* Takes a pointer to struct Dummy passed in and returns as object. */
-struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
-    struct Dummy *ptr = static_cast<struct Dummy*>(data);
-    struct Dummy retDummy(ptr->id);
-    std::memcpy(&retDummy.data, &(ptr->data), SIZE);
-    return retDummy;
-}
+cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+                    cirrus::struct_serializer_simple<SIZE>,
+                    cirrus::struct_deserializer_simple<SIZE>);
 
 /**
   * Tests that behavior is as expected when multiple threads make get and put
@@ -72,10 +47,11 @@ void test_mt() {
         threads[i] = new std::thread([dis, gen]() {
             for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();
-                struct Dummy d(rnd);
+
+                struct cirrus::Dummy<SIZE> d(rnd);
 
                 store.put(1, d);
-                Dummy d2 = store.get(1);
+                cirrus::Dummy<SIZE> d2 = store.get(1);
 
                 if (d2.id != rnd)
                     throw std::runtime_error("mismatch");
