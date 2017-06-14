@@ -34,6 +34,7 @@ struct Dummy struct_deserializer_simple(void* data, unsigned int /* size */) {
     return retDummy;
 }
 
+
 /** This test aims to ensure that when the remote server no longer has room to fulfill
   * all allocations it notifies the client, which will then throw an error message.
   * This test assumes that the server does not have enough room to store one million
@@ -63,7 +64,7 @@ void test_exhaustion() {
 auto main() -> int {
     try {
         test_exhaustion();
-    } catch (const cirrus::Exception & e) {
+    } catch (const cirrus::ServerMemoryErrorException & e) {
         return 0;
     }
     /* Exception should be thrown above and caught */
