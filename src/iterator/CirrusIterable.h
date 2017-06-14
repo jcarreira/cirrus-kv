@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CIRRUS_ITERABLE_H_
 #define _CIRRUS_ITERABLE_H_
 

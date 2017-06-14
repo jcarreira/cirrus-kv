@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _ITERATOR_H_
 #define _ITERATOR_H_
 
@@ -47,6 +45,7 @@ class Iterator {
 
 template<class T>
 T Iterator<T>::operator*() {
+  // Attempts to get the next readAhead items.
   for (unsigned int i = 1; i <= readAhead; i++) {
     // Math to make sure that prefetching loops back around
     // Formula is val = ((current_id + i) - first) % (last - first)) + first
