@@ -19,7 +19,7 @@ public:
 
     virtual void printStats() const noexcept = 0;
 
-    virtual bool remove(ObjectID) = 0;
+    virtual bool remove(ObjectID id) = 0;
 private:
 };
 
