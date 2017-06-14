@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CACHEMANAGER_H_
 #define _CACHEMANAGER_H_
 
