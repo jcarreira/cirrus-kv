@@ -5,6 +5,9 @@
 
 namespace cirrus {
 
+/**
+  * Contains information tracking an allocation.
+  */
 struct AllocationRecord {
     int alloc_id;
     uint64_t remote_addr;

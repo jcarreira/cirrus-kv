@@ -9,7 +9,7 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
-static const uint32_t SIZE = 1024*1024; // One MB
+static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
 
 struct Dummy {
@@ -30,8 +30,8 @@ void test_exhaustion() {
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
 
-   // warm up
-   std::cout << "Putting 1000" << std::endl;
+    // warm up
+    std::cout << "Putting 1000" << std::endl;
     for (int i = 0; i < 1000; ++i) {
         store.put(d.get(), sizeof(Dummy), i);
     }
@@ -48,9 +48,9 @@ void test_exhaustion() {
 
 auto main() -> int {
     try {
-    	test_exhaustion();
+        test_exhaustion();
     } catch (const cirrus::Exception & e) {
-    	return 0;
+        return 0;
     }
     /* Exception should be thrown above and caught */
     return -1;

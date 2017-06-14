@@ -12,18 +12,15 @@
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"   
+#include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
-
-/*
- * This store keeps objects in blades at all times
- * method get copies objects from blade to local nodes
- * method put copies object from local dram to remote blade
- */
 
 namespace cirrus {
 namespace ostore {
 
+/**
+  * @brief A class that stores a size and allocation record.
+  */
 class BladeLocation {
 public:
     BladeLocation(uint64_t sz, const AllocationRecord& ar) :
@@ -35,6 +32,11 @@ public:
     AllocationRecord allocRec;
 };
 
+/**
+  * This store keeps objects in blades at all times
+  * method get copies objects from blade to local nodes
+  * method put copies object from local dram to remote blade
+  */
 template<class T = void>
 class FullBladeObjectStoreTempl : public ObjectStore {
 public:
@@ -43,7 +45,7 @@ public:
     Object get(const ObjectID&) const override;
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
-    
+
     bool getHandle(ObjectID, BladeLocation& bl) const;
 
     bool getHandle(const ObjectID&, BladeLocation&) const;
@@ -51,7 +53,7 @@ public:
     bool put(Object, uint64_t, ObjectID, RDMAMem* mem = nullptr);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
-    
+
     bool remove(ObjectID);
 
 private:
@@ -71,6 +73,12 @@ private:
     mutable BladeClient client;
 };
 
+/**
+  * @brief Instatiates a FullBladeObjectStoreTempl.
+  * @param bladeIP the ip address of the blade to connect to.
+  * @param port the port to connect to.
+  * @see BladeClient.connect()
+  */
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
         const std::string& port) :
@@ -78,6 +86,10 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& blade
     client.connect(bladeIP, port);
 }
 
+
+/**
+  * @brief Not implemented as this store does not cache locally.
+  */
 template<class T>
 Object FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // We do not implement this because
@@ -86,6 +98,11 @@ Object FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     return 0;
 }
 
+/**
+  * @brief Copies object from blade to local node.
+  * @param id the ObjectID of the object to transfer.
+  * @param ptr a pointer to where the object should be transferred to.
+  */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
     BladeLocation loc;
@@ -98,6 +115,12 @@ bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
     }
 }
 
+/**
+  * @brief Returns the BladeLocation that contains a given ObjectID.
+  * @param id the ObjectID to find
+  * @param a reference to a BladeLocation that will be set.
+  * @return True if object exits, false otherwise.
+  */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& loc) const {
     if (objects_.find(id, loc)) {
@@ -107,6 +130,20 @@ bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& 
     }
 }
 
+
+/**
+  * @brief Asynchronously copies object from remote blade to local DRAM.
+  * @param id the ObjectID of the object being retrieved.
+  * @param ptr a pointer to the location where the object should be copied.
+  * @return Returns an std::function<bool(bool)>, which in this case will be
+  * a future that allows the user to see the status of the get. If called with
+  * false as the argument, the function will wait until the operation is
+  * complete. If true is passed as the argument, it will return immediately
+  * with the status of the get. If object does not exist, will return
+  * null pointer.
+  * @see FutureBladeOp
+  * @see readToLocalAsync()
+  */
 template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
@@ -129,11 +166,21 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
     }
 }
 
+/**
+  * @brief Copies object from local dram to remote blade.
+  * Operates in a synchronous fashion.
+  * @param id the ObjectID that obj should be stored under.
+  * @param obj the object to store on the remote blade.
+  * @param size the size of the obj being transferred
+  * @param mem a pointer to an RDMAMem
+  * @return Returns the success of the call to writeRemote()
+  * @see writeRemote()
+  */
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size, 
+bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
         ObjectID id, RDMAMem* mem) {
     BladeLocation loc;
-    
+
     if (objects_.find(id, loc)) {
         return writeRemote(obj, loc, mem);
     } else {
@@ -149,6 +196,20 @@ bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
     }
 }
 
+/**
+  * @brief Asynchronously copies object from local dram to remote blade.
+  * @param id the ObjectID that obj should be stored under.
+  * @param obj the object to store on the remote blade.
+  * @param size the size of the obj being transferred
+  * @param mem a pointer to an RDMAMem
+  * @return Returns an std::function<bool(bool)>, which in this case will be
+  * a future that allows the user to see the status of the put. If called with
+  * false as the argument, the function will wait until the operation is
+  * complete. If true is passed as the argument, it will return immediately
+  * with the status of the put.
+  * @see FutureBladeOp
+  * @see writeRemoteAsync()
+  */
 template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) {
@@ -174,6 +235,11 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
     return fun;
 }
 
+/**
+  * @brief Deallocates space occupied by object in remote blade.
+  * @param id the ObjectID of the object to be removed from remote memory.
+  * @return Returns true.
+  */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     BladeLocation loc;
@@ -237,4 +303,3 @@ void FullBladeObjectStoreTempl<T>::printStats() const noexcept {
 }
 
 #endif // _FULLBLADE_OBJECT_STORE_H_
-
