@@ -50,7 +50,7 @@ public:
     bool get(ObjectID, T*) const;
     std::function<bool(bool)> get_async(ObjectID, T*) const;
 
-    bool put(ObjectID id, T obj);
+    bool put(ObjectID id, T obj) const override;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
