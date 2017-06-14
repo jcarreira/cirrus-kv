@@ -47,7 +47,7 @@ public:
             std::function<T(void*,unsigned int)> deserializer);
 
     T get(const ObjectID& id) const override;
-    bool put(const ObjectID& id, T obj) const override;
+    bool put(const ObjectID& id, const T& obj) override;
 
     std::function<bool(bool)> get_async(ObjectID, T*) const;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
@@ -184,7 +184,7 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
   * @return the success of the put.
   */
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, T obj) {
+bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     BladeLocation loc;
 
     // Approach: serialize object passed in, push it to id
