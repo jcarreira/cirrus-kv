@@ -9,19 +9,19 @@
 namespace cirrus {
 
 class Exception : public std::exception {
-    public:
-        Exception(std::string msg): msg(msg) {}
-        const char* what() const throw() {
-          return msg.c_str();
-        }
-    private:
-        std::string msg;
+public:
+    Exception(std::string msg): msg(msg) {}
+    const char* what() const throw() {
+        return msg.c_str();
+    }
+private:
+    std::string msg;
 };
 
 class ServerMemoryErrorException : public cirrus::Exception {
-    public:
-        ServerMemoryErrorException(std::string msg): 
-            cirrus::Exception(msg) {}
+public:
+    ServerMemoryErrorException(std::string msg): 
+        cirrus::Exception(msg) {}
 };
 
 }
