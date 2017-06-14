@@ -5,7 +5,7 @@
 #include <map>
 
 namespace cirrus {
-using ObjectID = uint64_t;  // Will this work? should we include it?
+using ObjectID = uint64_t;
 
   /**
     * A class that manages the cache and interfaces with the store.
