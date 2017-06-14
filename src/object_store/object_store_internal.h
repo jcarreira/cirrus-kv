@@ -10,6 +10,9 @@ struct Dummy {
     char data[SIZE];
     int id;
     explicit Dummy(int id) : id(id) {}
+    Dummy() {
+        id = 0;
+    }
 };
 
 /* This function simply copies a struct Dummy into a new portion of memory. */
