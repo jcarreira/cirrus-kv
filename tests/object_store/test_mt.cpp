@@ -72,7 +72,7 @@ void test_mt() {
         threads[i] = new std::thread([dis, gen]() {
             for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();
-	        struct Dummy d(rnd);
+                struct Dummy d(rnd);
 
                 store.put(1, d);
                 Dummy d2 = store.get(1);
