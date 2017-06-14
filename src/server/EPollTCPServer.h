@@ -1,5 +1,3 @@
-/* Copyright 2017 Joao Carreira */
-
 #ifndef _EPOLLTCP_SERVER_H_
 #define _EPOLLTCP_SERVER_H_
 

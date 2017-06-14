@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _QUOTA_MANAGER_H_
 #define _QUOTA_MANAGER_H_
 

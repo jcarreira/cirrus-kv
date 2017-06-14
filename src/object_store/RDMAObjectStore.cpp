@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <iostream>
 #include <string>
 #include "src/object_store/RDMAObjectStore.h"

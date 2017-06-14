@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _RESOURCE_ALLOCATOR_H_
 #define _RESOURCE_ALLOCATOR_H_
 

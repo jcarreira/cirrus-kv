@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <unistd.h>
 #include <iostream>
 #include <csignal>

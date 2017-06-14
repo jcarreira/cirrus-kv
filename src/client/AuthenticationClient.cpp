@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include "src/client/AuthenticationClient.h"
 #include "src/common/AllocatorMessage.h"
 #include "src/common/AllocatorMessageGenerator.h"

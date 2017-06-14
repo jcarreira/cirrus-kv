@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <iostream>
 #include <cstring>
 #include "src/object_store/FullCacheStore.h"

@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <csignal>
 #include "BladeAllocServer.h"
 #include "src/utils/logging.h"

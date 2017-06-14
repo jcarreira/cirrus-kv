@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <unistd.h>
 #include <errno.h>
 #include "src/server/BladePoolServer.h"

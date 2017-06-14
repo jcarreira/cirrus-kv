@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _LRU_EVICTION_POLICY_H_
 #define _LRU_EVICTION_POLICY_H_
 
