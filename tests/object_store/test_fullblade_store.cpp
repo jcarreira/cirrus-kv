@@ -111,7 +111,6 @@ void test_sync(int N) {
 }
 
 auto main() -> int {
-    // TODO: Add back the async tests, visible in git history
     test_sync(1000);
     test_sync();
 
