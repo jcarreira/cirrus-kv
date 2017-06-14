@@ -46,11 +46,10 @@ public:
             std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
             std::function<T(void*,unsigned int)> deserializer);
 
-    T get(const ObjectID& oid) const override;
-    bool get(ObjectID, T*) const;
-    std::function<bool(bool)> get_async(ObjectID, T*) const;
+    T get(const ObjectID&) const override;
+    bool put(const ObjectID&, T) const override;
 
-    bool put(ObjectID id, T obj) const override;
+    std::function<bool(bool)> get_async(ObjectID, T*) const;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
@@ -185,10 +184,10 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
   * @return the success of the put.
   */
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj) {
+bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, T obj) {
     BladeLocation loc;
 
-    // Approach: serialize object passed in, push it to oid
+    // Approach: serialize object passed in, push it to id
     // serialized_size is saved in the class, it is the size of pushed objects
 
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
