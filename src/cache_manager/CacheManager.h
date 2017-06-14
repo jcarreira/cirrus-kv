@@ -34,7 +34,7 @@ class CacheManager {
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
     struct cache_entry {
       T obj;
-    };    
+    };
     std::map<ObjectID, struct cache_entry> cache;
     uint64_t max_size;
 };
