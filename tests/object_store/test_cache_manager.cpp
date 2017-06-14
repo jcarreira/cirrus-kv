@@ -44,7 +44,6 @@ void test_cache_manager_simple() {
     for (int oid = 0; oid <  10; oid++) {
         int retval = cm.get(oid);
         if (retval != oid) {
-            printf("expected %d but got %d\n\n\n\n", oid, retval);
             throw std::runtime_error("Wrong value returned.");
         }
     }
