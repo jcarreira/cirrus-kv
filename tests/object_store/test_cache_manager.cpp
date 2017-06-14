@@ -37,7 +37,7 @@ void test_cache_manager_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         serializer_simple, deserializer_simple);
 
-    CacheManager cm<int>(&store, 10);
+    cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  10; oid++) {
         cm.put(oid, oid);
     }

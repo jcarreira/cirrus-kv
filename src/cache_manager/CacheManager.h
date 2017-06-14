@@ -32,11 +32,11 @@ class CacheManager {
 
   private:
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
-    std::map<ObjectID, struct cache_entry> cache;
-    uint64_t max_size;
     struct cache_entry {
       T obj;
     };    
+    std::map<ObjectID, struct cache_entry> cache;
+    uint64_t max_size;
 };
 
 /**
@@ -46,7 +46,8 @@ class CacheManager {
   * under.
   * @return a copy of the object stored on the server.
   */
-T CacheManager<T>::get(int oid) {
+template<class T>
+T CacheManager<T>::get(ObjectID oid) {
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
@@ -58,8 +59,8 @@ T CacheManager<T>::get(int oid) {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
         struct cache_entry& entry = cache[oid];
-        entry.obj = store.get(oid);
-        return *entry.obj;
+        entry.obj = store->get(oid);
+        return entry.obj;
     }
 }
 
@@ -70,6 +71,7 @@ T CacheManager<T>::get(int oid) {
   * @param obj the object to store on the server
   * @see FullBladeObjectstore
   */
+template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     // Push the object to the store under the given id
     store->put(oid, obj);
@@ -82,11 +84,12 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
   * @param oid the ObjectID that the object you wish to retrieve is stored
   * under.
   */
+template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
     // set up local cache entry
     // Store object in the cache
     struct cache_entry& entry = cache[oid];
-    cache_entry.obj = store->get(oid);
+    entry.obj = store->get(oid);
 }
 
 
