@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 /**
   * Here we test the use of Cirrus on a distributed application
   * built on top of MPI

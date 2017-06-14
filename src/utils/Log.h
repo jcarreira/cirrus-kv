@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _LOG_H_
 #define _LOG_H_
 

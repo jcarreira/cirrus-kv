@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _AUTHENTICATOR_H_
 #define _AUTHENTICATOR_H_
 

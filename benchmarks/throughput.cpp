@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include <fstream>
 #include <iostream>
 #include <string>

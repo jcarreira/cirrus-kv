@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _BLADE_ALLOC_SERVER_H_
 #define _BLADE_ALLOC_SERVER_H_
 

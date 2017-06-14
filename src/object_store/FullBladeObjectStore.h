@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _FULLBLADE_OBJECT_STORE_H_
 #define _FULLBLADE_OBJECT_STORE_H_
 

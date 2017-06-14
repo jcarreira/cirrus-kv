@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include <csignal>
 #include "src/server/ResourceAllocator.h"
 #include "src/utils/logging.h"

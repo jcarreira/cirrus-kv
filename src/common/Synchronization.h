@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _SYNCHRONIZATION_H_
 #define _SYNCHRONIZATION_H_
 
