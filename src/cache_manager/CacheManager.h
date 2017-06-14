@@ -14,7 +14,8 @@ template<class T>
 class CacheManager {
   public:
     /**
-      * Constructor for the CacheManager class.
+      * Constructor for the CacheManager class. Any object added to the cache
+      * needs to have a default constructor.
       * @param store a pointer to the ObjectStore that the CacheManager will
       * interact with. This is where all objects will be stored and retrieved
       * from.
