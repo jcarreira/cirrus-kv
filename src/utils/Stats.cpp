@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #include "src/utils/Stats.h"
 
 #include <cmath>

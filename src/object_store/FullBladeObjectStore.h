@@ -1,10 +1,9 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _FULLBLADE_OBJECT_STORE_H_
 #define _FULLBLADE_OBJECT_STORE_H_
 
 #include <string>
 #include <iostream>
+#include <utility>
 
 #include "src/object_store/ObjectStore.h"
 #include "src/client/BladeClient.h"
@@ -53,7 +52,7 @@ public:
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
-    bool remove(ObjectID);
+    bool remove(ObjectID) override;
 
 private:
     bool readToLocal(BladeLocation loc, void*) const;
@@ -73,7 +72,9 @@ private:
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
     mutable BladeClient client;
 
-    /** The size of serialized objects. */
+    /** The size of serialized objects. This is obtained from the return
+      * value of the serializer() function. We assume that all serialized
+      * objects have the same length. */
     uint64_t serialized_size;
 
     /**
@@ -97,7 +98,8 @@ private:
   * @param port the port to use to communicate with the remote server
   * @param serializer A function that takes an object and serializes it.
   * Returns a pointer to the buffer containing the serialized object as
-  * well as the size of the buffer.
+  * well as the size of the buffer. All serialized objects should be the
+  * same length.
   * @param deserializer A function that reads the buffer passed in and
   * deserializes it, returning an object constructed from the information
   * in the buffer.
@@ -193,7 +195,8 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    this->serialized_size = serializer_out.second;
+    serialized_size = serializer_out.second;
+
     bool retval;
     if (objects_.find(id, loc)) {
         retval = writeRemote(serial_ptr.get(), loc, nullptr);
@@ -202,12 +205,12 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
         cirrus::AllocationRecord allocRec;
         {
             TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
-            allocRec = client.allocate(this->serialized_size);
+            allocRec = client.allocate(serialized_size);
         }
-        insertObjectLocation(id, this->serialized_size, allocRec);
+        insertObjectLocation(id, serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
         retval = writeRemote(serial_ptr.get(),
-                          BladeLocation(this->serialized_size, allocRec),
+                          BladeLocation(serialized_size, allocRec),
                           nullptr);
     }
     return retval;

@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include "src/memories/3DXPoint.h"
 
 namespace cirrus {

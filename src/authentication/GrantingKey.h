@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _GRANTING_KEY_H_
 #define _GRANTING_KEY_H_
 

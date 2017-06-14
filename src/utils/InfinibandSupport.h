@@ -1,5 +1,3 @@
-/* Coprytight 2016 Joao Carreira */
-
 #ifndef _INFINIBAND_SUPPORT_H_
 #define _INFINIBAND_SUPPORT_H_
 
