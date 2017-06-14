@@ -71,7 +71,8 @@ void test_mt() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
             for (int i = 0; i < 100; ++i) {
-                struct Dummy d(std::rand());
+                int rnd = std::rand();
+	        struct Dummy d(rnd);
 
                 store.put(1, d);
                 Dummy d2 = store.get(1);

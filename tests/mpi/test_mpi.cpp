@@ -110,8 +110,7 @@ void test_sync(int N) {
                       struct_serializer_simple, struct_deserializer_simple);
     cirrus::Stats stats;
 
-    struct Dummy d;
-    d.id = 42;
+    struct Dummy d(42);
 
     // warm up
     for (int i = 0; i < 100; ++i) {
