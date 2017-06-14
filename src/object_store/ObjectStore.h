@@ -21,6 +21,7 @@ public:
 
     virtual void printStats() const noexcept = 0;
 
+    virtual bool remove(ObjectID) = 0;
 private:
 };
 
