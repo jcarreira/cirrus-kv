@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _OBJECT_STORE_H_
 #define _OBJECT_STORE_H_
 

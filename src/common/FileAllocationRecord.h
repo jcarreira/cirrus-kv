@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _FILE_ALLOCATION_RECORD_H_
 #define _FILE_ALLOCATION_RECORD_H_
 

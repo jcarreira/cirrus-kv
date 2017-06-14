@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _CACHE_STORE_H_
 #define _CACHE_STORE_H_
 

@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 namespace cirrus {
 
 class 3DXPoint : public Memory {

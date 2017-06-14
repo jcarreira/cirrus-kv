@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #include "src/client/BladeClient.h"
 #include <unistd.h>
 #include <string>

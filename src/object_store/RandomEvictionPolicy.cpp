@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2016 */
-
 #include "src/object_store/RandomEvictionPolicy.h"
 #include "src/object_store/FullCacheStore.h"
 

@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _BLADE_CLIENT_H_
 #define _BLADE_CLIENT_H_
 

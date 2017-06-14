@@ -1,5 +1,3 @@
-/* Copyright 2016 Joao Carreira */
-
 #ifndef _RDMA_OBJECT_STORE_H_
 #define _RDMA_OBJECT_STORE_H_
 
