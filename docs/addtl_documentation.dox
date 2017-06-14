@@ -1,0 +1,23 @@
+/** @file */
+/** @file AllocatorMessage.fbs
+  * A schema for AllocatorMessages.
+  * Parsed by flatc to generate header files then used for sending messages.
+  */
+
+/** @file BladeMessage.fbs
+  * A schema for BladeMessages.
+  * Parsed by flatc to generate header files then used for sending messages.
+  */
+
+/** @file BladeObjectStoreMessage.fbs
+  * A schema for BladeObjectStoreMessages.
+  * Parsed by flatc to generate header files then used for sending messages.
+  */
+
+/** \namespace cirrus
+  * The cirrus project
+  */
+
+/** \namespace cirrus::ostore
+  * Object stores
+  */

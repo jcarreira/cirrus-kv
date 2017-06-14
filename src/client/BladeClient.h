@@ -13,20 +13,33 @@ namespace cirrus {
 
 class FutureBladeOp;
 
+/**
+  * @brief Information about an async op.
+  * A class that contains information about an operation being performed
+  * asynchronously.
+  */
 class FutureBladeOp {
 public:
     FutureBladeOp(RDMAOpInfo* info) :
         op_info(info) {}
-    
+
     virtual ~FutureBladeOp() = default;
 
     void wait();
     bool try_wait();
 
-private: 
+private:
+    /**
+      * @brief op_info for this FutureBladeOp.
+      */
     RDMAOpInfo* op_info;
 };
 
+
+/**
+  * @brief A class extending RDMAClient.
+  * This class extends RDMAClient, providing implementations for many methods.
+  */
 class BladeClient : public RDMAClient {
 public:
     BladeClient(int timeout_ms = 500);
@@ -42,7 +55,7 @@ public:
     std::shared_ptr<FutureBladeOp> write_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length, const void* data,
             RDMAMem* mem = nullptr);
-    bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset, 
+    bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, const void* data, RDMAMem* mem = nullptr);
 
     // XXX We may not need a shared ptr here
@@ -52,7 +65,7 @@ public:
             RDMAMem* mem = nullptr);
     bool read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
-    
+
     // fetch and add atomic
     std::shared_ptr<FutureBladeOp> fetchadd_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t value);

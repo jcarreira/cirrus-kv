@@ -19,6 +19,9 @@
 namespace cirrus {
 namespace ostore {
 
+/**
+  * A class that stores a size and allocation record.
+  */
 class BladeLocation {
 public:
     BladeLocation(uint64_t sz, const AllocationRecord& ar) :
@@ -29,7 +32,6 @@ public:
     uint64_t size;
     AllocationRecord allocRec;
 };
-
 
 /**
   * This store keeps objects in blades at all times
@@ -140,6 +142,20 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     }
 }
 
+
+/**
+  * @brief Asynchronously copies object from remote blade to local DRAM.
+  * @param id the ObjectID of the object being retrieved.
+  * @param ptr a pointer to the location where the object should be copied.
+  * @return Returns an std::function<bool(bool)>, which in this case will be
+  * a future that allows the user to see the status of the get. If called with
+  * false as the argument, the function will wait until the operation is
+  * complete. If true is passed as the argument, it will return immediately
+  * with the status of the get. If object does not exist, will return
+  * null pointer.
+  * @see FutureBladeOp
+  * @see readToLocalAsync()
+  */
 template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
@@ -199,6 +215,20 @@ bool FullBladeObjectStoreTempl<T>::put(ObjectID id, T obj) {
 
 }
 
+/**
+  * @brief Asynchronously copies object from local dram to remote blade.
+  * @param id the ObjectID that obj should be stored under.
+  * @param obj the object to store on the remote blade.
+  * @param size the size of the obj being transferred
+  * @param mem a pointer to an RDMAMem
+  * @return Returns an std::function<bool(bool)>, which in this case will be
+  * a future that allows the user to see the status of the put. If called with
+  * false as the argument, the function will wait until the operation is
+  * complete. If true is passed as the argument, it will return immediately
+  * with the status of the put.
+  * @see FutureBladeOp
+  * @see writeRemoteAsync()
+  */
 template<class T>
 std::function<bool(bool)>
 FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) {
@@ -224,6 +254,11 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
     return fun;
 }
 
+/**
+  * @brief Deallocates space occupied by object in remote blade.
+  * @param id the ObjectID of the object to be removed from remote memory.
+  * @return Returns true.
+  */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     BladeLocation loc;
