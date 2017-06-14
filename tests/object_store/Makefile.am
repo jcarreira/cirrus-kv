@@ -1,5 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = test_store_v2 exhaustion test_fullblade_store test_mt test_mult_clients test_cache_manager
+bin_PROGRAMS = test_store_v2 exhaustion test_fullblade_store test_mt \
+               test_mult_clients test_cache_manager iterator
 
 LIBS         = -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
@@ -56,3 +57,10 @@ test_cache_manager_CPPFLAGS = -ggdb -I$(top_srcdir) \
                                     -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_cache_manager_LDADD    = $(LINCLUDES) \
                                $(LIBS)
+
+iterator_SOURCES  = test_iterator.cpp
+iterator_LDFLAGS  = -pthread
+iterator_CPPFLAGS = -ggdb -I$(top_srcdir) \
+                     	        -I$(top_srcdir)/examples/sparsehash/src/ \
+                              -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+iterator_LDADD    = $(LINCLUDES) $(LIBS)
