@@ -4,6 +4,7 @@
 #include <string>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/common/Exception.h"
 
 static const uint64_t GB = (1024*1024*1024);
