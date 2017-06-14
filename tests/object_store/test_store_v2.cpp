@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/utils/Time.h"
@@ -49,7 +50,7 @@ void test_store_simple() {
 }
 
 auto main() -> int {
-    printf("test starting\n");
+    std::cout << "Test starting\n"; 
     test_store_simple();
     return 0;
 }
