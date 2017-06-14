@@ -48,7 +48,7 @@ class CirrusIterable {
   */
 template<class T>
 cirrus::Iterator<T> CirrusIterable<T>::begin() {
-    return new cirrus::Iterator<T>(cm, readAhead, first, last, first);
+    return cirrus::Iterator<T>(cm, readAhead, first, last, first);
 }
 
 /**
@@ -57,7 +57,7 @@ cirrus::Iterator<T> CirrusIterable<T>::begin() {
   */
 template<class T>
 cirrus::Iterator<T> CirrusIterable<T>::end() {
-  return new cirrus::Iterator<T>(cm, readAhead, first, last, last + 1);
+  return cirrus::Iterator<T>(cm, readAhead, first, last, last + 1);
 }
 
 }  // namespace cirrus
