@@ -32,7 +32,7 @@ class CirrusIterable {
         Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
                                     ObjectID last, ObjectID current_id);
-
+        
         T operator*();
         Iterator& operator++();
         Iterator& operator++(int i);

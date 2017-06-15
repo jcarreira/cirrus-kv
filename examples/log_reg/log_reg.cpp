@@ -11,6 +11,7 @@
 #include "src/utils/StringUtils.h"
 #include "src/utils/logging.h"
 
+// TODO: Remove hardcoded IP and PORT
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 
@@ -228,4 +229,3 @@ auto main(int argc, char** argv) -> int {
 
     return 0;
 }
-

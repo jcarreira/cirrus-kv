@@ -16,6 +16,7 @@
 #include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 
+// TODO: Remove hardcoded IP and PORT
 static const uint64_t MILLION = 1000000;
 static const int N_THREADS = 10;
 const char PORT[] = "12345";

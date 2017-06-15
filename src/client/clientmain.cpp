@@ -12,6 +12,7 @@
 #include "src/client/AuthenticationClient.h"
 #include "src/utils/Time.h"
 
+// TODO: Remove hardcoded IP and PORT
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
@@ -312,4 +313,3 @@ auto main() -> int {
     test_with_registration();
     return 0;
 }
-

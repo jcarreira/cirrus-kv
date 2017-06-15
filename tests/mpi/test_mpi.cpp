@@ -25,6 +25,7 @@
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
+// TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
