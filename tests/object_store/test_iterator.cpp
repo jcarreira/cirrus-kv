@@ -11,7 +11,6 @@
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/object_store/object_store_internal.h"
 #include "src/cache_manager/CacheManager.h"
-#include "src/iterator/Iterator.h"
 #include "src/iterator/CirrusIterable.h"
 
 
