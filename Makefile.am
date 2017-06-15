@@ -1,6 +1,7 @@
 AUTOMAKE_OPTIONS = foreign serial-tests
 SUBDIRS = src tests benchmarks
-TESTS = ./tests/basic_test.py ./tests/mem_exhaustion.py ./tests/test_store_2.py
+TESTS = ./tests/basic_test.py ./tests/test_mem_exhaustion.py \
+        ./tests/test_store_simple.py
 source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)
 
