@@ -93,7 +93,7 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::CacheCapacityException & e) {
     }
-    
+  
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"
