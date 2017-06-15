@@ -122,7 +122,11 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
   return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1);
 }
 
-
+/**
+  * Function that dereferences the iterator, retrieving the underlying object
+  * of type T. When dereferenced, it prefetches the next readAhead items.
+  * @return Returns an object of type T.
+  */
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
   // Attempts to get the next readAhead items.
@@ -142,7 +146,7 @@ T CirrusIterable<T>::Iterator::operator*() {
 /**
   * A function that increments the Iterator by increasing the value of
   * current_id. The next time the Iterator is dereferenced, an object stored
-  * under the incremented current_id will be retrieved.
+  * under the incremented current_id will be retrieved. Serves as preincrement.
   */
 template<class T>
 typename CirrusIterable<T>::Iterator&
@@ -155,7 +159,8 @@ typename CirrusIterable<T>::Iterator&
 /**
   * A function that increments the Iterator by increasing the value of
   * current_id. The next time the Iterator is dereferenced, an object stored
-  * under the incremented current_id will be retrieved.
+  * under the incremented current_id will be retrieved. Serves as post
+  * increment.
   */
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
