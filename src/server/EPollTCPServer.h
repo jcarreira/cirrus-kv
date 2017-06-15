@@ -11,8 +11,8 @@ namespace cirrus {
   * This class uses the epoll() mechanism to handle large numbers of simultaneous connections
   */
 class EPollTCPServer {
-public:
-    EPollTCPServer(int port, int queue_len_ = 100);
+ public:
+    explicit EPollTCPServer(int port, int queue_len_ = 100);
     ~EPollTCPServer();
 
     /**
@@ -25,7 +25,7 @@ public:
       * Within loop() the server starts serving requests
       */
     virtual void loop();
-private:
+ private:
     /**
       * Process request from socket
       */
@@ -34,7 +34,7 @@ private:
       * Configure socket to be non blocking
       */
     void make_non_blocking(int sock);
-    
+
     epoll_event* events;
     epoll_event ev;
     int max_conn_;
@@ -45,6 +45,6 @@ private:
     int epfd_;
 };
 
-} // namespace cirrus
+}  // namespace cirrus
 
 #endif // _EPOLLTCP_SERVER_H_

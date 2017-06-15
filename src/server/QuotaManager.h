@@ -6,13 +6,13 @@
 namespace cirrus {
 
 class QuotaManager {
-public:
+ public:
     QuotaManager();
 
     virtual bool canAllocateMemory(uint64_t app_id, uint64_t memorySize) = 0;;
     virtual void allocateMemory(uint64_t app_id, uint64_t memorySize) = 0;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _QUOTA_MANAGER_H_
+#endif  // _QUOTA_MANAGER_H_

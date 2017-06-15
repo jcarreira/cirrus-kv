@@ -4,11 +4,11 @@
 namespace cirrus {
 
 class ApplicationKey {
-public:
+ public:
     ApplicationKey();
-private:
+ private:
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _APPLICATION_KEY_H_
+#endif  // _APPLICATION_KEY_H_

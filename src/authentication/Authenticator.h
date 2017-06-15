@@ -7,11 +7,11 @@
 namespace cirrus {
 
 class Authenticator {
-public:
+ public:
     virtual bool allowApplication(const AppId& app_id) = 0;
-private:
+ private:
 };
 
-} // cirrus
+}  // namespace cirrus
 
 #endif  // _AUTHENTICATOR_H_

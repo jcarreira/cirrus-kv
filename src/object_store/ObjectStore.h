@@ -10,7 +10,7 @@ using Object = void*;
 
 template<typename T>
 class ObjectStore {
-public:
+ public:
     ObjectStore() {}
 
     virtual T get(const ObjectID& id) const = 0;
@@ -20,9 +20,9 @@ public:
     virtual void printStats() const noexcept = 0;
 
     virtual bool remove(ObjectID id) = 0;
-private:
+ private:
 };
 
-}
+}  // namespace cirrus
 
-#endif // _OBJECT_STORE_H_
+#endif  // _OBJECT_STORE_H_

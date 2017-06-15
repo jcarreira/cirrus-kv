@@ -7,11 +7,11 @@ namespace cirrus {
   * Parent class for all servers.
   */
 class Server {
-public:
+ public:
     Server() = default;
     Server(Server&) = delete;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _SERVER_H_
+#endif  // _SERVER_H_

@@ -1,8 +1,9 @@
 #ifndef _CACHEMANAGER_H_
 #define _CACHEMANAGER_H_
 
-#include "src/object_store/FullBladeObjectStore.h"
 #include <map>
+#include "src/object_store/FullBladeObjectStore.h"
+#include "src/common/Exception.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -12,7 +13,7 @@ using ObjectID = uint64_t;
     */
 template<class T>
 class CacheManager {
-  public:
+ public:
     /**
       * Constructor for the CacheManager class. Any object added to the cache
       * needs to have a default constructor.
@@ -20,16 +21,21 @@ class CacheManager {
       * interact with. This is where all objects will be stored and retrieved
       * from.
       * @param cache_size the maximum number of objects that the cache should
-      * hold.
+      * hold. Must be at least one.
       */
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                     uint64_t cache_size) :
-                            store(store), max_size(cache_size){}
+                            store(store), max_size(cache_size) {
+                              if (cache_size < 1) {
+                                throw cirrus::CacheCapacityException(
+                                  "Cache capacity must be at least one.");
+                              }
+                            }
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
 
-  private:
+ private:
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
     struct cache_entry {
       T obj;
@@ -57,6 +63,10 @@ T CacheManager<T>::get(ObjectID oid) {
     } else {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
+        if (cache.size() == max_size) {
+          throw cirrus::CacheCapacityException("Get operation would put cache "
+                                             "over capacity.");
+        }
         struct cache_entry& entry = cache[oid];
         entry.obj = store->get(oid);
         return entry.obj;

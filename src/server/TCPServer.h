@@ -9,8 +9,8 @@ namespace cirrus {
   * WARNING: This class only handles one client at a time. For more clients see EpollServer
   */
 class TCPServer {
-public:
-    TCPServer(int port, int queue_len = 100);
+ public:
+    explicit TCPServer(int port, int queue_len = 100);
     ~TCPServer();
 
     /**
@@ -23,7 +23,7 @@ public:
       * Within loop() the server starts serving requests
       */
     virtual void loop();
-private:
+ private:
 
     /**
       * Server a request from a given socket
@@ -35,6 +35,6 @@ private:
     int server_sock_;
 };
 
-} // namespace cirrus
+}  // namespace cirrus
 
-#endif // _TCP_SERVER_H_
+#endif  // _TCP_SERVER_H_

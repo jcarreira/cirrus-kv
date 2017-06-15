@@ -7,15 +7,15 @@
 namespace cirrus {
 
 class AuthenticationClient : public RDMAClient {
-public:
-    AuthenticationClient(int timeout_ms = 500);
+ public:
+    explicit AuthenticationClient(int timeout_ms = 500);
     ~AuthenticationClient() = default;
 
     AuthenticationToken authenticate();
 
-private:
+ private:
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _AUTH_CLIENT_H_
+#endif  // _AUTH_CLIENT_H_

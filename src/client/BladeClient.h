@@ -1,9 +1,10 @@
 #ifndef _BLADE_CLIENT_H_
 #define _BLADE_CLIENT_H_
 
-#include "src/client/RDMAClient.h"
 #include <memory>
 #include <utility>
+#include <string>
+#include "src/client/RDMAClient.h"
 #include "src/common/AllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"
 
@@ -17,8 +18,8 @@ class FutureBladeOp;
   * asynchronously.
   */
 class FutureBladeOp {
-public:
-    FutureBladeOp(RDMAOpInfo* info) :
+ public:
+    explicit FutureBladeOp(RDMAOpInfo* info) :
         op_info(info) {}
 
     virtual ~FutureBladeOp() = default;
@@ -26,7 +27,7 @@ public:
     void wait();
     bool try_wait();
 
-private:
+ private:
     /**
       * @brief op_info for this FutureBladeOp.
       */
@@ -39,8 +40,8 @@ private:
   * This class extends RDMAClient, providing implementations for many methods.
   */
 class BladeClient : public RDMAClient {
-public:
-    BladeClient(int timeout_ms = 500);
+ public:
+    explicit BladeClient(int timeout_ms = 500);
     ~BladeClient() = default;
 
     bool authenticate(std::string allocator_address,
@@ -50,8 +51,10 @@ public:
     bool deallocate(const AllocationRecord& ar);
 
     // writes
-    std::shared_ptr<FutureBladeOp> write_async(const AllocationRecord& alloc_rec,
-            uint64_t offset, uint64_t length, const void* data,
+    std::shared_ptr<FutureBladeOp> write_async(
+            const AllocationRecord& alloc_rec,
+            uint64_t offset, uint64_t length,
+            const void* data,
             RDMAMem* mem = nullptr);
     bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, const void* data, RDMAMem* mem = nullptr);
@@ -65,15 +68,17 @@ public:
             uint64_t length, void *data, RDMAMem* reg = nullptr);
 
     // fetch and add atomic
-    std::shared_ptr<FutureBladeOp> fetchadd_async(const AllocationRecord& alloc_rec,
-            uint64_t offset, uint64_t value);
+    std::shared_ptr<FutureBladeOp> fetchadd_async(
+            const AllocationRecord& alloc_rec,
+            uint64_t offset,
+            uint64_t value);
     bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t value);
 
-private:
+ private:
     uint64_t remote_addr_;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _BLADE_CLIENT_H_
+#endif  // _BLADE_CLIENT_H_

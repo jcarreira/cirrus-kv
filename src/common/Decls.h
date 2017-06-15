@@ -5,4 +5,4 @@
       TypeName(const TypeName&) = delete;      \
   void operator=(const TypeName&) = delete
 
-#endif
+#endif // _DECLS_H_
