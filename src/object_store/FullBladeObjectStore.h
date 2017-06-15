@@ -51,7 +51,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 
     std::function<bool(bool)> get_async(ObjectID, T*) const;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
-    virtual void printStats() const noexcept override;
+    void printStats() const noexcept override;
 
     bool remove(ObjectID) override;
 
@@ -217,7 +217,6 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
                           nullptr);
     }
     return retval;
-
 }
 
 /**

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <string>
 #include "src/client/RDMAClient.h"
 #include "src/common/AllocationRecord.h"
 #include "src/authentication/AuthenticationToken.h"

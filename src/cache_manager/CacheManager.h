@@ -24,7 +24,7 @@ class CacheManager {
       */
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                     uint64_t cache_size) :
-                            store(store), max_size(cache_size){}
+                            store(store), max_size(cache_size) {}
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);

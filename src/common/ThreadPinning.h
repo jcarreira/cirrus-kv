@@ -1,3 +1,6 @@
+#ifndef _THREADPINNING_H
+#define _THREADPINNING_H
+
 #include <pthread.h>
 #include <thread>
 #include "src/utils/logging.h"
@@ -5,7 +8,7 @@
 namespace cirrus {
 
 class ThreadPinning {
-public:
+ public:
     static void pinThread(
             std::thread::native_handle_type thread_handle, int cpu) {
         cpu_set_t cpuset;
@@ -20,4 +23,6 @@ public:
     }
 };
 
-}
+}  // namespace cirrus
+
+#endif  // _THREADPINNING_H
