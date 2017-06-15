@@ -34,6 +34,10 @@ void test_cache_manager_simple() {
     }
 }
 
+/**
+  * This test tests the behavior of the cache manager when attempting to
+  * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
+  */
 void test_nonexistent_get() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         cirrus::serializer_simple,
@@ -48,6 +52,11 @@ void test_nonexistent_get() {
     cm.get(10);
 }
 
+/**
+  * This test tests the behavior of the cache manager when the cache is at
+  * capacity. At moment, the cache should throw
+  * a cirrus::CacheCapacityException.
+  */
 void test_capacity() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         cirrus::serializer_simple,
@@ -66,6 +75,10 @@ void test_capacity() {
     cm.get(10);
 }
 
+/**
+  * This test tests the behavior of the cache manager when instantiated with
+  * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
+  */
 void test_instantiation() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         cirrus::serializer_simple,
@@ -83,7 +96,7 @@ auto main() -> int {
         std::cout << "Exception not thrown when cache"
                      " capacity exceeded." << std::endl;
         return -1;
-    } catch (const cirrus::CacheCapacityException & e) {
+    } catch (const cirrus::CacheCapacityException& e) {
     }
 
     try {
@@ -91,15 +104,15 @@ auto main() -> int {
         std::cout << "Exception not thrown when cache"
                      " capacity set to zero." << std::endl;
         return -1;
-    } catch (const cirrus::CacheCapacityException & e) {
+    } catch (const cirrus::CacheCapacityException& e) {
     }
-  
+
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"
                      " called on nonexistent ID." << std::endl;
         return -1;
-    } catch (const cirrus::NoSuchIDException & e) {
+    } catch (const cirrus::NoSuchIDException& e) {
     }
 
     return 0;
