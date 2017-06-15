@@ -8,7 +8,7 @@ namespace cirrus {
 
 class Exception : public std::exception {
 public:
-    Exception(std::string msg): msg(msg) {}
+    explicit Exception(std::string msg): msg(msg) {}
     const char* what() const throw() {
         return msg.c_str();
     }
@@ -18,10 +18,10 @@ private:
 
 class ServerMemoryErrorException : public cirrus::Exception {
 public:
-    ServerMemoryErrorException(std::string msg): 
+    explicit ServerMemoryErrorException(std::string msg):
         cirrus::Exception(msg) {}
 };
 
-}
+}  //namespace cirrus
 
-#endif // _EXCEPTION_H_
+#endif  // _EXCEPTION_H_
