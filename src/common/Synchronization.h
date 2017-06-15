@@ -50,7 +50,7 @@ class PosixSemaphore : public Lock {
     }
 
     /**
-      * @brief Waits until entered into semaphore.
+      * Waits until entered into semaphore.
       */
     void wait() final {
         int rc;
@@ -61,14 +61,14 @@ class PosixSemaphore : public Lock {
     }
 
     /**
-      * @brief Posts to one waiter
+      * Posts to one waiter
       */
     void signal() final {
         sem_post(&m_sema);
     }
 
     /**
-      * @brief Posts to count waiters
+      * Posts to count waiters
       * @param count number of waiters to wake
       */
     void signal(int count) final {

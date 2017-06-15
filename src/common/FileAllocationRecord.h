@@ -8,11 +8,11 @@ namespace cirrus {
   */
 struct FileAllocationRecord {
     /**
-      * @brief The remote address where this file is stored.
+      * The remote address where this file is stored.
       */
     uint64_t remote_addr; /** The remote address where this file is stored. */
     /**
-      * @brief The peer_rkey for this file.
+      * The peer_rkey for this file.
       */
     uint64_t peer_rkey;
 
