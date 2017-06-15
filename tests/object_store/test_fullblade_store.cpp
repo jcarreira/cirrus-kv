@@ -15,6 +15,7 @@
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/object_store/object_store_internal.h"
+#include "src/common/Exception.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -22,7 +23,6 @@ static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1;
-
 
 // #define CHECK_RESULTS
 
@@ -91,9 +91,36 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
+
+
+/**
+  * This test tests the behavior of the store when attempting to
+  * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
+  */
+void test_nonexistent_get() {
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+                        cirrus::serializer_simple,
+                        cirrus::deserializer_simple);
+
+    for (int oid = 0; oid <  10; oid++) {
+        store.put(oid, oid);
+    }
+
+    // Should fail
+    store.get(10);
+}
+
 auto main() -> int {
     test_sync(1000);
     test_sync();
+
+    try {
+        test_nonexistent_get();
+        std::cout << "Exception not thrown when get"
+                     " called on nonexistent ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
 
     return 0;
 }

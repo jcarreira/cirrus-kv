@@ -9,13 +9,12 @@ namespace cirrus {
   * reserved by one app.
   */
 class Allocation {
-public:
+ public:
     Allocation() {}
     virtual ~Allocation() {}
-private:
-
+ private:
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _ALLOCATION_H_
+#endif  // _ALLOCATION_H_

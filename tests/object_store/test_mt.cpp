@@ -23,7 +23,6 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
-
 cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
                     cirrus::struct_serializer_simple<SIZE>,
                     cirrus::struct_deserializer_simple<SIZE>);

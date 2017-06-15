@@ -6,7 +6,7 @@
 namespace cirrus {
 
 class GeneralContext {
-public:
+ public:
     GeneralContext() :
         ctx(0),
         pd(0),
@@ -21,6 +21,6 @@ public:
     std::thread* cq_poller_thread;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _RDMA_SERVER_H_
+#endif  // _RDMA_SERVER_H_

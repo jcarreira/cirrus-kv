@@ -1,12 +1,12 @@
 #ifndef _SYNCHRONIZATION_H_
 #define _SYNCHRONIZATION_H_
 
+#include <errno.h>
 #include <error.h>
 #include <semaphore.h>
 #include <atomic>
 #include <stdexcept>
-#include <errno.h>
-//#include "src/utils/logging.h"
+// #include "src/utils/logging.h"
 #include "src/common/Decls.h"
 
 namespace cirrus {
@@ -15,7 +15,7 @@ namespace cirrus {
   * A class providing a general outline of a lock. Purely virtual.
   */
 class Lock {
-public:
+ public:
     Lock() {
     }
 
@@ -32,7 +32,7 @@ public:
       */
     virtual bool trywait() = 0;
 
-private:
+ private:
     DISALLOW_COPY_AND_ASSIGN(Lock);
 };
 
@@ -41,8 +41,8 @@ private:
   * associated methods to fullfill the functions of the lock class.
   */
 class PosixSemaphore : public Lock {
-public:
-    PosixSemaphore(int initialCount = 0) : Lock() {
+ public:
+    explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_init(&m_sema, 0, initialCount);
     }
 
@@ -53,7 +53,7 @@ public:
     /**
       * @brief Waits until entered into semaphore.
       */
-    void wait() override final {
+    void wait() final {
         int rc;
         do {
             rc = sem_wait(&m_sema);
@@ -64,7 +64,7 @@ public:
     /**
       * @brief Posts to one waiter
       */
-    void signal() override final {
+    void signal() final {
         sem_post(&m_sema);
     }
 
@@ -72,20 +72,21 @@ public:
       * @brief Posts to count waiters
       * @param count number of waiters to wake
       */
-    void signal(int count) override final {
+    void signal(int count) final {
         while (count-- > 0) {
             sem_post(&m_sema);
         }
     }
 
-    bool trywait() override final {
+    bool trywait() final {
         int ret = sem_trywait(&m_sema);
         if (ret == -1 && errno != EAGAIN) {
             throw std::runtime_error("trywait error");
         }
-        return ret != -1; // true for success
+        return ret != -1;  // true for success
     }
-private:
+
+ private:
     sem_t m_sema;
 };
 
@@ -93,7 +94,7 @@ private:
   * A lock that extends the Lock class. Utilizes spin waiting.
   */
 class SpinLock : public Lock {
-public:
+ public:
     SpinLock() :
         Lock()
     { }
@@ -103,31 +104,30 @@ public:
     /**
       * This function busywaits until it obtains the lock.
       */
-    void wait() override final {
-        while (lock.test_and_set(std::memory_order_acquire))
-            ;
+    void wait() final {
+        while (lock.test_and_set(std::memory_order_acquire));
     }
 
     /**
       * This function attempts to obtain the lock once.
       * @return true if the lock was obtained, false otherwise.
       */
-    bool trywait() override final {
+    bool trywait() final {
         return lock.test_and_set(std::memory_order_acquire) == 0;
     }
 
-    void signal(__attribute__((unused)) int count) override final {
+    void signal(__attribute__((unused)) int count) final {
         throw std::runtime_error("Not implemented");
     }
 
-    void signal() override final {
+    void signal() final {
         lock.clear(std::memory_order_release);
     }
 
-private:
+ private:
     std::atomic_flag lock = ATOMIC_FLAG_INIT;
 };
 
-}
+}  // namespace cirrus
 
-#endif // _SYNCHRONIZATION_H_
+#endif  // _SYNCHRONIZATION_H_

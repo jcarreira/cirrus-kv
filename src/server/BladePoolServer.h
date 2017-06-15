@@ -2,11 +2,11 @@
 #define _BLADE_POOL_SERVER_H_
 
 #include <rdma/rdma_cma.h>
+#include <semaphore.h>
+#include <thread>
+#include <vector>
 #include "src/utils/utils.h"
 #include "RDMAServer.h"
-#include <vector>
-#include <thread>
-#include <semaphore.h>
 
 /*
  * This server only creates one big pool
@@ -17,13 +17,13 @@
 namespace cirrus {
 
 class BladePoolServer : public RDMAServer {
-public:
+ public:
     BladePoolServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
     virtual ~BladePoolServer() = default;
     void init() final override;
 
-private:
+ private:
     void process_message(rdma_cm_id*, void* msg) final override;
     void handle_connection(struct rdma_cm_id* id) final override;
     void handle_disconnection(struct rdma_cm_id* id) final override;
@@ -37,6 +37,6 @@ private:
     std::once_flag pool_flag_;
 };
 
-}
+}  // namespace cirrus
 
 #endif // _BLADE_POOL_SERVER_H_

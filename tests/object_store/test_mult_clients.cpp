@@ -47,6 +47,7 @@ void test_multiple_clients() {
 
           for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();
+
                 struct cirrus::Dummy<SIZE> d(rnd);
 
                 store.put(1, d);

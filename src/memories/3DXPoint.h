@@ -1,12 +1,12 @@
 namespace cirrus {
 
 class 3DXPoint : public Memory {
-public:
+ public:
     uint64_t getReadLatency() const {}
     uint64_t getWriteLatency() const {}
     uint64_t getReadBandwidth() const {}
     uint64_t getWriteBandwidth() const {}
-private:
+ private:
     const uint64_t GB = 1024*1024*1024;
     const uint64_t read_latency_us_ = 10;
     const uint64_t write_latency_us_ = 10;

@@ -4,13 +4,12 @@
 namespace cirrus {
 
 class ConnectionInfo {
-public:
+ public:
     ConnectionInfo(){}
 
-private:
+ private:
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _CONNECTION_INFO_H_
-
+#endif  // _CONNECTION_INFO_H_

@@ -1,21 +1,22 @@
 #ifndef _APPLICATION_RECORD_H_
 #define _APPLICATION_RECORD_H_
 
+#include <vector>
+
 namespace cirrus {
 
 class ApplicationRecord {
-public:
+  public:
     ApplicationRecord();
     virtual ~ApplicationRecord();
 
     void addAllocation(const Allocation& alloc);
 
-private:
+ private:
     uint64_t app_id_;
     std::vector<Allocation> allocations_;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _APPLICATION_RECORD_H_
-
+#endif  // _APPLICATION_RECORD_H_

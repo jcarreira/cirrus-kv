@@ -1,9 +1,8 @@
 #ifndef _ALLOCATORMESSAGE_H_
 #define _ALLOCATORMESSAGE_H_
 
-#include "src/authentication/AuthenticationToken.h"
-
 #include <cstdint>
+#include "src/authentication/AuthenticationToken.h"
 
 namespace cirrus {
 
@@ -48,6 +47,6 @@ struct AllocatorMessage {
     } data;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _ALLOCATORMESSAGE_H_
+#endif  // _ALLOCATORMESSAGE_H_

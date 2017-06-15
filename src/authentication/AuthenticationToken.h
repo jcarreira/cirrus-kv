@@ -6,19 +6,19 @@
 namespace cirrus {
 
 class AuthenticationToken {
-public:
-    AuthenticationToken(bool allow);
-    
+ public:
+    explicit AuthenticationToken(bool allow);
+
     static AuthenticationToken create_default_deny_token();
     static AuthenticationToken create_default_allow_token();
-   
-    // crypto key 
+
+    // crypto key
     GrantingKey gkey;
     // let application know if
     // access was granted
     char allow;
 };
 
-};
+};  // namespace cirrus
 
-#endif // _AUTHENTICATION_TOKEN_H_
+#endif  // _AUTHENTICATION_TOKEN_H_

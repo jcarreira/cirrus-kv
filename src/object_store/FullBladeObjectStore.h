@@ -22,7 +22,7 @@ namespace ostore {
   * A class that stores a size and allocation record.
   */
 class BladeLocation {
-public:
+ public:
     BladeLocation(uint64_t sz, const AllocationRecord& ar) :
         size(sz), allocRec(ar) {}
     explicit BladeLocation(uint64_t sz = 0) :
@@ -39,22 +39,23 @@ public:
   */
 template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
-public:
+ public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
-            std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
-            std::function<T(void*,unsigned int)> deserializer);
+            std::function<std::pair<std::unique_ptr<char[]>,
+            unsigned int>(const T&)> serializer,
+            std::function<T(void*, unsigned int)> deserializer);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
 
     std::function<bool(bool)> get_async(ObjectID, T*) const;
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
-    virtual void printStats() const noexcept override;
+    void printStats() const noexcept override;
 
     bool remove(ObjectID) override;
 
-private:
+ private:
     bool readToLocal(BladeLocation loc, void*) const;
     std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
             void* ptr) const;
@@ -105,9 +106,11 @@ private:
   * in the buffer.
   */
 template<class T>
-FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
+FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
+        const std::string& bladeIP,
         const std::string& port,
-        std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
+        std::function<std::pair<std::unique_ptr<char[]>,
+        unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
@@ -139,7 +142,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         ::operator delete (ptr);
         return retval;
     } else {
-        throw cirrus::Exception("Requested ObjectID does not exist remotely.");
+        throw cirrus::NoSuchIDException("Requested ObjectID "
+                                        "does not exist remotely.");
     }
 }
 
@@ -214,7 +218,6 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
                           nullptr);
     }
     return retval;
-
 }
 
 /**
@@ -233,7 +236,8 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
   */
 template<class T>
 std::function<bool(bool)>
-FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) {
+FullBladeObjectStoreTempl<T>::put_async(Object obj,
+                                        uint64_t size, ObjectID id) {
     BladeLocation loc;
 
     if (!objects_.find(id, loc)) {
@@ -244,7 +248,7 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj, uint64_t size, ObjectID id) 
 
     auto future = writeRemoteAsync(obj, loc);
 
-    //TimerFunction tf("create lambda", true);
+    // TimerFunction tf("create lambda", true);
     auto fun = [future](bool try_wait) -> bool {
         if (try_wait) {
             return future->try_wait();
@@ -272,7 +276,8 @@ bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
 }
 
 template<class T>
-bool FullBladeObjectStoreTempl<T>::readToLocal(BladeLocation loc, void* ptr) const {
+bool FullBladeObjectStoreTempl<T>::readToLocal(BladeLocation loc,
+                                                void* ptr) const {
     RDMAMem mem(ptr, loc.size);
     client.read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
     return true;
@@ -288,13 +293,12 @@ std::shared_ptr<FutureBladeOp> FullBladeObjectStoreTempl<T>::readToLocalAsync(
 template<class T>
 bool FullBladeObjectStoreTempl<T>::writeRemote(Object obj,
         BladeLocation loc, RDMAMem* mem) {
-
 //    LOG<INFO>("FullBladeObjectStoreTempl::writeRemote");
     RDMAMem mm(obj, loc.size);
 
     {
-        //TimerFunction tf("writeRemote", true);
-        //LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
+        // TimerFunction tf("writeRemote", true);
+        // LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
         client.write_sync(loc.allocRec, 0, loc.size, obj,
                 nullptr == mem ? &mm : mem);
     }
@@ -320,7 +324,7 @@ template<class T>
 void FullBladeObjectStoreTempl<T>::printStats() const noexcept {
 }
 
-}
-}
+}  // namespace ostore
+}  // namespace cirrus
 
-#endif // _FULLBLADE_OBJECT_STORE_H_
+#endif  // _FULLBLADE_OBJECT_STORE_H_
