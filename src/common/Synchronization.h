@@ -6,7 +6,6 @@
 #include <semaphore.h>
 #include <atomic>
 #include <stdexcept>
-// #include "utils/logging.h"
 #include "common/Decls.h"
 
 namespace cirrus {

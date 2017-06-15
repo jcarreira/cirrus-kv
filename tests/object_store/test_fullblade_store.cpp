@@ -92,6 +92,10 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
+/**
+  * This test tests the behavior of the store when attempting to
+  * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
+  */
 void test_nonexistent_get() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         cirrus::serializer_simple,
@@ -114,7 +118,7 @@ auto main() -> int {
         std::cout << "Exception not thrown when get"
                      " called on nonexistent ID." << std::endl;
         return -1;
-    } catch (const cirrus::NoSuchIDException & e) {
+    } catch (const cirrus::NoSuchIDException& e) {
     }
 
     return 0;

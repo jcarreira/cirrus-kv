@@ -14,35 +14,62 @@ using ObjectID = uint64_t;
 template<class T>
 class CacheManager {
  public:
-    /**
-      * Constructor for the CacheManager class. Any object added to the cache
-      * needs to have a default constructor.
-      * @param store a pointer to the ObjectStore that the CacheManager will
-      * interact with. This is where all objects will be stored and retrieved
-      * from.
-      * @param cache_size the maximum number of objects that the cache should
-      * hold. Must be at least one.
-      */
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
-                    uint64_t cache_size) :
-                            store(store), max_size(cache_size) {
-                              if (cache_size < 1) {
-                                throw cirrus::CacheCapacityException(
-                                  "Cache capacity must be at least one.");
-                              }
-                            }
+                    uint64_t cache_size);
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
 
  private:
+    /**
+      * A pointer to a store that contains the same type of object as the
+      * cache. This is the store that the cache manager interfaces with in order
+      * to access the remote store.
+      */
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
+
+    /**
+      * Struct that is stored within the cache. Contains a copy of an object
+      * of the type that the cache is storing.
+      */
     struct cache_entry {
       T obj;
     };
+
+    /**
+      * The map that serves as the actual cache. Maps ObjectIDs to cache
+      * entries.
+      */
     std::map<ObjectID, struct cache_entry> cache;
+
+    /**
+      * The maximum capacity of the cache. Will never be exceeded. Set
+      * at time of instantiation.
+      */
     uint64_t max_size;
 };
+
+
+/**
+  * Constructor for the CacheManager class. Any object added to the cache
+  * needs to have a default constructor.
+  * @param store a pointer to the ObjectStore that the CacheManager will
+  * interact with. This is where all objects will be stored and retrieved
+  * from.
+  * @param cache_size the maximum number of objects that the cache should
+  * hold. Must be at least one.
+  */
+template<class T>
+CacheManager<T>::CacheManager(
+                           cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
+                           uint64_t cache_size) :
+                           store(store), max_size(cache_size) {
+    if (cache_size < 1) {
+        throw cirrus::CacheCapacityException(
+              "Cache capacity must be at least one.");
+    }
+}
+
 
 /**
   * A function that returns an object stored under a given ObjectID.
