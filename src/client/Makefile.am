@@ -6,15 +6,14 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = RDMAClient.cpp BladeClient.cpp AuthenticationClient.cpp
 LIBS    = -lclient -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthentication \
-          -L../common/ -lcommon -L.
+		-L../common/ -lcommon -L.
 
 noinst_LIBRARIES = libclient.a
 bin_PROGRAMS = clientmain scalability_main
 
 libclient_a_SOURCES = $(SOURCES)
-libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir)  \ -I$(top_srcdir)/src
-                       -I$(top_srcdir)/third_party/flatbuffers/include \
-                       -I$(top_srcdir)/src
+libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			-I$(top_srcdir)/third_party/flatbuffers/include
 
 clientmain_DEPENDENCIES = libclient.a
 clientmain_SOURCES  = clientmain.cpp
