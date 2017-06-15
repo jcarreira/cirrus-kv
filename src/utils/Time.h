@@ -3,7 +3,7 @@
 
 #include <chrono>
 #include <string>
-#include "src/utils/StringUtils.h"
+#include "utils/StringUtils.h"
 
 namespace cirrus {
 

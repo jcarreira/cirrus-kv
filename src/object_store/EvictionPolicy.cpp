@@ -1,4 +1,4 @@
-#include "src/object_store/EvictionPolicy.h"
+#include "object_store/EvictionPolicy.h"
 
 namespace cirrus {
 

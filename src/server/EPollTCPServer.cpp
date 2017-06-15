@@ -1,4 +1,4 @@
-#include "src/server/EPollTCPServer.h"
+#include "server/EPollTCPServer.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string>
 #include <stdexcept>
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

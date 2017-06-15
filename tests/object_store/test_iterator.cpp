@@ -8,10 +8,10 @@
 #include <cctype>
 #include <memory>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/object_store/object_store_internal.h"
-#include "src/cache_manager/CacheManager.h"
-#include "src/iterator/CirrusIterable.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "object_store/object_store_internal.h"
+#include "cache_manager/CacheManager.h"
+#include "iterator/CirrusIterable.h"
 
 
 // TODO: Remove hardcoded IP and PORT

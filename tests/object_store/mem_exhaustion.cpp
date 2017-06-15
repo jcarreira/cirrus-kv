@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <string>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/object_store/object_store_internal.h"
-#include "src/common/Exception.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "object_store/object_store_internal.h"
+#include "common/Exception.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);

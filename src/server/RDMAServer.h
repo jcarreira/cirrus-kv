@@ -5,9 +5,9 @@
 #include <rdma/rdma_cma.h>
 #include <vector>
 #include <memory>
-#include "src/utils/utils.h"
-#include "src/server/Server.h"
-#include "src/server/GeneralContext.h"
+#include "utils/utils.h"
+#include "server/Server.h"
+#include "server/GeneralContext.h"
 #include "ConnectionContext.h"
 
 namespace cirrus {

@@ -8,8 +8,8 @@
 #include <memory>
 #include <cstring>
 #include <atomic>
-#include "src/common/Synchronization.h"
-#include "src/utils/logging.h"
+#include "common/Synchronization.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

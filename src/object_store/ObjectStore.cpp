@@ -1,4 +1,4 @@
-#include "src/object_store/ObjectStore.h"
+#include "object_store/ObjectStore.h"
 
 namespace cirrus {
 

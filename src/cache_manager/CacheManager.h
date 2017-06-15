@@ -2,8 +2,8 @@
 #define _CACHEMANAGER_H_
 
 #include <map>
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/common/Exception.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "common/Exception.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;

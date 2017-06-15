@@ -5,12 +5,12 @@
 #include <iostream>
 #include <utility>
 
-#include "src/object_store/ObjectStore.h"
-#include "src/client/BladeClient.h"
-#include "src/utils/utils.h"
-#include "src/utils/Time.h"
-#include "src/utils/logging.h"
-#include "src/common/Exception.h"
+#include "object_store/ObjectStore.h"
+#include "client/BladeClient.h"
+#include "utils/utils.h"
+#include "utils/Time.h"
+#include "utils/logging.h"
+#include "common/Exception.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"

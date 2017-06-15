@@ -1,8 +1,8 @@
-#include "src/client/AuthenticationClient.h"
-#include "src/common/AllocatorMessage.h"
-#include "src/common/AllocatorMessageGenerator.h"
-#include "src/utils/utils.h"
-#include "src/utils/logging.h"
+#include "client/AuthenticationClient.h"
+#include "common/AllocatorMessage.h"
+#include "common/AllocatorMessageGenerator.h"
+#include "utils/utils.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

@@ -2,8 +2,8 @@
 #define _ALLOC_MESSAGE_GENERATOR_H_
 
 #include <stdint.h>
-#include "src/common/AllocatorMessage.h"
-#include "src/authentication/ApplicationKey.h"
+#include "common/AllocatorMessage.h"
+#include "authentication/ApplicationKey.h"
 
 namespace cirrus {
 

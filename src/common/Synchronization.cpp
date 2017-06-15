@@ -1,4 +1,4 @@
-#include "src/common/Synchronization.h"
+#include "common/Synchronization.h"
 
 namespace cirrus {
 

@@ -1,4 +1,4 @@
-#include "src/authentication/AuthenticationToken.h"
+#include "authentication/AuthenticationToken.h"
 
 namespace cirrus {
 

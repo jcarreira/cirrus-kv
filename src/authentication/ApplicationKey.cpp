@@ -1,4 +1,4 @@
-#include "src/authentication/ApplicationKey.h"
+#include "authentication/ApplicationKey.h"
 
 namespace cirrus {
 

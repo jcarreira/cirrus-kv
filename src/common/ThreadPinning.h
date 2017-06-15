@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 #include <thread>
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

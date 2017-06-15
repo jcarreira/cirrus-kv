@@ -5,12 +5,12 @@
 #include <sstream>
 #include <cstring>
 #include <string>
-#include "src/client/BladeClient.h"
-#include "src/common/AllocationRecord.h"
-#include "src/utils/logging.h"
-#include "src/authentication/AuthenticationToken.h"
-#include "src/client/AuthenticationClient.h"
-#include "src/utils/Time.h"
+#include "client/BladeClient.h"
+#include "common/AllocationRecord.h"
+#include "utils/logging.h"
+#include "authentication/AuthenticationToken.h"
+#include "client/AuthenticationClient.h"
+#include "utils/Time.h"
 
 // TODO: Remove hardcoded IP and PORT
 const char PORT[] = "12345";

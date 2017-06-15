@@ -1,11 +1,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
-#include "src/server/BladeAllocServer.h"
-#include "src/utils/logging.h"
-#include "src/utils/Time.h"
-#include "src/utils/InfinibandSupport.h"
-#include "src/common/schemas/BladeMessage_generated.h"
+#include "server/BladeAllocServer.h"
+#include "utils/logging.h"
+#include "utils/Time.h"
+#include "utils/InfinibandSupport.h"
+#include "common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
 

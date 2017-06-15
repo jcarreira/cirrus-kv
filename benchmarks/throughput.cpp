@@ -2,8 +2,8 @@
 #include <iostream>
 #include <string>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/utils/Time.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "utils/Time.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);

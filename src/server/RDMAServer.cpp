@@ -1,4 +1,4 @@
-#include "src/server/RDMAServer.h"
+#include "server/RDMAServer.h"
 
 #include <unistd.h>
 
@@ -7,8 +7,8 @@
 #include <cstring>
 #include <algorithm>
 
-#include "src/common/ThreadPinning.h"
-#include "src/utils/logging.h"
+#include "common/ThreadPinning.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

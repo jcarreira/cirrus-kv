@@ -3,7 +3,7 @@
 
 #include <semaphore.h>
 #include <rdma/rdma_cma.h>
-#include "src/server/ConnectionInfo.h"
+#include "server/ConnectionInfo.h"
 
 namespace cirrus {
 

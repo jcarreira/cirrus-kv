@@ -2,7 +2,7 @@
 #define _ALLOCATORMESSAGE_H_
 
 #include <cstdint>
-#include "src/authentication/AuthenticationToken.h"
+#include "authentication/AuthenticationToken.h"
 
 namespace cirrus {
 

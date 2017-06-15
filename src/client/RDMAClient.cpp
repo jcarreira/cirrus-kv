@@ -1,4 +1,4 @@
-#include "src/client/RDMAClient.h"
+#include "client/RDMAClient.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -11,12 +11,12 @@
 #include <random>
 #include <cassert>
 
-#include "src/common/ThreadPinning.h"
-#include "src/utils/utils.h"
-#include "src/utils/Time.h"
-#include "src/utils/logging.h"
+#include "common/ThreadPinning.h"
+#include "utils/utils.h"
+#include "utils/Time.h"
+#include "utils/logging.h"
 
-#include "src/common/Synchronization.h"
+#include "common/Synchronization.h"
 
 namespace cirrus {
 

@@ -5,7 +5,7 @@
 #include <semaphore.h>
 #include <thread>
 #include <vector>
-#include "src/utils/utils.h"
+#include "utils/utils.h"
 #include "RDMAServer.h"
 
 /*

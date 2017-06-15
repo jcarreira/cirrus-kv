@@ -1,7 +1,7 @@
 #ifndef _CIRRUS_ITERABLE_H_
 #define _CIRRUS_ITERABLE_H_
 
-#include "src/cache_manager/CacheManager.h"
+#include "cache_manager/CacheManager.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -32,7 +32,7 @@ class CirrusIterable {
         Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
                                     ObjectID last, ObjectID current_id);
-        
+
         T operator*();
         Iterator& operator++();
         Iterator& operator++(int i);
@@ -149,7 +149,7 @@ typename CirrusIterable<T>::Iterator&
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
+typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
   current_id++;
   return *this;

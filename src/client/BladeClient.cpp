@@ -1,13 +1,13 @@
-#include "src/client/BladeClient.h"
+#include "client/BladeClient.h"
 #include <unistd.h>
 #include <string>
 #include <cstring>
-#include "src/utils/utils.h"
-#include "src/utils/Time.h"
-#include "src/utils/logging.h"
-#include "src/client/AuthenticationClient.h"
-#include "src/common/Exception.h"
-#include "src/common/schemas/BladeMessage_generated.h"
+#include "utils/utils.h"
+#include "utils/Time.h"
+#include "utils/logging.h"
+#include "client/AuthenticationClient.h"
+#include "common/Exception.h"
+#include "common/schemas/BladeMessage_generated.h"
 namespace cirrus {
 
 static const int initial_buffer_size = 50;

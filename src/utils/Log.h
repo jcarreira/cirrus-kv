@@ -3,9 +3,9 @@
 
 #include <iostream>
 #include <utility>
-#include "src/utils/Time.h"
-#include "src/utils/StringUtils.h"
-#include "src/common/Synchronization.h"
+#include "utils/Time.h"
+#include "utils/StringUtils.h"
+#include "common/Synchronization.h"
 
 #define DEFAULT_THRESHOLD 10
 
