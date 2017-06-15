@@ -19,15 +19,12 @@ const char PORT[] = "12345";
 const unsigned int SIZE = 1;
 const char IP[] = "10.10.49.83";
 
-
-// #define CHECK_RESULTS
 void test_iterator() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
   cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
-
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {

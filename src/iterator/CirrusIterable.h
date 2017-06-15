@@ -17,26 +17,10 @@ class CirrusIterable {
     CirrusIterable<T>::Iterator begin();
     CirrusIterable<T>::Iterator end();
 
-    /**
-      * Constructor for the CirrusIterable class. Assumes that all objects
-      * are stored sequentially between first and last.
-      * @param cm a pointer to a CacheManager with that contains the same
-      * object type as this Iterable.
-      * @param first the first sequential objectID. Should always be <= than
-      * last.
-      * @param the last sequential id under which an object is stored. Should
-      * always be >= first.
-      * @param readAhead how many items ahead items should be prefetched.
-      * Should always be <= last - first. Additionally, should be less than
-      * the cache capacity that was specified in the creation of the
-      * CacheManager.
-      */
     CirrusIterable<T>(cirrus::CacheManager<T>* cm,
                                  unsigned int readAhead,
                                  ObjectID first,
-                                 ObjectID last):
-                                 cm(cm), readAhead(readAhead), first(first),
-                                 last(last) {}
+                                 ObjectID last);
 
  private:
     /**
@@ -45,24 +29,9 @@ class CirrusIterable {
       */
     class Iterator {
      public:
-       /**
-         * Constructor for the Iterator class. Assumes that all objects
-         * are stored sequentially.
-         * @param cm a pointer to a CacheManager with that contains the same
-         * object type as this Iterable.
-         * @param readAhead how many items ahead items should be prefetched.
-         * @param first the first sequential objectID. Should always be <= than
-         * last.
-         * @param the last sequential id under which an object is stored. Should
-         * always be >= first.
-         * @param current_id the id that will be fetched when the iterator is
-         * dereferenced.
-         */
         Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
-                                    ObjectID last, ObjectID current_id):
-                                    cm(cm), readAhead(readAhead), first(first),
-                                    last(last), current_id(current_id) {}
+                                    ObjectID last, ObjectID current_id);
 
         T operator*();
         Iterator& operator++();
@@ -84,6 +53,48 @@ class CirrusIterable {
     ObjectID first;
     ObjectID last;
 };
+
+/**
+  * Constructor for the CirrusIterable class. Assumes that all objects
+  * are stored sequentially between first and last.
+  * @param cm a pointer to a CacheManager with that contains the same
+  * object type as this Iterable.
+  * @param first the first sequential objectID. Should always be <= than
+  * last.
+  * @param the last sequential id under which an object is stored. Should
+  * always be >= first.
+  * @param readAhead how many items ahead items should be prefetched.
+  * Should always be <= last - first. Additionally, should be less than
+  * the cache capacity that was specified in the creation of the
+  * CacheManager.
+  */
+template<class T>
+CirrusIterable<T>::CirrusIterable(cirrus::CacheManager<T>* cm,
+                             unsigned int readAhead,
+                             ObjectID first,
+                             ObjectID last):
+                             cm(cm), readAhead(readAhead), first(first),
+                             last(last) {}
+
+/**
+  * Constructor for the Iterator class. Assumes that all objects
+  * are stored sequentially.
+  * @param cm a pointer to a CacheManager with that contains the same
+  * object type as this Iterable.
+  * @param readAhead how many items ahead items should be prefetched.
+  * @param first the first sequential objectID. Should always be <= than
+  * last.
+  * @param the last sequential id under which an object is stored. Should
+  * always be >= first.
+  * @param current_id the id that will be fetched when the iterator is
+  * dereferenced.
+  */
+template<class T>
+CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
+                            unsigned int readAhead, ObjectID first,
+                            ObjectID last, ObjectID current_id):
+                            cm(cm), readAhead(readAhead), first(first),
+                            last(last), current_id(current_id) {}
 
 /**
   * Function that returns a cirrus::Iterator at the start of the given range.
@@ -125,7 +136,8 @@ T CirrusIterable<T>::Iterator::operator*() {
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() {
+typename CirrusIterable<T>::Iterator&
+                                     CirrusIterable<T>::Iterator::operator++() {
   current_id++;
   return *this;
 }
@@ -137,7 +149,7 @@ typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() 
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
+typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
   current_id++;
   return *this;
