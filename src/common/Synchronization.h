@@ -58,7 +58,8 @@ class PosixSemaphore : public Lock {
         do {
             rc = sem_wait(&m_sema);
         }
-        while (rc == -1 && errno == EINTR) {}
+        while (rc == -1 && errno == EINTR) {
+        }
     }
 
     /**
@@ -85,6 +86,7 @@ class PosixSemaphore : public Lock {
         }
         return ret != -1;  // true for success
     }
+
  private:
     sem_t m_sema;
 };
@@ -104,7 +106,8 @@ class SpinLock : public Lock {
       * This function busywaits until it obtains the lock.
       */
     void wait() final {
-        while (lock.test_and_set(std::memory_order_acquire)) {}
+        while (lock.test_and_set(std::memory_order_acquire)) {
+        }
     }
 
     /**
