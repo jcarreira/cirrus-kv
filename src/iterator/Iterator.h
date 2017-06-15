@@ -18,9 +18,13 @@ class Iterator {
      * are stored sequentially.
      * @param cm a pointer to a CacheManager with that contains the same
      * object type as this Iterable.
+     * @param readAhead how many items ahead items should be prefetched.
+     * @param first the first sequential objectID. Should always be <= than
+     * last.
+     * @param the last sequential id under which an object is stored. Should
+     * always be >= first.
      * @param current_id the id that will be fetched when the iterator is
      * dereferenced.
-     * @param readAhead how many items ahead items should be prefetched.
      */
     Iterator(cirrus::CacheManager<T>* cm,
                                 unsigned int readAhead, ObjectID first,
