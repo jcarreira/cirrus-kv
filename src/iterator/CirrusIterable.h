@@ -14,8 +14,8 @@ template<class T>
 class CirrusIterable {
     class Iterator;
  public:
-    CirrusIterable<T>::Iterator<T> begin();
-    CirrusIterable<T>::Iterator<T> end();
+    CirrusIterable<T>::Iterator begin();
+    CirrusIterable<T>::Iterator end();
 
     /**
       * Constructor for the CirrusIterable class. Assumes that all objects
@@ -89,7 +89,7 @@ class CirrusIterable {
   * Function that returns a cirrus::Iterator at the start of the given range.
   */
 template<class T>
-CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
+typename CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
     return CirrusIterable<T>::Iterator(cm, readAhead, first, last, first);
 }
 
@@ -98,7 +98,7 @@ CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
   * range.
   */
 template<class T>
-CirrusIterable<T>::Iterator<T> CirrusIterable<T>::end() {
+typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
   return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1);
 }
 
@@ -125,7 +125,7 @@ T CirrusIterable<T>::Iterator::operator*() {
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() {
+typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() {
   current_id++;
   return *this;
 }
@@ -137,7 +137,7 @@ CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() {
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
+typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
   current_id++;
   return *this;
