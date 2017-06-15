@@ -28,7 +28,7 @@ class BladeLocation {
     explicit BladeLocation(uint64_t sz = 0) :
         size(sz) {}
 
-    uint64_t size;
+    uint64_t size; /**< Size of the allocation */
     AllocationRecord allocRec;
 };
 

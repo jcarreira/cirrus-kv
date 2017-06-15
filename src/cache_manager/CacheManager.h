@@ -33,7 +33,7 @@ class CacheManager {
       * of the type that the cache is storing.
       */
     struct cache_entry {
-      T obj;
+      T obj; /**< Object that will be retrieved by a get() operation. */
     };
 
     /**

@@ -25,7 +25,7 @@ struct FLUSH { };
 struct NO_FLUSH { };
 struct TIME { };
 struct NO_TIME { };
-    
+
 template<typename T, typename K = NO_FLUSH, typename TT = TIME, typename ... Params>
 #else
 template<typename T, typename ... Params>
@@ -63,7 +63,7 @@ bool LOG(Params&& ... param) {
     };
 
  __attribute__((unused))
-    int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... }; 
+    int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... };
 
 #if __GNUC__ >= 7
     if constexpr (std::is_same(K, FLUSH)) {
@@ -72,11 +72,10 @@ bool LOG(Params&& ... param) {
 #else
     std::cout << std::endl;
 #endif
-//    sl.signal();
 
-    return true; // success
+    return true;  // success
 }
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _LOG_H_
+#endif  // _LOG_H_

@@ -4,7 +4,9 @@
 #include <utility>
 namespace cirrus {
 
-
+/**
+  * Struct used in many of the tests.
+  */
 template<unsigned int SIZE>
 struct Dummy {
     char data[SIZE];
@@ -24,8 +26,8 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
     return std::make_pair(std::move(ptr), sizeof(struct Dummy<SIZE>));
 }
 
-template<unsigned int SIZE>
 /* Takes a pointer to struct Dummy passed in and returns as object. */
+template<unsigned int SIZE>
 struct Dummy<SIZE> struct_deserializer_simple(void* data,
                                               unsigned int /* size */) {
     struct Dummy<SIZE> *ptr = static_cast<struct Dummy<SIZE>*>(data);
@@ -37,7 +39,6 @@ struct Dummy<SIZE> struct_deserializer_simple(void* data,
 /* This function simply copies an int into a new portion of memory. */
 std::pair<std::unique_ptr<char[]>, unsigned int>
     serializer_simple(const int& v) {
-
     std::unique_ptr<char[]> ptr(new char[sizeof(int)]);
     *(reinterpret_cast<int*>(ptr.get())) = v;
     return std::make_pair(std::move(ptr), sizeof(int));
