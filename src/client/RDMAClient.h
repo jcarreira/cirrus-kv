@@ -89,7 +89,6 @@ struct ConnectionContext {
 
     // these are used for SEND and RECV
     Lock* send_sem;
-    // Semaphore send_sem;
     Lock* recv_sem;
 
     GeneralContext gen_ctx_;
