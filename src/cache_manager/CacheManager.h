@@ -3,6 +3,7 @@
 
 #include <map>
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/common/Exception.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -57,6 +58,10 @@ T CacheManager<T>::get(ObjectID oid) {
     } else {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
+        if (cache.size() == max_size) {
+          throw cirrus::CacheFilledException("Get operation would put cache "
+                                             "over capacity.")
+        }
         struct cache_entry& entry = cache[oid];
         entry.obj = store->get(oid);
         return entry.obj;

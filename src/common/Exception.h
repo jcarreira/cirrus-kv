@@ -30,6 +30,28 @@ class ServerMemoryErrorException : public cirrus::Exception {
         cirrus::Exception(msg) {}
 };
 
+/**
+  * An exception generated when the local cache is completely filled and
+  * the user attempts to perform a get operation, either directly or through
+  * the use of an iterator.
+  */
+class CacheFilledException : public cirrus::Exception {
+ public:
+    explicit CacheFilledException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
+/**
+  * An exception generated when the user requests a get operation on an
+  * ObjectID that was either never pushed to the remote store, or was removed
+  * from the remote store.
+  */
+class NoSuchIDException : public cirrus::Exception {
+ public:
+    explicit NoSuchIDException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
 }  // namespace cirrus
 
 #endif  // _EXCEPTION_H_

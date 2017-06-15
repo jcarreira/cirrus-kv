@@ -142,7 +142,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
         ::operator delete (ptr);
         return retval;
     } else {
-        throw cirrus::Exception("Requested ObjectID does not exist remotely.");
+        throw cirrus::NoSuchIDException("Requested ObjectID "
+                                        "does not exist remotely.");
     }
 }
 
