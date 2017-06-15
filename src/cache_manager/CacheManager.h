@@ -21,11 +21,16 @@ class CacheManager {
       * interact with. This is where all objects will be stored and retrieved
       * from.
       * @param cache_size the maximum number of objects that the cache should
-      * hold.
+      * hold. Must be at least one.
       */
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                     uint64_t cache_size) :
-                            store(store), max_size(cache_size) {}
+                            store(store), max_size(cache_size) {
+                              if (cache_size < 1) {
+                                throw cirrus:CacheCapacityException(
+                                  "Cache capacity must be at least one.");
+                              }
+                            }
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
@@ -59,7 +64,7 @@ T CacheManager<T>::get(ObjectID oid) {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
         if (cache.size() == max_size) {
-          throw cirrus::CacheFilledException("Get operation would put cache "
+          throw cirrus::CacheCapacityException("Get operation would put cache "
                                              "over capacity.");
         }
         struct cache_entry& entry = cache[oid];

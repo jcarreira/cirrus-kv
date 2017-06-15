@@ -33,11 +33,12 @@ class ServerMemoryErrorException : public cirrus::Exception {
 /**
   * An exception generated when the local cache is completely filled and
   * the user attempts to perform a get operation, either directly or through
-  * the use of an iterator.
+  * the use of an iterator. Also thrown if user sets max size of the
+  * cache to be zero.
   */
-class CacheFilledException : public cirrus::Exception {
+class CacheCapacityException : public cirrus::Exception {
  public:
-    explicit CacheFilledException(std::string msg):
+    explicit CacheCapacityException(std::string msg):
         cirrus::Exception(msg) {}
 };
 

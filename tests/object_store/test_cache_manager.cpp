@@ -66,16 +66,34 @@ void test_capacity() {
     cm.get(10);
 }
 
+void test_instantiation() {
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+                        cirrus::serializer_simple,
+                        cirrus::deserializer_simple);
+
+    cirrus::CacheManager<int> cm(&store, 0);
+}
+
 auto main() -> int {
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
+
     try {
         test_capacity();
         std::cout << "Exception not thrown when cache"
                      " capacity exceeded." << std::endl;
         return -1;
-    } catch (const cirrus::CacheFilledException & e) {
+    } catch (const cirrus::CacheCapacityException & e) {
     }
+
+    try {
+        test_instantiation();
+        std::cout << "Exception not thrown when cache"
+                     " capacity set to zero." << std::endl;
+        return -1;
+    } catch (const cirrus::CacheCapacityException & e) {
+    }
+    
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"
