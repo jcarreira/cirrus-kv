@@ -27,7 +27,7 @@ class CacheManager {
                     uint64_t cache_size) :
                             store(store), max_size(cache_size) {
                               if (cache_size < 1) {
-                                throw cirrus:CacheCapacityException(
+                                throw cirrus::CacheCapacityException(
                                   "Cache capacity must be at least one.");
                               }
                             }
