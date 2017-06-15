@@ -12,7 +12,7 @@ using ObjectID = uint64_t;
   */
 template<class T>
 class CirrusIterable {
-    template<class C> class Iterator; 
+    class Iterator;
  public:
     CirrusIterable<T>::Iterator<T> begin();
     CirrusIterable<T>::Iterator<T> end();
@@ -43,7 +43,6 @@ class CirrusIterable {
       * A class that interfaces with the cache manager. Making an access will
       * prefetch a user defined distance ahead
       */
-    template<class C>
     class Iterator {
      public:
        /**
@@ -59,13 +58,13 @@ class CirrusIterable {
          * @param current_id the id that will be fetched when the iterator is
          * dereferenced.
          */
-        Iterator(cirrus::CacheManager<C>* cm,
+        Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
                                     ObjectID last, ObjectID current_id):
                                     cm(cm), readAhead(readAhead), first(first),
                                     last(last), current_id(current_id) {}
 
-        C operator*();
+        T operator*();
         Iterator& operator++();
         Iterator& operator++(int i);
         bool operator!=(const Iterator& it) const;
@@ -73,7 +72,7 @@ class CirrusIterable {
         ObjectID get_curr_id() const;
 
      private:
-        cirrus::CacheManager<C> *cm;
+        cirrus::CacheManager<T> *cm;
         unsigned int readAhead;
         ObjectID first;
         ObjectID last;
@@ -90,8 +89,8 @@ class CirrusIterable {
   * Function that returns a cirrus::Iterator at the start of the given range.
   */
 template<class T>
-CirrusIterable<T>::Iterator<T> CirrusIterable<T>::begin() {
-    return CirrusIterable<T>::Iterator<T>(cm, readAhead, first, last, first);
+CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
+    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, first);
 }
 
 /**
@@ -100,12 +99,12 @@ CirrusIterable<T>::Iterator<T> CirrusIterable<T>::begin() {
   */
 template<class T>
 CirrusIterable<T>::Iterator<T> CirrusIterable<T>::end() {
-  return CirrusIterable<T>::Iterator<T>(cm, readAhead, first, last, last + 1);
+  return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1);
 }
 
 
-template<class C>
-C CirrusIterable<C>::Iterator<C>::operator*() {
+template<class T>
+T CirrusIterable<T>::Iterator::operator*() {
   // Attempts to get the next readAhead items.
   for (unsigned int i = 1; i <= readAhead; i++) {
     // Math to make sure that prefetching loops back around
@@ -125,8 +124,8 @@ C CirrusIterable<C>::Iterator<C>::operator*() {
   * current_id. The next time the Iterator is dereferenced, an object stored
   * under the incremented current_id will be retrieved.
   */
-template<class C>
-CirrusIterable<C>::Iterator<C>& Iterator<C>::operator++() {
+template<class T>
+CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++() {
   current_id++;
   return *this;
 }
@@ -137,8 +136,9 @@ CirrusIterable<C>::Iterator<C>& Iterator<C>::operator++() {
   * current_id. The next time the Iterator is dereferenced, an object stored
   * under the incremented current_id will be retrieved.
   */
-template<class C>
-CirrusIterable<C>::Iterator<C>& Iterator<C>::operator++(int /* i */) {
+template<class T>
+CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
+                                                                int /* i */) {
   current_id++;
   return *this;
 }
@@ -147,8 +147,9 @@ CirrusIterable<C>::Iterator<C>& Iterator<C>::operator++(int /* i */) {
   * A function that compares two Iterators. Will return true if the two
   * iterators have different values of current_id.
   */
-template<class C>
-bool CirrusIterable<C>::Iterator<C>::operator!=(const CirrusIterable<T>::Iterator<C>& it) const {
+template<class T>
+bool CirrusIterable<T>::Iterator::operator!=(
+                               const CirrusIterable<T>::Iterator& it) const {
   return current_id != it.get_curr_id();
 }
 
@@ -156,16 +157,17 @@ bool CirrusIterable<C>::Iterator<C>::operator!=(const CirrusIterable<T>::Iterato
   * A function that compares two Iterators. Will return true if the two
   * iterators have identical values of current_id.
   */
-template<class C>
-bool Iterator<C>::operator==(const Iterator<C>& it) const {
+template<class T>
+bool CirrusIterable<T>::Iterator::operator==(
+                                 const CirrusIterable<T>::Iterator& it) const {
   return current_id == it.get_curr_id();
 }
 
 /**
   * A function that returns the current_id of the Iterator that calls it.
   */
-template<class C>
-ObjectID Iterator<C>::get_curr_id() const {
+template<class T>
+ObjectID CirrusIterable<T>::Iterator::get_curr_id() const {
   return current_id;
 }
 
