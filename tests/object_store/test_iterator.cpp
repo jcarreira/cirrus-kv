@@ -77,9 +77,8 @@ void test_iterator_alt() {
 
     int j = 0;
     for (const auto& data : iter) {
-      cirrus::Dummy<SIZE> val = *data;
-      if (val.id != j) {
-        printf("received %d but expected %d\n", val.id, j);
+      if (data.id != j) {
+        printf("received %d but expected %d\n", data.id, j);
         throw std::runtime_error("Wrong value");
       }
       j++;
