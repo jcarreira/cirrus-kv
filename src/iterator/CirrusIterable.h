@@ -32,10 +32,11 @@ class CirrusIterable {
         Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
                                     ObjectID last, ObjectID current_id);
+        Iterator(const Iterator& it);
 
-        T operator*();
-        Iterator& operator++();
-        Iterator& operator++(int i);
+        T operator*() override;
+        Iterator& operator++() override;
+        Iterator& operator++(int i) override;
         bool operator!=(const Iterator& it) const;
         bool operator==(const Iterator& it) const;
         ObjectID get_curr_id() const;
@@ -97,6 +98,14 @@ CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
                             last(last), current_id(current_id) {}
 
 /**
+  * Copy constructor for the Iterator class.
+  */
+template<class T>
+CirrusIterable<T>::Iterator::Iterator(const Iterator& it):
+              cm(it.cm), readAhead(it.readAhead), first(it.first),
+              last(it.last), current_id(it.current_id) {}
+
+/**
   * Function that returns a cirrus::Iterator at the start of the given range.
   */
 template<class T>
@@ -149,10 +158,11 @@ typename CirrusIterable<T>::Iterator&
   * under the incremented current_id will be retrieved.
   */
 template<class T>
-typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator++(
+typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
-  current_id++;
-  return *this;
+  typename CirrusIterable<T>::Iterator tmp(*this);
+  operator++();
+  return tmp;
 }
 
 /**
