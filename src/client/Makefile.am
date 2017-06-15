@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = RDMAClient.cpp BladeClient.cpp AuthenticationClient.cpp
 LIBS    = -lclient -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthentication \
-		-L../common/ -lcommon -L.
+					-L../common/ -lcommon -L.
 
 noinst_LIBRARIES = libclient.a
 bin_PROGRAMS = clientmain scalability_main

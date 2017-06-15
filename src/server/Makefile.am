@@ -4,17 +4,17 @@ AUTOMAKE_OPTIONS = foreign
 
 DEFAULT_LIB= -L. -lserver -lrdmacm -libverbs\
              -L../authentication/ -lauthentication \
-            -L../utils/ -lutils \
-            -L../common/ -lcommon
+             -L../utils/ -lutils \
+             -L../common/ -lcommon
 
 noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain objectstoremain
 
 libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
-                     ConnectionContext.cpp \
-                     ResourceAllocator.cpp BladeAllocServer.cpp \
-                     BladeObjectStore.cpp \
-                     TCPServer.cpp EPollTCPServer.cpp
+                      ConnectionContext.cpp \
+                      ResourceAllocator.cpp BladeAllocServer.cpp \
+                      BladeObjectStore.cpp \
+                      TCPServer.cpp EPollTCPServer.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include \
                        -I$(top_srcdir)/src
 
