@@ -34,9 +34,9 @@ class CirrusIterable {
                                     ObjectID last, ObjectID current_id);
         Iterator(const Iterator& it);
 
-        T operator*() override;
-        Iterator& operator++() override;
-        Iterator& operator++(int i) override;
+        T operator*();
+        Iterator& operator++();
+        Iterator operator++(int i);
         bool operator!=(const Iterator& it) const;
         bool operator==(const Iterator& it) const;
         ObjectID get_curr_id() const;

@@ -58,11 +58,6 @@ test_cache_manager_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
                                     -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_cache_manager_LDADD    = $(LINCLUDES) \
                                $(LIBS)
- test_cache_manager_CPPFLAGS = -ggdb -I$(top_srcdir) \
-                                     -I$(top_srcdir)/examples/sparsehash/src/ \
-                                     -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
- test_cache_manager_LDADD    = $(LINCLUDES) \
-                               $(LIBS)
 
 iterator_SOURCES  = test_iterator.cpp
 iterator_LDFLAGS  = -pthread
