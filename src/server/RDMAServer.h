@@ -1,14 +1,14 @@
 #ifndef _RDMA_SERVER_H_
 #define _RDMA_SERVER_H_
 
+#include <mutex>
 #include <rdma/rdma_cma.h>
+#include <vector>
+#include <memory>
 #include "src/utils/utils.h"
 #include "src/server/Server.h"
 #include "src/server/GeneralContext.h"
 #include "ConnectionContext.h"
-#include <vector>
-#include <mutex>
-#include <memory>
 
 namespace cirrus {
 
@@ -16,8 +16,8 @@ namespace cirrus {
   * Parent class for servers that communicate over RDMA.
   */
 class RDMAServer : public Server {
-public:
-    RDMAServer(int port, int timeout_ms = 500);
+ public:
+    explicit RDMAServer(int port, int timeout_ms = 500);
     ~RDMAServer();
 
     // init the server
@@ -26,7 +26,7 @@ public:
     // get into the event loop
     virtual void loop();
 
-protected:
+ protected:
     // RDMA setup functions
     void build_connection(struct rdma_cm_id *id);
     void build_params(struct rdma_conn_param *params);
@@ -79,6 +79,6 @@ protected:
     std::once_flag gen_ctx_flag;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _RDMA_SERVER_H_
+#endif  // _RDMA_SERVER_H_

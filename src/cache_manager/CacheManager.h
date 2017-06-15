@@ -1,8 +1,8 @@
 #ifndef _CACHEMANAGER_H_
 #define _CACHEMANAGER_H_
 
-#include "src/object_store/FullBladeObjectStore.h"
 #include <map>
+#include "src/object_store/FullBladeObjectStore.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -12,7 +12,7 @@ using ObjectID = uint64_t;
     */
 template<class T>
 class CacheManager {
-  public:
+ public:
     /**
       * Constructor for the CacheManager class. Any object added to the cache
       * needs to have a default constructor.
@@ -29,7 +29,7 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
 
-  private:
+ private:
     cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
     struct cache_entry {
       T obj;
@@ -93,6 +93,6 @@ void CacheManager<T>::prefetch(ObjectID oid) {
 }
 
 
-}  // cirrus
+}  // namespace cirrus
 
-#endif // _CACHEMANAGER_H_
+#endif  // _CACHEMANAGER_H_

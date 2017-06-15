@@ -1,13 +1,13 @@
 #ifndef _RDMA_CLIENT_H_
 #define _RDMA_CLIENT_H_
 
+#include <rdma/rdma_cma.h>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <memory>
 #include <cstring>
 #include <atomic>
-#include <rdma/rdma_cma.h>
 #include "src/common/Synchronization.h"
 #include "src/utils/logging.h"
 
@@ -35,8 +35,7 @@ struct GeneralContext {
   */
 struct RDMAOpInfo {
     RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
-            std::function<void(void)> fn = []() -> void {}
-            ) :
+            std::function<void(void)> fn = []() -> void {}) :
         id(id_), op_sem(s), apply_fn(fn) {
             if (fn == nullptr)
                 throw std::runtime_error("BUG");
@@ -61,10 +60,9 @@ struct ConnectionContext {
         send_msg(0), send_msg_mr(0), recv_msg(0),
         recv_msg_mr(0), qp(nullptr),
         peer_addr(0), peer_rkey(0),
-        setup_done(false)
-    {
+        setup_done(false) {
         recv_sem = new SpinLock();
-        recv_sem->wait(); //lock
+        recv_sem->wait();  // lock
         memset(&gen_ctx_, 0, sizeof(gen_ctx_));
     }
 
@@ -91,7 +89,7 @@ struct ConnectionContext {
 
     // these are used for SEND and RECV
     Lock* send_sem;
-    //Semaphore send_sem;
+    // Semaphore send_sem;
     Lock* recv_sem;
 
     GeneralContext gen_ctx_;
@@ -163,13 +161,13 @@ struct RDMAMem {
   * for communication.
   */
 class RDMAClient {
-public:
+ public:
     explicit RDMAClient(int timeout_ms = 500);
     virtual ~RDMAClient();
 
     virtual void connect(const std::string& host, const std::string& port);
 
-protected:
+ protected:
     void alloc_rdma_memory(ConnectionContext& ctx);
 
     void build_params(struct rdma_conn_param *params);
@@ -238,6 +236,6 @@ protected:
     RDMAMem default_send_mem_;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _RDMA_CLIENT_H_
+#endif  // _RDMA_CLIENT_H_

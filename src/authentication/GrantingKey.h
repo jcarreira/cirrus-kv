@@ -4,17 +4,17 @@
 namespace cirrus {
 
 class GrantingKey {
-public:
+ public:
     GrantingKey();
 
     static constexpr int KEY_SIZE = 10;
-    
+
     // if access granted access key goes
     // here. To be used when contacting
     // memory blades
     char data_[KEY_SIZE];
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _GRANTING_KEY_H_
+#endif  // _GRANTING_KEY_H_

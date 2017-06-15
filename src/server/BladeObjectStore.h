@@ -1,38 +1,39 @@
 #ifndef _BLADE_OBJECT_STORE_SERVER_H_
 #define _BLADE_OBJECT_STORE_SERVER_H_
 
+#include <semaphore.h>
 #include <rdma/rdma_cma.h>
-#include "src/utils/utils.h"
-#include "RDMAServer.h"
+#include <thread>
 #include <vector>
 #include <set>
-#include <thread>
-#include <semaphore.h>
 #include <map>
+#include "src/utils/utils.h"
+#include "RDMAServer.h"
 #include <boost/interprocess/managed_external_buffer.hpp>
 
 namespace cirrus {
 
 struct BladeAllocation {
-    BladeAllocation(void* p = 0) : ptr(p){}
+    explicit BladeAllocation(void* p = 0) : ptr(p) {}
     void* ptr;
 };
 
 class BladeObjectStore : public RDMAServer {
-public:
+ public:
     BladeObjectStore(int port, uint64_t pool_size,
             int timeout_ms = 500);
     virtual ~BladeObjectStore() = default;
     void init() final override;
 
-private:
+ private:
     void process_message(rdma_cm_id*, void* msg) final override;
     void handle_connection(struct rdma_cm_id* id) final override;
     void handle_disconnection(struct rdma_cm_id* id) final override;
 
     bool create_pool(uint64_t size);
 
-    void allocate_mem(rdma_cm_id* id, uint64_t size, void*& ptr, uint32_t& rkey);
+    void allocate_mem(rdma_cm_id* id, uint64_t size, void*& ptr,
+                                                             uint32_t& rkey);
     void* find_free_data(uint64_t size);
 
     void checkpoint();
@@ -52,6 +53,6 @@ private:
     std::unique_ptr<boost::interprocess::managed_external_buffer> allocator;
 };
 
-}
+}  // namespace cirrus
 
-#endif // _BLADE_OBJECT_STORE_SERVER_H_
+#endif  // _BLADE_OBJECT_STORE_SERVER_H_

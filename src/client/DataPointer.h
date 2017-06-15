@@ -15,7 +15,7 @@ class DataPointer {
             uint64_t remote_addr);
     // FIX: we also need a key here
 
-private:
+ private:
     std::string blade_address_;
     std::string blade_port_;
     uint64_t remote_addr_;
@@ -23,4 +23,4 @@ private:
 
 }  // namespace cirrus
 
-#endif // _DATA_POINTER_H_
+#endif  // _DATA_POINTER_H_
