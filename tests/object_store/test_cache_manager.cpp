@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "src/object_store/FullBladeObjectStore.h"
 #include "src/object_store/object_store_internal.h"
@@ -49,7 +50,7 @@ void test_cache_manager_simple() {
 }
 
 auto main() -> int {
-    printf("test starting\n");
+    std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
     return 0;
 }
