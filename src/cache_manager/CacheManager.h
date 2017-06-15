@@ -60,7 +60,7 @@ T CacheManager<T>::get(ObjectID oid) {
         // Do we save to the cache in this case?
         if (cache.size() == max_size) {
           throw cirrus::CacheFilledException("Get operation would put cache "
-                                             "over capacity.")
+                                             "over capacity.");
         }
         struct cache_entry& entry = cache[oid];
         entry.obj = store->get(oid);
