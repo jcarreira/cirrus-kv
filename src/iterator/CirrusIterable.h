@@ -42,16 +42,51 @@ class CirrusIterable {
         ObjectID get_curr_id() const;
 
      private:
+        /**
+          * Pointer to CacheManager used for put, get, and prefetch.
+          */
         cirrus::CacheManager<T> *cm;
+
+        /**
+          * How many items ahead to prefetch on a dereference.
+          */
         unsigned int readAhead;
+
+        /**
+          * First sequential ID.
+          */
         ObjectID first;
+
+        /**
+          * Last sequential ID.
+          */
         ObjectID last;
+
+        /**
+          * The ObjectID that will be get() will be called on the
+          * next time the iterator is dereferenced.
+          */
         ObjectID current_id;
     };
 
+    /**
+      * Pointer to CacheManager used for put, get, and prefetch.
+      */
     cirrus::CacheManager<T> *cm;
+
+    /**
+      * How many items ahead to prefetch on a dereference.
+      */
     unsigned int readAhead;
+
+    /**
+      * First sequential ID.
+      */
     ObjectID first;
+    
+    /**
+      * Last sequential ID.
+      */
     ObjectID last;
 };
 
