@@ -27,7 +27,9 @@ class CirrusIterable {
       * @param the last sequential id under which an object is stored. Should
       * always be >= first.
       * @param readAhead how many items ahead items should be prefetched.
-      * Should always be <= last - first.
+      * Should always be <= last - first. Additionally, should be less than
+      * the cache capacity that was specified in the creation of the 
+      * CacheManager.
       */
     CirrusIterable<T>(cirrus::CacheManager<T>* cm,
                                  unsigned int readAhead,
