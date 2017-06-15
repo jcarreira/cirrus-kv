@@ -13,6 +13,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 
 static const uint64_t MILLION = 1000000;
@@ -22,29 +23,32 @@ const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t N_MSG = 1000000;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
-
 uint64_t total_puts = 0;
 uint64_t total_time = 0;
 
 std::atomic<int> count;
 
+/**
+  * This benchmark tests the performance of the system when multiple clients
+  * are connected to the same store. To do so, it creates ten new threads,
+  * each of which connects to the store and sends N_MSG puts spread across
+  * 100 different object ids. The time taken for these puts is then recorded
+  * and statistics computed.
+  */
 void test_multiple_clients() {
     std::thread* threads[N_THREADS];
 
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([]() {
-            cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
+            cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+                store(IP, PORT,
+                            cirrus::struct_serializer_simple<SIZE>,
+                            cirrus::struct_deserializer_simple<SIZE>);
 
-            std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-            d->id = 42;
+            struct cirrus::Dummy<SIZE> d(42);
             // warm up
-            cirrus::RDMAMem mem(d.get(), sizeof(Dummy));
             for (uint64_t i = 0; i < 100; ++i) {
-                store.put(d.get(), sizeof(Dummy), i, &mem);
+                store.put(i, d);
             }
 
             // barrier
@@ -53,7 +57,7 @@ void test_multiple_clients() {
 
             cirrus::TimerFunction tf;
             for (uint64_t i = 0; i < N_MSG; ++i) {
-                store.put(d.get(), sizeof(Dummy), i % 100, &mem);
+                store.put(i % 100, d);
             }
 
             total_time += tf.getUsElapsed();
@@ -85,4 +89,3 @@ auto main() -> int {
 
     return 0;
 }
-

@@ -3,12 +3,14 @@
 
 #include <string>
 #include <iostream>
+#include <utility>
 
 #include "src/object_store/ObjectStore.h"
 #include "src/client/BladeClient.h"
 #include "src/utils/utils.h"
 #include "src/utils/Time.h"
 #include "src/utils/logging.h"
+#include "src/common/Exception.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -17,7 +19,7 @@ namespace cirrus {
 namespace ostore {
 
 /**
-  * @brief A class that stores a size and allocation record.
+  * A class that stores a size and allocation record.
   */
 class BladeLocation {
 public:
@@ -35,24 +37,22 @@ public:
   * method get copies objects from blade to local nodes
   * method put copies object from local dram to remote blade
   */
-template<class T = void>
-class FullBladeObjectStoreTempl : public ObjectStore {
+template<class T>
+class FullBladeObjectStoreTempl : public ObjectStore<T> {
 public:
-    FullBladeObjectStoreTempl(const std::string& bladeIP, const std::string& port);
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
+                            const std::string& port,
+            std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
+            std::function<T(void*,unsigned int)> deserializer);
 
-    Object get(const ObjectID&) const override;
-    bool get(ObjectID, T*) const;
+    T get(const ObjectID& id) const override;
+    bool put(const ObjectID& id, const T& obj) override;
+
     std::function<bool(bool)> get_async(ObjectID, T*) const;
-
-    bool getHandle(ObjectID, BladeLocation& bl) const;
-
-    bool getHandle(const ObjectID&, BladeLocation&) const;
-
-    bool put(Object, uint64_t, ObjectID, RDMAMem* mem = nullptr);
     std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
     virtual void printStats() const noexcept override;
 
-    bool remove(ObjectID);
+    bool remove(ObjectID) override;
 
 private:
     bool readToLocal(BladeLocation loc, void*) const;
@@ -65,66 +65,81 @@ private:
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocationRecord& allocRec);
 
-    // hash to map oid and location
-    // if oid is not found, object is not in store
+    /**
+      * hash to map oid and location.
+      * if oid is not found, object is not in store.
+      */
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
     mutable BladeClient client;
+
+    /** The size of serialized objects. This is obtained from the return
+      * value of the serializer() function. We assume that all serialized
+      * objects have the same length. */
+    uint64_t serialized_size;
+
+    /**
+      * A function that takes an object and serializes it. Returns a pointer
+      * to the buffer containing the serialized object as well as the size of
+      * the buffer.
+      */
+    std::function<std::pair<std::unique_ptr<char[]>,
+                                unsigned int>(const T&)> serializer;
+
+    /**
+      * A function that reads the buffer passed in and deserializes it,
+      * returning an object constructed from the information in the buffer.
+      */
+    std::function<T(void*, unsigned int)> deserializer;
 };
 
 /**
-  * @brief Instatiates a FullBladeObjectStoreTempl.
-  * @param bladeIP the ip address of the blade to connect to.
-  * @param port the port to connect to.
-  * @see BladeClient.connect()
+  * Constructor for new object stores.
+  * @param bladeIP the ip of the remote server.
+  * @param port the port to use to communicate with the remote server
+  * @param serializer A function that takes an object and serializes it.
+  * Returns a pointer to the buffer containing the serialized object as
+  * well as the size of the buffer. All serialized objects should be the
+  * same length.
+  * @param deserializer A function that reads the buffer passed in and
+  * deserializes it, returning an object constructed from the information
+  * in the buffer.
   */
 template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(const std::string& bladeIP,
-        const std::string& port) :
-    ObjectStore() {
+        const std::string& port,
+        std::function<std::pair<std::unique_ptr<char[]>, unsigned int>(const T&)> serializer,
+        std::function<T(void*, unsigned int)> deserializer) :
+    ObjectStore<T>(), serializer(serializer), deserializer(deserializer) {
     client.connect(bladeIP, port);
 }
 
-
 /**
-  * @brief Not implemented as this store does not cache locally.
+  * A function that retrieves the object at a specified object id.
+  * @param id the ObjectID that the object should be stored under.
+  * @return the object stored at id.
   */
 template<class T>
-Object FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    // We do not implement this because
-    // this store does not cache locally
-    throw std::runtime_error("Not implemented");
-    return 0;
-}
-
-/**
-  * @brief Copies object from blade to local node.
-  * @param id the ObjectID of the object to transfer.
-  * @param ptr a pointer to where the object should be transferred to.
-  */
-template<class T>
-bool FullBladeObjectStoreTempl<T>::get(ObjectID id, T* ptr) const {
+T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     BladeLocation loc;
     if (objects_.find(id, loc)) {
-        readToLocal(loc, reinterpret_cast<void*>(ptr));
-        return true;
-    } else {
-        // object is not in store
-        return false;
-    }
-}
+        /* This is safe as we will only reach here if a previous put has
+           occured, thus setting the value of serialized_size. */
 
-/**
-  * @brief Returns the BladeLocation that contains a given ObjectID.
-  * @param id the ObjectID to find
-  * @param a reference to a BladeLocation that will be set.
-  * @return True if object exits, false otherwise.
-  */
-template<class T>
-bool FullBladeObjectStoreTempl<T>::getHandle(const ObjectID& id, BladeLocation& loc) const {
-    if (objects_.find(id, loc)) {
-        return true;
+        /* This allocation provides a buffer to read the serialized object
+           into. */
+        void* ptr = ::operator new (serialized_size);
+
+        // Read into the section of memory you just allocated
+        readToLocal(loc, ptr);
+
+        // Deserialize the memory at ptr and return an object
+        T retval = deserializer(ptr, serialized_size);
+
+        // Free the memory we stored the serialized object in.
+        ::operator delete (ptr);
+        return retval;
     } else {
-        return false;
+        throw cirrus::Exception("Requested ObjectID does not exist remotely.");
     }
 }
 
@@ -165,33 +180,41 @@ FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
 }
 
 /**
-  * @brief Copies object from local dram to remote blade.
-  * Operates in a synchronous fashion.
-  * @param id the ObjectID that obj should be stored under.
-  * @param obj the object to store on the remote blade.
-  * @param size the size of the obj being transferred
-  * @param mem a pointer to an RDMAMem
-  * @return Returns the success of the call to writeRemote()
-  * @see writeRemote()
+  * A function that puts a given object at a specified object id.
+  * @param id the ObjectID that the object should be stored under.
+  * @param obj the object to be stored.
+  * @return the success of the put.
   */
 template<class T>
-bool FullBladeObjectStoreTempl<T>::put(Object obj, uint64_t size,
-        ObjectID id, RDMAMem* mem) {
+bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     BladeLocation loc;
 
+    // Approach: serialize object passed in, push it to id
+    // serialized_size is saved in the class, it is the size of pushed objects
+
+    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                        serializer(obj);
+    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+    serialized_size = serializer_out.second;
+
+    bool retval;
     if (objects_.find(id, loc)) {
-        return writeRemote(obj, loc, mem);
+        retval = writeRemote(serial_ptr.get(), loc, nullptr);
     } else {
         // we could merge this into a single message (?)
         cirrus::AllocationRecord allocRec;
         {
             TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
-            allocRec = client.allocate(size);
+            allocRec = client.allocate(serialized_size);
         }
-        insertObjectLocation(id, size, allocRec);
+        insertObjectLocation(id, serialized_size, allocRec);
         LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
-        return writeRemote(obj, BladeLocation(size, allocRec), mem);
+        retval = writeRemote(serial_ptr.get(),
+                          BladeLocation(serialized_size, allocRec),
+                          nullptr);
     }
+    return retval;
+
 }
 
 /**

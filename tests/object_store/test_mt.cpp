@@ -13,6 +13,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 
 static const uint64_t GB = (1024*1024*1024);
@@ -22,13 +23,16 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
-cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
+cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+                    cirrus::struct_serializer_simple<SIZE>,
+                    cirrus::struct_deserializer_simple<SIZE>);
 
+/**
+  * Tests that behavior is as expected when multiple threads make get and put
+  * requests to the remote store. These clients all use the same instance of
+  * the store to connect. Currently not working.
+  */
 void test_mt() {
     cirrus::TimerFunction tf("connect time", true);
 
@@ -41,16 +45,13 @@ void test_mt() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
             for (int i = 0; i < 100; ++i) {
-                std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
                 int rnd = std::rand();
-                d->id = rnd;
+                struct cirrus::Dummy<SIZE> d(rnd);
 
-                store.put(d.get(), sizeof(Dummy), 1);
-                Dummy* d2 = new Dummy;
+                store.put(1, d);
+                cirrus::Dummy<SIZE> d2 = store.get(1);
 
-                store.get(1, d2);
-
-                if (d2->id != rnd)
+                if (d2.id != rnd)
                     throw std::runtime_error("mismatch");
             }
         });
@@ -65,4 +66,3 @@ auto main() -> int {
 
     return 0;
 }
-

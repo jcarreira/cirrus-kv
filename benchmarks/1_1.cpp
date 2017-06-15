@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -23,27 +24,28 @@ const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 static const uint64_t MILLION = 1000000;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
-
-
+/**
+  * This benchmarks has two aims. The first aim is to find the distribution of
+  * latencies for synchronous puts. To do this it times the time taken for
+  * one million puts spread across 1000 object ids. The second aim is to
+  * measure the throughput in terms of messages sent per second, which it
+  * achieves by measuring the time needed for ten million puts.
+  */
 void test_sync() {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
+            cirrus::struct_serializer_simple<SIZE>,
+            cirrus::struct_deserializer_simple<SIZE>);
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
+    struct cirrus::Dummy<SIZE> d(42);
 
     // warm up
     std::cout << "Warming up" << std::endl;
     for (int i = 0; i < 1000; ++i) {
-        store.put(d.get(), sizeof(Dummy), i);
+        store.put(i, d);
     }
 
     std::cout << "Warm up done" << std::endl;
-
-    cirrus::RDMAMem mem(d.get(), sizeof(Dummy));
 
     cirrus::Stats stats;
     stats.reserve(MILLION);
@@ -51,7 +53,7 @@ void test_sync() {
     std::cout << "Measuring latencies.." << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         cirrus::TimerFunction tf;
-        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
+        store.put(i % 1000, d);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
@@ -61,7 +63,7 @@ void test_sync() {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < 10 * MILLION; ++i) {
-        store.put(d.get(), sizeof(Dummy), i % 1000, &mem);
+        store.put(i % 1000, d);
 
         if (i % 100000 == 0) {
             if ((end = start.getUsElapsed()) > MILLION) {
@@ -98,4 +100,3 @@ auto main() -> int {
 
     return 0;
 }
-

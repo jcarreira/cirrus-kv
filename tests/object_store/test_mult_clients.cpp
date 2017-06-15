@@ -13,6 +13,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 
 static const uint64_t GB = (1024*1024*1024);
@@ -22,13 +23,12 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
-
 uint64_t total_puts = 0;
 
+/**
+  * Checks that the system works properly when multiple clients get and put.
+  * These clients each use their own instance of the store.
+  */
 void test_multiple_clients() {
     cirrus::TimerFunction tf("connect time", true);
 
@@ -40,18 +40,20 @@ void test_multiple_clients() {
 
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen]() {
-            cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-            for (int i = 0; i < 100; ++i) {
-                std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+          cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+              store(IP, PORT,
+                       cirrus::struct_serializer_simple<SIZE>,
+                       cirrus::struct_deserializer_simple<SIZE>);
+
+          for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();
-                d->id = rnd;
+                struct cirrus::Dummy<SIZE> d(rnd);
 
-                store.put(d.get(), sizeof(Dummy), 1);
-                Dummy* d2 = new Dummy;
+                store.put(1, d);
 
-                store.get(1, d2);
+                struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
-                if (d2->id != rnd)
+                if (d2.id != rnd)
                     throw std::runtime_error("mismatch");
 
                 total_puts++;
@@ -70,4 +72,3 @@ auto main() -> int {
 
     return 0;
 }
-

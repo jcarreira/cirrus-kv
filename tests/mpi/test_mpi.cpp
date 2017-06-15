@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -29,39 +30,34 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
-
 // #define CHECK_RESULTS
 
 void test_sync() {
-    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
+                      cirrus::struct_serializer_simple<SIZE>,
+                      cirrus::struct_deserializer_simple<SIZE>);
+    struct cirrus::Dummy<SIZE> d(42);
 
     try {
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
     } catch(...) {
         throw std::runtime_error("Error inserting");
     }
 
-    void* d2 = ::operator new(sizeof(Dummy));
-    store.get(1, d2);
+    struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
     // should be 42
-    std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
+    std::cout << "d2.id: " << d2.id << std::endl;
 
-    if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+    if (d2.id != 42) {
         throw std::runtime_error("Wrong value");
     }
 }
 
+#if 0
 void test_async() {
     cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-
     std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
     d->id = 42;
 
@@ -86,27 +82,29 @@ void test_async() {
         throw std::runtime_error("Wrong value");
     }
 }
+#endif
 
 void test_sync(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+         store(IP, PORT,
+                      cirrus::struct_serializer_simple<SIZE>,
+                      cirrus::struct_deserializer_simple<SIZE>);
     cirrus::Stats stats;
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
-    Dummy* d2 = reinterpret_cast<Dummy*>(::operator new(sizeof(Dummy)));
+    struct cirrus::Dummy<SIZE> d(42);
 
     // warm up
     for (int i = 0; i < 100; ++i) {
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
     }
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
         cirrus::TimerFunction tf("", false);
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
 #ifdef CHECK_RESULTS
-        store.get(1, d2);
-        if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+        struct cirrus::Dummy<SIZE> d2 = store.get(1);
+        if (d2.id != 42) {
             throw std::runtime_error("Wrong value");
         }
 #endif
@@ -120,6 +118,7 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
+#if 0
 void test_async_N(int N) {
     cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
     cirrus::Stats stats;
@@ -166,6 +165,7 @@ void test_async_N(int N) {
     std::cout << "sd: " << stats.sd() << std::endl;
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
+#endif
 
 inline
 void init_mpi(int argc, char**argv) {
@@ -199,4 +199,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-

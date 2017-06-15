@@ -14,6 +14,7 @@
 #include <random>
 
 #include "src/object_store/FullBladeObjectStore.h"
+#include "src/object_store/object_store_internal.h"
 #include "src/utils/Time.h"
 #include "src/utils/Stats.h"
 
@@ -22,24 +23,25 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 128;
 
-struct Dummy {
-    char data[SIZE];
-    int id;
-};
-
+/**
+  * This benchmark measures the distribution of times necessary for
+  * N asynchronous puts.
+  */
 void test_async(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
+                cirrus::struct_serializer_simple<SIZE>,
+                cirrus::struct_deserializer_simple<SIZE>);
     cirrus::Stats stats;
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    struct cirrus::Dummy<SIZE> d(42);
     cirrus::TimerFunction tfs[N];
-    d->id = 42;
 
     std::function<bool(bool)> futures[N];
 
     // warm up
     for (int i = 0; i < N; ++i) {
-        store.put(d.get(), sizeof(Dummy), i);
+        store.put(i, d);
     }
 
     std::cout << "Warm up done" << std::endl;
@@ -50,7 +52,7 @@ void test_async(int N) {
 
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
-        futures[i] = store.put_async(d.get(), sizeof(Dummy), i);
+        futures[i] = store.put_async(&d, sizeof(cirrus::Dummy<SIZE>), i);
     }
 
     while (total_done != N) {
@@ -91,4 +93,3 @@ auto main() -> int {
 
     return 0;
 }
-
