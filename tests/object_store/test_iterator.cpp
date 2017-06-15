@@ -44,7 +44,8 @@ void test_iterator() {
     for (auto it = iter.begin(); it != iter.end(); it++) {
       cirrus::Dummy<SIZE> val = *it;
       if (val.id != j) {
-        printf("received %d but expected %d\n", val.id, j);
+        std::cout << "received " << val.id << " but expected " << j
+                  << std::endl;
         throw std::runtime_error("Wrong value");
       }
       j++;
@@ -75,7 +76,8 @@ void test_iterator_alt() {
     int j = 0;
     for (const auto& data : iter) {
       if (data.id != j) {
-        printf("received %d but expected %d\n", data.id, j);
+        std::cout << "received " << data.id << " but expected " << j
+                  << std::endl;
         throw std::runtime_error("Wrong value");
       }
       j++;
