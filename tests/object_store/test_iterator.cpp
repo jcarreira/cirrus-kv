@@ -20,6 +20,10 @@ const char PORT[] = "12345";
 const unsigned int SIZE = 1;
 const char IP[] = "10.10.49.83";
 
+/**
+  * This test ensures that items can be properly retrieved using
+  * the iterator interface.
+  */
 void test_iterator() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
                       cirrus::struct_serializer_simple<SIZE>,
@@ -52,6 +56,11 @@ void test_iterator() {
     }
 }
 
+
+/**
+  * This test ensures that items can be properly retrieved using
+  * the iterator interface, but using an alternate syntax.
+  */
 void test_iterator_alt() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
                       cirrus::struct_serializer_simple<SIZE>,
