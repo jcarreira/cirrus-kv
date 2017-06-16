@@ -168,8 +168,8 @@ T CirrusIterable<T>::Iterator::operator*() {
   for (unsigned int i = 1; i <= readAhead; i++) {
     // Math to make sure that prefetching loops back around
     // Formula is val = ((current_id + i) - first) % (last - first)) + first
-    ObjectID tenative_fetch = current_id + i;  // calculate what we WOULD fetch
-    ObjectID shifted = tenative_fetch - first;  // shift relative to first
+    ObjectID tentative_fetch = current_id + i;  // calculate what we WOULD fetch
+    ObjectID shifted = tentative_fetch - first;  // shift relative to first
     ObjectID modded = shifted % (last - first);  // Mod relative to shifted last
     ObjectID to_fetch = modded + first;  // Add back to first for final result
     cm->prefetch(to_fetch);
@@ -185,7 +185,7 @@ T CirrusIterable<T>::Iterator::operator*() {
   */
 template<class T>
 typename CirrusIterable<T>::Iterator&
-                                     CirrusIterable<T>::Iterator::operator++() {
+CirrusIterable<T>::Iterator::operator++() {
   current_id++;
   return *this;
 }
