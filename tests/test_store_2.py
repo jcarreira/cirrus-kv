@@ -3,7 +3,7 @@
 import sys
 import subprocess
 import time
-import test_runner.py
+import test_runner
 
 # Set name of test to run
 testPath = "./tests/object_store/test_store_v2"

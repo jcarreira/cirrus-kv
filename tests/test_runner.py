@@ -7,8 +7,6 @@ import time
 # NOTE: all pathnames start from the top directory where make check is run
 
 def runTest(testPath):
-    testPath = sys.argv[1]
-
     # Launch the server in the background
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
