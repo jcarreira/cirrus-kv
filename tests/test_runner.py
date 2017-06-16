@@ -4,8 +4,11 @@ import sys
 import subprocess
 import time
 
-# NOTE: all pathnames start from the top directory where make check is run
+# A function that will launch a test of a given name and return its exit
+# status. Will automatically start and kill the server before and after
+# the test.
 
+# NOTE: all pathnames start from the top directory where make check is run
 def runTest(testPath):
     # Launch the server in the background
     print("Starting server.")
