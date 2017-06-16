@@ -6,6 +6,6 @@ import time
 import test_runner
 
 # Set name of test to run
-testPath = "./src/client/clientmain"
+testPath = "./tests/object_store/test_fullblade_store"
 # Call script to run the test
 test_runner.runTest(testPath)
