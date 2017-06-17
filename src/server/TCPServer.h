@@ -4,8 +4,8 @@
 namespace cirrus {
 
 /**
-  * This class serves as a remote store that allows connection from clients through TCP
-  * clients can make requests for reading and writing data
+  * This class serves as a remote store that allows connection from clients through TCP.
+  * Clients can make requests for reading and writing data.
   * WARNING: This class only handles one client at a time. For more clients see EpollServer
   */
 class TCPServer {
@@ -24,9 +24,8 @@ class TCPServer {
       */
     virtual void loop();
  private:
-
     /**
-      * Server a request from a given socket
+      * Process a request from a given socket
       */
     void process(int sock);
 

@@ -8,7 +8,9 @@ DEFAULT_LIB= -L. -lserver -lrdmacm -libverbs\
             -L../common/ -lcommon
 
 noinst_LIBRARIES = libserver.a
-bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain objectstoremain
+bin_PROGRAMS = bladepoolmain bladeallocmain allocmain controllermain objectstoremain \
+                tcpservermain
+
 
 libserver_a_SOURCES = RDMAServer.cpp BladePoolServer.cpp \
                      ConnectionContext.cpp \
@@ -47,3 +49,9 @@ objectstoremain_SOURCES  = objectstoremain.cpp
 objectstoremain_LDFLAGS  = -pthread
 objectstoremain_CPPFLAGS = -ggdb -I$(top_srcdir)
 objectstoremain_LDADD    = $(DEFAULT_LIB)
+
+tcpservermain_DEPENDENCIES = libserver.a
+tcpservermain_SOURCES  = TCPServerMain.cpp
+tcpservermain_LDFLAGS  = -pthread
+tcpservermain_CPPFLAGS = -ggdb -I$(top_srcdir)/src
+tcpservermain_LDADD    = $(DEFAULT_LIB)

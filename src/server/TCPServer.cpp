@@ -1,11 +1,8 @@
 #include "src/server/TCPServer.h"
 
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <cstring>
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 
@@ -29,7 +26,6 @@ void TCPServer::init() {
         memset(&serv_addr, 0, sizeof(serv_addr));
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_family =  INADDR_ANY;
         serv_addr.sin_port = htons(port_);
 
         LOG<INFO>("Created socket in TCPServer");
@@ -55,13 +51,15 @@ void TCPServer::loop() {
 
         process(newsock);
 
-        close(newsock);
+        close(newsock);  // Do this for now, likely change later?
     }
 }
 
 void TCPServer::process(int sock) {
-    sock = 3;  // warning
     LOG<INFO>("Processing socket: ", sock);
+    char buffer[1024] = {0};
+    int valread = read(new_socket , buffer, 1024);
+    printf("%s\n", buffer);
 }
 
 }  // namespace cirrus
