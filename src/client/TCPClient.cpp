@@ -13,7 +13,7 @@ void TCPClient::connect(std::string address, std::string port_string) {
       printf("socket creation error \n \n");
     }
     struct sockaddr_in serv_addr;
-    memset(&serv_addr, '0', sizeof(serv_addr));
+
 
     // Set the type of address being used, assuming ip v4
     serv_addr.sin_family = AF_INET:

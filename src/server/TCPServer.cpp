@@ -2,8 +2,8 @@
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include "utils/logging.h"
-
+#include "src/utils/logging.h"  // TODO: remove word src
+#include <unistd.h>
 namespace cirrus {
 
 TCPServer::TCPServer(int port, int queue_len) {
@@ -22,8 +22,6 @@ void TCPServer::init() {
         server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
         if (server_sock_ < 0)
             throw std::runtime_error("Error creating socket");
-
-        memset(&serv_addr, 0, sizeof(serv_addr));
 
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(port_);
@@ -58,7 +56,10 @@ void TCPServer::loop() {
 void TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
     char buffer[1024] = {0};
-    int valread = read(new_socket , buffer, 1024);
+    int retval = read(sock, buffer, 1024);
+    if (retval < 0) {
+        printf("bad things happened \n");
+    }
     printf("%s\n", buffer);
 }
 
