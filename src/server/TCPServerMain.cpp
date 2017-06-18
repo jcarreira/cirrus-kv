@@ -1,6 +1,6 @@
 #include "server/TCPServer.h"
 
-const int port = 12345;
+const int port = 12344;
 const int queue_len = 10;
 
 /* Start a server that runs and prints messages received. */

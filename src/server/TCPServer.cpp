@@ -17,24 +17,27 @@ TCPServer::~TCPServer() {
 }
 
 void TCPServer::init() {
-        struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr;
 
-        server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
-        if (server_sock_ < 0)
-            throw std::runtime_error("Error creating socket");
+    server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_sock_ < 0)
+        throw std::runtime_error("Error creating socket");
 
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port_);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port_);
 
-        LOG<INFO>("Created socket in TCPServer");
+    LOG<INFO>("Created socket in TCPServer");
+    int opt = 1;    
+    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        throw std::runtime_error("Error forcing port binding");
+    }
+    int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
+            sizeof(serv_addr));
+    if (ret < 0)
+        throw std::runtime_error("Error binding in port "
+               + to_string(port_));
 
-        int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
-                sizeof(serv_addr));
-        if (ret < 0)
-            throw std::runtime_error("Error binding in port "
-                   + to_string(port_));
-
-        listen(server_sock_, queue_len_);
+    listen(server_sock_, queue_len_);
 }
 
 void TCPServer::loop() {

@@ -1,4 +1,4 @@
-#include "client/TCPClient.h"
+#include "src/client/TCPClient.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
@@ -16,8 +16,8 @@ void TCPClient::connect(std::string address, std::string port_string) {
 
 
     // Set the type of address being used, assuming ip v4
-    serv_addr.sin_family = AF_INET:
-
+    serv_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr);
     // Convert port from string to int
     int port = stoi(port_string, nullptr);
 
@@ -26,13 +26,13 @@ void TCPClient::connect(std::string address, std::string port_string) {
 
     // Connect to the server
     // TODO: Replace with logged errors and exit
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr) < 0) {
+    if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
       printf("could not connect to server\n\n");
     }
 }
 
 void TCPClient::test() {
-  char *hello = "Hello from client";
-  send(sock , hello , strlen(hello) , 0);
+    std::string hello = "Hello from client";
+    send(sock, hello.c_str(), hello.length(), 0);
 }
 }  // namespace cirrus

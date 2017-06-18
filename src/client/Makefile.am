@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 
 #DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
-SOURCES = RDMAClient.cpp BladeClient.cpp AuthenticationClient.cpp
+SOURCES = RDMAClient.cpp BladeClient.cpp AuthenticationClient.cpp TCPClient.cpp
 LIBS    = -lclient -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthentication \
           -L../common/ -lcommon -L.
 
@@ -26,8 +26,8 @@ scalability_main_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
 scalability_main_LDFLAGS  = -pthread
 scalability_main_LDADD     = $(LIBS)
 
-clientmain_DEPENDENCIES = libclient.a
-clientmain_SOURCES  = TCPClientMain.cpp
-clientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
-clientmain_LDFLAGS  = -pthread
-clientmain_LDADD    = $(LIBS)
+tcpclientmain_DEPENDENCIES = libclient.a
+tcpclientmain_SOURCES  = TCPClientMain.cpp
+tcpclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
+tcpclientmain_LDFLAGS  = -pthread
+tcpclientmain_LDADD    = $(LIBS)
