@@ -31,7 +31,7 @@ test_mult_clients_SOURCES     = test_mult_clients.cpp
 test_mult_clients_LDFLAGS     = -pthread
 test_mult_clients_CPPFLAGS    = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
                                 -I$(top_srcdir)/examples/sparsehash/src/ \
-                    		        -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+                    		-I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
 test_mult_clients_LDADD       = $(LINCLUDES) \
                                 $(LIBS)
 
