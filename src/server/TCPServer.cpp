@@ -24,7 +24,7 @@ void TCPServer::init() {
         throw std::runtime_error("Error creating socket");
 
     serv_addr.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port_);
 
     LOG<INFO>("Created socket in TCPServer");
