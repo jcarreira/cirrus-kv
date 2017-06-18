@@ -59,7 +59,7 @@ void test_iterator() {
 
 /**
   * This test ensures that items can be properly retrieved using
-  * the iterator interface, but using an alternate syntax.
+  * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
