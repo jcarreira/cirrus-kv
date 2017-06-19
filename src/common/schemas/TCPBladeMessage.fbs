@@ -8,24 +8,27 @@ table Write{
 }
 
 table WriteAck{
-  id:ulong;
+  oid:ulong;
+  success:byte;
 }
 
 table Read{
-  id:ulong;
+  oid:ulong;
 }
 
 table ReadAck{
-  id:ulong;
+  oid:ulong;
+  success:byte;
   data:[byte];
 }
 
 table Remove{
-  id:ulong;
+  oid:ulong;
 }
 
 table RemoveAck{
-  id:ulong;
+  oid:ulong;
+  success:byte;
 }
 
 table TCPBladeMessage {

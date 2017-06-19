@@ -11,10 +11,11 @@
 
 namespace cirrus {
 
+static const int initial_buffer_size = 50;
+
 TCPServer::TCPServer(int port, int queue_len) {
     port_ = port;
     queue_len_ = queue_len;
-
     server_sock_ = 0;
 }
 
@@ -68,13 +69,94 @@ void TCPServer::process(int sock) {
     char buffer[1024] = {0};
     int retval = read(sock, buffer, 1024);
     if (retval < 0) {
-        printf("bad things happened \n");
+        printf("bad things happened when reading from socket\n");
     }
-    std::vector<char> demo;
-    demo.push_back('x');
-    printf("%s\n", buffer);
-    std::string hello = "hello this is the server";
-    send(sock, hello.c_str(), hello.length(), 0);
+
+    auto msg = message::TCPBladeMessage::GetTCPBladeMessage(buffer);
+
+
+    // Instantiate the builder
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+
+
+    // Check message type
+    switch (msg->message_type()) {
+        case message::TCPBladeMessage::Message_Write:
+            {
+                ObjectID oid = msg->message_as_Write()->oid();
+                std::vector<int8_t> data = msg->message_as_Write()->data();
+
+                // Create entry in store mapping the data to the id
+                store[oid] = data;
+
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                                           true, oid);
+                auto ack_msg =
+                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                      message::BladeMessage::Message_WriteAck,
+                                      ack.Union());
+                builder.Finish(ack_msg);
+                int message_size = builder.GetSize();
+                send(sock, builder.GetBufferPointer(), message_size, 0);
+                break;
+            }
+        case message::TCPBladeMessage::Message_Read:
+            {
+               ObjectID oid = msg->message_as_Write()->oid();
+
+               bool exists = true;
+               auto entry_itr = store.find(oid);
+               if (entry_itr != store.end()) {
+                   exists = false;
+               }
+
+               if (exists) {
+                 auto data = store[oid];
+               } else {
+                 std::vector<int8_t> data;
+               }
+
+               // Create and send ack
+               auto ack = message::TCPBladeMessage::CreateReadAck(builder,
+                                          oid, exists, data);
+               auto ack_msg =
+                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                     message::BladeMessage::Message_ReadAck,
+                                     ack.Union());
+
+               builder.Finish(ack_msg);
+               int message_size = builder.GetSize();
+               send(sock, builder.GetBufferPointer(), message_size, 0);
+               break;
+            }
+        case message::TCPBladeMessage::Message_Remove:
+            {
+              ObjectID oid = msg->message_as_Write()->oid();
+
+              bool success = false;
+              auto entry_itr = store.find(oid);
+              if (entry_itr != store.end()) {
+                store.erase(entry_itr);
+                success = true;
+              }
+              // Create and send ack
+              auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                                         oid, success);
+              auto ack_msg =
+                   message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                    message::BladeMessage::Message_RemoveAck,
+                                    ack.Union());
+              builder.Finish(ack_msg);
+              int message_size = builder.GetSize();
+              send(sock, builder.GetBufferPointer(), message_size, 0);
+              break;
+            }
+        default:
+            LOG<ERROR>("Unknown message", " type:", msg->message_type());
+            exit(-1);
+            break;
+    }
 }
 
 }  // namespace cirrus

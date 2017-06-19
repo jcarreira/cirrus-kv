@@ -16,7 +16,7 @@ class TCPServer {
     ~TCPServer();
 
     /**
-      * initializes the server
+      * Initializes the server
       */
     virtual void init();
 
@@ -34,7 +34,7 @@ class TCPServer {
     int port_;
     int queue_len_;
     int server_sock_;
-    std::map<uint64_t, std::vector<char>> store;
+    std::map<uint64_t, std::vector<int8_t>> store;
 };
 
 }  // namespace cirrus
