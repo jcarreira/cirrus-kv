@@ -1,6 +1,8 @@
 #ifndef _TCP_SERVER_H_
 #define _TCP_SERVER_H_
 
+#include <vector>
+#include <map>
 namespace cirrus {
 
 /**
@@ -32,6 +34,7 @@ class TCPServer {
     int port_;
     int queue_len_;
     int server_sock_;
+    std::map<uint64_t, std::vector<char>> store;
 };
 
 }  // namespace cirrus

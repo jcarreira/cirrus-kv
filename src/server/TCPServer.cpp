@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include "src/utils/logging.h"  // TODO: remove word src
 #include <unistd.h>
+#include <map>
+#include <vector>
 namespace cirrus {
 
 TCPServer::TCPServer(int port, int queue_len) {
@@ -65,7 +67,11 @@ void TCPServer::process(int sock) {
     if (retval < 0) {
         printf("bad things happened \n");
     }
+    std::vector<char> demo;
+    demo.push_back('x');
     printf("%s\n", buffer);
+    std::string hello = "hello this is the server";
+    send(sock, hello.c_str(), hello.length(), 0);
 }
 
 }  // namespace cirrus

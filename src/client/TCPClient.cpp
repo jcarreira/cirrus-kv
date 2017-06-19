@@ -2,7 +2,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
-
+#include <unistd.h>
 namespace cirrus {
 
 void TCPClient::connect(std::string address, std::string port_string) {
@@ -31,8 +31,25 @@ void TCPClient::connect(std::string address, std::string port_string) {
     }
 }
 
+bool TCPClient::write_sync(ObjectID /*id*/, void*  /*data*/, uint64_t /*size*/) {
+    return true;
+}
+
+bool TCPClient::read_sync(ObjectID /*id*/, void* /*data*/, uint64_t /*size*/) {
+    return true;
+}
+
+bool TCPClient::remove(ObjectID /*id*/){
+    return true;
+}
 void TCPClient::test() {
     std::string hello = "Hello from client";
     send(sock, hello.c_str(), hello.length(), 0);
+    char buffer[1024] = {0};
+    int retval = read(sock, buffer, 1024);
+    if (retval < 0) {
+        printf("issue in receiving\n");
+    }
+    printf("%s\n", buffer);
 }
 }  // namespace cirrus
