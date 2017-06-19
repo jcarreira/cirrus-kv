@@ -1,8 +1,11 @@
 #include "src/client/TCPClient.h"
+
+#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
-#include <unistd.h>
+#include "src/common/schemas/TCPBladeMessage_generated.h"
+
 namespace cirrus {
 
 void TCPClient::connect(std::string address, std::string port_string) {

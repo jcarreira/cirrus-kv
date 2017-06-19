@@ -2,10 +2,13 @@
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include "src/utils/logging.h"  // TODO: remove word src
 #include <unistd.h>
 #include <map>
 #include <vector>
+
+#include "src/utils/logging.h"  // TODO: remove word src
+#include "src/common/schemas/TCPBladeMessage_generated.h"
+
 namespace cirrus {
 
 TCPServer::TCPServer(int port, int queue_len) {

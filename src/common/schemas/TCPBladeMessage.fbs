@@ -1,0 +1,35 @@
+namespace cirrus.message.TCPBladeMessage;
+
+union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck }
+
+table Write{
+  id:ulong;
+  data:[byte];
+}
+
+table WriteAck{
+  id:ulong;
+}
+
+table Read{
+  id:ulong;
+}
+
+table ReadAck{
+  id:ulong;
+  data:[byte];
+}
+
+table Remove{
+  id:ulong;
+}
+
+table RemoveAck{
+  id:ulong;
+}
+
+table TCPBladeMessage {
+  message:Message;
+}
+
+root_type TCPBladeMessage;
