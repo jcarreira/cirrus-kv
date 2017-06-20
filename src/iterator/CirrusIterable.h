@@ -83,7 +83,7 @@ class CirrusIterable {
       * First sequential ID.
       */
     ObjectID first;
-    
+
     /**
       * Last sequential ID.
       */
@@ -154,7 +154,7 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
   */
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
-  return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1);
+    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1);
 }
 
 /**
@@ -164,18 +164,23 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
   */
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
-  // Attempts to get the next readAhead items.
-  for (unsigned int i = 1; i <= readAhead; i++) {
-    // Math to make sure that prefetching loops back around
-    // Formula is val = ((current_id + i) - first) % (last - first)) + first
-    ObjectID tentative_fetch = current_id + i;  // calculate what we WOULD fetch
-    ObjectID shifted = tentative_fetch - first;  // shift relative to first
-    ObjectID modded = shifted % (last - first);  // Mod relative to shifted last
-    ObjectID to_fetch = modded + first;  // Add back to first for final result
-    cm->prefetch(to_fetch);
-  }
+    // Attempts to get the next readAhead items.
+    for (unsigned int i = 1; i <= readAhead; i++) {
+        // Math to make sure that prefetching loops back around
+        // Formula is val = ((current_id + i) - first) % (last - first)) + first
 
-  return cm->get(current_id);
+        // calculate what we WOULD fetch
+        ObjectID tentative_fetch = current_id + i;
+        // shift relative to first
+        ObjectID shifted = tentative_fetch - first;
+        // Mod relative to shifted last
+        ObjectID modded = shifted % (last - first);
+        // Add back to first for final result
+        ObjectID to_fetch = modded + first;
+        cm->prefetch(to_fetch);
+    }
+
+    return cm->get(current_id);
 }
 
 /**
@@ -186,8 +191,8 @@ T CirrusIterable<T>::Iterator::operator*() {
 template<class T>
 typename CirrusIterable<T>::Iterator&
 CirrusIterable<T>::Iterator::operator++() {
-  current_id++;
-  return *this;
+    current_id++;
+    return *this;
 }
 
 
@@ -200,9 +205,9 @@ CirrusIterable<T>::Iterator::operator++() {
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
-  typename CirrusIterable<T>::Iterator tmp(*this);
-  operator++();
-  return tmp;
+    typename CirrusIterable<T>::Iterator tmp(*this);
+    operator++();
+    return tmp;
 }
 
 /**
@@ -212,7 +217,7 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
 template<class T>
 bool CirrusIterable<T>::Iterator::operator!=(
                                const CirrusIterable<T>::Iterator& it) const {
-  return current_id != it.get_curr_id();
+    return current_id != it.get_curr_id();
 }
 
 /**
@@ -222,7 +227,7 @@ bool CirrusIterable<T>::Iterator::operator!=(
 template<class T>
 bool CirrusIterable<T>::Iterator::operator==(
                                  const CirrusIterable<T>::Iterator& it) const {
-  return current_id == it.get_curr_id();
+    return current_id == it.get_curr_id();
 }
 
 /**
@@ -230,7 +235,7 @@ bool CirrusIterable<T>::Iterator::operator==(
   */
 template<class T>
 ObjectID CirrusIterable<T>::Iterator::get_curr_id() const {
-  return current_id;
+    return current_id;
 }
 
 
