@@ -49,8 +49,6 @@ void test_throughput(int numRuns) {
 
     std::cout << "Warm up done" << std::endl;
 
-    printf("size is %lu \n", sizeof(array));
-
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;

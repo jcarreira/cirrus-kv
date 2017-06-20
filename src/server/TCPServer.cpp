@@ -11,8 +11,14 @@
 
 namespace cirrus {
 
+using TxnID = uint64_t;
+
 static const int initial_buffer_size = 50;
 
+/**
+  * Constructor for the server. Given a port and queue length, sets the values
+  * of the variables.
+  */
 TCPServer::TCPServer(int port, int queue_len) {
     port_ = port;
     queue_len_ = queue_len;
@@ -22,6 +28,10 @@ TCPServer::TCPServer(int port, int queue_len) {
 TCPServer::~TCPServer() {
 }
 
+/**
+  * Initializer for the server. Sets up the socket it uses to listen for
+  * incoming connections.
+  */
 void TCPServer::init() {
     struct sockaddr_in serv_addr;
 
@@ -48,6 +58,10 @@ void TCPServer::init() {
     listen(server_sock_, queue_len_);
 }
 
+/**
+  * Server processing loop. When called, server loops infinitely, accepting
+  * new connections and acting on messages received.
+  */
 void TCPServer::loop() {
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
@@ -66,17 +80,46 @@ void TCPServer::loop() {
     }
 }
 
+/**
+  * Process the message incoming on a particular socket. Reads in the message
+  * from the socket, extracts the flatbuffer, and then acts depending on
+  * the type of the message.
+  * @param sock the file descriptor for the socket with an incoming message.
+  */
 void TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
-    char buffer[1024] = {0};
-    int retval = read(sock, buffer, 1024);
+    std::vector<char> buffer;
+
+    // Read in the incoming message
+
+    // Reserve the size of a 32 bit int
+    buffer.reserve(sizeof(uint32_t));
+    int current_buf_size = sizeof(uint32_t);
+
+    // TODO: replace with logging and exit
+    int retval = read(sock, buffer.data(), sizeof(uint32_t));
     if (retval < 0) {
-        printf("bad things happened when reading from socket\n");
+        printf("bad things happened when reading size from socket\n");
     }
 
-    auto msg = message::TCPBladeMessage::GetTCPBladeMessage(buffer);
+    int incoming_size = ntohl(reinterpret_cast<uint32_t>(buffer.data()));
 
+    // Resize the buffer to be larger if necessary
+    if (incoming_size > current_buf_size) {
+        buffer.resize(size);
+    }
 
+    retval = read(sock, buffer.data(), incoming_size);
+
+    // TODO: is this the correct way to check this?
+    // TODO: replace with logging and exit
+    if (retval < incoming_size) {
+        printf("issue in reading socket. Full message not read. \n");
+    }
+
+    // Extract the message from the buffer
+    auto msg = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
+    TxnID txn_id = msg->txnid();
     // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
@@ -88,7 +131,7 @@ void TCPServer::process(int sock) {
                 /* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
                 auto data_fb = msg->message_as_Write()->data();
-		std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
+                std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
                 // Create entry in store mapping the data to the id
                 store[oid] = data;
 
@@ -97,11 +140,9 @@ void TCPServer::process(int sock) {
                                            true, oid);
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                      message::TCPBladeMessage::Message_WriteAck,
-                                      ack.Union());
-                builder.Finish(ack_msg);
-                int message_size = builder.GetSize();
-                send(sock, builder.GetBufferPointer(), message_size, 0);
+                                    txn_id,
+                                    message::TCPBladeMessage::Message_WriteAck,
+                                    ack.Union());
                 break;
             }
         case message::TCPBladeMessage::Message_Read:
@@ -128,12 +169,9 @@ void TCPServer::process(int sock) {
                                             oid, exists);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                     message::TCPBladeMessage::Message_ReadAck,
-                                     ack.Union());
-
-                builder.Finish(ack_msg);
-                int message_size = builder.GetSize();
-                send(sock, builder.GetBufferPointer(), message_size, 0);
+                                    txn_id,
+                                    message::TCPBladeMessage::Message_ReadAck,
+                                    ack.Union());
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
@@ -151,11 +189,9 @@ void TCPServer::process(int sock) {
                                          oid, success);
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                    txn_id,
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
-                builder.Finish(ack_msg);
-                int message_size = builder.GetSize();
-                send(sock, builder.GetBufferPointer(), message_size, 0);
                 break;
             }
         default:
@@ -163,6 +199,15 @@ void TCPServer::process(int sock) {
             exit(-1);
             break;
     }
+
+    builder.Finish(ack_msg);
+    int message_size = builder.GetSize();
+    // Convert size to network order and send
+    uint32_t network_order_size = htonl(message_size);
+    send(sock, &network_order_size, sizeof(uint32_t), 0);
+
+    // Send main message
+    send(sock, builder.GetBufferPointer(), message_size, 0);
 }
 
 }  // namespace cirrus

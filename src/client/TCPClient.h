@@ -15,6 +15,9 @@ namespace cirrus {
 using ObjectID = uint64_t;
 using TxnID = uint64_t;
 
+/**
+  * A TCP based client that inherits from BladeClient.
+  */
 class TCPClient {
  public:
     void connect(std::string address, std::string port);
