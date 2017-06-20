@@ -47,18 +47,18 @@ void TCPClient::connect(std::string address, std::string port_string) {
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-bool TCPClient::write_sync(ObjectID id, void* data, uint64_t size) {
+bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
     // Create and send write request
     int8_t *data_cast = reinterpret_cast<int8_t*>(data);
-    std::vector<int8_t> data_vector(data, data + size);
-
-    auto msg_contents = message::TCPBladeMessage::CreateWrite(oid, data_vector);
+    std::vector<int8_t> data_vector(data_cast, data_cast + size);
+    auto data_fb_vector = builder.CreateVector(data_vector);
+    auto msg_contents = message::TCPBladeMessage::CreateWrite(builder, oid, data_fb_vector);
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         builder,
                                         message::TCPBladeMessage::Message_Write,
-                                        msg_contents.union());
+                                        msg_contents.Union());
     builder.Finish(msg);
     int message_size = builder.GetSize();
     send(sock, builder.GetBufferPointer(), message_size, 0);
