@@ -6,10 +6,10 @@
 #include <thread>
 #include <vector>
 #include <memory>
-#include "src/utils/utils.h"
-#include "src/server/RDMAServer.h"
-#include "src/authentication/Authenticator.h"
-#include "src/common/AllocatorMessage.h"
+#include "utils/utils.h"
+#include "server/RDMAServer.h"
+#include "authentication/Authenticator.h"
+#include "common/AllocatorMessage.h"
 
 
 namespace cirrus {

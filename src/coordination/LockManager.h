@@ -1,7 +1,7 @@
 #ifndef _LOCK_MANAGER_H_
 #define _LOCK_MANAGER_H_
 
-#include "src/coordination/LockManager.h"
+#include "coordination/LockManager.h"
 
 namespace cirrus {
 

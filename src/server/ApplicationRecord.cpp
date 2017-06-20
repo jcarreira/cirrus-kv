@@ -1,4 +1,4 @@
-#include "src/server/ApplicationRecord.h"
+#include "server/ApplicationRecord.h"
 
 namespace cirrus {
 

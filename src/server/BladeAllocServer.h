@@ -7,7 +7,7 @@
 #include <vector>
 #include <set>
 #include <map>
-#include "src/utils/utils.h"
+#include "utils/utils.h"
 #include "RDMAServer.h"
 
 #include <boost/interprocess/managed_external_buffer.hpp>
@@ -20,7 +20,7 @@ struct BladeAllocation {
 };
 
 /**
-  * @brief This server supports allocations on top of a big mem pool.
+  * This server supports allocations on top of a big mem pool.
   * Allocations are isolated through the use of mem. windows
   * We use a mem. allocator to manage mem.
   */

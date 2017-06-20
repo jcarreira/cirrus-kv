@@ -1,6 +1,6 @@
 #include <csignal>
-#include "src/server/ResourceAllocator.h"
-#include "src/utils/logging.h"
+#include "server/ResourceAllocator.h"
+#include "utils/logging.h"
 
 static const int PORT = 12346;
 

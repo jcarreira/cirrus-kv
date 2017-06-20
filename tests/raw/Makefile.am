@@ -11,7 +11,7 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 test_atomics_SOURCES  = test_atomics.cpp
 test_atomics_LDFLAGS  = -pthread
 test_atomics_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
-                        -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3
+                        -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+                        -I$(top_srcdir)/src
 test_atomics_LDADD    = $(LINCLUDES) \
                         $(LIBS)
-

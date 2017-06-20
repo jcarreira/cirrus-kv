@@ -2,9 +2,10 @@
 #include <iostream>
 #include <string>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/utils/Time.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "utils/Time.h"
 
+// TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.84";
@@ -48,6 +49,8 @@ void test_throughput(int numRuns) {
     store.put(0, array);
 
     std::cout << "Warm up done" << std::endl;
+
+    std::cout <<"size is " << sizeof(array) << std::endl;
 
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;

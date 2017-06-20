@@ -22,3 +22,5 @@ install-sh
 ltmain.sh
 missing
 docs/html/
+*.pyc
+__pycache__/

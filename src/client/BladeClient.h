@@ -4,16 +4,16 @@
 #include <memory>
 #include <utility>
 #include <string>
-#include "src/client/RDMAClient.h"
-#include "src/common/AllocationRecord.h"
-#include "src/authentication/AuthenticationToken.h"
+#include "client/RDMAClient.h"
+#include "common/AllocationRecord.h"
+#include "authentication/AuthenticationToken.h"
 
 namespace cirrus {
 
 class FutureBladeOp;
 
 /**
-  * @brief Information about an async op.
+  * Information about an async op.
   * A class that contains information about an operation being performed
   * asynchronously.
   */
@@ -28,15 +28,13 @@ class FutureBladeOp {
     bool try_wait();
 
  private:
-    /**
-      * @brief op_info for this FutureBladeOp.
-      */
+    /** op_info for this FutureBladeOp. */
     RDMAOpInfo* op_info;
 };
 
 
 /**
-  * @brief A class extending RDMAClient.
+  * A class extending RDMAClient.
   * This class extends RDMAClient, providing implementations for many methods.
   */
 class BladeClient : public RDMAClient {

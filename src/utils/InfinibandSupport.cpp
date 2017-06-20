@@ -1,7 +1,7 @@
 #include <cstring>
-#include "src/utils/InfinibandSupport.h"
-#include "src/utils/utils.h"
-#include "src/utils/logging.h"
+#include "utils/InfinibandSupport.h"
+#include "utils/utils.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

@@ -1,5 +1,5 @@
-#include "src/object_store/RandomEvictionPolicy.h"
-#include "src/object_store/FullCacheStore.h"
+#include "object_store/RandomEvictionPolicy.h"
+#include "object_store/FullCacheStore.h"
 
 namespace cirrus {
 

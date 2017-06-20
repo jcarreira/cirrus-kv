@@ -1,9 +1,9 @@
-#include "src/server/ResourceAllocator.h"
-#include "src/authentication/ApplicationKey.h"
-#include "src/authentication/AuthenticationToken.h"
-#include "src/common/AllocatorMessageGenerator.h"
+#include "server/ResourceAllocator.h"
+#include "authentication/ApplicationKey.h"
+#include "authentication/AuthenticationToken.h"
+#include "common/AllocatorMessageGenerator.h"
 
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 /*
  * Users authenticate in the ResourceManager and get a token

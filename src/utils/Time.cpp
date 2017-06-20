@@ -1,6 +1,6 @@
 #include <iostream>
-#include "src/utils/Time.h"
-#include "src/utils/Log.h"
+#include "utils/Time.h"
+#include "utils/Log.h"
 
 namespace cirrus {
 

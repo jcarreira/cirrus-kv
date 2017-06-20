@@ -1,4 +1,4 @@
-#include "src/server/TCPServer.h"
+#include "server/TCPServer.h"
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -6,7 +6,7 @@
 #include <map>
 #include <vector>
 
-#include "src/utils/logging.h"  // TODO: remove word src
+#include "utils/logging.h"  // TODO: remove word src
 #include "src/common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
