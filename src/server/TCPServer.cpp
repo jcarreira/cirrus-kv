@@ -85,6 +85,7 @@ void TCPServer::process(int sock) {
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
+                /* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
                 std::vector<int8_t> data = msg->message_as_Write()->data();
 
@@ -105,54 +106,57 @@ void TCPServer::process(int sock) {
             }
         case message::TCPBladeMessage::Message_Read:
             {
-               ObjectID oid = msg->message_as_Write()->oid();
+                /* Service the read request by sending the serialized object
+                 to the client */
 
-               bool exists = true;
-               auto entry_itr = store.find(oid);
-               if (entry_itr != store.end()) {
-                   exists = false;
-               }
+                ObjectID oid = msg->message_as_Write()->oid();
 
-               if (exists) {
-                 auto data = store[oid];
-               } else {
-                 std::vector<int8_t> data;
-               }
+                bool exists = true;
+                auto entry_itr = store.find(oid);
+                if (entry_itr != store.end()) {
+                    exists = false;
+                }
 
-               // Create and send ack
-               auto ack = message::TCPBladeMessage::CreateReadAck(builder,
-                                          oid, exists, data);
-               auto ack_msg =
+                if (exists) {
+                    auto data = store[oid];
+                } else {
+                    std::vector<int8_t> data;
+                }
+
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateReadAck(builder,
+                                            oid, exists, data);
+                auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                      message::BladeMessage::Message_ReadAck,
                                      ack.Union());
 
-               builder.Finish(ack_msg);
-               int message_size = builder.GetSize();
-               send(sock, builder.GetBufferPointer(), message_size, 0);
-               break;
+                builder.Finish(ack_msg);
+                int message_size = builder.GetSize();
+                send(sock, builder.GetBufferPointer(), message_size, 0);
+                break;
             }
         case message::TCPBladeMessage::Message_Remove:
             {
               ObjectID oid = msg->message_as_Write()->oid();
 
-              bool success = false;
-              auto entry_itr = store.find(oid);
-              if (entry_itr != store.end()) {
-                store.erase(entry_itr);
-                success = true;
-              }
-              // Create and send ack
-              auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                bool success = false;
+                auto entry_itr = store.find(oid);
+                if (entry_itr != store.end()) {
+                    store.erase(entry_itr);
+                    success = true;
+                }
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
                                          oid, success);
-              auto ack_msg =
+                auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     message::BladeMessage::Message_RemoveAck,
                                     ack.Union());
-              builder.Finish(ack_msg);
-              int message_size = builder.GetSize();
-              send(sock, builder.GetBufferPointer(), message_size, 0);
-              break;
+                builder.Finish(ack_msg);
+                int message_size = builder.GetSize();
+                send(sock, builder.GetBufferPointer(), message_size, 0);
+                break;
             }
         default:
             LOG<ERROR>("Unknown message", " type:", msg->message_type());

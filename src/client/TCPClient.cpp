@@ -38,7 +38,14 @@ void TCPClient::connect(std::string address, std::string port_string) {
 }
 
 /**
-  * Writes the serialized object at data to the remote store under
+  * Writes an object to remote storage under id.
+  * @param id the id of the object the user wishes to write to remote memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read read from.
+  * @param size the size of the serialized object being read from
+  * local memory.
+  * @return True if the object was successfully written to the server, false
+  * otherwise.
   */
 bool TCPClient::write_sync(ObjectID id, void* data, uint64_t size) {
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
@@ -71,13 +78,30 @@ bool TCPClient::write_sync(ObjectID id, void* data, uint64_t size) {
     return ack->message_as_WriteAck()->success();
 }
 
+/**
+  * Reads an object corresponding to ObjectID from the remote server.
+  * @param id the id of the object the user wishes to read to local memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read to.
+  * @param size the size of the serialized object being read from
+  * remote storage.
+  * @return True if the object was successfully read from the server, false
+  * otherwise.
+  */
 bool TCPClient::read_sync(ObjectID /*id*/, void* /*data*/, uint64_t /*size*/) {
     return true;
 }
 
+/**
+  * Removes the object corresponding to the given ObjectID from the remote store.
+  * @return True if the object was successfully removed from the server, false
+  * if the object does not exist remotely or if another error occurred.
+  */
 bool TCPClient::remove(ObjectID /*id*/){
     return true;
 }
+
+
 void TCPClient::test() {
     std::string hello = "Hello from client";
     send(sock, hello.c_str(), hello.length(), 0);
