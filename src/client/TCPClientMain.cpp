@@ -1,4 +1,4 @@
-#include "src/client/TCPClient.h" // TODO FIX THIS
+#include "client/TCPClient.h" // TODO FIX THIS
 #include <string>
 
 auto main() -> int {

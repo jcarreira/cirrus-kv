@@ -1,4 +1,4 @@
-#include "src/client/TCPClient.h"
+#include "client/TCPClient.h"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -7,8 +7,10 @@
 #include <vector>
 #include <thread>
 #include <algorithm>
-#include "src/common/schemas/TCPBladeMessage_generated.h"
-#include "src/utils/logging.h"
+#include "common/schemas/TCPBladeMessage_generated.h"
+#include "utils/logging.h"
+#include "common/Future.h"
+
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
@@ -49,16 +51,16 @@ void TCPClient::connect(std::string address, std::string port_string) {
 }
 
 /**
-  * Writes an object to remote storage under id.
+  * Asynchronously writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
   * @param data a pointer to the buffer where the serialized object should
   * be read read from.
   * @param size the size of the serialized object being read from
   * local memory.
-  * @return True if the object was successfully written to the server, false
-  * otherwise.
+  * @return A Future that contains information about the status of the
+  * operation.
   */
-bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
+cirrus::Future TCPClient::write_async(ObjectID id, void* data, uint64_t size) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -79,11 +81,8 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
 
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
-
     // TODO: change this to use the cirrus lock?
     // spin lock may have lower latency
-
-
     // Obtain lock on map
     std::unique_lock<std::mutex> map_lock(txn_map_mutex);
     map_lock.lock();
@@ -93,7 +92,8 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
     // Release lock on map
     map_lock.release();
 
-    // TODO: build future
+    // Build the future
+    cirrus::Future future(txn->result, txn->sem);
 
     // Obtain lock on send queue
     std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
@@ -104,7 +104,80 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
 
     // Release lock
     queue_lock.release();
-    return true;
+    return future;
+}
+
+/**
+  * Asynchronously reads an object corresponding to ObjectID
+  * from the remote server.
+  * @param id the id of the object the user wishes to read to local memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read to.
+  * @param size the size of the serialized object being read from
+  * remote storage.
+  * @return True if the object was successfully read from the server, false
+  * otherwise.
+  */
+cirrus::Future TCPClient::read_async(ObjectID id, void* data, uint64_t size) {
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+                                initial_buffer_size);
+
+    // Create and send read request
+
+    auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
+
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                        *builder,
+                                        curr_txn_id,
+                                        message::TCPBladeMessage::Message_Read,
+                                        msg_contents.Union());
+    builder->Finish(msg);
+
+    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
+    txn->mem_for_read = data;
+
+    // TODO: change this to use the cirrus lock?
+    // spin lock may have lower latency
+
+    // Obtain lock on map
+    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
+    map_lock.lock();
+
+    // Add to map
+    txn_map[curr_txn_id++] = txn;
+
+    // Release lock on map
+    map_lock.release();
+
+    // Build the future
+    cirrus::Future future(txn->result, txn->sem);
+
+    // Obtain lock on send queue
+    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
+    queue_lock.lock();
+
+    // Add builder to send queue
+    send_queue.push(builder);
+
+    // Release lock on send queue
+    queue_lock.release();
+    return future;
+}
+
+/**
+  * Writes an object to remote storage under id.
+  * @param id the id of the object the user wishes to write to remote memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read read from.
+  * @param size the size of the serialized object being read from
+  * local memory.
+  * @return True if the object was successfully written to the server, false
+  * otherwise.
+  */
+bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
+    cirrus::Future future = write_async(oid, data, size);
+    return future.get();
 }
 
 /**
@@ -117,8 +190,9 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-bool TCPClient::read_sync(ObjectID /*id*/, void* /*data*/, uint64_t /*size*/) {
-    return true;
+bool TCPClient::read_sync(ObjectID id, void* data, uint64_t size) {
+    cirrus::Future future = read_async(oid, data, size);
+    return future.get();
 }
 
 /**
@@ -151,10 +225,11 @@ void TCPClient::process_received() {
             printf("issue in reading socket. Full size not read. \n");
         }
         // Convert to host byte order
-        uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+        uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
+                                                                buffer.data());
         int incoming_size = ntohl(*incoming_size_ptr);
-        
-	// Resize the buffer to be larger if necessary
+
+        // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
             buffer.resize(incoming_size);
         }
@@ -197,7 +272,7 @@ void TCPClient::process_received() {
             case message::TCPBladeMessage::Message_WriteAck:
                 {
                     // just put state in the struct, check for errors
-                    txn->result = ack->message_as_WriteAck()->success();
+                    *(txn->result) = ack->message_as_WriteAck()->success();
                     break;
                 }
             case message::TCPBladeMessage::Message_ReadAck:
@@ -206,7 +281,7 @@ void TCPClient::process_received() {
                      to the client */
 
                     // copy the data from the ReadAck into the given pointer
-                    txn->result = ack->message_as_ReadAck()->success();
+                    *(txn->result) = ack->message_as_ReadAck()->success();
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
@@ -216,7 +291,7 @@ void TCPClient::process_received() {
             case message::TCPBladeMessage::Message_RemoveAck:
                 {
                     // put the result in the struct
-                    txn->result = ack->message_as_RemoveAck()->success();
+                    *(txn->result) = ack->message_as_RemoveAck()->success();
                     break;
                 }
             default:
@@ -225,7 +300,7 @@ void TCPClient::process_received() {
                 break;
         }
         // Update the semaphore/CV so other know it is ready
-        txn->cv.notify_one();
+        txn->sem->signal();
     }
 }
 
@@ -245,8 +320,9 @@ void TCPClient::process_send() {
 
         // Process the send queue until it is empty
         while (send_queue.size() != 0) {
-            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder = send_queue.front();
-	    send_queue.pop();
+            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                                                            send_queue.front();
+            send_queue.pop();
             int message_size = builder->GetSize();
 
             // Convert size to network order and send

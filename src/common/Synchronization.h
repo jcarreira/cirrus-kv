@@ -68,7 +68,7 @@ class PosixSemaphore : public Lock {
     }
 
     /**
-      * Posts to count waiters
+      * Posts to a specified number of waiters
       * @param count number of waiters to wake
       */
     void signal(int count) final {
@@ -77,6 +77,10 @@ class PosixSemaphore : public Lock {
         }
     }
 
+    /**
+      * Attempts to lock the semaphore and returns its success.
+      * @return True if the semaphore had a positive value and was decremented.
+      */
     bool trywait() final {
         int ret = sem_trywait(&m_sema);
         if (ret == -1 && errno != EAGAIN) {
@@ -86,7 +90,7 @@ class PosixSemaphore : public Lock {
     }
 
  private:
-    sem_t m_sema;
+    sem_t m_sema; /**< underlying semaphore that operations are performed on. */
 };
 
 /**

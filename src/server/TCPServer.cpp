@@ -6,8 +6,8 @@
 #include <map>
 #include <vector>
 
-#include "utils/logging.h"  // TODO: remove word src
-#include "src/common/schemas/TCPBladeMessage_generated.h"
+#include "utils/logging.h"
+#include "common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
 

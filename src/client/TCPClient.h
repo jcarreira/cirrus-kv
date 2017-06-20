@@ -8,7 +8,9 @@
 #include <map>
 #include <mutex>
 #include <condition_variable>
-#include "src/common/schemas/TCPBladeMessage_generated.h"
+#include "common/schemas/TCPBladeMessage_generated.h"
+#include "client/newBladeClient.h"
+#include "common/Future.h"
 
 namespace cirrus {
 
@@ -18,13 +20,13 @@ using TxnID = uint64_t;
 /**
   * A TCP based client that inherits from BladeClient.
   */
-class TCPClient {
+class TCPClient : public newBladeClient {
  public:
     void connect(std::string address, std::string port);
     bool write_sync(ObjectID id, void* data, uint64_t size);
     bool read_sync(ObjectID id, void* data, uint64_t size);
-    // std::future<bool> write_sync(ObjectID id, void* data, uint64_t size);
-    // std::future<bool> read_sync(ObjectID id, void* data, uint64_t size);
+    cirrus::Future write_async(ObjectID id, void* data, uint64_t size);
+    cirrus::Future read_async(ObjectID id, void* data, uint64_t size);
     bool remove(ObjectID id);
     void test();
 
@@ -35,10 +37,17 @@ class TCPClient {
       * transactions.
       */
     struct txn_info {
-        std::mutex mutex; /**< mutex for the CV/result/mem */
-        std::condition_variable cv; /**< CV to let future wait */
-        bool result = false; /**< result of the transaction */
+        std::shared_ptr<bool> result; /**< result of the transaction */
+
+        /** Semaphore for the transaction. */
+        std::shared_ptr<cirrus::PosixSemaphore> sem;
+
         void *mem_for_read; /**< memory that should be read to */
+
+        txn_info() {
+            result = std::make_shared<bool>();
+            sem = std::make_shared<cirrus::PosixSemaphore>();
+        }
     };
 
     int sock; /**< fd of the socket used to communicate w/ remote store. */

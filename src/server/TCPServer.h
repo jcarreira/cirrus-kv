@@ -7,11 +7,12 @@ namespace cirrus {
 
 using ObjectID = uint64_t;
 /**
-  * This class serves as a remote store that allows connection from clients through TCP.
+  * This class serves as a remote store that allows connection from
+  * clients over TCP.
   * Clients can make requests for reading and writing data.
-  * WARNING: This class only handles one client at a time. For more clients see EpollServer
+  * WARNING: This class only handles one client at a time.
   */
-class TCPServer {
+class TCPServer : public Server {
  public:
     explicit TCPServer(int port, int queue_len = 100);
     ~TCPServer();
