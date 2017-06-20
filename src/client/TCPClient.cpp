@@ -52,34 +52,46 @@ void TCPClient::connect(std::string address, std::string port_string) {
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
-    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+                                initial_buffer_size);
 
     // Create and send write request
     int8_t *data_cast = reinterpret_cast<int8_t*>(data);
     std::vector<int8_t> data_vector(data_cast, data_cast + size);
-    auto data_fb_vector = builder.CreateVector(data_vector);
-    auto msg_contents = message::TCPBladeMessage::CreateWrite(builder, oid, data_fb_vector);
+    auto data_fb_vector = builder->CreateVector(data_vector);
+    auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder, oid, data_fb_vector);
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
-                                        builder,
+                                        *builder,
                                         message::TCPBladeMessage::Message_Write,
                                         msg_contents.Union());
-    builder.Finish(msg);
-    int message_size = builder.GetSize();
-    send(sock, builder.GetBufferPointer(), message_size, 0);
+    builder->Finish(msg);
 
-    // Receive write ack
+    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
-    char buffer[1024] = {0};
-    int retval = read(sock, buffer, 1024);
-    if (retval < 0) {
-        printf("issue in receiving write ack\n");
-    }
 
-    auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer);
+    // TODO: change this to use the cirrus lock?
+    // spin lock may have lower latency
 
-    // TODO: check the type of the message first
-    // TODO: check for error messages?
-    return ack->message_as_WriteAck()->success();
+
+    // Obtain lock on map
+    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
+    map_lock.lock();
+    // Add to map
+    txn_map[curr_txn_id++] = txn;
+
+    // Release lock on map
+    map_lock.release();
+
+    // Obtain lock on send queue
+    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
+    queue_lock.lock();
+
+    // Add to send queue
+    send_queue.push(builder);
+
+    // Release lock
+    queue_lock.release();
 }
 
 /**
@@ -106,11 +118,155 @@ bool TCPClient::remove(ObjectID /*id*/) {
 }
 
 void TCPClient::process_received() {
+    // All elements stored on heap according to stack overflow, so it can grow
+    std::vector<char> buffer;
+    // Reserve the size of a 32 bit int
+    buffer.reserve(sizeof(uint32_t));
+    int current_buf_size = sizeof(uint32_t);
 
+    while (1) {
+        // Read in the size of the next message from the network
+        int retval = read(sock, buffer.data(), sizeof(uint32_t));
+
+        if (retval < sizeof(uint32_t)) {
+            printf("issue in reading socket. Full size not read. \n");
+        }
+        // Convert to host byte order
+        int incoming_size = htonl(reinterpret_cast<uint32_t>(buffer.data()));
+
+        // Resize the buffer to be larger if necessary
+        if (incoming_size > current_buf_size) {
+            buffer.resize(size);
+        }
+
+        // Read rest of message into buffer
+        retval = read(sock, buffer.data(), incoming_size);
+
+        // TODO: is this the correct way to check this?
+        if (retval < incoming_size) {
+            printf("issue in reading socket. Full message not read. \n");
+        }
+
+
+        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
+        TxnID txn_id = ack->txnid();
+
+        // obtain lock on map
+
+        // find pair for this item in the map
+        auto txn_pair =
+
+        // ensure that the id really exists, error otherwise
+
+
+        // Process the ack
+        switch (ack->message_type()) {
+            case message::TCPBladeMessage::Message_WriteAck:
+                {
+                    /* Service the write request by storing the serialized object */
+                    ObjectID oid = msg->message_as_Write()->oid();
+                    auto data_fb = msg->message_as_Write()->data();
+    		std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
+                    // Create entry in store mapping the data to the id
+                    store[oid] = data;
+
+                    // Create and send ack
+                    auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                                               true, oid);
+                    auto ack_msg =
+                         message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                          message::TCPBladeMessage::Message_WriteAck,
+                                          ack.Union());
+                    builder.Finish(ack_msg);
+                    int message_size = builder.GetSize();
+                    send(sock, builder.GetBufferPointer(), message_size, 0);
+                    break;
+                }
+            case message::TCPBladeMessage::Message_ReadAck:
+                {
+                    /* Service the read request by sending the serialized object
+                     to the client */
+
+                    ObjectID oid = msg->message_as_Write()->oid();
+
+                    bool exists = true;
+                    auto entry_itr = store.find(oid);
+                    if (entry_itr != store.end()) {
+                        exists = false;
+                    }
+
+                    if (exists) {
+                        auto data = store[oid];
+                    } else {
+                        std::vector<int8_t> data;
+                    }
+
+                    // Create and send ack
+                    auto ack = message::TCPBladeMessage::CreateReadAck(builder,
+                                                oid, exists);
+                    auto ack_msg =
+                        message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                         message::TCPBladeMessage::Message_ReadAck,
+                                         ack.Union());
+
+                    builder.Finish(ack_msg);
+                    int message_size = builder.GetSize();
+                    send(sock, builder.GetBufferPointer(), message_size, 0);
+                    break;
+                }
+            case message::TCPBladeMessage::Message_RemoveAck:
+                {
+                  ObjectID oid = msg->message_as_Write()->oid();
+
+                    bool success = false;
+                    auto entry_itr = store.find(oid);
+                    if (entry_itr != store.end()) {
+                        store.erase(entry_itr);
+                        success = true;
+                    }
+                    // Create and send ack
+                    auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                                             oid, success);
+                    auto ack_msg =
+                       message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                        message::TCPBladeMessage::Message_RemoveAck,
+                                        ack.Union());
+                    builder.Finish(ack_msg);
+                    int message_size = builder.GetSize();
+                    send(sock, builder.GetBufferPointer(), message_size, 0);
+                    break;
+                }
+            default:
+                LOG<ERROR>("Unknown message", " type:", msg->message_type());
+                exit(-1);
+                break;
+        }
+
+
+        // TODO: check the type of the message first
+        // TODO: check for error messages?
+        return ack->message_as_WriteAck()->success();
+    }
 }
 
 void TCPClient::process_send() {
+    // TODO: switch to just locks
+    // Wait until there are messages to send
+    while (1) {
+        std::unique_lock<std::mutex> lk(send_queue_mutex);
+        send_queue_cv.wait(lk);
 
+        // This thread now owns the lock on the send queue
+
+        // Process the send queue until it is empty
+        while (send_queue.size() != 0) {
+            auto builder = send_queue.pop();
+            int message_size = builder->GetSize();
+            send(sock, builder->GetBufferPointer(), message_size, 0);
+        }
+        // Release the lock so that the other thread may add to the send queue
+        lk.unlock();
+    }
 }
 
 
