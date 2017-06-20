@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "object_store/FullBladeObjectStore.h"
-#include "object_store/object_store_internal.h"
+#include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
 

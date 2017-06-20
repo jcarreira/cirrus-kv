@@ -2,7 +2,7 @@
 #include <string>
 
 #include "object_store/FullBladeObjectStore.h"
-#include "object_store/object_store_internal.h"
+#include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
 
 // TODO: Remove hardcoded IP and PORT
