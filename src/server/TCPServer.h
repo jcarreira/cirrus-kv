@@ -1,5 +1,5 @@
-#ifndef _TCP_SERVER_H_
-#define _TCP_SERVER_H_
+#ifndef SRC_SERVER_TCPSERVER_H_
+#define SRC_SERVER_TCPSERVER_H_
 
 #include <vector>
 #include <map>
@@ -25,6 +25,7 @@ class TCPServer {
       * Within loop() the server starts serving requests
       */
     virtual void loop();
+
  private:
     /**
       * Process a request from a given socket
@@ -39,4 +40,4 @@ class TCPServer {
 
 }  // namespace cirrus
 
-#endif  // _TCP_SERVER_H_
+#endif  // SRC_SERVER_TCPSERVER_H_

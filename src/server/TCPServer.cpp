@@ -52,6 +52,8 @@ void TCPServer::loop() {
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 
+    // TODO: add support for multiple clients at once
+    // TODO: stop closing socket?
     while (1) {
         int newsock = accept(server_sock_,
                 reinterpret_cast<struct sockaddr*>(&cli_addr), &clilen);
@@ -60,7 +62,7 @@ void TCPServer::loop() {
 
         process(newsock);
 
-        close(newsock);  // Do this for now, likely change later?
+        close(newsock);
     }
 }
 

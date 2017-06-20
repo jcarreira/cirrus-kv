@@ -4,9 +4,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
+#include <vector>
 #include "src/common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
+
+static const int initial_buffer_size = 50;
 
 void TCPClient::connect(std::string address, std::string port_string) {
     // Create socket
@@ -34,8 +37,38 @@ void TCPClient::connect(std::string address, std::string port_string) {
     }
 }
 
-bool TCPClient::write_sync(ObjectID /*id*/, void*  /*data*/, uint64_t /*size*/) {
-    return true;
+/**
+  * Writes the serialized object at data to the remote store under
+  */
+bool TCPClient::write_sync(ObjectID id, void* data, uint64_t size) {
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+
+    // Create and send write request
+    int8_t *data_cast = reinterpret_cast<int8_t*>(data);
+    std::vector<int8_t> data_vector(data, data + size);
+
+    auto msg_contents = message::TCPBladeMessage::CreateWrite(oid, data_vector);
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                        builder,
+                                        message::TCPBladeMessage::Message_Write,
+                                        msg_contents.union());
+    builder.Finish(msg);
+    int message_size = builder.GetSize();
+    send(sock, builder.GetBufferPointer(), message_size, 0);
+
+    // Receive write ack
+
+    char buffer[1024] = {0};
+    int retval = read(sock, buffer, 1024);
+    if (retval < 0) {
+        printf("issue in receiving write ack\n");
+    }
+
+    auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer);
+
+    // TODO: check the type of the message first
+    // TODO: check for error messages?
+    return ack->message_as_WriteAck()->success();
 }
 
 bool TCPClient::read_sync(ObjectID /*id*/, void* /*data*/, uint64_t /*size*/) {
