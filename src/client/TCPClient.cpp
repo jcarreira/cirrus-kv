@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <string>
 #include <vector>
+#include <thread>
 #include "src/common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
@@ -35,6 +36,9 @@ void TCPClient::connect(std::string address, std::string port_string) {
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
       printf("could not connect to server\n\n");
     }
+
+    receiver_thread (process_received);
+    sender_thread (process_send);
 }
 
 /**
@@ -97,8 +101,16 @@ bool TCPClient::read_sync(ObjectID /*id*/, void* /*data*/, uint64_t /*size*/) {
   * @return True if the object was successfully removed from the server, false
   * if the object does not exist remotely or if another error occurred.
   */
-bool TCPClient::remove(ObjectID /*id*/){
+bool TCPClient::remove(ObjectID /*id*/) {
     return true;
+}
+
+void TCPClient::process_received() {
+
+}
+
+void TCPClient::process_send() {
+
 }
 
 
