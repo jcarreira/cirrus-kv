@@ -101,12 +101,12 @@ void TCPServer::process(int sock) {
     if (retval < 0) {
         printf("bad things happened when reading size from socket\n");
     }
-
-    int incoming_size = ntohl(reinterpret_cast<uint32_t>(buffer.data()));
+    uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+    int incoming_size = ntohl(*incoming_size_ptr);
 
     // Resize the buffer to be larger if necessary
     if (incoming_size > current_buf_size) {
-        buffer.resize(size);
+        buffer.resize(incoming_size);
     }
 
     retval = read(sock, buffer.data(), incoming_size);
@@ -143,6 +143,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
+    		builder.Finish(ack_msg);
                 break;
             }
         case message::TCPBladeMessage::Message_Read:
@@ -172,6 +173,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
+    		builder.Finish(ack_msg);
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
@@ -192,6 +194,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
+    		builder.Finish(ack_msg);
                 break;
             }
         default:
@@ -200,7 +203,6 @@ void TCPServer::process(int sock) {
             break;
     }
 
-    builder.Finish(ack_msg);
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);

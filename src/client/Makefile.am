@@ -28,6 +28,6 @@ scalability_main_LDADD     = $(LIBS)
 
 tcpclientmain_DEPENDENCIES = libclient.a
 tcpclientmain_SOURCES  = TCPClientMain.cpp
-tcpclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG)
+tcpclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) -I$(top_srcdir)/third_party/flatbuffers/include
 tcpclientmain_LDFLAGS  = -pthread
 tcpclientmain_LDADD    = $(LIBS)

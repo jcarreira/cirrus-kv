@@ -54,7 +54,6 @@ table LockAck{
 }
 
 table BladeObjectStoreMessage {
-  txnid:ulong;
   data:Data;
 }
 

@@ -39,7 +39,7 @@ class TCPClient {
         std::condition_variable cv; /**< CV to let future wait */
         bool result = false; /**< result of the transaction */
         void *mem_for_read; /**< memory that should be read to */
-    }
+    };
 
     int sock; /**< fd of the socket used to communicate w/ remote store. */
     TxnID curr_txn_id = 0; /**< next txn_id to assign */

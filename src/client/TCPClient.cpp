@@ -8,7 +8,7 @@
 #include <thread>
 #include <algorithm>
 #include "src/common/schemas/TCPBladeMessage_generated.h"
-
+#include "src/utils/logging.h"
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
@@ -104,6 +104,7 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
 
     // Release lock
     queue_lock.release();
+    return true;
 }
 
 /**
@@ -146,15 +147,16 @@ void TCPClient::process_received() {
         // Read in the size of the next message from the network
         int retval = read(sock, buffer.data(), sizeof(uint32_t));
 
-        if (retval < sizeof(uint32_t)) {
+        if (retval < static_cast<int>(sizeof(uint32_t))) {
             printf("issue in reading socket. Full size not read. \n");
         }
         // Convert to host byte order
-        int incoming_size = ntohl(reinterpret_cast<uint32_t>(buffer.data()));
-
-        // Resize the buffer to be larger if necessary
+        uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+        int incoming_size = ntohl(*incoming_size_ptr);
+        
+	// Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
-            buffer.resize(size);
+            buffer.resize(incoming_size);
         }
 
         // Read rest of message into buffer
@@ -206,8 +208,8 @@ void TCPClient::process_received() {
                     // copy the data from the ReadAck into the given pointer
                     txn->result = ack->message_as_ReadAck()->success();
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
-                    std::copy(data_fb_vector.begin(), data_fb_vector.end(),
-                                txn->mem_for_read);
+                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                                reinterpret_cast<char*>(txn->mem_for_read));
 
                     break;
                 }
@@ -243,7 +245,8 @@ void TCPClient::process_send() {
 
         // Process the send queue until it is empty
         while (send_queue.size() != 0) {
-            auto builder = send_queue.pop();
+            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder = send_queue.front();
+	    send_queue.pop();
             int message_size = builder->GetSize();
 
             // Convert size to network order and send
