@@ -1,4 +1,4 @@
-#include "src/coordination/LockManager.h"
+#include "coordination/LockManager.h"
 
 namespace cirrus {
 

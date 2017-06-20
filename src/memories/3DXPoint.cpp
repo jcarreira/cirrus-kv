@@ -1,4 +1,4 @@
-#include "src/memories/3DXPoint.h"
+#include "memories/3DXPoint.h"
 
 namespace cirrus {
 

@@ -1,11 +1,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <boost/interprocess/creation_tags.hpp>
-#include "src/server/BladeAllocServer.h"
-#include "src/utils/logging.h"
-#include "src/utils/Time.h"
-#include "src/utils/InfinibandSupport.h"
-#include "src/common/schemas/BladeMessage_generated.h"
+#include "server/BladeAllocServer.h"
+#include "utils/logging.h"
+#include "utils/Time.h"
+#include "utils/InfinibandSupport.h"
+#include "common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
 
@@ -36,7 +36,7 @@ void BladeAllocServer::handle_disconnection(struct rdma_cm_id* /*id*/) {
 }
 
 /**
-  * @brief Allocates the initial memory pool.
+  * Allocates the initial memory pool.
   * @param size the size of the memory pool being created.
   * @return true
   */
@@ -66,7 +66,7 @@ bool BladeAllocServer::create_pool(uint64_t size) {
 }
 
 /**
-  * @brief Processes incoming RDMA messages.
+  * Processes incoming RDMA messages.
   * Depending on the type of the message, responds differently. This function
   * handles allocation and deallocation.
   * @param id the rdma_cm_id used for communication

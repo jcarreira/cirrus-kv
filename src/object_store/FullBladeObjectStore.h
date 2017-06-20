@@ -5,12 +5,12 @@
 #include <iostream>
 #include <utility>
 
-#include "src/object_store/ObjectStore.h"
-#include "src/client/BladeClient.h"
-#include "src/utils/utils.h"
-#include "src/utils/Time.h"
-#include "src/utils/logging.h"
-#include "src/common/Exception.h"
+#include "object_store/ObjectStore.h"
+#include "client/BladeClient.h"
+#include "utils/utils.h"
+#include "utils/Time.h"
+#include "utils/logging.h"
+#include "common/Exception.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -28,7 +28,7 @@ class BladeLocation {
     explicit BladeLocation(uint64_t sz = 0) :
         size(sz) {}
 
-    uint64_t size;
+    uint64_t size; /**< Size of the allocation */
     AllocationRecord allocRec;
 };
 
@@ -149,7 +149,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 
 
 /**
-  * @brief Asynchronously copies object from remote blade to local DRAM.
+  * Asynchronously copies object from remote blade to local DRAM.
   * @param id the ObjectID of the object being retrieved.
   * @param ptr a pointer to the location where the object should be copied.
   * @return Returns an std::function<bool(bool)>, which in this case will be
@@ -221,7 +221,7 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 }
 
 /**
-  * @brief Asynchronously copies object from local dram to remote blade.
+  * Asynchronously copies object from local dram to remote blade.
   * @param id the ObjectID that obj should be stored under.
   * @param obj the object to store on the remote blade.
   * @param size the size of the obj being transferred
@@ -261,7 +261,7 @@ FullBladeObjectStoreTempl<T>::put_async(Object obj,
 }
 
 /**
-  * @brief Deallocates space occupied by object in remote blade.
+  * Deallocates space occupied by object in remote blade.
   * @param id the ObjectID of the object to be removed from remote memory.
   * @return Returns true.
   */

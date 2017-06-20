@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <rdma/rdma_cma.h>
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

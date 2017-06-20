@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/object_store/object_store_internal.h"
-#include "src/cache_manager/CacheManager.h"
-#include "src/utils/Time.h"
-#include "src/utils/Stats.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "tests/object_store/object_store_internal.h"
+#include "cache_manager/CacheManager.h"
+#include "utils/Time.h"
+#include "utils/Stats.h"
 
+// TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
@@ -112,7 +113,7 @@ auto main() -> int {
         std::cout << "Exception not thrown when get"
                      " called on nonexistent ID." << std::endl;
         return -1;
-    } catch (const cirrus::NoSuchIDException& e) {
+    } catch (const cirrus::NoSuchIDException & e) {
     }
 
     return 0;

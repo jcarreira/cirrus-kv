@@ -1,8 +1,8 @@
 #ifndef _AUTH_CLIENT_H_
 #define _AUTH_CLIENT_H_
 
-#include "src/client/RDMAClient.h"
-#include "src/authentication/AuthenticationToken.h"
+#include "client/RDMAClient.h"
+#include "authentication/AuthenticationToken.h"
 
 namespace cirrus {
 

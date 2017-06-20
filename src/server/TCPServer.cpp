@@ -1,11 +1,11 @@
-#include "src/server/TCPServer.h"
+#include "server/TCPServer.h"
 
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <cstring>
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 

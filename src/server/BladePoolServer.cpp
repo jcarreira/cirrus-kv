@@ -1,10 +1,10 @@
 #include <unistd.h>
 #include <errno.h>
-#include "src/server/BladePoolServer.h"
-#include "src/utils/logging.h"
-#include "src/utils/Time.h"
-#include "src/utils/InfinibandSupport.h"
-#include "src/common/schemas/BladeMessage_generated.h"
+#include "server/BladePoolServer.h"
+#include "utils/logging.h"
+#include "utils/Time.h"
+#include "utils/InfinibandSupport.h"
+#include "common/schemas/BladeMessage_generated.h"
 
 namespace cirrus {
 

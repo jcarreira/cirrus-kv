@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstring>
-#include "src/object_store/FullCacheStore.h"
-#include "src/utils/utils.h"
+#include "object_store/FullCacheStore.h"
+#include "utils/utils.h"
 
 namespace cirrus {
 

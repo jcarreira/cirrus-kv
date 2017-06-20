@@ -13,12 +13,13 @@
 #include <random>
 #include <memory>
 
-#include "src/object_store/FullBladeObjectStore.h"
-#include "src/object_store/object_store_internal.h"
-#include "src/common/Exception.h"
-#include "src/utils/Time.h"
-#include "src/utils/Stats.h"
+#include "object_store/FullBladeObjectStore.h"
+#include "tests/object_store/object_store_internal.h"
+#include "common/Exception.h"
+#include "utils/Time.h"
+#include "utils/Stats.h"
 
+// TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
@@ -90,8 +91,6 @@ void test_sync(int N) {
     std::cout << "sd: " << stats.sd() << std::endl;
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
-
-
 
 /**
   * This test tests the behavior of the store when attempting to

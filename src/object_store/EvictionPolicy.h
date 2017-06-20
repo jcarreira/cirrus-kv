@@ -1,7 +1,7 @@
 #ifndef _EVICTION_POLICY_H_
 #define _EVICTION_POLICY_H_
 
-#include "src/object_store/FullCacheStore.h"
+#include "object_store/FullCacheStore.h"
 
 #include <cstddef>
 

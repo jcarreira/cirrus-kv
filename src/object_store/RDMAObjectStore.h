@@ -1,10 +1,10 @@
 #ifndef _RDMA_OBJECT_STORE_H_
 #define _RDMA_OBJECT_STORE_H_
 
-#include "src/object_store/ObjectStore.h"
-#include "src/object_store/FullCacheStore.h"
-#include "src/object_store/EvictionPolicy.h"
-#include "src/client/BladeClient.h"
+#include "object_store/ObjectStore.h"
+#include "object_store/FullCacheStore.h"
+#include "object_store/EvictionPolicy.h"
+#include "client/BladeClient.h"
 
 namespace cirrus {
 

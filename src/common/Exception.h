@@ -44,7 +44,7 @@ class CacheCapacityException : public cirrus::Exception {
 
 /**
   * An exception generated when the user requests a get operation on an
-  * ObjectID that was either never pushed to the remote store, or was removed
+  * ObjectID that was either never pushed to the remote store or was removed
   * from the remote store.
   */
 class NoSuchIDException : public cirrus::Exception {

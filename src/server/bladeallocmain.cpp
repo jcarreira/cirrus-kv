@@ -1,6 +1,6 @@
 #include <csignal>
 #include "BladeAllocServer.h"
-#include "src/utils/logging.h"
+#include "utils/logging.h"
 
 static const uint64_t GB = (1024*1024*1024);
 

@@ -6,6 +6,6 @@ import time
 import test_runner
 
 # Set name of test to run
-testPath = "./tests/object_store/test_store_v2"
+testPath = "./tests/object_store/iterator"
 # Call script to run the test
 test_runner.runTest(testPath)

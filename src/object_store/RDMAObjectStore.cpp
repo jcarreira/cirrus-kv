@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
-#include "src/object_store/RDMAObjectStore.h"
-#include "src/object_store/RandomEvictionPolicy.h"
-#include "src/utils/utils.h"
+#include "object_store/RDMAObjectStore.h"
+#include "object_store/RandomEvictionPolicy.h"
+#include "utils/utils.h"
 
 namespace cirrus {
 

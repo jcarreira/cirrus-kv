@@ -1,7 +1,7 @@
 #ifndef _CACHE_STORE_H_
 #define _CACHE_STORE_H_
 
-#include "src/object_store/ObjectStore.h"
+#include "object_store/ObjectStore.h"
 #include <semaphore.h>
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"   
@@ -11,8 +11,8 @@
 
 #include <iostream>
 #include <cstring>
-#include "src/object_store/FullCacheStore.h"
-#include "src/utils/utils.h"
+#include "object_store/FullCacheStore.h"
+#include "utils/utils.h"
 
 //#define GOOGLE
 #define CUCKOO

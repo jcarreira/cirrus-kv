@@ -5,4 +5,4 @@ SUBDIRS = schemas
 noinst_LIBRARIES = libcommon.a
 libcommon_a_SOURCES = AllocatorMessageGenerator.cpp Synchronization.cpp
 
-libcommon_a_CPPFLAGS = -ggdb -I$(top_srcdir)
+libcommon_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src

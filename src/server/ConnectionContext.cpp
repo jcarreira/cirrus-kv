@@ -1,5 +1,5 @@
-#include "src/server/ConnectionContext.h"
-#include "src/utils/utils.h"
+#include "server/ConnectionContext.h"
+#include "utils/utils.h"
 
 namespace cirrus {
 

@@ -1,4 +1,4 @@
-#include "src/authentication/GrantingKey.h"
+#include "authentication/GrantingKey.h"
 
 #include <cstring>
 

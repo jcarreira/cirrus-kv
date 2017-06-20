@@ -1,8 +1,8 @@
 #ifndef _AUTHENTICATOR_H_
 #define _AUTHENTICATOR_H_
 
-#include "src/authentication/ApplicationKey.h"
-#include "src/common/AllocatorMessage.h"
+#include "authentication/ApplicationKey.h"
+#include "common/AllocatorMessage.h"
 
 namespace cirrus {
 

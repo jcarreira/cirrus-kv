@@ -1,4 +1,4 @@
-#include "src/common/AllocatorMessageGenerator.h"
+#include "common/AllocatorMessageGenerator.h"
 
 #include <cstring>
 
