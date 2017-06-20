@@ -37,8 +37,8 @@ void TCPClient::connect(std::string address, std::string port_string) {
       printf("could not connect to server\n\n");
     }
 
-    receiver_thread (process_received);
-    sender_thread (process_send);
+    receiver_thread = std::thread(&TCPClient::process_received, this);
+    sender_thread = std::thread(&TCPClient::process_send, this);
 }
 
 /**

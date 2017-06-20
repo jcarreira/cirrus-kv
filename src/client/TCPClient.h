@@ -3,7 +3,7 @@
 
 #include <string>
 #include <thread>
-
+#include <future>
 namespace cirrus {
 
 using ObjectID = uint64_t;
@@ -13,8 +13,8 @@ class TCPClient {
     void connect(std::string address, std::string port);
     bool write_sync(ObjectID id, void* data, uint64_t size);
     bool read_sync(ObjectID id, void* data, uint64_t size);
-    std::future<bool> write_sync(ObjectID id, void* data, uint64_t size);
-    std::future<bool> read_sync(ObjectID id, void* data, uint64_t size);
+    // std::future<bool> write_sync(ObjectID id, void* data, uint64_t size);
+    // std::future<bool> read_sync(ObjectID id, void* data, uint64_t size);
     bool remove(ObjectID id);
     void test();
 
