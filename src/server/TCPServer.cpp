@@ -87,8 +87,8 @@ void TCPServer::process(int sock) {
             {
                 /* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
-                std::vector<int8_t> data = msg->message_as_Write()->data();
-
+                auto data_fb = msg->message_as_Write()->data();
+		std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
                 // Create entry in store mapping the data to the id
                 store[oid] = data;
 
@@ -97,7 +97,7 @@ void TCPServer::process(int sock) {
                                            true, oid);
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                      message::BladeMessage::Message_WriteAck,
+                                      message::TCPBladeMessage::Message_WriteAck,
                                       ack.Union());
                 builder.Finish(ack_msg);
                 int message_size = builder.GetSize();
@@ -125,10 +125,10 @@ void TCPServer::process(int sock) {
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
-                                            oid, exists, data);
+                                            oid, exists);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                     message::BladeMessage::Message_ReadAck,
+                                     message::TCPBladeMessage::Message_ReadAck,
                                      ack.Union());
 
                 builder.Finish(ack_msg);
@@ -151,7 +151,7 @@ void TCPServer::process(int sock) {
                                          oid, success);
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                    message::BladeMessage::Message_RemoveAck,
+                                    message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
                 int message_size = builder.GetSize();

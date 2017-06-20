@@ -3,7 +3,7 @@ namespace cirrus.message.TCPBladeMessage;
 union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck }
 
 table Write{
-  id:ulong;
+  oid:ulong;
   data:[byte];
 }
 

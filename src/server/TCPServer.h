@@ -5,6 +5,7 @@
 #include <map>
 namespace cirrus {
 
+using ObjectID = uint64_t;
 /**
   * This class serves as a remote store that allows connection from clients through TCP.
   * Clients can make requests for reading and writing data.
@@ -35,7 +36,7 @@ class TCPServer {
     int port_;
     int queue_len_;
     int server_sock_;
-    std::map<uint64_t, std::vector<int8_t>> store;
+    std::map<uint64_t, std::vector<uint8_t>> store;
 };
 
 }  // namespace cirrus
