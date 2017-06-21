@@ -28,7 +28,6 @@ class TCPClient : public newBladeClient {
     cirrus::Future write_async(ObjectID oid, void* data, uint64_t size);
     cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
     bool remove(ObjectID id);
-    void test();
 
  private:
     /**
@@ -68,6 +67,7 @@ class TCPClient : public newBladeClient {
     std::thread receiver_thread;
     std::thread sender_thread;
 
+    cirrus::Future enqueue_message();
     void process_received();
     void process_send();
 };

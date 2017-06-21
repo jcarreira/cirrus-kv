@@ -10,6 +10,7 @@
 #include <memory>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
+#include "utils/utils.h"
 #include "common/Future.h"
 
 namespace cirrus {
@@ -62,6 +63,9 @@ void TCPClient::connect(std::string address, std::string port_string) {
   * operation.
   */
 cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
+    // Make sure that the pointer is not null
+    TEST_NZ(data == nullptr);
+    // Create flatbuffer builder
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -80,32 +84,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
-
-    // TODO: change this to use the cirrus lock?
-    // spin lock may have lower latency
-    // Obtain lock on map
-    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
-    map_lock.lock();
-    // Add to map
-    txn_map[curr_txn_id++] = txn;
-
-    // Release lock on map
-    map_lock.release();
-
-    // Build the future
-    cirrus::Future future(txn->result, txn->sem);
-
-    // Obtain lock on send queue
-    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
-    queue_lock.lock();
-
-    // Add to send queue
-    send_queue.push(builder);
-
-    // Release lock
-    queue_lock.release();
-    return future;
+    return enqueue_message(builder);
 }
 
 /**
@@ -119,7 +98,8 @@ cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-cirrus::Future TCPClient::read_async(ObjectID oid, void* data, uint64_t /* size */) {
+cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
+                                     uint64_t /* size */) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -135,35 +115,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data, uint64_t /* size 
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
-    txn->mem_for_read = data;
-
-    // TODO: change this to use the cirrus lock?
-    // spin lock may have lower latency
-
-    // Obtain lock on map
-    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
-    map_lock.lock();
-
-    // Add to map
-    txn_map[curr_txn_id++] = txn;
-
-    // Release lock on map
-    map_lock.release();
-
-    // Build the future
-    cirrus::Future future(txn->result, txn->sem);
-
-    // Obtain lock on send queue
-    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
-    queue_lock.lock();
-
-    // Add builder to send queue
-    send_queue.push(builder);
-
-    // Release lock on send queue
-    queue_lock.release();
-    return future;
+    return enqueue_message(builder, data);
 }
 
 /**
@@ -197,12 +149,29 @@ bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
 }
 
 /**
-  * Removes the object corresponding to the given ObjectID from the remote store.
+  * Removes the object corresponding to the given ObjectID from the
+  * remote store.
+  * @param oid the ObjectID of the object to be removed.
   * @return True if the object was successfully removed from the server, false
   * if the object does not exist remotely or if another error occurred.
   */
-bool TCPClient::remove(ObjectID /*id*/) {
-    return true;
+bool TCPClient::remove(ObjectID oid) {
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+                                initial_buffer_size);
+
+    // Create and send removal request
+    auto msg_contents = message::TCPBladeMessage::CreateRemove(*builder, oid);
+
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                    *builder,
+                                    curr_txn_id,
+                                    message::TCPBladeMessage::Message_Remove,
+                                    msg_contents.Union());
+    builder->Finish(msg);
+
+    cirrus::Future future = enqueue_message(builder, data);
+    return future.get();
 }
 
 
@@ -338,15 +307,47 @@ void TCPClient::process_send() {
     }
 }
 
+/**
+  * Given a message and optionally a pointer to memory, adds a message to the
+  * send queue, adds a transaction to the map, and returns a future.
+  * @param builder a shared_ptr to a FlatBufferBuilder, containing the
+  * message.
+  * @param An optional argument. Pointer to memory for read operations.
+  * @return Returns a Future.
+  */
+cirrus::Future enqueue_message(
+            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+            void *ptr = nullptr) {
+    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
-void TCPClient::test() {
-    std::string hello = "Hello from client";
-    send(sock, hello.c_str(), hello.length(), 0);
-    char buffer[1024] = {0};
-    int retval = read(sock, buffer, 1024);
-    if (retval < 0) {
-        printf("issue in receiving\n");
-    }
-    printf("%s\n", buffer);
+    txn->mem_for_read = ptr;
+
+    // TODO: change this to use the cirrus lock?
+    // spin lock may have lower latency
+
+    // Obtain lock on map
+    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
+    map_lock.lock();
+
+    // Add to map
+    txn_map[curr_txn_id++] = txn;
+
+    // Release lock on map
+    map_lock.release();
+
+    // Build the future
+    cirrus::Future future(txn->result, txn->sem);
+
+    // Obtain lock on send queue
+    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
+    queue_lock.lock();
+
+    // Add builder to send queue
+    send_queue.push(builder);
+
+    // Release lock on send queue
+    queue_lock.release();
+    return future;
 }
+
 }  // namespace cirrus
