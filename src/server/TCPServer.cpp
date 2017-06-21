@@ -74,9 +74,9 @@ void TCPServer::loop() {
         if (newsock < 0)
             throw std::runtime_error("Error accepting socket");
 
-        process(newsock);
-
-        close(newsock);
+        while (1) {
+            process(newsock);  // loop on the new socket
+        }
     }
 }
 
