@@ -187,13 +187,20 @@ void TCPClient::process_received() {
     // Reserve the size of a 32 bit int
     buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
+    int bytes_read = 0;
     while (1) {
         // Read in the size of the next message from the network
-        int retval = read(sock, buffer.data(), sizeof(uint32_t));
+        while (bytes_read < static_cast<int>(sizeof(uint32_t)) {
+            int retval = read(sock, buffer.data() + bytes_read,
+                              sizeof(uint32_t) - bytes_read);
 
-        if (retval < static_cast<int>(sizeof(uint32_t))) {
-            printf("issue in reading socket. Full size not read. \n");
+            if (retval < 0) {
+                printf("issue in reading socket. Full size not read. \n");
+            }
+
+            bytes_read += retval;
         }
+
         // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                                 buffer.data());
@@ -204,14 +211,18 @@ void TCPClient::process_received() {
             buffer.resize(incoming_size);
         }
 
-        // Read rest of message into buffer
-        retval = read(sock, buffer.data(), incoming_size);
+        bytes_read = 0;
 
-        // TODO: is this the correct way to check this?
-        if (retval < incoming_size) {
-            printf("issue in reading socket. Full message not read. \n");
+        while (bytes_read < incoming_size) {
+            int retval = read(sock, buffer.data() + bytes_read,
+                              incoming_size - bytes_read);
+
+            if (retval < 0) {
+                printf("error while reading full message. \n");
+            }
+
+            bytes_read += retval;
         }
-
 
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
         TxnID txn_id = ack->txnid();
@@ -281,7 +292,7 @@ void TCPClient::process_received() {
 void TCPClient::process_send() {
     // TODO: switch to just locks
     // Wait until there are messages to send
-    
+
     while (1) {
         queue_lock.wait();
         printf("obtained the lock to send\n");
@@ -337,7 +348,7 @@ cirrus::Future TCPClient::enqueue_message(
     cirrus::Future future(txn->result, txn->sem);
 
     // Obtain lock on send queue
-    queue_lock.wait();    
+    queue_lock.wait();
 
     // Add builder to send queue
     send_queue.push(builder);

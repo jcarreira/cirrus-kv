@@ -96,12 +96,20 @@ void TCPServer::process(int sock) {
     buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
 
-    // TODO: replace with logging and exit
-    int retval = read(sock, buffer.data(), sizeof(uint32_t));
-    if (retval < 0) {
-        printf("bad things happened when reading size from socket\n");
+    while (bytes_read < static_cast<int>(sizeof(uint32_t)) {
+        int retval = read(sock, buffer.data() + bytes_read,
+                          sizeof(uint32_t) - bytes_read);
+
+        if (retval < 0) {
+            printf("issue in reading socket. Full size not read. \n");
+        }
+
+        bytes_read += retval;
     }
-    uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+
+    // Convert to host byte order
+    uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
+                                                            buffer.data());
     int incoming_size = ntohl(*incoming_size_ptr);
 
     // Resize the buffer to be larger if necessary
@@ -109,12 +117,17 @@ void TCPServer::process(int sock) {
         buffer.resize(incoming_size);
     }
 
-    retval = read(sock, buffer.data(), incoming_size);
+    bytes_read = 0;
 
-    // TODO: is this the correct way to check this?
-    // TODO: replace with logging and exit
-    if (retval < incoming_size) {
-        printf("issue in reading socket. Full message not read. \n");
+    while (bytes_read < incoming_size) {
+        int retval = read(sock, buffer.data() + bytes_read,
+                          incoming_size - bytes_read);
+
+        if (retval < 0) {
+            printf("error while reading full message. \n");
+        }
+
+        bytes_read += retval;
     }
 
     // Extract the message from the buffer
@@ -143,7 +156,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
-    		builder.Finish(ack_msg);
+                builder.Finish(ack_msg);
                 break;
             }
         case message::TCPBladeMessage::Message_Read:
@@ -173,7 +186,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
-    		builder.Finish(ack_msg);
+                builder.Finish(ack_msg);
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
@@ -194,7 +207,7 @@ void TCPServer::process(int sock) {
                                     txn_id,
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
-    		builder.Finish(ack_msg);
+                builder.Finish(ack_msg);
                 break;
             }
         default:
