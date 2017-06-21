@@ -2,6 +2,7 @@
 #define SRC_CLIENT_BLADECLIENT_H_
 
 #include <string>
+#include "common/future.h"
 
 namespace cirrus {
 
@@ -21,9 +22,9 @@ class newBladeClient {
 
     virtual bool remove(ObjectID id) = 0;
 
-    // std::future<bool> write_sync(ObjectID id, void* data, uint64_t size);
-    
-    // std::future<bool> read_sync(ObjectID id, void* data, uint64_t size);
+    cirrus::Future write_async(ObjectID oid, void* data, uint64_t size);
+
+    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
 };
 
 }  // namespace cirrus

@@ -1,5 +1,5 @@
-#ifndef SRC_CLIENT_TCPCLIENT_CLIENT_H_
-#define SRC_CLIENT_TCPCLIENT_CLIENT_H_
+#ifndef SRC_CLIENT_TCPCLIENT_H_
+#define SRC_CLIENT_TCPCLIENT_H_
 
 #include <string>
 #include <thread>
@@ -22,12 +22,13 @@ using TxnID = uint64_t;
   */
 class TCPClient : public newBladeClient {
  public:
-    void connect(std::string address, std::string port);
-    bool write_sync(ObjectID oid, void* data, uint64_t size);
-    bool read_sync(ObjectID oid, void* data, uint64_t size);
-    cirrus::Future write_async(ObjectID oid, void* data, uint64_t size);
-    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
-    bool remove(ObjectID id);
+    void connect(std::string address, std::string port) override;
+    bool write_sync(ObjectID oid, void* data, uint64_t size) override;
+    bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    cirrus::Future write_async(ObjectID oid, void* data,
+                               uint64_t size) override;
+    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
+    bool remove(ObjectID id) override;
 
  private:
     /**
