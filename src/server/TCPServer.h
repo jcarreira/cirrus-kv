@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <map>
+#include "server/Server.h"
+
 namespace cirrus {
 
 using ObjectID = uint64_t;

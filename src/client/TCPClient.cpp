@@ -7,6 +7,7 @@
 #include <vector>
 #include <thread>
 #include <algorithm>
+#include <memory>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "common/Future.h"
@@ -60,7 +61,7 @@ void TCPClient::connect(std::string address, std::string port_string) {
   * @return A Future that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID id, void* data, uint64_t size) {
+cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -118,7 +119,7 @@ cirrus::Future TCPClient::write_async(ObjectID id, void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-cirrus::Future TCPClient::read_async(ObjectID id, void* data, uint64_t size) {
+cirrus::Future TCPClient::read_async(ObjectID oid, void* data, uint64_t /* size */) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -190,7 +191,7 @@ bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-bool TCPClient::read_sync(ObjectID id, void* data, uint64_t size) {
+bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
     cirrus::Future future = read_async(oid, data, size);
     return future.get();
 }
