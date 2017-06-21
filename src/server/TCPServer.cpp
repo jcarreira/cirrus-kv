@@ -95,23 +95,24 @@ void TCPServer::process(int sock) {
     // Reserve the size of a 32 bit int
     buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
+    int bytes_read = 0;
 
-    while (bytes_read < static_cast<int>(sizeof(uint32_t)) {
+    while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,
                           sizeof(uint32_t) - bytes_read);
 
         if (retval < 0) {
-            printf("issue in reading socket. Full size not read. \n");
+            LOG<ERROR>("Server issue in reading socket during size read.");
         }
 
         bytes_read += retval;
     }
-
+    LOG<INFO>("Server received size from client");
     // Convert to host byte order
     uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                             buffer.data());
     int incoming_size = ntohl(*incoming_size_ptr);
-
+    LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
@@ -124,24 +125,26 @@ void TCPServer::process(int sock) {
                           incoming_size - bytes_read);
 
         if (retval < 0) {
-            printf("error while reading full message. \n");
+            LOG<ERROR>("Serverside error while reading full message.");
         }
 
         bytes_read += retval;
+	LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
     }
-
+    LOG<INFO>("Server received full message from client");
     // Extract the message from the buffer
     auto msg = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
     TxnID txn_id = msg->txnid();
     // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
-
+    LOG<INFO>("Server checking type of message");
     // Check message type
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
-                /* Service the write request by storing the serialized object */
+                LOG<INFO>("Server processing write request.");
+		/* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
                 auto data_fb = msg->message_as_Write()->data();
                 std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
@@ -163,21 +166,22 @@ void TCPServer::process(int sock) {
             {
                 /* Service the read request by sending the serialized object
                  to the client */
-
-                ObjectID oid = msg->message_as_Write()->oid();
-
+                LOG<INFO>("Processing read request");
+		ObjectID oid = msg->message_as_Read()->oid();
+                LOG<INFO>("Server extracted oid");
                 bool exists = true;
                 auto entry_itr = store.find(oid);
-                if (entry_itr != store.end()) {
+		LOG<INFO>("Got pair from store");
+                if (entry_itr == store.end()) {
                     exists = false;
+		    LOG<INFO>("oid does not exist on server");
                 }
-
                 if (exists) {
                     auto data = store[oid];
                 } else {
                     std::vector<int8_t> data;
                 }
-
+                LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
                                             oid, exists);
@@ -187,11 +191,12 @@ void TCPServer::process(int sock) {
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
+		LOG<INFO>("Server done building response");
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
             {
-              ObjectID oid = msg->message_as_Write()->oid();
+              ObjectID oid = msg->message_as_Remove()->oid();
 
                 bool success = false;
                 auto entry_itr = store.find(oid);
@@ -220,9 +225,11 @@ void TCPServer::process(int sock) {
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
     send(sock, &network_order_size, sizeof(uint32_t), 0);
-
+    LOG<INFO>("Server sent size.");
     // Send main message
     send(sock, builder.GetBufferPointer(), message_size, 0);
+    LOG<INFO>("Server sent ack of size: ", message_size);
+    LOG<INFO>("Server done processing message from client");
 }
 
 }  // namespace cirrus
