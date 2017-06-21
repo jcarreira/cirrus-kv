@@ -170,7 +170,7 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(builder, data);
+    cirrus::Future future = enqueue_message(builder);
     return future.get();
 }
 
@@ -315,9 +315,9 @@ void TCPClient::process_send() {
   * @param An optional argument. Pointer to memory for read operations.
   * @return Returns a Future.
   */
-cirrus::Future enqueue_message(
+cirrus::Future TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-            void *ptr = nullptr) {
+            void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn->mem_for_read = ptr;

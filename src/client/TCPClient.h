@@ -67,7 +67,8 @@ class TCPClient : public newBladeClient {
     std::thread receiver_thread;
     std::thread sender_thread;
 
-    cirrus::Future enqueue_message();
+    cirrus::Future enqueue_message(std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+		    void *ptr = nullptr);
     void process_received();
     void process_send();
 };
