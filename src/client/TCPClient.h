@@ -59,11 +59,8 @@ class TCPClient : public newBladeClient {
     std::map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
     std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
-    std::mutex txn_map_mutex;
-
-    std::mutex send_queue_mutex;
-    std::condition_variable send_queue_cv;
-
+    cirrus::SpinLock map_lock;
+    cirrus::SpinLock queue_lock;
     std::thread receiver_thread;
     std::thread sender_thread;
 

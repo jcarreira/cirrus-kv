@@ -130,6 +130,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   */
 bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
     cirrus::Future future = write_async(oid, data, size);
+    printf("returned from write async\n");
     return future.get();
 }
 
@@ -186,7 +187,6 @@ void TCPClient::process_received() {
     // Reserve the size of a 32 bit int
     buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
-
     while (1) {
         // Read in the size of the next message from the network
         int retval = read(sock, buffer.data(), sizeof(uint32_t));
@@ -217,8 +217,7 @@ void TCPClient::process_received() {
         TxnID txn_id = ack->txnid();
 
         // obtain lock on map
-        std::unique_lock<std::mutex> map_lock(txn_map_mutex);
-        map_lock.lock();
+        map_lock.wait();
 
         // find pair for this item in the map
         auto txn_pair = txn_map.find(txn_id);
@@ -235,7 +234,7 @@ void TCPClient::process_received() {
         txn_map.erase(txn_id);
 
         // release lock
-        map_lock.unlock();
+        map_lock.signal();
 
         // Process the ack
         switch (ack->message_type()) {
@@ -282,11 +281,11 @@ void TCPClient::process_received() {
 void TCPClient::process_send() {
     // TODO: switch to just locks
     // Wait until there are messages to send
+    
     while (1) {
-        std::unique_lock<std::mutex> lk(send_queue_mutex);
-        send_queue_cv.wait(lk);
-
-        // This thread now owns the lock on the send queue
+        queue_lock.wait();
+        printf("obtained the lock to send\n");
+	// This thread now owns the lock on the send queue
 
         // Process the send queue until it is empty
         while (send_queue.size() != 0) {
@@ -303,7 +302,7 @@ void TCPClient::process_send() {
             send(sock, builder->GetBufferPointer(), message_size, 0);
         }
         // Release the lock so that the other thread may add to the send queue
-        lk.unlock();
+        queue_lock.signal();
     }
 }
 
@@ -326,27 +325,25 @@ cirrus::Future TCPClient::enqueue_message(
     // spin lock may have lower latency
 
     // Obtain lock on map
-    std::unique_lock<std::mutex> map_lock(txn_map_mutex);
-    map_lock.lock();
+    map_lock.wait();
 
     // Add to map
     txn_map[curr_txn_id++] = txn;
 
     // Release lock on map
-    map_lock.release();
+    map_lock.signal();
 
     // Build the future
     cirrus::Future future(txn->result, txn->sem);
 
     // Obtain lock on send queue
-    std::unique_lock<std::mutex> queue_lock(send_queue_mutex);
-    queue_lock.lock();
+    queue_lock.wait();    
 
     // Add builder to send queue
     send_queue.push(builder);
 
     // Release lock on send queue
-    queue_lock.release();
+    queue_lock.signal();
     return future;
 }
 
