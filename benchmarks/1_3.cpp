@@ -41,8 +41,8 @@ void test_multiple_clients() {
     std::thread* threads[N_THREADS];
 
     for (int i = 0; i < N_THREADS; ++i) {
-        cirrus::TCPClient client;  // TODO: Is this right
         threads[i] = new std::thread([]() {
+            cirrus::TCPClient client;  // TODO: Is this right
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
                 store(IP, PORT, &client,
                             cirrus::struct_serializer_simple<SIZE>,

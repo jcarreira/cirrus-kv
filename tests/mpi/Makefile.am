@@ -17,5 +17,6 @@ test_mpi_LDFLAGS  = -pthread
 #--static -L$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 test_mpi_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
 		    -I$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-                    -I$(TOP_DIR)/src
+                    -I$(TOP_DIR)/src \
+		    -I$(TOP_DIR)/third_party/flatbuffers/include
 test_mpi_LDADD    = $(LINCLUDES) $(LIBS)

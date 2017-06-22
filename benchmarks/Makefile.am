@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = 1_1 1_2 1_3 throughput
+bin_PROGRAMS = 1_1 1_3 throughput #add 1_2 as it requires async later
 LIBS         = -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
@@ -12,7 +12,8 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 1_1_LDFLAGS  = -pthread
 1_1_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-               -I$(top_srcdir)/src
+               -I$(top_srcdir)/src \
+	       -I$(top_srcdir)/third_party/flatbuffers/include
 1_1_LDADD    = $(LINCLUDES) \
                $(LIBS)
 
@@ -20,7 +21,8 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 1_2_LDFLAGS  = -pthread
 1_2_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-               -I$(top_srcdir)/src
+               -I$(top_srcdir)/src \
+	       -I$(top_srcdir)/third_party/flatbuffers/include
 1_2_LDADD    = $(LINCLUDES) \
                $(LIBS)
 
@@ -28,7 +30,8 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 1_3_LDFLAGS  = -pthread
 1_3_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
                -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-               -I$(top_srcdir)/src
+               -I$(top_srcdir)/src \
+	       -I$(top_srcdir)/third_party/flatbuffers/include
 1_3_LDADD    = $(LINCLUDES) \
                $(LIBS)
 
@@ -36,6 +39,7 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
  throughput_LDFLAGS  = -pthread
  throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
                        -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-                       -I$(top_srcdir)/src
+                       -I$(top_srcdir)/src \
+		       -I$(top_srcdir)/third_party/flatbuffers/include
  throughput_LDADD    = $(LINCLUDES) \
                         $(LIBS)

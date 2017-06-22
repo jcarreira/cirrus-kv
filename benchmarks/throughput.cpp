@@ -4,6 +4,7 @@
 
 #include "object_store/FullBladeObjectStore.h"
 #include "utils/Time.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -38,8 +39,9 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
   */
 template <unsigned int SIZE>
 void test_throughput(int numRuns) {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-        store(IP, PORT, array_serializer_simple<SIZE>,
+        store(IP, PORT, &client, array_serializer_simple<SIZE>,
                 array_deserializer_simple<SIZE>);
 
     std::array<char, SIZE> array;
