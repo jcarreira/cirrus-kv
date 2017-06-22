@@ -191,6 +191,7 @@ void TCPClient::process_received() {
     while (1) {
         // Read in the size of the next message from the network
         printf("client waiting for message from server\n");
+	bytes_read = 0;
 	while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
@@ -239,7 +240,7 @@ void TCPClient::process_received() {
         // ensure that the id really exists, error otherwise
         if (txn_pair == txn_map.end()) {
             // error
-	    printf("ERROR THE CLIENT DOES NOT KNOW THIS TXN ID\n\n\n");
+	    LOG<ERROR>("THE CLIENT DOES NOT KNOW THIS TXN ID: ", txn_id);
         }
 
         // get the struct
@@ -263,13 +264,18 @@ void TCPClient::process_received() {
                 {
                     /* Service the read request by sending the serialized object
                      to the client */
-
+                    LOG<INFO>("Client processing ReadAck");
                     // copy the data from the ReadAck into the given pointer
                     *(txn->result) = ack->message_as_ReadAck()->success();
-                    auto data_fb_vector = ack->message_as_ReadAck()->data();
-                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                    LOG<INFO>("Client wrote success");
+		    auto data_fb_vector = ack->message_as_ReadAck()->data();
+                    LOG<INFO>("Client has pointer to vector");
+		    LOG<INFO>("accessing size of vector");
+		    int x = data_fb_vector->size();
+		    LOG<INFO>("Size of received vector is: ", x);
+		    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
-
+                    LOG<INFO>("Client copied vector");
                     break;
                 }
             case message::TCPBladeMessage::Message_RemoveAck:
