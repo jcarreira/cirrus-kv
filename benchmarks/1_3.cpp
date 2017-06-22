@@ -15,6 +15,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t MILLION = 1000000;
@@ -40,9 +41,10 @@ void test_multiple_clients() {
     std::thread* threads[N_THREADS];
 
     for (int i = 0; i < N_THREADS; ++i) {
+        cirrus::TCPClient client;  // TODO: Is this right
         threads[i] = new std::thread([]() {
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-                store(IP, PORT,
+                store(IP, PORT, client,
                             cirrus::struct_serializer_simple<SIZE>,
                             cirrus::struct_deserializer_simple<SIZE>);
 

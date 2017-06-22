@@ -18,6 +18,7 @@
 #include "common/Exception.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -32,7 +33,10 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+                      PORT,
+                      client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
@@ -59,10 +63,13 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+                      PORT,
+                      client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
+
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);

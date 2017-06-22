@@ -17,6 +17,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -33,8 +34,9 @@ static const uint64_t MILLION = 1000000;
   * achieves by measuring the time needed for ten million puts.
   */
 void test_sync() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+        store(IP, PORT, client,
             cirrus::struct_serializer_simple<SIZE>,
             cirrus::struct_deserializer_simple<SIZE>);
 

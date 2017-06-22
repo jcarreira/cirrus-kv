@@ -6,6 +6,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -17,7 +18,9 @@ const char IP[] = "10.10.49.83";
   * Uses simpler objects than test_fullblade_store.
   */
 void test_store_simple() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+                        client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
     for (int oid = 0; oid <  10; oid++) {

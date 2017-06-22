@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 
 #DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
-SOURCES = RDMAClient.cpp BladeClient.cpp AuthenticationClient.cpp TCPClient.cpp
+SOURCES = RDMAClient.cpp TCPClient.cpp
 LIBS    = -lclient -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthentication \
 					-L../common/ -lcommon -L.
 

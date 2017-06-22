@@ -9,7 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "common/schemas/TCPBladeMessage_generated.h"
-#include "client/newBladeClient.h"
+#include "client/BladeClient.h"
 #include "common/Future.h"
 
 namespace cirrus {
@@ -20,7 +20,7 @@ using TxnID = uint64_t;
 /**
   * A TCP based client that inherits from BladeClient.
   */
-class TCPClient : public newBladeClient {
+class TCPClient : public BladeClient {
  public:
     void connect(std::string address, std::string port) override;
     bool write_sync(ObjectID oid, void* data, uint64_t size) override;

@@ -11,7 +11,7 @@
 #include "utils/Time.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
-#include "client/newBladeClient.h"
+#include "client/BladeClient.h"
 #include "common/Future.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
@@ -30,7 +30,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                             const std::string& port,
-                            newBladeClient *client,
+                            BladeClient *client,
             std::function<std::pair<std::unique_ptr<char[]>,
             unsigned int>(const T&)> serializer,
             std::function<T(void*, unsigned int)> deserializer);
@@ -46,7 +46,11 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 
 
  private:
-    mutable newBladeClient *client;
+    /**
+      * The client that the store uses to achieve all interaction with the
+      * remote store.
+      */
+    BladeClient *client;
 
     /** The size of serialized objects. This is obtained from the return
       * value of the serializer() function. We assume that all serialized
@@ -85,7 +89,7 @@ template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
-        newBladeClient client*,
+        BladeClient client*,
         std::function<std::pair<std::unique_ptr<char[]>,
         unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :

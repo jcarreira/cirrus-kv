@@ -7,6 +7,7 @@
 #include "cache_manager/CacheManager.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -18,7 +19,8 @@ const char IP[] = "10.10.49.83";
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -40,7 +42,8 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -59,7 +62,8 @@ void test_nonexistent_get() {
   * a cirrus::CacheCapacityException.
   */
 void test_capacity() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -81,7 +85,8 @@ void test_capacity() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 

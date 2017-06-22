@@ -12,6 +12,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
+#include "cirrus/TCPClient.h"
 
 
 // TODO: Remove hardcoded IP and PORT
@@ -25,11 +26,14 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+                    PORT,
+                    client,
+                    cirrus::struct_serializer_simple<SIZE>,
+                    cirrus::struct_deserializer_simple<SIZE>);
 
-  cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
@@ -62,11 +66,14 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+                      PORT,
+                      client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
-  cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
 
     // Put items in the store

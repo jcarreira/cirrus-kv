@@ -20,6 +20,8 @@ class ObjectStore {
     virtual void printStats() const noexcept = 0;
 
     virtual bool remove(ObjectID id) = 0;
+
+    //TODO: Add async operations
  private:
 };
 
