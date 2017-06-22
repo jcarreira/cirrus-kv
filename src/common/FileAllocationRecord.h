@@ -21,6 +21,6 @@ struct FileAllocationRecord {
     {}
 };
 
-}
+}  // namespace cirrus
 
 #endif // _FILE_ALLOCATION_RECORD_H_
