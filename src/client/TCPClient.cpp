@@ -190,7 +190,9 @@ void TCPClient::process_received() {
     int bytes_read = 0;
     while (1) {
         // Read in the size of the next message from the network
-        while (bytes_read < static_cast<int>(sizeof(uint32_t)) {
+        printf("client waiting for message from server\n");
+	bytes_read = 0;
+	while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
@@ -200,13 +202,14 @@ void TCPClient::process_received() {
 
             bytes_read += retval;
         }
-
-        // Convert to host byte order
+	// Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                                 buffer.data());
         int incoming_size = ntohl(*incoming_size_ptr);
 
-        // Resize the buffer to be larger if necessary
+        LOG<INFO>("Size of incoming message received from server: ", incoming_size);
+        
+	// Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
             buffer.resize(incoming_size);
         }
@@ -222,6 +225,7 @@ void TCPClient::process_received() {
             }
 
             bytes_read += retval;
+	    LOG<INFO>("Client has read ", bytes_read, " of ", incoming_size, " bytes.");
         }
 
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
@@ -236,6 +240,7 @@ void TCPClient::process_received() {
         // ensure that the id really exists, error otherwise
         if (txn_pair == txn_map.end()) {
             // error
+	    LOG<ERROR>("THE CLIENT DOES NOT KNOW THIS TXN ID: ", txn_id);
         }
 
         // get the struct
@@ -259,13 +264,18 @@ void TCPClient::process_received() {
                 {
                     /* Service the read request by sending the serialized object
                      to the client */
-
+                    LOG<INFO>("Client processing ReadAck");
                     // copy the data from the ReadAck into the given pointer
                     *(txn->result) = ack->message_as_ReadAck()->success();
-                    auto data_fb_vector = ack->message_as_ReadAck()->data();
-                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                    LOG<INFO>("Client wrote success");
+		    auto data_fb_vector = ack->message_as_ReadAck()->data();
+                    LOG<INFO>("Client has pointer to vector");
+		    LOG<INFO>("accessing size of vector");
+		    int x = data_fb_vector->size();
+		    LOG<INFO>("Size of received vector is: ", x);
+		    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
-
+                    LOG<INFO>("Client copied vector");
                     break;
                 }
             case message::TCPBladeMessage::Message_RemoveAck:
@@ -281,6 +291,7 @@ void TCPClient::process_received() {
         }
         // Update the semaphore/CV so other know it is ready
         txn->sem->signal();
+	printf("client done processing message\n");
     }
 }
 
@@ -295,7 +306,7 @@ void TCPClient::process_send() {
 
     while (1) {
         queue_lock.wait();
-        printf("obtained the lock to send\n");
+        // printf("obtained the lock to send\n");
 	// This thread now owns the lock on the send queue
 
         // Process the send queue until it is empty
@@ -304,14 +315,15 @@ void TCPClient::process_send() {
                                                             send_queue.front();
             send_queue.pop();
             int message_size = builder->GetSize();
-
+            printf("client sending size\n");
             // Convert size to network order and send
             uint32_t network_order_size = htonl(message_size);
             send(sock, &network_order_size, sizeof(uint32_t), 0);
-
+            printf("client sending main message\n");
             // Send main message
             send(sock, builder->GetBufferPointer(), message_size, 0);
-        }
+            printf("message pair sent by client\n");
+	}
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
     }
