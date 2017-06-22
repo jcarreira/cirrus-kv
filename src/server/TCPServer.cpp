@@ -147,7 +147,7 @@ void TCPServer::process(int sock) {
 		/* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
                 auto data_fb = msg->message_as_Write()->data();
-                std::vector<uint8_t> data(data_fb->begin(), data_fb->end());
+                std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                 // Create entry in store mapping the data to the id
                 store[oid] = data;
 
@@ -176,15 +176,15 @@ void TCPServer::process(int sock) {
                     exists = false;
 		    LOG<INFO>("oid does not exist on server");
                 }
-                if (exists) {
-                    auto data = store[oid];
-                } else {
-                    std::vector<int8_t> data;
+                std::vector<int8_t> data;
+		if (exists) {
+                    data = store[oid];
                 }
-                LOG<INFO>("Server building response");
+                auto fb_vector = builder.CreateVector(data);
+		LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
-                                            oid, exists);
+                                            oid, exists, fb_vector);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,

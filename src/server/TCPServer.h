@@ -39,7 +39,7 @@ class TCPServer : public Server {
     int port_;
     int queue_len_;
     int server_sock_;
-    std::map<uint64_t, std::vector<uint8_t>> store;
+    std::map<uint64_t, std::vector<int8_t>> store;
 };
 
 }  // namespace cirrus
