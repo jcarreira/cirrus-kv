@@ -2,7 +2,7 @@
 #define SRC_CLIENT_BLADECLIENT_H_
 
 #include <string>
-#include "common/future.h"
+#include "common/Future.h"
 
 namespace cirrus {
 
@@ -14,17 +14,17 @@ using ObjectID = uint64_t;
   */
 class BladeClient {
  public:
-    virtual void connect(std::string address, std::string port) = 0;
+    virtual void connect(const std::string& address, const std::string& port) = 0;
 
-    virtual bool write_sync(ObjectID id, void* data, uint64_t size) = 0;
+    virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
 
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 
     virtual bool remove(ObjectID id) = 0;
 
-    cirrus::Future write_async(ObjectID oid, void* data, uint64_t size);
+    virtual cirrus::Future write_async(ObjectID oid, const void* data, uint64_t size) = 0;
 
-    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
+    virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) = 0;
 };
 
 }  // namespace cirrus

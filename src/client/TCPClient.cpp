@@ -23,7 +23,7 @@ static const int initial_buffer_size = 50;
   * @param address the ipv4 address of the server, represented as a string
   * @param port_string the port to connect to, represented as a string
   */
-void TCPClient::connect(std::string address, std::string port_string) {
+void TCPClient::connect(const std::string& address, const std::string& port_string) {
     // Create socket
 
     // TODO: Replace with logged errors and exit
@@ -62,7 +62,7 @@ void TCPClient::connect(std::string address, std::string port_string) {
   * @return A Future that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
+cirrus::Future TCPClient::write_async(ObjectID oid, const void* data, uint64_t size) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
     // Create flatbuffer builder
@@ -71,7 +71,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, void* data, uint64_t size) {
                                 initial_buffer_size);
 
     // Create and send write request
-    int8_t *data_cast = reinterpret_cast<int8_t*>(data);
+    const int8_t *data_cast = reinterpret_cast<const int8_t*>(data);
     std::vector<int8_t> data_vector(data_cast, data_cast + size);
     auto data_fb_vector = builder->CreateVector(data_vector);
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
@@ -128,7 +128,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-bool TCPClient::write_sync(ObjectID oid, void* data, uint64_t size) {
+bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
     cirrus::Future future = write_async(oid, data, size);
     printf("returned from write async\n");
     return future.get();

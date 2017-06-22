@@ -15,11 +15,13 @@
 #include "client/BladeClient.h"
 #include "utils/logging.h"
 
+#include "third_party/libcuckoo/src/cuckoohash_map.hh"
+#include "third_party/libcuckoo/src/city_hasher.hh"
 
 namespace cirrus {
 
 using ObjectID = uint64_t;
-
+using Object = void*;
 
 // TODO: should this go here? or be internal to the class?
 /**
@@ -42,10 +44,10 @@ struct GeneralContext {
   */
 class RDMAClient : public BladeClient {
  public:
-    void connect(std::string address, std::string port) override;
-    bool write_sync(ObjectID oid, void* data, uint64_t size) override;
+    void connect(const std::string& address, const std::string& port) override;
+    bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
-    cirrus::Future write_async(ObjectID oid, void* data,
+    cirrus::Future write_async(ObjectID oid, const void* data,
                                uint64_t size) override;
     cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
     bool remove(ObjectID id) override;
@@ -196,12 +198,12 @@ class RDMAClient : public BladeClient {
     };
 
 
-    bool readToLocal(BladeLocation loc, void*) const;
+    bool readToLocal(BladeLocation loc, void*);
 
     std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
-            void* ptr) const;
+            void* ptr);
 
-    bool writeRemote(Object obj, BladeLocation loc, RDMAMem* mem = nullptr);
+    bool writeRemote(const Object obj, BladeLocation loc, RDMAMem* mem = nullptr);
     std::shared_ptr<FutureBladeOp> writeRemoteAsync(Object obj,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
@@ -250,10 +252,10 @@ class RDMAClient : public BladeClient {
 
     // XXX We may not need a shared ptr here
     // reads
-    std::shared_ptr<FutureBladeOp> read_async(const AllocationRecord& alloc_rec,
+    std::shared_ptr<FutureBladeOp> rdma_read_async(const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length, void *data,
             RDMAMem* mem = nullptr);
-    bool read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
+    bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
 
     // fetch and add atomic
