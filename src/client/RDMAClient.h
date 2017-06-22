@@ -21,7 +21,6 @@
 namespace cirrus {
 
 using ObjectID = uint64_t;
-using Object = void*;
 
 // TODO: should this go here? or be internal to the class?
 /**
@@ -203,8 +202,8 @@ class RDMAClient : public BladeClient {
     std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
             void* ptr);
 
-    bool writeRemote(const Object obj, BladeLocation loc, RDMAMem* mem = nullptr);
-    std::shared_ptr<FutureBladeOp> writeRemoteAsync(Object obj,
+    bool writeRemote(const void* data, BladeLocation loc, RDMAMem* mem = nullptr);
+    std::shared_ptr<FutureBladeOp> writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocationRecord& allocRec);

@@ -195,8 +195,9 @@ std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::readToLocalAsync(
     return future;
 }
 
-bool RDMAClient::writeRemote(const Object obj, BladeLocation loc, RDMAMem* mem) {
-    RDMAMem mm(obj, loc.size);
+bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
+                             RDMAMem* mem) {
+    RDMAMem mm(data, loc.size);
     {
         // TimerFunction tf("writeRemote", true);
         // LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
@@ -207,8 +208,8 @@ bool RDMAClient::writeRemote(const Object obj, BladeLocation loc, RDMAMem* mem) 
 }
 
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
-        Object obj, BladeLocation loc) {
-    auto future = write_async(loc.allocRec, 0, loc.size, obj);
+        const void *data, BladeLocation loc) {
+    auto future = write_async(loc.allocRec, 0, loc.size, data);
     return future;
 }
 
@@ -362,7 +363,9 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
 }
 
 void RDMAClient::on_completion(struct ibv_wc *wc) {
-    RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(wc->wr_id);
+    RDMAClient::RDMAOpInfo* op_info =
+                                     reinterpret_cast<RDMAClient::RDMAOpInfo*>(
+                                                                    wc->wr_id);
 
     LOG<INFO>("on_completion. wr_id: ", wc->wr_id,
         " opcode: ", wc->opcode,
@@ -534,8 +537,11 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
   * @return A pointer to an RDMAOpInfo containing information about the status
   * of the write.
   */
-RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-        uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
+RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
+                                                    uint64_t size,
+                                                    uint64_t remote_addr,
+                                                    uint64_t peer_rkey,
+                                                    const RDMAMem& mem) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
@@ -586,7 +592,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint
   */
 void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
-	RDMAClient::RDMAOpInfo* op_info = read_rdma_async(id, size,
+        RDMAClient::RDMAOpInfo* op_info = read_rdma_async(id, size,
             remote_addr, peer_rkey, mem);
 
     // wait until operation is completed
@@ -613,9 +619,12 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
   * @return A pointer to an RDMAOpInfo containing information about the status
   * of the read.
   */
-RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
-        uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem,
-        std::function<void()> apply_fn) {
+RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
+                                            uint64_t size,
+                                            uint64_t remote_addr,
+                                            uint64_t peer_rkey,
+                                            const RDMAMem& mem,
+                                            std::function<void()> apply_fn) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
