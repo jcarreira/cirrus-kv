@@ -12,7 +12,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
-#include "cirrus/TCPClient.h"
+#include "client/TCPClient.h"
 
 
 // TODO: Remove hardcoded IP and PORT
@@ -29,7 +29,7 @@ void test_iterator() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                     PORT,
-                    client,
+                    &client,
                     cirrus::struct_serializer_simple<SIZE>,
                     cirrus::struct_deserializer_simple<SIZE>);
 
@@ -69,7 +69,7 @@ void test_iterator_alt() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
-                      client,
+                      &client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 

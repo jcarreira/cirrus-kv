@@ -37,7 +37,7 @@ static const uint32_t SIZE = 1;
 void test_sync() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT, client,
+        store(IP, PORT, &client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -90,7 +90,7 @@ void test_async() {
 void test_sync(int N) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-         store(IP, PORT, client,
+         store(IP, PORT, &client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
     cirrus::Stats stats;

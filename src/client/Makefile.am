@@ -5,11 +5,11 @@ AUTOMAKE_OPTIONS = foreign
 #DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
 SOURCES = RDMAClient.cpp TCPClient.cpp
-LIBS    = -lclient -l:libcityhash.a -libverbs -lrdmacm -L../utils/ -lutils -L../authentication/ -lauthentication \
-					-L../common/ -lcommon -L.
+LIBS    = -l:libcityhash.a -libverbs -lrdmacm -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+					-L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 noinst_LIBRARIES = libclient.a
-bin_PROGRAMS = clientmain tcpclientmain
+bin_PROGRAMS = tcpclientmain
 
 libclient_a_SOURCES = $(SOURCES)
 libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \

@@ -89,13 +89,13 @@ template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
-        BladeClient client*,
+        BladeClient* client,
         std::function<std::pair<std::unique_ptr<char[]>,
         unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
-    client.connect(bladeIP, port);
+    client->connect(bladeIP, port);
 }
 
 /**

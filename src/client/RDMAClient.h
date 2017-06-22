@@ -264,7 +264,6 @@ class RDMAClient : public BladeClient {
             uint64_t value);
     bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t value);
-
     // *****************From old RDMAClient, above was BladeClient + store ****
     void alloc_rdma_memory(ConnectionContext& ctx);
 
