@@ -271,9 +271,13 @@ void TCPClient::process_received() {
 		    auto data_fb_vector = ack->message_as_ReadAck()->data();
                     LOG<INFO>("Client has pointer to vector");
 		    LOG<INFO>("accessing size of vector");
+		    // this line below will segfault
 		    int x = data_fb_vector->size();
 		    LOG<INFO>("Size of received vector is: ", x);
-		    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+		    //this line below uses same syntax as on server, also segfaults
+		    std::vector<uint8_t> data(data_fb_vector->begin(), data_fb_vector->end());
+		    
+		    std::copy(data.begin(), data.end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
                     LOG<INFO>("Client copied vector");
                     break;
