@@ -20,7 +20,7 @@ const char IP[] = "10.10.49.83";
 void test_store_simple() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        client,
+                        &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
     for (int oid = 0; oid <  10; oid++) {

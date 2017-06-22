@@ -36,7 +36,7 @@ static const uint64_t MILLION = 1000000;
 void test_sync() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT, client,
+        store(IP, PORT, &client,
             cirrus::struct_serializer_simple<SIZE>,
             cirrus::struct_deserializer_simple<SIZE>);
 

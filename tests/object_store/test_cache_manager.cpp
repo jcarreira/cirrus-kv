@@ -20,7 +20,7 @@ const char IP[] = "10.10.49.83";
   */
 void test_cache_manager_simple() {
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -43,7 +43,7 @@ void test_cache_manager_simple() {
   */
 void test_nonexistent_get() {
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -63,7 +63,7 @@ void test_nonexistent_get() {
   */
 void test_capacity() {
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
@@ -86,7 +86,7 @@ void test_capacity() {
   */
 void test_instantiation() {
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client,
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 

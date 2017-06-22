@@ -36,7 +36,7 @@ void test_sync() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
-                      client,
+                      &client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
@@ -66,7 +66,7 @@ void test_sync(int N) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
-                      client,
+                      &client,
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
@@ -104,7 +104,8 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
                         cirrus::serializer_simple,
                         cirrus::deserializer_simple);
 
