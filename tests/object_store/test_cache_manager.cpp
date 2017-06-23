@@ -94,10 +94,10 @@ auto main() -> int {
 
     try {
         test_capacity();
-        std::cout << "Exception not thrown when cache"
-                     " capacity exceeded." << std::endl;
-        return -1;
     } catch (const cirrus::CacheCapacityException& e) {
+        std::cout << "Cache capacity exceeded when item should have been "
+                     " removed by eviction policy." << std::endl;
+        return -1;
     }
 
     try {
