@@ -18,21 +18,6 @@ static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
 static const char IP[] = "10.10.49.83";
 
-void ctrlc_handler(int sig_num) {
-    cirrus::LOG<cirrus::ERROR>("Caught CTRL-C. sig_num: ", sig_num);
-    exit(EXIT_FAILURE);
-}
-
-void set_ctrlc_handler() {
-    struct sigaction sig_int_handler;
-
-    sig_int_handler.sa_handler = ctrlc_handler;
-    sigemptyset(&sig_int_handler.sa_mask);
-    sig_int_handler.sa_flags = 0;
-
-    sigaction(SIGINT, &sig_int_handler, nullptr);
-}
-
 void test_1_client() {
     char data[1000];
     const char* to_send = "CIRRUS_DDC";
@@ -46,7 +31,7 @@ void test_1_client() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    client1.write_sync(0,to_send, std::strlen(to_send));
+    client1.write_sync(0, to_send, std::strlen(to_send));
 
     client1.read_sync(0, data, std::strlen(to_send));
 
@@ -126,12 +111,8 @@ void test_performance() {
 }
 
 auto main() -> int {
-    // test_1_client();
+    test_1_client();
     // test_2_clients();
     // test_performance();
-    // test_authentication();
-    // test_destructor();
-    // test_allocation();
-    // test_async();
     return 0;
 }

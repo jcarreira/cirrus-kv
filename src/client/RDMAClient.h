@@ -46,9 +46,11 @@ class RDMAClient : public BladeClient {
     void connect(const std::string& address, const std::string& port) override;
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
-    cirrus::Future write_async(ObjectID oid, const void* data,
-                               uint64_t size) override;
-    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
+
+    // TODO: Add async
+    // cirrus::Future write_async(ObjectID oid, const void* data,
+    //                            uint64_t size) override;
+    // cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
     bool remove(ObjectID id) override;
 
  private:
@@ -202,7 +204,8 @@ class RDMAClient : public BladeClient {
     std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
             void* ptr);
 
-    bool writeRemote(const void* data, BladeLocation loc, RDMAMem* mem = nullptr);
+    bool writeRemote(const void* data, BladeLocation loc,
+        RDMAMem* mem = nullptr);
     std::shared_ptr<FutureBladeOp> writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
@@ -251,9 +254,11 @@ class RDMAClient : public BladeClient {
 
     // XXX We may not need a shared ptr here
     // reads
-    std::shared_ptr<FutureBladeOp> rdma_read_async(const AllocationRecord& alloc_rec,
-            uint64_t offset, uint64_t length, void *data,
-            RDMAMem* mem = nullptr);
+    std::shared_ptr<FutureBladeOp> rdma_read_async(
+        const AllocationRecord& alloc_rec,
+        uint64_t offset, uint64_t length, void *data,
+        RDMAMem* mem = nullptr);
+
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
 
@@ -264,6 +269,7 @@ class RDMAClient : public BladeClient {
             uint64_t value);
     bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t value);
+
     // *****************From old RDMAClient, above was BladeClient + store ****
     void alloc_rdma_memory(ConnectionContext& ctx);
 

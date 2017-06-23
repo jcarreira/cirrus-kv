@@ -23,12 +23,11 @@ static const int initial_buffer_size = 50;
   * @param address the ipv4 address of the server, represented as a string
   * @param port_string the port to connect to, represented as a string
   */
-void TCPClient::connect(const std::string& address, const std::string& port_string) {
+void TCPClient::connect(const std::string& address,
+                        const std::string& port_string) {
     // Create socket
-
-    // TODO: Replace with logged errors and exit
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-      printf("socket creation error \n \n");
+        LOG<ERROR>("socket creation error");
     }
     struct sockaddr_in serv_addr;
 
@@ -43,9 +42,8 @@ void TCPClient::connect(const std::string& address, const std::string& port_stri
     serv_addr.sin_port = htons(port);
 
     // Connect to the server
-    // TODO: Replace with logged errors and exit
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      printf("could not connect to server\n\n");
+        LOG<ERROR>("could not connect to server");
     }
 
     receiver_thread = std::thread(&TCPClient::process_received, this);
@@ -62,7 +60,8 @@ void TCPClient::connect(const std::string& address, const std::string& port_stri
   * @return A Future that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID oid, const void* data, uint64_t size) {
+cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
+                                                    uint64_t size) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
     // Create flatbuffer builder
@@ -191,8 +190,8 @@ void TCPClient::process_received() {
     while (1) {
         // Read in the size of the next message from the network
         printf("client waiting for message from server\n");
-	bytes_read = 0;
-	while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
+        bytes_read = 0;
+        while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
@@ -202,14 +201,15 @@ void TCPClient::process_received() {
 
             bytes_read += retval;
         }
-	// Convert to host byte order
+        // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                                 buffer.data());
         int incoming_size = ntohl(*incoming_size_ptr);
 
-        LOG<INFO>("Size of incoming message received from server: ", incoming_size);
-        
-	// Resize the buffer to be larger if necessary
+        LOG<INFO>("Size of incoming message received from server: ",
+                                                                 incoming_size);
+
+        // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
             buffer.resize(incoming_size);
         }
@@ -225,7 +225,8 @@ void TCPClient::process_received() {
             }
 
             bytes_read += retval;
-	    LOG<INFO>("Client has read ", bytes_read, " of ", incoming_size, " bytes.");
+            LOG<INFO>("Client has read ", bytes_read, " of ", incoming_size,
+                                                        " bytes.");
         }
 
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
@@ -239,8 +240,7 @@ void TCPClient::process_received() {
 
         // ensure that the id really exists, error otherwise
         if (txn_pair == txn_map.end()) {
-            // error
-	    LOG<ERROR>("THE CLIENT DOES NOT KNOW THIS TXN ID: ", txn_id);
+            LOG<ERROR>("The client received an unknow txn_id: ", txn_id);
         }
 
         // get the struct
@@ -268,16 +268,10 @@ void TCPClient::process_received() {
                     // copy the data from the ReadAck into the given pointer
                     *(txn->result) = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
-		    auto data_fb_vector = ack->message_as_ReadAck()->data();
+                    auto data_fb_vector = ack->message_as_ReadAck()->data();
                     LOG<INFO>("Client has pointer to vector");
-		    LOG<INFO>("accessing size of vector");
-		    // this line below will segfault
-		    int x = data_fb_vector->size();
-		    LOG<INFO>("Size of received vector is: ", x);
-		    //this line below uses same syntax as on server, also segfaults
-		    std::vector<uint8_t> data(data_fb_vector->begin(), data_fb_vector->end());
-		    
-		    std::copy(data.begin(), data.end(),
+                    LOG<INFO>("Size of received vector is: ", x);
+                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
                     LOG<INFO>("Client copied vector");
                     break;
@@ -295,7 +289,7 @@ void TCPClient::process_received() {
         }
         // Update the semaphore/CV so other know it is ready
         txn->sem->signal();
-	printf("client done processing message\n");
+        LOG<INFO>("client done processing message");
     }
 }
 
@@ -305,13 +299,10 @@ void TCPClient::process_received() {
   * contain. Does not wait for response.
   */
 void TCPClient::process_send() {
-    // TODO: switch to just locks
     // Wait until there are messages to send
-
     while (1) {
         queue_lock.wait();
-        // printf("obtained the lock to send\n");
-	// This thread now owns the lock on the send queue
+        // This thread now owns the lock on the send queue
 
         // Process the send queue until it is empty
         while (send_queue.size() != 0) {
@@ -327,7 +318,7 @@ void TCPClient::process_send() {
             // Send main message
             send(sock, builder->GetBufferPointer(), message_size, 0);
             printf("message pair sent by client\n");
-	}
+        }
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
     }

@@ -9,7 +9,7 @@ LIBS    = -l:libcityhash.a -libverbs -lrdmacm -lclient -L../utils/ -lutils -L../
 					-L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 noinst_LIBRARIES = libclient.a
-bin_PROGRAMS = tcpclientmain
+bin_PROGRAMS = tcpclientmain rdmaclientmain
 
 libclient_a_SOURCES = $(SOURCES)
 libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
@@ -17,11 +17,14 @@ libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 			-I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src
 
 
-clientmain_DEPENDENCIES = libclient.a
-clientmain_SOURCES  = clientmain.cpp
-clientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) -I$(top_srcdir)/src -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src
-clientmain_LDFLAGS  = -pthread
-clientmain_LDADD    = $(LIBS)
+rdmaclientmain_DEPENDENCIES = libclient.a
+rdmaclientmain_SOURCES  = clientmain.cpp
+rdmaclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) \
+						  -I$(top_srcdir)/third_party/flatbuffers/include \
+						  -I$(top_srcdir)/src \
+						  -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src
+rdmaclientmain_LDFLAGS  = -pthread
+rdmaclientmain_LDADD    = $(LIBS)
 
 tcpclientmain_DEPENDENCIES = libclient.a
 tcpclientmain_SOURCES  = TCPClientMain.cpp

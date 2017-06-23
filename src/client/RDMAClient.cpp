@@ -201,7 +201,7 @@ bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
     {
         // TimerFunction tf("writeRemote", true);
         // LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
-        write_sync(loc.allocRec, 0, loc.size, data,
+        rdma_write_sync(loc.allocRec, 0, loc.size, data,
                 nullptr == mem ? &mm : mem);
     }
     return true;
@@ -209,12 +209,13 @@ bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
 
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
         const void *data, BladeLocation loc) {
-    auto future = write_async(loc.allocRec, 0, loc.size, data);
+    auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
     return future;
 }
 
 bool RDMAClient::insertObjectLocation(ObjectID id,
-		        uint64_t size, const AllocationRecord& allocRec) {
+                                      uint64_t size,
+                                      const AllocationRecord& allocRec) {
     objects_[id] = BladeLocation(size, allocRec);
     return true;
 }
@@ -994,7 +995,7 @@ bool RDMAClient::deallocate(const AllocationRecord& ar) {
   * @return write success
   * @see AllocationRecord
   */
-bool RDMAClient::write_sync(const AllocationRecord& alloc_rec,
+bool RDMAClient::rdma_write_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         const void* data,
@@ -1044,7 +1045,7 @@ bool RDMAClient::write_sync(const AllocationRecord& alloc_rec,
   * the max sendable message size
   * @see AllocationRecord
   */
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::write_async(
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::rdma_write_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
