@@ -1,13 +1,7 @@
 #include <stdlib.h>
-#include <fstream>
-#include <iterator>
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
-#include <map>
-#include <string>
 #include <cctype>
-#include <chrono>
 #include <thread>
 #include <memory>
 #include <random>
@@ -25,8 +19,8 @@ const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024;
 
 cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
-                    cirrus::struct_serializer_simple<SIZE>,
-                    cirrus::struct_deserializer_simple<SIZE>);
+                    cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                    cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
 /**
   * Tests that behavior is as expected when multiple threads make get and put

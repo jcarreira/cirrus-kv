@@ -19,8 +19,8 @@ const char IP[] = "10.10.49.83";
   */
 void test_cache_manager_simple() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  10; oid++) {
@@ -41,8 +41,8 @@ void test_cache_manager_simple() {
   */
 void test_nonexistent_get() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  10; oid++) {
@@ -60,8 +60,8 @@ void test_nonexistent_get() {
   */
 void test_capacity() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::CacheManager<int> cm(&store, 10);
     for (int oid = 0; oid <  15; oid++) {
@@ -82,8 +82,8 @@ void test_capacity() {
   */
 void test_instantiation() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::CacheManager<int> cm(&store, 0);
 }

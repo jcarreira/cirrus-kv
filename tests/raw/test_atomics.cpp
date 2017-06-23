@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <fstream>
-#include <iterator>
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
