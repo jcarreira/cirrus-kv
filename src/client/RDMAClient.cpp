@@ -182,8 +182,7 @@ bool RDMAClient::remove(ObjectID oid) {
 
 
 // ********************** from object store *******************
-bool RDMAClient::readToLocal(BladeLocation loc,
-                                                void* ptr) {
+bool RDMAClient::readToLocal(BladeLocation loc, void* ptr) {
     RDMAMem mem(ptr, loc.size);
     rdma_read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
     return true;
@@ -370,8 +369,7 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
 }
 
 void RDMAClient::on_completion(struct ibv_wc *wc) {
-    RDMAClient::RDMAOpInfo* op_info =
-                                     reinterpret_cast<RDMAClient::RDMAOpInfo*>(
+    RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(
                                                                     wc->wr_id);
 
     LOG<INFO>("on_completion. wr_id: ", wc->wr_id,

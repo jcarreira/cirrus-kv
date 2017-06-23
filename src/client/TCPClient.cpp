@@ -187,9 +187,21 @@ void TCPClient::process_received() {
     buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
     int bytes_read = 0;
+
+
+    /*
+    * Each message received consists of two parts. The first part of a message
+    * is four bytes long and contains the size of the second part of the
+    * message, stored in network byte order. The second part of the message is
+    * a flatbuffer, whose size is dictated by the first part of the message.
+    * To receive, a client first reads in exactly four bytes, then converts
+    * the value received into host byte order to know the size of the incoming
+    * buffer. It then reads in exactly as many bytes as make up the flatbuffer.
+    */
+
     while (1) {
         // Read in the size of the next message from the network
-        printf("client waiting for message from server\n");
+        LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
         while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
             int retval = read(sock, buffer.data() + bytes_read,
@@ -214,6 +226,7 @@ void TCPClient::process_received() {
             buffer.resize(incoming_size);
         }
 
+        // Reset the counter to read in the flatbuffer
         bytes_read = 0;
 
         while (bytes_read < incoming_size) {
@@ -229,6 +242,7 @@ void TCPClient::process_received() {
                                                         " bytes.");
         }
 
+        // Extract the flatbuffer from the receiving buffer
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
         TxnID txn_id = ack->txnid();
 
@@ -247,7 +261,7 @@ void TCPClient::process_received() {
         std::shared_ptr<struct txn_info> txn = txn_pair->second;
 
         // remove from map
-        txn_map.erase(txn_id);
+        txn_map.erase(txn_pair);
 
         // release lock
         map_lock.signal();

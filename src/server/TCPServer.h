@@ -19,26 +19,21 @@ class TCPServer : public Server {
     explicit TCPServer(int port, int queue_len = 100);
     ~TCPServer();
 
-    /**
-      * Initializes the server
-      */
+
     virtual void init();
 
-    /**
-      * Makes the server enter loop mode.
-      * Within loop() the server starts serving requests
-      */
     virtual void loop();
 
  private:
-    /**
-      * Process a request from a given socket
-      */
     void process(int sock);
 
+    /** The port that the server is listening on. */
     int port_;
+    /** The number of pending connection requests allowed at once. */
     int queue_len_;
+    /** The fd for the socket the server listens for incoming requests on. */
     int server_sock_;
+    /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 };
 

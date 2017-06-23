@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 #include "client/TCPClient.h"
 
 
@@ -10,9 +11,9 @@ auto main() -> int {
     client.connect(ip, port);
     int message = 42;
     client.write_sync(1, &message, sizeof(int));
-    printf("write sync complete\n\n\n");
+    std::cout << "write sync complete" << std::endl;
     int returned;
     client.read_sync(1, &returned, sizeof(int));
-    printf("%d returned from server\n", returned);
+    std::cout << returned << " returned from server" << std::endl;
     return 0;
 }

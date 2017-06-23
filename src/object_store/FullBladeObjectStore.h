@@ -29,11 +29,12 @@ template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
-                            const std::string& port,
-                            BladeClient *client,
-            std::function<std::pair<std::unique_ptr<char[]>,
-            unsigned int>(const T&)> serializer,
-            std::function<T(void*, unsigned int)> deserializer);
+                              const std::string& port,
+                              BladeClient *client,
+                              std::function<std::pair<std::unique_ptr<char[]>,
+                              unsigned int>(const T&)> serializer,
+                              std::function<T(void*, unsigned int)>
+                              deserializer);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
