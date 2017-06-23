@@ -1,10 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <iterator>
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <cctype>
 #include <memory>
 
@@ -25,9 +22,9 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
   cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -63,8 +60,8 @@ void test_iterator() {
   */
 void test_iterator_alt() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
   cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
