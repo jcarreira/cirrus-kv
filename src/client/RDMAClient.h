@@ -244,12 +244,12 @@ class RDMAClient : public BladeClient {
     bool deallocate(const AllocationRecord& ar);
 
     // writes
-    std::shared_ptr<FutureBladeOp> write_async(
+    std::shared_ptr<FutureBladeOp> rdma_write_async(
             const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length,
             const void* data,
             RDMAMem* mem = nullptr);
-    bool write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
+    bool rdma_write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, const void* data, RDMAMem* mem = nullptr);
 
     // XXX We may not need a shared ptr here

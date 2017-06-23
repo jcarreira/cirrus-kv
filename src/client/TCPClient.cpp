@@ -284,7 +284,6 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     LOG<INFO>("Client has pointer to vector");
-                    LOG<INFO>("Size of received vector is: ", x);
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
                     LOG<INFO>("Client copied vector");
