@@ -58,15 +58,24 @@ class TCPClient : public BladeClient {
       * completion information.
       */
     std::map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+    /**
+     * Queue of FlatBufferBuilders that the sender_thread processes to send
+     * messages to the server.
+     */
     std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
+    /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;
+    /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    /** Thread that runs the receiving loop. */
     std::thread receiver_thread;
+    /** Thread that runs the sending loop. */
     std::thread sender_thread;
 
-    cirrus::Future enqueue_message(std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-		    void *ptr = nullptr);
+    cirrus::Future enqueue_message(
+                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        void *ptr = nullptr);
     void process_received();
     void process_send();
 };

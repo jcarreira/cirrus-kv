@@ -15,7 +15,7 @@ using ObjectID = uint64_t;
 class BladeClient {
  public:
     virtual void connect(const std::string& address,
-        const std::string& port) = 0;
+                         const std::string& port) = 0;
 
     virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
 

@@ -12,6 +12,7 @@
 #include "utils/logging.h"
 #include "utils/utils.h"
 #include "common/Future.h"
+#include "common/Exception.h"
 
 namespace cirrus {
 
@@ -104,7 +105,6 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
                                 initial_buffer_size);
 
     // Create and send read request
-
     auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
 
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
@@ -129,7 +129,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
     cirrus::Future future = write_async(oid, data, size);
-    printf("returned from write async\n");
+    LOG<INFO>("returned from write async");
     return future.get();
 }
 
@@ -255,6 +255,8 @@ void TCPClient::process_received() {
         // ensure that the id really exists, error otherwise
         if (txn_pair == txn_map.end()) {
             LOG<ERROR>("The client received an unknow txn_id: ", txn_id);
+            throw cirrus::Exception("Client error when processing "
+                                     "Messages. txn_id received was invalid.");
         }
 
         // get the struct
@@ -323,14 +325,14 @@ void TCPClient::process_send() {
                                                             send_queue.front();
             send_queue.pop();
             int message_size = builder->GetSize();
-            printf("client sending size\n");
+            LOG<INFO>("Client sending size: ", message_size);
             // Convert size to network order and send
             uint32_t network_order_size = htonl(message_size);
             send(sock, &network_order_size, sizeof(uint32_t), 0);
-            printf("client sending main message\n");
+            LOG<INFO>("Client sending main message");
             // Send main message
             send(sock, builder->GetBufferPointer(), message_size, 0);
-            printf("message pair sent by client\n");
+            LOG<INFO>("message pair sent by client");
         }
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
@@ -351,9 +353,6 @@ cirrus::Future TCPClient::enqueue_message(
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn->mem_for_read = ptr;
-
-    // TODO: change this to use the cirrus lock?
-    // spin lock may have lower latency
 
     // Obtain lock on map
     map_lock.wait();
