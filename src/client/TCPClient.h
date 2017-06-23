@@ -3,11 +3,8 @@
 
 #include <string>
 #include <thread>
-#include <future>
 #include <queue>
 #include <map>
-#include <mutex>
-#include <condition_variable>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Future.h"
