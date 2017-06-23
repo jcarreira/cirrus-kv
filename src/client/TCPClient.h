@@ -26,8 +26,8 @@ class TCPClient : public BladeClient {
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
     cirrus::Future write_async(ObjectID oid, const void* data,
-                               uint64_t size) override;
-    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
+                               uint64_t size);
+    cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
     bool remove(ObjectID id) override;
 
  private:

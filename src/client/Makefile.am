@@ -18,7 +18,7 @@ libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 
 
 rdmaclientmain_DEPENDENCIES = libclient.a
-rdmaclientmain_SOURCES  = clientmain.cpp
+rdmaclientmain_SOURCES  = RDMAClientmain.cpp
 rdmaclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) \
 						  -I$(top_srcdir)/third_party/flatbuffers/include \
 						  -I$(top_srcdir)/src \
