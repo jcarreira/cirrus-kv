@@ -167,21 +167,21 @@ void TCPServer::process(int sock) {
                 /* Service the read request by sending the serialized object
                  to the client */
                 LOG<INFO>("Processing read request");
-		ObjectID oid = msg->message_as_Read()->oid();
+                ObjectID oid = msg->message_as_Read()->oid();
                 LOG<INFO>("Server extracted oid");
                 bool exists = true;
                 auto entry_itr = store.find(oid);
-		LOG<INFO>("Got pair from store");
+                LOG<INFO>("Got pair from store");
                 if (entry_itr == store.end()) {
                     exists = false;
-		    LOG<INFO>("oid does not exist on server");
+                    LOG<INFO>("oid does not exist on server");
                 }
                 std::vector<int8_t> data;
-		if (exists) {
+                if (exists) {
                     data = store[oid];
                 }
                 auto fb_vector = builder.CreateVector(data);
-		LOG<INFO>("Server building response");
+                LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
                                             oid, exists, fb_vector);
@@ -191,7 +191,7 @@ void TCPServer::process(int sock) {
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
-		LOG<INFO>("Server done building response");
+                LOG<INFO>("Server done building response");
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
