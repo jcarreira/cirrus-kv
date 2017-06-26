@@ -23,4 +23,4 @@ class GeneralContext {
 
 }  // namespace cirrus
 
-#endif  // _RDMA_SERVER_H_
+#endif  // _GENERAL_CONTEXT_H_
