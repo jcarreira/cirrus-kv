@@ -1,12 +1,15 @@
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = 1_1 1_3 throughput #add 1_2 as it requires async later
-LIBS         = -l:libcityhash.a -lclient -libverbs -lrdmacm\
+LIBS         = -l:libcityhash.a -lclient \
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 	       -L$(top_srcdir)/src/client/ \
 	       -L$(top_srcdir)/src/authentication \
 	       -L$(top_srcdir)/src/common \
 	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+if USE_RDMA
+LIBS += -libverbs -lrdmacm
+endif
 
 1_1_SOURCES  = 1_1.cpp
 1_1_LDFLAGS  = -pthread
@@ -35,11 +38,11 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 1_3_LDADD    = $(LINCLUDES) \
                $(LIBS)
 
- throughput_SOURCES  = throughput.cpp
- throughput_LDFLAGS  = -pthread
- throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
-                       -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-                       -I$(top_srcdir)/src \
-		       -I$(top_srcdir)/third_party/flatbuffers/include
- throughput_LDADD    = $(LINCLUDES) \
+throughput_SOURCES  = throughput.cpp
+throughput_LDFLAGS  = -pthread
+throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
+                      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+                      -I$(top_srcdir)/src \
+                      -I$(top_srcdir)/third_party/flatbuffers/include
+throughput_LDADD    = $(LINCLUDES) \
                         $(LIBS)

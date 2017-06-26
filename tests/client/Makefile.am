@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = tcpclientmain rdmaclientmain
+bin_PROGRAMS = tcpclientmain
 
-LIBS    = -l:libcityhash.a -libverbs -lrdmacm -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+LIBS    = -l:libcityhash.a -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
 		  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
@@ -9,6 +9,11 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
     	       -L$(top_srcdir)/src/authentication \
 	       -L$(top_srcdir)/src/common \
      	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+
+if USE_RDMA
+bin_PROGRAMS += rdmaclientmain
+LIBS += -libverbs -lrdmacm
+endif
 
 rdmaclientmain_SOURCES  = RDMAClientmain.cpp
 rdmaclientmain_CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) \

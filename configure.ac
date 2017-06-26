@@ -24,19 +24,12 @@ CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])
 #AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
-
-PKG_PROG_PKG_CONFIG
-
 # check presence
 AC_CHECK_LIB([ibverbs], [main])
 AC_CHECK_LIB([rdmacm], [main])
 
 # check for command line argument
-AC_ARG_WITH([rdma],
-  [AS_HELP_STRING([--with-rdma],
-    [support for communication over RDMA (default disabled)],
-  [],
-  [with_rdma=0])
+AC_ARG_WITH([rdma], [AS_HELP_STRING([--with-rdma], [support for communication over RDMA (default disabled)])], [], [with_rdma=0])
 
 # Make variables based on presence
 AS_IF([test "$ac_cv_lib_rdma_main" = yes], [HAVE_RDMACM=1], [HAVE_RDMACM=0])
@@ -80,6 +73,7 @@ AC_CONFIG_FILES([Makefile
 		 tests/client/Makefile
                  tests/Makefile
                  benchmarks/Makefile])
+
 # Checks for presence of dependencies
 AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
 if test x"$CPPLINT_CHECK" != x"yes" ; then
