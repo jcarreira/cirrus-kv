@@ -4,9 +4,14 @@ AUTOMAKE_OPTIONS = foreign
 
 #DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
-SOURCES = RDMAClient.cpp TCPClient.cpp
-LIBS    = -l:libcityhash.a -libverbs -lrdmacm -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+SOURCES = TCPClient.cpp
+LIBS    = -l:libcityhash.a -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
 		  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+
+if USE_RDMA
+SOURCES += RDMAClient.cpp
+LIBS += -libverbs -lrdmacm
+endif
 
 noinst_LIBRARIES = libclient.a
 
