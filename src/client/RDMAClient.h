@@ -217,9 +217,6 @@ class RDMAClient : public BladeClient {
       */
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
 
-
-    // ************************ old blade client *****************************
-
     /**
       * Information about an async op.
       * A class that contains information about an operation being performed
@@ -270,7 +267,6 @@ class RDMAClient : public BladeClient {
     bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t value);
 
-    // *****************From old RDMAClient, above was BladeClient + store ****
     void alloc_rdma_memory(ConnectionContext& ctx);
 
     void build_params(struct rdma_conn_param *params);

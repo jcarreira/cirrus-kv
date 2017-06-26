@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = RDMAClient.cpp TCPClient.cpp
 LIBS    = -l:libcityhash.a -libverbs -lrdmacm -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-					-L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+		  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 noinst_LIBRARIES = libclient.a
 bin_PROGRAMS = tcpclientmain rdmaclientmain

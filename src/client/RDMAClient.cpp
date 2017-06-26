@@ -26,8 +26,6 @@ namespace cirrus {
 
 static const int initial_buffer_size = 50;
 
-// ******************** PUBLIC METHODS *******************************
-
 /**
   * Connects the client to the remote server.
   */
@@ -178,10 +176,6 @@ bool RDMAClient::remove(ObjectID oid) {
     return false;
 }
 
-// ******************** PRIVATE METHODS *******************************
-
-
-// ********************** from object store *******************
 bool RDMAClient::readToLocal(BladeLocation loc, void* ptr) {
     RDMAMem mem(ptr, loc.size);
     rdma_read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
@@ -219,8 +213,6 @@ bool RDMAClient::insertObjectLocation(ObjectID id,
     return true;
 }
 
-
-// **************************** OLD RDMAClient METHODS *******************
 
 /**
   * Initializes rdma params.
@@ -889,8 +881,6 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
 
     LOG<INFO>("Connection successful");
 }
-
-// ************************ old bladeclient methods ***********************
 
 /**
   * A function that requests a given number of bytes be allocated

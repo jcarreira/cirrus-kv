@@ -28,7 +28,7 @@ void TCPClient::connect(const std::string& address,
                         const std::string& port_string) {
     // Create socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        LOG<ERROR>("socket creation error");
+        throw cirrus::ConnectionException("Error when creating socket.");
     }
     struct sockaddr_in serv_addr;
 
@@ -44,7 +44,8 @@ void TCPClient::connect(const std::string& address,
 
     // Connect to the server
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        LOG<ERROR>("could not connect to server");
+        throw cirrus::ConnectionException("Client could "
+                                          "not connect to server.");
     }
 
     receiver_thread = std::thread(&TCPClient::process_received, this);

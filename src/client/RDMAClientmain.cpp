@@ -112,7 +112,7 @@ void test_performance() {
 
 auto main() -> int {
     test_1_client();
-    // test_2_clients();
-    // test_performance();
+    test_2_clients();
+    test_performance();
     return 0;
 }

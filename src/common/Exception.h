@@ -1,5 +1,5 @@
-#ifndef _EXCEPTION_H_
-#define _EXCEPTION_H_
+#ifndef SRC_COMMON_EXCEPTION_H_
+#define SRC_COMMON_EXCEPTION_H_
 
 #include <string>
 #include <exception>
@@ -53,6 +53,16 @@ class NoSuchIDException : public cirrus::Exception {
         cirrus::Exception(msg) {}
 };
 
+/**
+  * An exception generated when the client or server fail to make a connection
+  * with the other.
+  */
+class ConnectionException : public cirrus::Exception {
+ public:
+    explicit ConnectionException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
 }  // namespace cirrus
 
-#endif  // _EXCEPTION_H_
+#endif  // SRC_COMMON_EXCEPTION_H_

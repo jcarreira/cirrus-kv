@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "utils/logging.h"
+#include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
@@ -37,7 +38,7 @@ void TCPServer::init() {
 
     server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock_ < 0)
-        throw std::runtime_error("Error creating socket");
+        throw cirrus::Exception("Server error creating socket");
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -47,12 +48,12 @@ void TCPServer::init() {
     int opt = 1;
     if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                    sizeof(opt))) {
-        throw std::runtime_error("Error forcing port binding");
+        throw cirrus::Exception("Error forcing port binding");
     }
     int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
             sizeof(serv_addr));
     if (ret < 0)
-        throw std::runtime_error("Error binding in port "
+        throw cirrus::Exception("Error binding in port "
                + to_string(port_));
 
     listen(server_sock_, queue_len_);
@@ -67,7 +68,6 @@ void TCPServer::loop() {
     socklen_t clilen = sizeof(cli_addr);
 
     // TODO: add support for multiple clients at once
-    // TODO: stop closing socket?
     while (1) {
         int newsock = accept(server_sock_,
                 reinterpret_cast<struct sockaddr*>(&cli_addr), &clilen);
@@ -129,7 +129,7 @@ void TCPServer::process(int sock) {
         }
 
         bytes_read += retval;
-	LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
+        LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
     }
     LOG<INFO>("Server received full message from client");
     // Extract the message from the buffer
@@ -144,7 +144,7 @@ void TCPServer::process(int sock) {
         case message::TCPBladeMessage::Message_Write:
             {
                 LOG<INFO>("Server processing write request.");
-		/* Service the write request by storing the serialized object */
+                /* Service the write request by storing the serialized object */
                 ObjectID oid = msg->message_as_Write()->oid();
                 auto data_fb = msg->message_as_Write()->data();
                 std::vector<int8_t> data(data_fb->begin(), data_fb->end());
