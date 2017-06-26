@@ -3,10 +3,10 @@ bin_PROGRAMS = 1_1 1_3 throughput #add 1_2 as it requires async later
 LIBS         = -l:libcityhash.a -lclient -libverbs -lrdmacm\
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
-		-L$(top_srcdir)/src/client/ \
-		-L$(top_srcdir)/src/authentication \
-		-L$(top_srcdir)/src/common \
-		-L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+	       -L$(top_srcdir)/src/client/ \
+	       -L$(top_srcdir)/src/authentication \
+	       -L$(top_srcdir)/src/common \
+	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 1_1_SOURCES  = 1_1.cpp
 1_1_LDFLAGS  = -pthread
