@@ -21,19 +21,19 @@ class EvictionPolicy {
      * Counterpart to the get method. Returns a list of the ObjectIDs to be
      * purged from the cache.
      */
-    std::vector<ObjectID> get(ObjectID oid);
+    virtual std::vector<ObjectID> get(ObjectID oid) = 0;
 
     /**
      * Counterpart to the put method. Returns a vector of the ObjectIDs to be
      * purged from the cache.
      */
-    std::vector<ObjectID> put(ObjectID oid, T obj);
+    virtual std::vector<ObjectID> put(ObjectID oid, T obj) = 0;
 
     /**
      * Counterpart to the prefetch method. Returns a vector of the ObjectIDs to be
      * purged from the cache.
      */
-    std::vector<ObjectID> prefetch(ObjectID oid);
+    virtual std::vector<ObjectID> prefetch(ObjectID oid) = 0;
 
  private:
      /**
