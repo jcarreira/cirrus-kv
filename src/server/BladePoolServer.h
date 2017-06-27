@@ -1,5 +1,5 @@
-#ifndef _BLADE_POOL_SERVER_H_
-#define _BLADE_POOL_SERVER_H_
+#ifndef SRC_SERVER_BLADEPOOLSERVER_H_
+#define SRC_SERVER_BLADEPOOLSERVER_H_
 
 #include <rdma/rdma_cma.h>
 #include <semaphore.h>
@@ -21,12 +21,12 @@ class BladePoolServer : public RDMAServer {
     BladePoolServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
     virtual ~BladePoolServer() = default;
-    void init() final override;
+    void init() final;
 
  private:
-    void process_message(rdma_cm_id*, void* msg) final override;
-    void handle_connection(struct rdma_cm_id* id) final override;
-    void handle_disconnection(struct rdma_cm_id* id) final override;
+    void process_message(rdma_cm_id*, void* msg) final;
+    void handle_connection(struct rdma_cm_id* id) final;
+    void handle_disconnection(struct rdma_cm_id* id) final;
 
     uint32_t create_pool(uint64_t size, struct rdma_cm_id*);
 
@@ -39,4 +39,4 @@ class BladePoolServer : public RDMAServer {
 
 }  // namespace cirrus
 
-#endif // _BLADE_POOL_SERVER_H_
+#endif  // SRC_SERVER_BLADEPOOLSERVER_H_

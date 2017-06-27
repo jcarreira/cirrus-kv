@@ -82,7 +82,8 @@ void TCPServer::loop() {
     }
 }
 
-ssize_t TCPServer::send_all(int sock, const void* data, size_t len, int /* flags */) {
+ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
+    int /* flags */) {
     uint64_t to_send = len;
     uint64_t total_sent = 0;
     int64_t sent = 0;
@@ -122,7 +123,8 @@ void TCPServer::process(int sock) {
                           sizeof(uint32_t) - bytes_read);
 
         if (retval < 0) {
-            throw cirrus::Exception("Server issue in reading socket during size read.");
+            throw cirrus::Exception("Server issue in reading "
+                                    "socket during size read.");
         }
 
         bytes_read += retval;
@@ -145,7 +147,8 @@ void TCPServer::process(int sock) {
                           incoming_size - bytes_read);
 
         if (retval < 0) {
-            throw cirrus::Exception("Serverside error while reading full message.");
+            throw cirrus::Exception("Serverside error while "
+                                    "reading full message.");
         }
 
         bytes_read += retval;

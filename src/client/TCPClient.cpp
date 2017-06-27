@@ -230,7 +230,8 @@ void TCPClient::process_received() {
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
-                    throw cirrus::Exception("issue in reading socket. Full size not read");
+                    throw cirrus::Exception("Issue in reading socket. "
+                                            "Full size not read");
                 }
             }
 

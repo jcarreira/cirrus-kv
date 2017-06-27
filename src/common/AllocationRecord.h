@@ -1,5 +1,5 @@
-#ifndef _ALLOCATION_RECORD_H_
-#define _ALLOCATION_RECORD_H_
+#ifndef SRC_COMMON_ALLOCATIONRECORD_H_
+#define SRC_COMMON_ALLOCATIONRECORD_H_
 
 namespace cirrus {
 
@@ -21,4 +21,4 @@ struct AllocationRecord {
 
 }
 
-#endif // _ALLOCATION_RECORD_H_
+#endif  // SRC_COMMON_ALLOCATIONRECORD_H_

@@ -169,15 +169,15 @@ class RDMAClient : public BladeClient {
             mr = ibv_reg_mr(gctx.pd,
                     reinterpret_cast<void*>(addr_),
                     size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-	    if (mr == nullptr) {
+            if (mr == nullptr) {
                 if (errno == EINVAL) {
-		    LOG<ERROR>("EINVAL from ibv_reg_mr");
-		} else if (errno == ENOMEM) {
+                    LOG<ERROR>("EINVAL from ibv_reg_mr");
+                } else if (errno == ENOMEM) {
                     LOG<ERROR>("ENOMEM from ibv_reg_mr");
-		} else {
-		    LOG<ERROR>("ibv_reg_mr returned null, errno unrecognized");
-		}
-	    }
+                } else {
+                    LOG<ERROR>("ibv_reg_mr returned null, errno unrecognized");
+                }
+            }
             if (mr) {
                 registered_ = true;
             }

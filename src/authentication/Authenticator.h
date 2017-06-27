@@ -1,5 +1,5 @@
-#ifndef _AUTHENTICATOR_H_
-#define _AUTHENTICATOR_H_
+#ifndef SRC_AUTHENTICATION_AUTHENTICATOR_H_
+#define SRC_AUTHENTICATION_AUTHENTICATOR_H_
 
 #include "authentication/ApplicationKey.h"
 #include "common/AllocatorMessage.h"
@@ -14,4 +14,4 @@ class Authenticator {
 
 }  // namespace cirrus
 
-#endif  // _AUTHENTICATOR_H_
+#endif  // SRC_AUTHENTICATION_AUTHENTICATOR_H_

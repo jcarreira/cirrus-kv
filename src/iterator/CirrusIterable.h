@@ -1,5 +1,5 @@
-#ifndef _CIRRUS_ITERABLE_H_
-#define _CIRRUS_ITERABLE_H_
+#ifndef SRC_ITERATOR_CIRRUSITERABLE_H_
+#define SRC_ITERATOR_CIRRUSITERABLE_H_
 
 #include "cache_manager/CacheManager.h"
 
@@ -241,4 +241,4 @@ ObjectID CirrusIterable<T>::Iterator::get_curr_id() const {
 
 }  // namespace cirrus
 
-#endif  // _CIRRUS_ITERABLE_H_
+#endif  // SRC_ITERATOR_CIRRUSITERABLE_H_

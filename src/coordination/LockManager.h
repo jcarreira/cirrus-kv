@@ -1,5 +1,5 @@
-#ifndef _LOCK_MANAGER_H_
-#define _LOCK_MANAGER_H_
+#ifndef SRC_COORDINATION_LOCK_MANAGER_H_
+#define SRC_COORDINATION_LOCK_MANAGER_H_
 
 #include "coordination/LockManager.h"
 
@@ -11,4 +11,4 @@ class LockManager {
 
 }  // namespace cirrus
 
-#endif  // _LOCK_MANAGER_H_
+#endif  // SRC_COORDINATION_LOCK_MANAGER_H_

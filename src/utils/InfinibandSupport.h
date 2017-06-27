@@ -1,5 +1,5 @@
-#ifndef _INFINIBAND_SUPPORT_H_
-#define _INFINIBAND_SUPPORT_H_
+#ifndef SRC_UTILS_INFINIBANDSUPPORT_H_
+#define SRC_UTILS_INFINIBANDSUPPORT_H_
 
 #include <rdma/rdma_cma.h>
 #include <mutex>
@@ -20,4 +20,4 @@ class InfinibandSupport {
 
 }  // namespace cirrus
 
-#endif  // _INFINIBAND_SUPPORT_H_
+#endif  // SRC_UTILS_INFINIBANDSUPPORT_H_

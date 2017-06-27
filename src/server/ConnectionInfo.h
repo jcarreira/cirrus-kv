@@ -1,15 +1,15 @@
-#ifndef _CONNECTION_INFO_H_
-#define _CONNECTION_INFO_H_
+#ifndef SRC_SERVER_CONNECTIONINFO_H_
+#define SRC_SERVER_CONNECTIONINFO_H_
 
 namespace cirrus {
 
 class ConnectionInfo {
  public:
-    ConnectionInfo(){}
+    ConnectionInfo() {}
 
  private:
 };
 
 }  // namespace cirrus
 
-#endif  // _CONNECTION_INFO_H_
+#endif  // SRC_SERVER_CONNECTIONINFO_H_

@@ -1,5 +1,5 @@
-#ifndef _EPOLLTCP_SERVER_H_
-#define _EPOLLTCP_SERVER_H_
+#ifndef SRC_SERVER_EPOLLTCPSERVER_H_
+#define SRC_SERVER_EPOLLTCPSERVER_H_
 
 #include <sys/epoll.h>
 
@@ -25,6 +25,7 @@ class EPollTCPServer {
       * Within loop() the server starts serving requests
       */
     virtual void loop();
+
  private:
     /**
       * Process request from socket
@@ -47,4 +48,4 @@ class EPollTCPServer {
 
 }  // namespace cirrus
 
-#endif // _EPOLLTCP_SERVER_H_
+#endif  // SRC_SERVER_EPOLLTCPSERVER_H_

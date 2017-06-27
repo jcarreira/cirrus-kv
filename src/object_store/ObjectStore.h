@@ -1,5 +1,5 @@
-#ifndef _OBJECT_STORE_H_
-#define _OBJECT_STORE_H_
+#ifndef SRC_OBJECT_STORE_OBJECTSTORE_H_
+#define SRC_OBJECT_STORE_OBJECTSTORE_H_
 
 #include <cstdint>
 
@@ -21,10 +21,10 @@ class ObjectStore {
 
     virtual bool remove(ObjectID id) = 0;
 
-    //TODO: Add async operations
+    // TODO: Add async operations
  private:
 };
 
 }  // namespace cirrus
 
-#endif  // _OBJECT_STORE_H_
+#endif  // SRC_OBJECT_STORE_OBJECTSTORE_H_

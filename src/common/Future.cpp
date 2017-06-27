@@ -12,7 +12,7 @@ using ObjectID = uint64_t;
   */
 Future::Future(std::shared_ptr<bool> result,
                std::shared_ptr<cirrus::PosixSemaphore> sem):
-	result(result), sem(sem) {}
+    result(result), sem(sem) {}
 
 /**
   * Waits until the result the future is monitoring is available.

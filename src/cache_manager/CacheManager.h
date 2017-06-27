@@ -1,5 +1,5 @@
-#ifndef _CACHEMANAGER_H_
-#define _CACHEMANAGER_H_
+#ifndef SRC_CACHE_CACHEMANAGER_H_
+#define SRC_CACHE_CACHEMANAGER_H_
 
 #include <map>
 #include "object_store/FullBladeObjectStore.h"
@@ -132,4 +132,4 @@ void CacheManager<T>::prefetch(ObjectID oid) {
 
 }  // namespace cirrus
 
-#endif  // _CACHEMANAGER_H_
+#endif  // SRC_CACHE_CACHEMANAGER_H_

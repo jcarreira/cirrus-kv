@@ -1,23 +1,24 @@
-#ifndef _EVICTION_POLICY_H_
-#define _EVICTION_POLICY_H_
+#ifndef SRC_OBJECT_STORE_EVICTIONPOLICY_H_
+#define SRC_OBJECT_STORE_EVICTIONPOLICY_H_
+
+#include <cstddef>
 
 #include "object_store/FullCacheStore.h"
 
-#include <cstddef>
 
 namespace cirrus {
 
 class EvictionPolicy {
-public:
+ public:
     explicit EvictionPolicy(size_t max_num_objs);
     virtual ~EvictionPolicy() = default;
 
     virtual bool evictIfNeeded(FullCacheStore& fc) = 0;
 
-protected:
+ protected:
     size_t max_num_objs_; /** Max number of objects in the store */
 };
 
-} // namespace cirrus
+}  // namespace cirrus
 
-#endif
+#endif  // SRC_OBJECT_STORE_EVICTIONPOLICY_H_

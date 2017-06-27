@@ -1,5 +1,5 @@
-#ifndef _FULLBLADE_OBJECT_STORE_H_
-#define _FULLBLADE_OBJECT_STORE_H_
+#ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
+#define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
 #include <string>
 #include <iostream>
@@ -11,7 +11,6 @@
 #include "utils/Time.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
-#include "client/BladeClient.h"
 #include "common/Future.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
@@ -229,4 +228,4 @@ void FullBladeObjectStoreTempl<T>::printStats() const noexcept {
 }  // namespace ostore
 }  // namespace cirrus
 
-#endif  // _FULLBLADE_OBJECT_STORE_H_
+#endif  // SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
