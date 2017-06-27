@@ -7,6 +7,12 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
+# Checks for presence of dependencies
+AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
+if test x"$CPPLINT_CHECK" != x"yes" ; then
+    AC_MSG_ERROR([Please install cpplint with 'sudo pip install cpplint' before installing.])
+fi
+
 # Checks for programs.
 AC_PROG_CXX([g++-6])
 AC_PROG_AWK
@@ -67,11 +73,6 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  benchmarks/Makefile])
 
-# Checks for presence of dependencies
-AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
-if test x"$CPPLINT_CHECK" != x"yes" ; then
-    AC_MSG_ERROR([Please install cpplint with 'sudo pip install cpplint' before installing.])
-fi
 
 AC_CONFIG_SUBDIRS([tests/mpi])
 

@@ -6,10 +6,8 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 	       -L$(top_srcdir)/src/client/ \
 	       -L$(top_srcdir)/src/authentication \
 	       -L$(top_srcdir)/src/common \
-	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
-if USE_RDMA
-LIBS += -libverbs -lrdmacm
-endif
+	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
+	       $(LIBRDMACM) $(LIBIBVERBS)
 
 1_1_SOURCES  = 1_1.cpp
 1_1_LDFLAGS  = -pthread

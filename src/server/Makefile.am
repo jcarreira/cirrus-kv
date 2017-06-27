@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 DEFAULT_LIB = -L. -lserver \
              -L../authentication/ -lauthentication \
              -L../utils/ -lutils \
-             -L../common/ -lcommon
+             -L../common/ -lcommon $(LIBRDMACM) $(LIBIBVERBS)
 
 noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = tcpservermain
@@ -20,7 +20,6 @@ libserver_a_SOURCES += RDMAServer.cpp BladePoolServer.cpp \
                       ConnectionContext.cpp \
                       ResourceAllocator.cpp BladeAllocServer.cpp \
                       BladeObjectStore.cpp
-DEFAULT_LIB += -libverbs -lrdmacm
 endif
 
 bladepoolmain_DEPENDENCIES = libserver.a
