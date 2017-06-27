@@ -13,6 +13,7 @@ bin_PROGRAMS = tcpservermain
 libserver_a_SOURCES = TCPServer.cpp EPollTCPServer.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include \
                        -I$(top_srcdir)/src
+
 if USE_RDMA
 bin_PROGRAMS += bladepoolmain bladeallocmain allocmain controllermain objectstoremain
 libserver_a_SOURCES += RDMAServer.cpp BladePoolServer.cpp \

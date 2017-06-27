@@ -25,20 +25,13 @@ CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
 #AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
 # check presence
-AC_CHECK_LIB([ibverbs], [main])
-AC_CHECK_LIB([rdmacm], [main])
+#AC_CHECK_LIB([ibverbs], [main])
+#AC_CHECK_LIB([rdmacm], [main])
 
-# check for command line argument
-AC_ARG_WITH([rdma], [AS_HELP_STRING([--with-rdma], [support for communication over RDMA (default disabled)])], [], [with_rdma=0])
+AC_LIB_HAVE_LINKFLAGS(rdmacm)
+AC_LIB_HAVE_LINKFLAGS(ibverbs)
 
-# Make variables based on presence
-AS_IF([test "$ac_cv_lib_rdma_main" = yes], [HAVE_RDMACM=1], [HAVE_RDMACM=0])
-AS_IF([test "$ac_cv_lib_ibverbs_main" = yes], [HAVE_IBVERBS=1], [HAVE_IBVERBS=0])
-
-# Set conditional based on presence of both:
-AM_CONDITIONAL([USE_RDMA], ["$HAVE_RDMACM" -eq 1 -a "$HAVE_IBVERBS" -eq 1 -a "$with_rdma" -eq 1])
-
-
+AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
 # Checks for header files.
 AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
         stdlib.h sys/types.h sys/socket.h sys/epoll.h\
