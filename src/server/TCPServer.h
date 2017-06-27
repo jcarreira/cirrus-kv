@@ -17,8 +17,7 @@ using ObjectID = uint64_t;
 class TCPServer : public Server {
  public:
     explicit TCPServer(int port, int queue_len = 100);
-    ~TCPServer();
-
+    ~TCPServer() = default;
 
     virtual void init();
 
@@ -26,6 +25,8 @@ class TCPServer : public Server {
 
  private:
     void process(int sock);
+
+    ssize_t send_all(int, const void*, size_t, int);
 
     /** The port that the server is listening on. */
     int port_;

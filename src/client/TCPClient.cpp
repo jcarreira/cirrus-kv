@@ -32,7 +32,6 @@ void TCPClient::connect(const std::string& address,
     }
     struct sockaddr_in serv_addr;
 
-
     // Set the type of address being used, assuming ip v4
     serv_addr.sin_family = AF_INET;
     inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr);
@@ -185,20 +184,16 @@ void TCPClient::process_received() {
     // All elements stored on heap according to stack overflow, so it can grow
     std::vector<char> buffer;
     // Reserve the size of a 32 bit int
-    buffer.reserve(sizeof(uint32_t));
     int current_buf_size = sizeof(uint32_t);
+    buffer.reserve(current_buf_size);
     int bytes_read = 0;
 
-
-    /*
-    * Each message received consists of two parts. The first part of a message
-    * is four bytes long and contains the size of the second part of the
-    * message, stored in network byte order. The second part of the message is
-    * a flatbuffer, whose size is dictated by the first part of the message.
-    * To receive, a client first reads in exactly four bytes, then converts
-    * the value received into host byte order to know the size of the incoming
-    * buffer. It then reads in exactly as many bytes as make up the flatbuffer.
-    */
+    /**
+      * Message format
+      * |---------------------------------------------------
+      * | Msg size (4Bytes) | message content (flatbuffer) |
+      * |---------------------------------------------------
+      */
 
     while (1) {
         // Read in the size of the next message from the network
@@ -209,7 +204,7 @@ void TCPClient::process_received() {
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
-                printf("issue in reading socket. Full size not read. \n");
+                throw cirrus::Exception("issue in reading socket. Full size not read");
             }
 
             bytes_read += retval;
@@ -235,7 +230,7 @@ void TCPClient::process_received() {
                               incoming_size - bytes_read);
 
             if (retval < 0) {
-                printf("error while reading full message. \n");
+                throw cirrus::Exception("error while reading full message");
             }
 
             bytes_read += retval;

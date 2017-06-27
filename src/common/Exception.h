@@ -63,6 +63,12 @@ class ConnectionException : public cirrus::Exception {
         cirrus::Exception(msg) {}
 };
 
+class ServerReadException : public cirrus::Exception {
+ public:
+    explicit ServerReadException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
 }  // namespace cirrus
 
 #endif  // SRC_COMMON_EXCEPTION_H_
