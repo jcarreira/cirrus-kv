@@ -98,10 +98,9 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     uint64_t to_send = len;
     uint64_t total_sent = 0;
     int64_t sent = 0;
-    void *send_ptr = data;
 
     while (to_send != total_sent) {
-        sent = send(sock, send_ptr, len, 0);
+        sent = send(sock, data, len, 0);
 
         if (sent == -1) {
             throw cirrus::Exception("Server error sending data to client");
@@ -110,7 +109,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
         total_sent += sent;
 
         // Increment the pointer to data we're sending by the amount just sent
-        send_ptr = static_cast<char*>(send_ptr) + sent;
+        data = static_cast<const char*>(data) + sent;
     }
 
     return total_sent;
