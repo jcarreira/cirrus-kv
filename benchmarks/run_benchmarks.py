@@ -20,14 +20,16 @@ for benchmark in benchmarks:
     time.sleep(2)
     print("Sleep finished, launching client.")
 
+    sys.stdout.write("Benchmark " + benchmark[0] + "...")
     child = subprocess.Popen(benchmark, stdout=subprocess.PIPE)
     streamdata = child.communicate()[0]
     rc = child.returncode
-    print("Benchmark " + benchmark[0] + " complete\n")
     server.kill()
 
     #give server time to die
     time.sleep(1)
     if (rc != 0):
-        print("Benchmark " + benchmark[0] + " failed\n")
+        print(" Failed")
         sys.exit(rc)
+    else:
+        print(" Success")

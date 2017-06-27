@@ -1,6 +1,7 @@
 #include "client/TCPClient.h"
 
 #include <unistd.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
@@ -17,6 +18,26 @@
 namespace cirrus {
 
 static const int initial_buffer_size = 50;
+
+TCPClient::~TCPClient() {
+    terminate_threads = true;
+
+    // We need to destroy threads if they are active
+    // alternatively (best option) we make the threads non-blocking
+    if (receiver_thread) {
+        LOG<INFO>("Terminating receiver thread");
+        auto rhandle = receiver_thread->native_handle();
+        pthread_cancel(rhandle);
+        receiver_thread->join();
+        delete receiver_thread;
+    }
+
+    if (sender_thread) {
+        LOG<INFO>("Terminating sender thread");
+        sender_thread->join();
+        delete sender_thread;
+    }
+}
 
 /**
   * Connects the client to the remote server. Opens a socket and attempts to
@@ -47,8 +68,8 @@ void TCPClient::connect(const std::string& address,
                                           "not connect to server.");
     }
 
-    receiver_thread = std::thread(&TCPClient::process_received, this);
-    sender_thread = std::thread(&TCPClient::process_send, this);
+    receiver_thread = new std::thread(&TCPClient::process_received, this);
+    sender_thread   = new std::thread(&TCPClient::process_send, this);
 }
 
 /**
@@ -203,8 +224,14 @@ void TCPClient::process_received() {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
+            std::cout << "read retval: " << retval << std::endl;
+
             if (retval < 0) {
-                throw cirrus::Exception("issue in reading socket. Full size not read");
+                if (errno == EINTR && terminate_threads == true) {
+                    return;
+                } else {
+                    throw cirrus::Exception("issue in reading socket. Full size not read");
+                }
             }
 
             bytes_read += retval;
@@ -314,6 +341,10 @@ void TCPClient::process_send() {
     while (1) {
         queue_lock.wait();
         // This thread now owns the lock on the send queue
+
+        if (terminate_threads) {
+            return;
+        }
 
         // Process the send queue until it is empty
         while (send_queue.size() != 0) {
