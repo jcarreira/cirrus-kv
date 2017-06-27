@@ -1,5 +1,5 @@
-#ifndef _OBJECT_STORE_INTERNAL_H_
-#define _OBJECT_STORE_INTERNAL_H_
+#ifndef TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_
+#define TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_
 
 #include <utility>
 namespace cirrus {
@@ -53,4 +53,4 @@ int deserializer_simple(void* data, unsigned int /* size */) {
 
 }  // namespace cirrus
 
-#endif  // _OBJECT_STORE_INTERNAL_H_
+#endif  // TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_

@@ -1,5 +1,5 @@
-#ifndef SRC_APPLICATION_KEY_H_
-#define SRC_APPLICATION_KEY_H_
+#ifndef SRC_AUTHENTICATION_APPLICATIONKEY_H_
+#define SRC_AUTHENTICATION_APPLICATIONKEY_H_
 
 namespace cirrus {
 
@@ -11,4 +11,4 @@ class ApplicationKey {
 
 }  // namespace cirrus
 
-#endif  // SRC_APPLICATION_KEY_H_
+#endif  // SRC_AUTHENTICATION_APPLICATIONKEY_H_
