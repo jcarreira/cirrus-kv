@@ -34,6 +34,7 @@ class TCPClient : public BladeClient {
     bool remove(ObjectID id) override;
 
  private:
+    ssize_t send_all(int, const void*, size_t, int);
     cirrus::Future enqueue_message(
                         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
                         void *ptr = nullptr);

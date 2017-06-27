@@ -36,7 +36,7 @@ void TCPServer::init() {
 
     server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock_ < 0) {
-        throw cirrus::Exception("Server error creating socket");
+        throw cirrus::ConnectionException("Server error creating socket");
     }
 
     serv_addr.sin_family = AF_INET;
@@ -47,17 +47,20 @@ void TCPServer::init() {
     int opt = 1;
     if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                    sizeof(opt))) {
-        throw cirrus::Exception("Error forcing port binding");
+        throw cirrus::ConnectionException("Error forcing port binding");
     }
 
     int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
             sizeof(serv_addr));
     if (ret < 0) {
-        throw cirrus::Exception("Error binding in port "
+        throw cirrus::ConnectionException("Error binding in port "
                + to_string(port_));
     }
 
-    listen(server_sock_, queue_len_);
+    if (listen(server_sock_, queue_len_) == -1) {
+        throw cirrus::ConnectionException("Error listening on port "
+            + to_string(port_));
+    }
 }
 
 /**
@@ -82,20 +85,32 @@ void TCPServer::loop() {
     }
 }
 
+/**
+ * Guarantees that an entire message is sent.
+ * @param sock the fd of the socket to send on.
+ * @param data a pointer to the data to send.
+ * @param len the number of bytes to send.
+ * @param flags for the send call.
+ * @return the number of bytes sent.
+ */
 ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     int /* flags */) {
     uint64_t to_send = len;
     uint64_t total_sent = 0;
     int64_t sent = 0;
+    void *send_ptr = data;
 
     while (to_send != total_sent) {
-        sent = send(sock, data, len, 0);
+        sent = send(sock, send_ptr, len, 0);
 
         if (sent == -1) {
             throw cirrus::Exception("Server error sending data to client");
         }
 
         total_sent += sent;
+
+        // Increment the pointer to data we're sending by the amount just sent
+        send_ptr = static_cast<char*>(send_ptr) + sent;
     }
 
     return total_sent;
@@ -222,7 +237,7 @@ void TCPServer::process(int sock) {
             }
         case message::TCPBladeMessage::Message_Remove:
             {
-              ObjectID oid = msg->message_as_Remove()->oid();
+                ObjectID oid = msg->message_as_Remove()->oid();
 
                 bool success = false;
                 auto entry_itr = store.find(oid);
@@ -256,7 +271,10 @@ void TCPServer::process(int sock) {
     LOG<INFO>("Server sent size.");
 
     // Send main message
-    send_all(sock, builder.GetBufferPointer(), message_size, 0);
+    if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
+        != message_size) {
+        throw cirrus::Exception("Server error sending message back to client");
+    }
 
     LOG<INFO>("Server sent ack of size: ", message_size);
     LOG<INFO>("Server done processing message from client");

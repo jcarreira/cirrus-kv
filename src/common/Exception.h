@@ -63,6 +63,9 @@ class ConnectionException : public cirrus::Exception {
         cirrus::Exception(msg) {}
 };
 
+/**
+  * An exception generated when a read on the server fails.
+  */
 class ServerReadException : public cirrus::Exception {
  public:
     explicit ServerReadException(std::string msg):

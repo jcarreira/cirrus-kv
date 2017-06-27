@@ -19,6 +19,10 @@ namespace cirrus {
 
 static const int initial_buffer_size = 50;
 
+/**
+ * Destructor method for the TCPClient. Terminates the receiver and sender
+ * threads so that the program will exit gracefully.
+ */
 TCPClient::~TCPClient() {
     terminate_threads = true;
 
@@ -278,7 +282,7 @@ void TCPClient::process_received() {
 
         // ensure that the id really exists, error otherwise
         if (txn_pair == txn_map.end()) {
-            LOG<ERROR>("The client received an unknow txn_id: ", txn_id);
+            LOG<ERROR>("The client received an unknown txn_id: ", txn_id);
             throw cirrus::Exception("Client error when processing "
                                      "Messages. txn_id received was invalid.");
         }
@@ -333,6 +337,37 @@ void TCPClient::process_received() {
 }
 
 /**
+ * Guarantees that an entire message is sent.
+ * @param sock the fd of the socket to send on.
+ * @param data a pointer to the data to send.
+ * @param len the number of bytes to send.
+ * @param flags for the send call.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
+    int /* flags */) {
+    uint64_t to_send = len;
+    uint64_t total_sent = 0;
+    int64_t sent = 0;
+    void *send_ptr = data;
+
+    while (to_send != total_sent) {
+        sent = send(sock, send_ptr, len, 0);
+
+        if (sent == -1) {
+            throw cirrus::Exception("Server error sending data to client");
+        }
+
+        total_sent += sent;
+
+        // Increment the pointer to data we're sending by the amount just sent
+        send_ptr = static_cast<char*>(send_ptr) + sent;
+    }
+
+    return total_sent;
+}
+
+/**
   * Loop run by the thread that handles sending messages. Takes
   * FlatBufferBuilders off of the queue and then sends the messages they
   * contain. Does not wait for response.
@@ -353,13 +388,21 @@ void TCPClient::process_send() {
                                                             send_queue.front();
             send_queue.pop();
             int message_size = builder->GetSize();
+
             LOG<INFO>("Client sending size: ", message_size);
             // Convert size to network order and send
             uint32_t network_order_size = htonl(message_size);
-            send(sock, &network_order_size, sizeof(uint32_t), 0);
+            if (send(sock, &network_order_size, sizeof(uint32_t), 0)
+                != sizeof(uint32_t)) {
+                throw cirrus::Exception("Client error sending data to server");
+            }
+
             LOG<INFO>("Client sending main message");
             // Send main message
-            send(sock, builder->GetBufferPointer(), message_size, 0);
+            if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
+                != message_size) {
+                throw cirrus::Exception("Client error sending data to server");
+            }
             LOG<INFO>("message pair sent by client");
         }
         // Release the lock so that the other thread may add to the send queue
