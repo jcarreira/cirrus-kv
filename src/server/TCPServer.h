@@ -1,6 +1,7 @@
 #ifndef SRC_SERVER_TCPSERVER_H_
 #define SRC_SERVER_TCPSERVER_H_
 
+#include <poll.h>
 #include <vector>
 #include <map>
 #include "server/Server.h"
@@ -36,6 +37,11 @@ class TCPServer : public Server {
     int server_sock_;
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
+
+    uint64_t num_fds = 100; /**< number of sockets open at once. */
+    uint64_t curr_index = 0;
+    int timeout = 60 * 1000 * 3;
+    std::vector<struct pollfd> fds(num_fds);
 };
 
 }  // namespace cirrus

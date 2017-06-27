@@ -1,5 +1,6 @@
 #include "server/TCPServer.h"
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -44,6 +45,7 @@ void TCPServer::init() {
     serv_addr.sin_port = htons(port_);
 
     LOG<INFO>("Created socket in TCPServer");
+
     int opt = 1;
     if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                    sizeof(opt))) {
@@ -61,6 +63,10 @@ void TCPServer::init() {
         throw cirrus::ConnectionException("Error listening on port "
             + to_string(port_));
     }
+
+    fds.at(curr_index).fd = server_sock;
+    // Only listen for data to read
+    fds.at(curr_index++).events = POLLIN;
 }
 
 /**
@@ -71,16 +77,36 @@ void TCPServer::loop() {
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 
-    // TODO: add support for multiple clients at once
     while (1) {
-        int newsock = accept(server_sock_,
-                reinterpret_cast<struct sockaddr*>(&cli_addr), &clilen);
-        if (newsock < 0) {
-            throw std::runtime_error("Error accepting socket");
-        }
+        int poll_status = poll(fds.data(), num_fds, timeout);
 
-        while (1) {
-            process(newsock);  // loop on the new socket
+        if (poll_status == -1) {
+            throw cirrus::ConnectionException("Server error calling poll.");
+        } else if (poll_status == 0) {
+            LOG<INFO>(timeout, " milliseconds elapsed without contact.");
+        } else {
+            // there is at least one pending event, find it.
+            for (int i = 0; i < curr_index; i++) {
+                struct pollfd& curr_fd = fds.at(i);
+                if (curr_fd.revents != POLLIN) {
+                    // This is unexpected, error out
+                    LOG<ERROR>("Unexpected event type.");
+                } else if (curr_fd.fd == server_sock_) {
+                    // New data on main socket, accept and connect
+                    // TODO: loop this to accept multiple at once?
+                    int newsock = accept(server_sock_,
+                            reinterpret_cast<struct sockaddr*>(&cli_addr),
+                            &clilen);
+                    if (newsock < 0) {
+                        throw std::runtime_error("Error accepting socket");
+                    }
+                    fds.at(curr_index).fd = newsock;
+                    fds.at(curr_index).events = POLLIN;
+                    curr_index++;
+                } else {
+                    process(curr_fd.fd);
+                }
+            }
         }
     }
 }
@@ -132,9 +158,16 @@ void TCPServer::process(int sock) {
     buffer.reserve(current_buf_size);
     int bytes_read = 0;
 
+    bool first_loop = true;
     while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,
                           sizeof(uint32_t) - bytes_read);
+
+        if (first_loop && retval == 0) {
+            // Socket is closed by client if 0 bytes are available
+            close(sock);
+            return;
+        }
 
         if (retval < 0) {
             throw cirrus::Exception("Server issue in reading "
@@ -142,6 +175,7 @@ void TCPServer::process(int sock) {
         }
 
         bytes_read += retval;
+        first_loop == false;
     }
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
