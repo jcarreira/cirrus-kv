@@ -120,6 +120,7 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException & e) {
     }
-
+    std::cout << "test successful" << std::endl;
+    std::cout.flush();
     return 0;
 }
