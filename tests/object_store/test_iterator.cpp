@@ -22,11 +22,13 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
-  cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
