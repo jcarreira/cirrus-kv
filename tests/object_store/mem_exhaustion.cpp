@@ -28,14 +28,6 @@ void test_exhaustion() {
                       cirrus::struct_deserializer_simple<SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
 
-    // warm up
-    std::cout << "Putting 1000" << std::endl;
-    for (int i = 0; i < 1000; ++i) {
-        store.put(i, d);
-    }
-
-    std::cout << "Done putting 1000" << std::endl;
-
     std::cout << "Putting one million objects" << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {
         store.put(i, d);

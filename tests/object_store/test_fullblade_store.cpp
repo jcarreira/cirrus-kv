@@ -40,7 +40,7 @@ void test_sync() {
                       cirrus::struct_serializer_simple<SIZE>,
                       cirrus::struct_deserializer_simple<SIZE>);
 
-  struct cirrus::Dummy<SIZE> d(42);
+    struct cirrus::Dummy<SIZE> d(42);
 
     try {
         store.put(1, d);
@@ -118,7 +118,7 @@ void test_nonexistent_get() {
 }
 
 auto main() -> int {
-    test_sync(1000);
+    test_sync(10);
     test_sync();
 
     try {
