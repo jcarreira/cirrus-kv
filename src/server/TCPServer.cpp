@@ -227,13 +227,14 @@ bool TCPServer::process(int sock) {
             {
                 LOG<INFO>("Server processing write request.");
 
+                ObjectID oid = msg->message_as_Write()->oid();
                 // Throw error if put would exceed size of the store
                 if (store.size() >= max_objects) {
-                    error_code = cirrus::ErrorCodes:kServerMemoryErrorException;
+                    error_code =
+                        cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
-                    ObjectID oid = msg->message_as_Write()->oid();
                     auto data_fb = msg->message_as_Write()->data();
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id

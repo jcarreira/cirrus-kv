@@ -38,7 +38,7 @@ class TCPServer : public Server {
     std::map<uint64_t, std::vector<int8_t>> store;
 
     /** Max objects that can be stored on server at once. */
-    uint64_t max_objects = 10000;
+    uint64_t max_objects = 2000;
     /** Max number of sockets open at once. */
     // TODO(TYLER): Enforce this limit, or remove it and allow scaling
     uint64_t num_fds = 100;
