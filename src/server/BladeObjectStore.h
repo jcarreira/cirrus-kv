@@ -32,8 +32,8 @@ class BladeObjectStore : public RDMAServer {
 
     bool create_pool(uint64_t size);
 
-    void allocate_mem(rdma_cm_id* id, uint64_t size, void*& ptr,
-                                                             uint32_t& rkey);
+    void allocate_mem(rdma_cm_id* id, uint64_t size, const void* ptr,
+                      const uint32_t& rkey);
     void* find_free_data(uint64_t size);
 
     void checkpoint();

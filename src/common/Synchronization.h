@@ -50,11 +50,10 @@ class PosixSemaphore : public Lock {
       * Waits until entered into semaphore.
       */
     void wait() final {
-        int rc;
-        do {
+        int rc = sem_wait(&m_sema);
+        while (rc == -1 && errno == EINTR) {
             rc = sem_wait(&m_sema);
         }
-        while (rc == -1 && errno == EINTR);
     }
 
     /**

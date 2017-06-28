@@ -21,7 +21,7 @@ class ObjectStore {
 
     virtual bool remove(ObjectID id) = 0;
 
-    // TODO: Add async operations
+    // TODO(Tyler): Add async operations
  private:
 };
 

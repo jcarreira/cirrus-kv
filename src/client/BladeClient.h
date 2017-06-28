@@ -22,12 +22,12 @@ class BladeClient {
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 
     virtual bool remove(ObjectID id) = 0;
-//TODO: add in async
- //   virtual cirrus::Future write_async(ObjectID oid, const void* data,
-   //     uint64_t size) = 0;
+// TODO(Tyler): add in async
+    //   virtual cirrus::Future write_async(ObjectID oid, const void* data,
+    //     uint64_t size) = 0;
 
- //   virtual cirrus::Future read_async(ObjectID oid, void* data,
-   //     uint64_t size) = 0;
+    //   virtual cirrus::Future read_async(ObjectID oid, void* data,
+    //     uint64_t size) = 0;
 };
 
 }  // namespace cirrus

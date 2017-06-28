@@ -10,7 +10,7 @@ class LRUEvictionPolicy : public EvictionPolicy {
     explicit LRUEvictionPolicy(size_t num_objs = DEFAULT_SIZE);
     virtual ~LRUEvictionPolicy();
 
-    virtual bool evictIfNeeded(FullCacheStore& fc);
+    virtual bool evictIfNeeded(FullCacheStore  *fc);
 
  private:
     static const size_t DEFAULT_SIZE = 1000;

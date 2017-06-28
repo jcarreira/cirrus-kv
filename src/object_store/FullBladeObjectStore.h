@@ -108,7 +108,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     /* This is safe as we will only reach here if a previous put has
        occured, thus setting the value of serialized_size. */
     if (serialized_size == 0) {
-        // TODO: throw error message if get before put
+        // TODO(Tyler): throw error message if get before put
     }
     /* This allocation provides a buffer to read the serialized object
        into. */
@@ -206,8 +206,10 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 //     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
 //     serialized_size = serializer_out.second;
 //
-//     auto future = client->write_async (id, serial_ptr.get(), serialized_size);
-//     // TODO: Build future to return to higher levels. Get will return bool
+//     auto future = client->write_async (id,
+//                       serial_ptr.get(), serialized_size);
+//     // TODO(Tyler): Build future to return to higher levels.
+//     //  Get will return bool
 //     return fun;
 // }
 

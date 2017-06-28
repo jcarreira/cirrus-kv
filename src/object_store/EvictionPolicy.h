@@ -13,7 +13,7 @@ class EvictionPolicy {
     explicit EvictionPolicy(size_t max_num_objs);
     virtual ~EvictionPolicy() = default;
 
-    virtual bool evictIfNeeded(FullCacheStore& fc) = 0;
+    virtual bool evictIfNeeded(FullCacheStore *fc) = 0;
 
  protected:
     size_t max_num_objs_; /** Max number of objects in the store */

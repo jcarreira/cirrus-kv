@@ -23,7 +23,7 @@ namespace cirrus {
 
 using ObjectID = uint64_t;
 
-// TODO: should this go here? or be internal to the class?
+// TODO(Tyler): should this go here? or be internal to the class?
 /**
   * One GeneralContext for all connections
   */
@@ -48,10 +48,11 @@ class RDMAClient : public BladeClient {
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
 
-    // TODO: Add async
+    // TODO(Tyler): Add async
     // cirrus::Future write_async(ObjectID oid, const void* data,
     //                            uint64_t size) override;
-    // cirrus::Future read_async(ObjectID oid, void* data, uint64_t size) override;
+    // cirrus::Future read_async(ObjectID oid,
+    //     void* data, uint64_t size) override;
     bool remove(ObjectID id) override;
 
  private:
@@ -276,10 +277,10 @@ class RDMAClient : public BladeClient {
     bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t value);
 
-    void alloc_rdma_memory(ConnectionContext& ctx);
+    void alloc_rdma_memory(ConnectionContext *ctx);
 
     void build_params(struct rdma_conn_param *params);
-    void setup_memory(ConnectionContext& ctx);
+    void setup_memory(ConnectionContext *ctx);
     void build_qp_attr(struct ibv_qp_init_attr *qp_attr, ConnectionContext*);
     void build_connection(struct rdma_cm_id *id);
     void build_context(struct ibv_context *verbs, ConnectionContext*);

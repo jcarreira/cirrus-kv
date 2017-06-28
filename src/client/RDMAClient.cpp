@@ -268,8 +268,8 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
     params->retry_count = 7;
 }
 
-void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
-    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
+void RDMAClient::alloc_rdma_memory(ConnectionContext *ctx) { 
+    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx->recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx_.send_msg),
@@ -277,24 +277,24 @@ void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
                 SEND_MSG_SIZE));
 }
 
-void RDMAClient::setup_memory(ConnectionContext& ctx) {
+void RDMAClient::setup_memory(ConnectionContext *ctx) { 
     alloc_rdma_memory(ctx);
 
     LOG<INFO>("Registering region with size: ",
             (RECV_MSG_SIZE / 1024 / 1024), " MB");
     TEST_Z(con_ctx_.recv_msg_mr =
-            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.recv_msg,
+            ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.recv_msg,
                 RECV_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
-    TEST_Z(con_ctx_.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.send_msg,
+    TEST_Z(con_ctx_.send_msg_mr = ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));
 
-    default_recv_mem_ = RDMAMem(ctx.recv_msg,
+    default_recv_mem_ = RDMAMem(ctx->recv_msg,
             RECV_MSG_SIZE, con_ctx_.recv_msg_mr);
-    default_send_mem_ = RDMAMem(ctx.send_msg,
+    default_send_mem_ = RDMAMem(ctx->send_msg,
             SEND_MSG_SIZE, con_ctx_.send_msg_mr);
 
     con_ctx_.setup_done = true;
@@ -892,7 +892,7 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));
 
-            setup_memory(con_ctx_);
+            setup_memory(&con_ctx_);
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
             LOG<INFO>("resolved route");
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {

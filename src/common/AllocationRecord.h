@@ -19,6 +19,6 @@ struct AllocationRecord {
     {}
 };
 
-}
+}  // namespace cirrus
 
 #endif  // SRC_COMMON_ALLOCATIONRECORD_H_
