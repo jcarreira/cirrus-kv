@@ -56,6 +56,7 @@ class RDMAClient : public BladeClient {
     bool remove(ObjectID id) override;
 
  private:
+    unsigned int seed;
     class FutureBladeOp;
     struct RDMAMem;
 

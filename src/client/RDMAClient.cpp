@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <time.h>
 
 #include <string>
 #include <cstring>
@@ -31,6 +32,7 @@ static const int initial_buffer_size = 50;
   */
 
   void RDMAClient::connect(const std::string& host, const std::string& port) {
+      seed = time(nullptr);
       connect_rdma_cm(host, port);
   }
 
@@ -840,7 +842,7 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
 
     handshake_msg.lid = con_ctx_.gen_ctx_.port_attr.lid;
     handshake_msg.qpn = con_ctx_.qp->qp_num;
-    handshake_msg.psn = rand();
+    handshake_msg.psn = rand_r(&seed);
     // handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
     // handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
 
