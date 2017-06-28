@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = tcpclientmain
 
-LIBS    = -l:libcityhash.a -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-		  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+LIBS          = -l:libcityhash.a -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+                -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 	       -L$(top_srcdir)/src/client/ \
