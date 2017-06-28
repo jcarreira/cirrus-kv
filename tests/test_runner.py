@@ -20,11 +20,15 @@ def runTest(testPath):
     print("Started server, sleeping.")
     time.sleep(2)
     print("Sleep finished, launching client.")
-
+    
     child = subprocess.Popen([testPath], stdout=subprocess.PIPE)
+    
+    # Print the output from the child
+    for line in child.stdout: 
+        print(line.decode(), end='')
+    
     streamdata = child.communicate()[0]
     rc = child.returncode
 
     server.kill()
-
     sys.exit(rc)

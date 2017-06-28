@@ -106,6 +106,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
                                         curr_txn_id,
+                                        0,
                                         message::TCPBladeMessage::Message_Write,
                                         msg_contents.Union());
     builder->Finish(msg);
@@ -136,6 +137,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
                                         curr_txn_id,
+                                        0,
                                         message::TCPBladeMessage::Message_Read,
                                         msg_contents.Union());
     builder->Finish(msg);
@@ -192,6 +194,7 @@ bool TCPClient::remove(ObjectID oid) {
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                     *builder,
                                     curr_txn_id,
+                                    0,
                                     message::TCPBladeMessage::Message_Remove,
                                     msg_contents.Union());
     builder->Finish(msg);
@@ -229,8 +232,6 @@ void TCPClient::process_received() {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
-            std::cout << "read retval: " << retval << std::endl;
-
             if (retval < 0) {
                 if (errno == EINTR && terminate_threads == true) {
                     return;
@@ -241,6 +242,7 @@ void TCPClient::process_received() {
             }
 
             bytes_read += retval;
+            LOG<INFO>("Client read ", bytes_read, " bytes of 4");
         }
         // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(

@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <map>
 #include <vector>
-
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -260,7 +259,6 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
-
                 std::vector<int8_t> data;
                 if (exists) {
                     data = store[oid];

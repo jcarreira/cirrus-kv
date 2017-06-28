@@ -53,7 +53,7 @@ void test_nonexistent_get() {
     }
 
     // Should fail
-    cm.get(10);
+    cm.get(1492);
 }
 
 /**
