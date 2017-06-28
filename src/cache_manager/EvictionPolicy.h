@@ -15,8 +15,7 @@ using ObjectID = uint64_t;
  */
 class EvictionPolicy {
  public:
-    virtual explicit EvictionPolicy(size_t max_num_objs) = 0;
-
+    EvictionPolicy() {}
     /**
      * Counterpart to the get method. Returns a list of the ObjectIDs to be
      * purged from the cache.
@@ -27,7 +26,7 @@ class EvictionPolicy {
      * Counterpart to the put method. Returns a vector of the ObjectIDs to be
      * purged from the cache.
      */
-    virtual std::vector<ObjectID> put(ObjectID oid, T obj) = 0;
+    virtual std::vector<ObjectID> put(ObjectID oid) = 0;
 
     /**
      * Counterpart to the prefetch method. Returns a vector of the ObjectIDs to be

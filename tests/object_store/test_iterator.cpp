@@ -9,7 +9,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
-
+#include "cache_manager/LRAddedEvictionPolicy.h"
 
 // TODO: Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -27,7 +27,7 @@ void test_iterator() {
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
-    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
     // Put items in the store
@@ -65,7 +65,8 @@ void test_iterator_alt() {
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
-  cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
 
     // Put items in the store

@@ -92,7 +92,7 @@ CacheManager<T>::CacheManager(
   */
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
-    std::vector<ObjectID> to_remove = policy.get(oid);
+    std::vector<ObjectID> to_remove = policy->get(oid);
     for (auto const& oid : to_remove) {
         remove(oid);
     }
@@ -127,7 +127,7 @@ T CacheManager<T>::get(ObjectID oid) {
   */
 template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
-    std::vector<ObjectID> to_remove = policy.put(oid);
+    std::vector<ObjectID> to_remove = policy->put(oid);
     for (auto const& oid : to_remove) {
         remove(oid);
     }
@@ -145,7 +145,7 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
-    std::vector<ObjectID> to_remove = policy.prefetch(oid);
+    std::vector<ObjectID> to_remove = policy->prefetch(oid);
     for (auto const& oid : to_remove) {
         remove(oid);
     }
@@ -161,7 +161,8 @@ void CacheManager<T>::prefetch(ObjectID oid) {
  * Throws an error if it is not present.
  * @param oid the ObjectID corresponding to the object to remove.
  */
-void remove(ObjectID oid) {
+template<class T>
+void CacheManager<T>::remove(ObjectID oid) {
     auto it = cache.find(oid);
     if (it == cache.end()) {
         throw cirrus::Exception("Eviction policy "

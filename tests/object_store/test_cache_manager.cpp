@@ -23,7 +23,7 @@ void test_cache_manager_simple() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  10; oid++) {
         cm.put(oid, oid);
@@ -46,7 +46,7 @@ void test_nonexistent_get() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  10; oid++) {
         cm.put(oid, oid);
@@ -65,7 +65,7 @@ void test_capacity() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  15; oid++) {
         cm.put(oid, oid);
@@ -88,7 +88,7 @@ void test_instantiation() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::LRAddedEvictionPolicy policy;
+    cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 0);
 }
 

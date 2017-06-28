@@ -1,5 +1,5 @@
-#ifndef SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
-#define SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
+#ifndef SRC_CACHE_MANAGER_LRADDEDEVICTIONPOLICY_H_
+#define SRC_CACHE_MANAGER_LRADDEDEVICTIONPOLICY_H_
 
 #include <vector>
 #include <queue>
@@ -16,11 +16,11 @@ using ObjectID = uint64_t;
  */
 class LRAddedEvictionPolicy : public EvictionPolicy {
  public:
-    explicit EvictionPolicy(size_t max_num_objs) override;
+    explicit LRAddedEvictionPolicy(uint64_t max_num_objs);
 
     std::vector<ObjectID> get(ObjectID oid) override;
 
-    std::vector<ObjectID> put(ObjectID oid, T obj) override;
+    std::vector<ObjectID> put(ObjectID oid) override;
 
     std::vector<ObjectID> prefetch(ObjectID oid) override;
 
@@ -44,4 +44,4 @@ class LRAddedEvictionPolicy : public EvictionPolicy {
 
 }  // namespace cirrus
 
-#endif  // SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
+#endif  // SRC_CACHE_MANAGER_LRADDEDEVICTIONPOLICY_H_
