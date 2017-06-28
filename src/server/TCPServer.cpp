@@ -94,6 +94,7 @@ void TCPServer::loop() {
                     LOG<INFO>("New connection incoming");
                     // New data on main socket, accept and connect
                     // TODO(Tyler): loop this to accept multiple at once?
+                    // TODO(Tyler): Switch to non blocking sockets?
                     int newsock = accept(server_sock_,
                             reinterpret_cast<struct sockaddr*>(&cli_addr),
                             &clilen);
@@ -225,12 +226,19 @@ bool TCPServer::process(int sock) {
         case message::TCPBladeMessage::Message_Write:
             {
                 LOG<INFO>("Server processing write request.");
-                /* Service the write request by storing the serialized object */
-                ObjectID oid = msg->message_as_Write()->oid();
-                auto data_fb = msg->message_as_Write()->data();
-                std::vector<int8_t> data(data_fb->begin(), data_fb->end());
-                // Create entry in store mapping the data to the id
-                store[oid] = data;
+
+                // Throw error if put would exceed size of the store
+                if (store.size() >= max_objects) {
+                    error_code = cirrus::ErrorCodes:kServerMemoryErrorException;
+                } else {
+                    // Service the write request by
+                    //  storing the serialized object
+                    ObjectID oid = msg->message_as_Write()->oid();
+                    auto data_fb = msg->message_as_Write()->data();
+                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
+                    // Create entry in store mapping the data to the id
+                    store[oid] = data;
+                }
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateWriteAck(builder,

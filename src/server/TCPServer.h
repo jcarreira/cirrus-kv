@@ -37,9 +37,26 @@ class TCPServer : public Server {
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 
-    uint64_t num_fds = 100; /**< number of sockets open at once. */
+    /** Max objects that can be stored on server at once. */
+    uint64_t max_objects = 10000;
+    /** Max number of sockets open at once. */
+    // TODO(TYLER): Enforce this limit, or remove it and allow scaling
+    uint64_t num_fds = 100;
+
+    /**
+     * Index that the next socket accepted should have in the
+     * array of struct pollfds.
+     */
     uint64_t curr_index = 0;
+    /**
+     * How long the client will wait during a call to poll() before
+     * timing out.
+     */
     int timeout = 60 * 1000 * 3;
+    /**
+     * Vector that serves as a wrapper for a c style array containing
+     * struct pollfd objects. Used for calls to poll().
+     */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
 };
 
