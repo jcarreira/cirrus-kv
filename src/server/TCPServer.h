@@ -41,7 +41,7 @@ class TCPServer : public Server {
     uint64_t num_fds = 100; /**< number of sockets open at once. */
     uint64_t curr_index = 0;
     int timeout = 60 * 1000 * 3;
-    std::vector<struct pollfd> fds(num_fds);
+    std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
 };
 
 }  // namespace cirrus

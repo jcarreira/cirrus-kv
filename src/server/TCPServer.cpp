@@ -64,7 +64,7 @@ void TCPServer::init() {
             + to_string(port_));
     }
 
-    fds.at(curr_index).fd = server_sock;
+    fds.at(curr_index).fd = server_sock_;
     // Only listen for data to read
     fds.at(curr_index++).events = POLLIN;
 }
@@ -86,11 +86,24 @@ void TCPServer::loop() {
             LOG<INFO>(timeout, " milliseconds elapsed without contact.");
         } else {
             // there is at least one pending event, find it.
-            for (int i = 0; i < curr_index; i++) {
+            for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
                 if (curr_fd.revents != POLLIN) {
                     // This is unexpected, error out
-                    LOG<ERROR>("Unexpected event type.");
+                    // LOG<ERROR>("Unexpected event type.");
+		    if (curr_fd.revents == POLLPRI) {
+                        LOG<INFO>("POLLPRI");
+		    } else if (curr_fd.revents == POLLHUP) {
+		        LOG<INFO>("POLLHUP");
+		    } else if (curr_fd.revents == POLLRDHUP) {
+                        LOG<INFO>("POLLRDHUP");
+		    } else if (curr_fd.revents == POLLOUT) {
+                        LOG<INFO>("POLLERR");
+		    } else if (curr_fd.revents == POLLOUT) {
+                        LOG<INFO>("POLLOUT");
+		    } else if (curr_fd.revents == POLLNVAL) {
+                        LOG<INFO>("POLLNVAL");
+		    }
                 } else if (curr_fd.fd == server_sock_) {
                     // New data on main socket, accept and connect
                     // TODO: loop this to accept multiple at once?
@@ -166,7 +179,8 @@ void TCPServer::process(int sock) {
         if (first_loop && retval == 0) {
             // Socket is closed by client if 0 bytes are available
             close(sock);
-            return;
+            LOG<INFO>("Closing socket: ", sock);
+	    return;
         }
 
         if (retval < 0) {
@@ -175,7 +189,7 @@ void TCPServer::process(int sock) {
         }
 
         bytes_read += retval;
-        first_loop == false;
+        first_loop = false;
     }
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
