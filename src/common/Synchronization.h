@@ -15,11 +15,8 @@ namespace cirrus {
   */
 class Lock {
  public:
-    Lock() {
-    }
-
-    virtual ~Lock() {
-    }
+    Lock() = default;
+    virtual ~Lock() = default;
 
     virtual void wait() = 0; /** A pure virtual member. */
     virtual void signal() = 0; /** A pure virtual member. */
@@ -108,7 +105,8 @@ class SpinLock : public Lock {
       * This function busywaits until it obtains the lock.
       */
     void wait() final {
-        while (lock.test_and_set(std::memory_order_acquire));
+        while (lock.test_and_set(std::memory_order_acquire))
+            continue;
     }
 
     /**

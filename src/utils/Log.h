@@ -67,7 +67,7 @@ bool LOG(Params&& ... param) {
         std::cout << " " << arg;
     };
 
- __attribute__((unused))
+     __attribute__((unused))
     int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... };
 
 #if __GNUC__ >= 7
