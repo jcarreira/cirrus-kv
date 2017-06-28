@@ -38,6 +38,7 @@ TCPClient::~TCPClient() {
 
     if (sender_thread) {
         LOG<INFO>("Terminating sender thread");
+        queue_semaphore.signal(); // unblock sender thread
         sender_thread->join();
         delete sender_thread;
     }
@@ -374,37 +375,36 @@ ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
 void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
+        queue_semaphore.wait();
+        queue_lock.wait();
+        
         if (terminate_threads) {
             return;
         }
-
-        // queue_semaphore.wait();
-        queue_lock.wait();
         // This thread now owns the lock on the send queue
         
 	// Process the send queue until it is empty
-        while (send_queue.size() != 0) {
-            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-                                                            send_queue.front();
-            send_queue.pop();
-            int message_size = builder->GetSize();
+        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+            send_queue.front();
+        send_queue.pop();
+        int message_size = builder->GetSize();
 
-            LOG<INFO>("Client sending size: ", message_size);
-            // Convert size to network order and send
-            uint32_t network_order_size = htonl(message_size);
-            if (send(sock, &network_order_size, sizeof(uint32_t), 0)
+        LOG<INFO>("Client sending size: ", message_size);
+        // Convert size to network order and send
+        uint32_t network_order_size = htonl(message_size);
+        if (send(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {
-                throw cirrus::Exception("Client error sending data to server");
-            }
-
-            LOG<INFO>("Client sending main message");
-            // Send main message
-            if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
-                != message_size) {
-                throw cirrus::Exception("Client error sending data to server");
-            }
-            LOG<INFO>("message pair sent by client");
+            throw cirrus::Exception("Client error sending data to server");
         }
+
+        LOG<INFO>("Client sending main message");
+        // Send main message
+        if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
+                != message_size) {
+            throw cirrus::Exception("Client error sending data to server");
+        }
+        LOG<INFO>("message pair sent by client");
+        
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
     }
