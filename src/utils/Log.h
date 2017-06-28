@@ -43,6 +43,9 @@ bool LOG(Params&& ... param) {
             } else {
                 THRESHOLD = DEFAULT_THRESHOLD;
             }
+        } else {
+            // if env not defined we default to not show logs
+            THRESHOLD = DEFAULT_THRESHOLD;
         }
     }
 
