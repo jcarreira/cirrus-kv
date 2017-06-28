@@ -78,8 +78,9 @@ void TCPServer::loop() {
     socklen_t clilen = sizeof(cli_addr);
 
     while (1) {
+        LOG<INFO>("Server calling poll.");
         int poll_status = poll(fds.data(), num_fds, timeout);
-
+        LOG<INFO>("Poll returned with status: ", poll_status);
         if (poll_status == -1) {
             throw cirrus::ConnectionException("Server error calling poll.");
         } else if (poll_status == 0) {
@@ -88,23 +89,8 @@ void TCPServer::loop() {
             // there is at least one pending event, find it.
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
-                if (curr_fd.revents != POLLIN) {
-                    // This is unexpected, error out
-                    // LOG<ERROR>("Unexpected event type.");
-		    if (curr_fd.revents == POLLPRI) {
-                        LOG<INFO>("POLLPRI");
-		    } else if (curr_fd.revents == POLLHUP) {
-		        LOG<INFO>("POLLHUP");
-		    } else if (curr_fd.revents == POLLRDHUP) {
-                        LOG<INFO>("POLLRDHUP");
-		    } else if (curr_fd.revents == POLLOUT) {
-                        LOG<INFO>("POLLERR");
-		    } else if (curr_fd.revents == POLLOUT) {
-                        LOG<INFO>("POLLOUT");
-		    } else if (curr_fd.revents == POLLNVAL) {
-                        LOG<INFO>("POLLNVAL");
-		    }
-                } else if (curr_fd.fd == server_sock_) {
+                 if (curr_fd.fd == server_sock_) {
+		    LOG<INFO>("New connection incoming");
                     // New data on main socket, accept and connect
                     // TODO: loop this to accept multiple at once?
                     int newsock = accept(server_sock_,
@@ -113,11 +99,15 @@ void TCPServer::loop() {
                     if (newsock < 0) {
                         throw std::runtime_error("Error accepting socket");
                     }
+		    LOG<INFO>("Created new socket: ", newsock);
                     fds.at(curr_index).fd = newsock;
                     fds.at(curr_index).events = POLLIN;
                     curr_index++;
                 } else {
-                    process(curr_fd.fd);
+                    if (!process(curr_fd.fd)) {
+                        // do not make future alerts on this fd
+			curr_fd.fd = -1;
+		    }
                 }
             }
         }
@@ -160,7 +150,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
   * the type of the message.
   * @param sock the file descriptor for the socket with an incoming message.
   */
-void TCPServer::process(int sock) {
+bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
     std::vector<char> buffer;
 
@@ -180,7 +170,7 @@ void TCPServer::process(int sock) {
             // Socket is closed by client if 0 bytes are available
             close(sock);
             LOG<INFO>("Closing socket: ", sock);
-	    return;
+	    return false;
         }
 
         if (retval < 0) {
@@ -325,6 +315,7 @@ void TCPServer::process(int sock) {
 
     LOG<INFO>("Server sent ack of size: ", message_size);
     LOG<INFO>("Server done processing message from client");
+    return true;
 }
 
 }  // namespace cirrus

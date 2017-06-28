@@ -13,7 +13,6 @@ using ObjectID = uint64_t;
   * This class serves as a remote store that allows connection from
   * clients over TCP.
   * Clients can make requests for reading and writing data.
-  * WARNING: This class only handles one client at a time.
   */
 class TCPServer : public Server {
  public:
@@ -25,7 +24,7 @@ class TCPServer : public Server {
     virtual void loop();
 
  private:
-    void process(int sock);
+    bool process(int sock);
 
     ssize_t send_all(int, const void*, size_t, int);
 
