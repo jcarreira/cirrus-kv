@@ -18,7 +18,8 @@ using ObjectID = uint64_t;
 class Future {
  public:
     Future(std::shared_ptr<bool> result,
-           std::shared_ptr<cirrus::PosixSemaphore> sem);
+           std::shared_ptr<cirrus::PosixSemaphore> sem,
+           std::shared_ptr<cirrus::ErrorCodes> error_code);
 
     void wait();
 
@@ -28,6 +29,7 @@ class Future {
  private:
     std::shared_ptr<bool> result; /**< Pointer to the result. */
     std::shared_ptr<cirrus::PosixSemaphore> sem; /**< Sem for the result. */
+    std::shared_prt<cirrus::ErrorCodes> error_code; /** Any errors thrown. */
     bool result_available = false; /** Boolean monitoring result state. */
 };
 

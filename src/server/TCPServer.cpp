@@ -217,6 +217,9 @@ bool TCPServer::process(int sock) {
     // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
+    // Initialize the error code
+    cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
+
     LOG<INFO>("Server checking type of message");
     // Check message type
     switch (msg->message_type()) {
@@ -236,6 +239,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
+                                    static_cast<int>(error_code),
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -253,7 +257,8 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Got pair from store");
                 if (entry_itr == store.end()) {
                     exists = false;
-                    LOG<INFO>("oid does not exist on server");
+                    error_code = cirrus::ErrorCodes::kNoSuchIDException;
+                    LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
 
                 std::vector<int8_t> data;
@@ -269,6 +274,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
+                                    static_cast<int>(error_code),
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -291,6 +297,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
+                                    static_cast<int>(error_code),
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -298,6 +305,8 @@ bool TCPServer::process(int sock) {
             }
         default:
             LOG<ERROR>("Unknown message", " type:", msg->message_type());
+            throw cirrus::Exception("Unknown message "
+                                    "type received from client.");
             break;
     }
 

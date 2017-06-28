@@ -6,6 +6,15 @@
 
 namespace cirrus {
 
+// TODO(Tyler): Add in enum for exceptions
+
+enum ErrorCodes {
+  kOk = 0,
+  kException,
+  kServerMemoryErrorException,
+  kNoSuchIDException,
+};
+
 /**
   * A class for cirrus generated exceptions.
   */

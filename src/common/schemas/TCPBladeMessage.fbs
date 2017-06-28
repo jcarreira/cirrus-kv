@@ -1,7 +1,5 @@
 namespace cirrus.message.TCPBladeMessage;
 
-union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck }
-
 table Write{
   oid:ulong;
   data:[byte];
@@ -32,8 +30,9 @@ table RemoveAck{
 }
 
 table TCPBladeMessage {
-  txnid:ulong;
-  message:Message;
+  txnid:ulong (required);
+  error_code:long (required);
+  message:Message (required);
 }
 
 root_type TCPBladeMessage;

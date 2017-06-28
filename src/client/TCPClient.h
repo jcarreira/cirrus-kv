@@ -8,6 +8,7 @@
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Future.h"
+#include "common/Exception.h"
 
 namespace cirrus {
 
@@ -47,8 +48,10 @@ class TCPClient : public BladeClient {
       * transactions.
       */
     struct txn_info {
-        std::shared_ptr<bool> result;  /**< result of the transaction */
-
+        /** result of the transaction */
+        std::shared_ptr<bool> result;
+        /** Error code if any were thrown on the server. */
+        std::shared_ptr<cirrus::ErrorCodes> error_code;
         /** Semaphore for the transaction. */
         std::shared_ptr<cirrus::PosixSemaphore> sem;
 
@@ -57,6 +60,7 @@ class TCPClient : public BladeClient {
         txn_info() {
             result = std::make_shared<bool>();
             sem = std::make_shared<cirrus::PosixSemaphore>();
+            error_code = std::make_shared<cirrus::ErrorCodes>();
         }
     };
 
@@ -78,12 +82,19 @@ class TCPClient : public BladeClient {
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */
     std::thread* receiver_thread;
     /** Thread that runs the sending loop. */
     std::thread* sender_thread;
 
+    /**
+     * Bool that the process_send and process_received threads check.
+     * If it is true, they exit their loops so that they may
+     * finish execution and join may be called on them. Set to true
+     * in the class destructor.
+     */
     bool terminate_threads = false;
 };
 

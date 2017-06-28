@@ -56,6 +56,10 @@ class RDMAClient : public BladeClient {
     bool remove(ObjectID id) override;
 
  private:
+    /**
+     * The seed used for calls to rand_r. Set based on system time
+     * during call to connect.
+     */
     unsigned int seed;
     class FutureBladeOp;
     struct RDMAMem;
@@ -74,11 +78,12 @@ class RDMAClient : public BladeClient {
         AllocationRecord allocRec;
     };
 
-    /** Struct used to carry information from issuing operation
-      * to receiving completion.
-      * This is allocated when issuing and deallocated
-      * for async ops this is passed up.
-      */
+    /**
+     * Struct used to carry information from issuing operation
+     * to receiving completion.
+     * This is allocated when issuing and deallocated
+     * for async ops this is passed up.
+     */
     struct RDMAOpInfo {
         RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
                 std::function<void(void)> fn = []() -> void {}) :
@@ -99,7 +104,8 @@ class RDMAClient : public BladeClient {
     };
 
     /**
-      * Struct to maintain connection context. One ConnectionContext per connection
+      * Struct to maintain connection context.
+      * One ConnectionContext is used per connection.
       */
     struct ConnectionContext {
         ConnectionContext() :

@@ -248,7 +248,7 @@ void TCPClient::process_received() {
         int incoming_size = ntohl(*incoming_size_ptr);
 
         LOG<INFO>("Size of incoming message received from server: ",
-                                                                 incoming_size);
+                  incoming_size);
 
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
@@ -297,6 +297,8 @@ void TCPClient::process_received() {
         // release lock
         map_lock.signal();
 
+        // Save the error code so that the future can read it
+        *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
         // Process the ack
         switch (ack->message_type()) {
             case message::TCPBladeMessage::Message_WriteAck:
@@ -435,7 +437,7 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->sem);
+    cirrus::Future future(txn->result, txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();

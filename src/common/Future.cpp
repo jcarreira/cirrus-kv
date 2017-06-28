@@ -2,6 +2,7 @@
 #include <memory>
 #include "common/Synchronization.h"
 #include "common/Future.h"
+#include "common/Exception.h"
 
 namespace cirrus {
 
@@ -11,8 +12,9 @@ using ObjectID = uint64_t;
   * Constructor for Future.
   */
 Future::Future(std::shared_ptr<bool> result,
-               std::shared_ptr<cirrus::PosixSemaphore> sem):
-    result(result), sem(sem) {}
+               std::shared_ptr<cirrus::PosixSemaphore> sem,
+               std::shared_ptr<cirrus::ErrorCodes> error_code):
+    result(result), sem(sem), error_code(error_code) {}
 
 /**
   * Waits until the result the future is monitoring is available.
@@ -49,6 +51,30 @@ bool Future::get() {
         result_available = true;
     }
 
+    // Check the error code enum. Throw exception if one happened on server.
+    switch (*error_code) {
+      case cirrus::ErrorCodes::kOk: {
+        break;
+      }
+      case cirrus::ErrorCodes::kException: {
+        throw cirrus::Exception("Server threw generic exception.");
+        break;
+      }
+      case cirrus::ErrorCodes::kServerMemoryErrorException: {
+        throw cirrus::ServerMemoryErrorException("Server memory exhausted "
+                                                 "during call to put.")
+        break;
+      }
+      case cirrus::ErrorCodes::kNoSuchIDException: {
+        throw cirrus::NoSuchIDException("Call to put was made for id that "
+                                        "did not exist on server.")
+        break;
+      }
+      default: {
+        throw cirrus::Exception("Unrecognized error code during get().");
+        break;
+      }
+    }
     return *result;
 }
 
