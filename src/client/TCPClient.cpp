@@ -374,6 +374,7 @@ ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
 void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
+        queue_semaphore.wait();
         queue_lock.wait();
         // This thread now owns the lock on the send queue
 
@@ -444,6 +445,8 @@ cirrus::Future TCPClient::enqueue_message(
 
     // Release lock on send queue
     queue_lock.signal();
+    // Alert that the queue has been updated
+    queue_semaphore.post();
     return future;
 }
 

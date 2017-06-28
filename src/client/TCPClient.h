@@ -78,6 +78,7 @@ class TCPClient : public BladeClient {
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */
     std::thread* receiver_thread;
     /** Thread that runs the sending loop. */
