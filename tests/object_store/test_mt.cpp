@@ -17,7 +17,7 @@
 #include "utils/Time.h"
 #include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 static const uint64_t MB = (1024*1024);
 static const int N_THREADS = 2;

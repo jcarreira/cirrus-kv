@@ -45,8 +45,9 @@ static const int initial_buffer_size = 50;
   * operation.
   */
 
-  // TODO: implement async method
-// cirrus::Future RDMAClient::write_async(ObjectID oid, void* data, uint64_t size) {
+  // TODO(Tyler): implement async method
+// cirrus::Future RDMAClient::write_async(ObjectID oid,
+//                                        void* data, uint64_t size) {
 //     // Make sure that the pointer is not null
 //     TEST_NZ(data == nullptr);
 //     // Create flatbuffer builder
@@ -83,7 +84,7 @@ static const int initial_buffer_size = 50;
   * otherwise.
   */
 
-// TODO: ADD ASYNC
+// TODO(Tyler): ADD ASYNC
 // cirrus::Future RDMAClient::read_async(ObjectID oid, void* data,
 //                                      uint64_t /* size */) {
 //     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
@@ -268,7 +269,7 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
     params->retry_count = 7;
 }
 
-void RDMAClient::alloc_rdma_memory(ConnectionContext *ctx) { 
+void RDMAClient::alloc_rdma_memory(ConnectionContext *ctx) {
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx->recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
@@ -277,7 +278,7 @@ void RDMAClient::alloc_rdma_memory(ConnectionContext *ctx) {
                 SEND_MSG_SIZE));
 }
 
-void RDMAClient::setup_memory(ConnectionContext *ctx) { 
+void RDMAClient::setup_memory(ConnectionContext *ctx) {
     alloc_rdma_memory(ctx);
 
     LOG<INFO>("Registering region with size: ",
@@ -287,7 +288,8 @@ void RDMAClient::setup_memory(ConnectionContext *ctx) {
                 RECV_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
-    TEST_Z(con_ctx_.send_msg_mr = ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.send_msg,
+    TEST_Z(con_ctx_.send_msg_mr =
+            ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));

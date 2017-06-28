@@ -11,7 +11,7 @@
 #include "utils/StringUtils.h"
 #include "utils/logging.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
 

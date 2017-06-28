@@ -11,7 +11,7 @@
 #include "authentication/AuthenticationToken.h"
 #include "utils/Time.h"
 #include "client/RDMAClient.h"
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);

@@ -147,7 +147,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 //     /* This is safe as we will only reach here if a previous put has
 //        occured, thus setting the value of serialized_size. */
 //     if (serialized_size == 0) {
-//         // TODO: throw error message if get before put
+//         // TODO(Tyler): throw error message if get before put
 //     }
 //     /* This allocation provides a buffer to read the serialized object
 //        into. */

@@ -7,7 +7,7 @@
 /**
  * Simple test verifying that basic put/get works as intended.
  */
-// TODO: Remove hardcoded port and ip
+// TODO(Tyler): Remove hardcoded port and ip
 auto main() -> int {
     std::string port = "12345";
     std::string ip = "127.0.0.1";

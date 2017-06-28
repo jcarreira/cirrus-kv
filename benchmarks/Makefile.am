@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS = 1_1 1_3 throughput #TODO: add 1_2 as it requires async later
+bin_PROGRAMS = 1_1 1_3 throughput #TODO(Tyler): add 1_2 as it requires async later
 LIBS         = -l:libcityhash.a -lclient \
                -lauthentication -lutils -lcommon
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \

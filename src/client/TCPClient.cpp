@@ -38,7 +38,7 @@ TCPClient::~TCPClient() {
 
     if (sender_thread) {
         LOG<INFO>("Terminating sender thread");
-        queue_semaphore.signal(); // unblock sender thread
+        queue_semaphore.signal();  // unblock sender thread
         sender_thread->join();
         delete sender_thread;
     }
@@ -377,13 +377,13 @@ void TCPClient::process_send() {
     while (1) {
         queue_semaphore.wait();
         queue_lock.wait();
-        
+
         if (terminate_threads) {
             return;
         }
         // This thread now owns the lock on the send queue
-        
-	// Process the send queue until it is empty
+
+        // Process the send queue until it is empty
         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
             send_queue.front();
         send_queue.pop();
@@ -404,7 +404,7 @@ void TCPClient::process_send() {
             throw cirrus::Exception("Client error sending data to server");
         }
         LOG<INFO>("message pair sent by client");
-        
+
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
     }

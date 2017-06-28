@@ -90,28 +90,28 @@ void TCPServer::loop() {
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
                 if (curr_fd.revents != POLLIN) {
-		    LOG<INFO>("Non read event on socket: ", curr_fd.fd);
-		} else if (curr_fd.fd == server_sock_) {
-		    LOG<INFO>("New connection incoming");
+                    LOG<INFO>("Non read event on socket: ", curr_fd.fd);
+                } else if (curr_fd.fd == server_sock_) {
+                    LOG<INFO>("New connection incoming");
                     // New data on main socket, accept and connect
-                    // TODO: loop this to accept multiple at once?
+                    // TODO(Tyler): loop this to accept multiple at once?
                     int newsock = accept(server_sock_,
                             reinterpret_cast<struct sockaddr*>(&cli_addr),
                             &clilen);
                     if (newsock < 0) {
                         throw std::runtime_error("Error accepting socket");
                     }
-		    LOG<INFO>("Created new socket: ", newsock);
+                    LOG<INFO>("Created new socket: ", newsock);
                     fds.at(curr_index).fd = newsock;
                     fds.at(curr_index).events = POLLIN;
                     curr_index++;
                 } else {
                     if (!process(curr_fd.fd)) {
                         // do not make future alerts on this fd
-			curr_fd.fd = -1;
-		    }
+                        curr_fd.fd = -1;
+                    }
                 }
-	        curr_fd.revents = 0;  // Reset the event flags
+                curr_fd.revents = 0;  // Reset the event flags
             }
         }
     }
@@ -173,7 +173,7 @@ bool TCPServer::process(int sock) {
             // Socket is closed by client if 0 bytes are available
             close(sock);
             LOG<INFO>("Closing socket: ", sock);
-	    return false;
+            return false;
         }
 
         if (retval < 0) {
