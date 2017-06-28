@@ -89,7 +89,9 @@ void TCPServer::loop() {
             // there is at least one pending event, find it.
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
-                 if (curr_fd.fd == server_sock_) {
+                if (curr_fd.revents != POLLIN) {
+		    LOG<INFO>("Non read event on socket: ", curr_fd.fd);
+		} else if (curr_fd.fd == server_sock_) {
 		    LOG<INFO>("New connection incoming");
                     // New data on main socket, accept and connect
                     // TODO: loop this to accept multiple at once?
@@ -109,6 +111,7 @@ void TCPServer::loop() {
 			curr_fd.fd = -1;
 		    }
                 }
+	        curr_fd.revents = 0;  // Reset the event flags
             }
         }
     }
