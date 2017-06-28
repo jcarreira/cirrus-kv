@@ -2,6 +2,11 @@
 #include <iostream>
 #include "client/TCPClient.h"
 
+
+
+/**
+ * Simple test verifying that basic put/get works as intended.
+ */
 // TODO: Remove hardcoded port and ip
 auto main() -> int {
     std::string port = "12345";
@@ -17,5 +22,10 @@ auto main() -> int {
     int returned;
     client.read_sync(1, &returned, sizeof(int));
     std::cout << returned << " returned from server" << std::endl;
-    return 0;
+
+    if (returned == message) {
+        return 0;
+    } else {
+        return -1;
+    }
 }

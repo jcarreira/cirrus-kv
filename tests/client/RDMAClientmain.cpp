@@ -18,6 +18,10 @@ static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
 static const char IP[] = "10.10.49.83";
 
+
+/**
+ * Tests that simple get and put work with a string.
+ */
 void test_1_client() {
     char data[1000];
     const char* to_send = "CIRRUS_DDC";
@@ -39,6 +43,10 @@ void test_1_client() {
         throw std::runtime_error("Error in test");
 }
 
+/**
+ * Tests that two clients can function at once without overwriting one
+ * another.
+ */
 void test_2_clients() {
     char data[1000];
     snprintf(data, sizeof(data), "%s", "WRONG");
@@ -67,11 +75,21 @@ void test_2_clients() {
     client1.read_sync(0, data, oss.str().size());
     cirrus::LOG<cirrus::INFO>("Received data 1: ", data);
 
+    // Check that client 2 receives the desired string
+    if (strncmp(data, oss.str().c_str(), oss.str().size()))
+        throw std::runtime_error("Error in test");
+
     client2.read_sync(0, data, 5);
     cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
+
+    // Check that client2 receives "data2"
+    if (strncmp(data, "data2", 5))
+        throw std::runtime_error("Error in test");
 }
 
-// test bandwidth utilization
+/**
+ * Test proper performance when writing large objects
+ */
 void test_performance() {
     cirrus::RDMAClient client;
     client.connect(IP, PORT);
@@ -87,15 +105,6 @@ void test_performance() {
     memset(data, 0, mem_size);
     data[0] = 'Y';
 
-
-    // small write to force creation of pool
-    {
-        cirrus::TimerFunction tf("Timing 1byte write", true);
-        client.write_sync(0, data, 1);
-    }
-
-    sleep(1);
-
     {
         cirrus::TimerFunction tf("Timing write", true);
         client.write_sync(0, data, mem_size);
@@ -105,6 +114,9 @@ void test_performance() {
         cirrus::TimerFunction tf("Timing read", true);
         client.read_sync(0, data, mem_size);
         std::cout << "data[0]: " << data[0] << std::endl;
+        if (data[0] != 'Y') {
+            throw std::runtime_error("Returned value does not match");
+        }
     }
 
     free(data);

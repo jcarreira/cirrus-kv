@@ -176,18 +176,41 @@ bool RDMAClient::remove(ObjectID oid) {
     return false;
 }
 
+/**
+ * Reads an object to local memory from the remote store.
+ * @param loc the BladeLocation for the desired object. Contains the
+ * address and size of the object.
+ * @param ptr a pointer to the memory where the object will be read to.
+ */
 bool RDMAClient::readToLocal(BladeLocation loc, void* ptr) {
     RDMAMem mem(ptr, loc.size);
     rdma_read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
     return true;
 }
 
+/**
+ * Reads an object to local memory from the remote store asynchronously.
+ * @param loc the BladeLocation for the desired object. Contains the
+ * address and size of the object.
+ * @param ptr a pointer to the memory where the object will be read to.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::readToLocalAsync(
         BladeLocation loc, void* ptr) {
     auto future = rdma_read_async(loc.allocRec, 0, loc.size, ptr);
     return future;
 }
 
+/**
+ * Writes an object from local memory to the remote store.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ */
 bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
                              RDMAMem* mem) {
     RDMAMem mm(data, loc.size);
@@ -200,12 +223,30 @@ bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
     return true;
 }
 
+/**
+ * Writes an object from local memory to the remote store asynchronously.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
         const void *data, BladeLocation loc) {
     auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
     return future;
 }
 
+/**
+ * Inserts an object into objects_ , which maps ObjectIDs to
+ * BladeLocation objects.
+ * @param id the ObjectID of the object.
+ * @param size the size of the object.
+ * @param allocRec the AllocationRecord being used for this object.
+ */
 bool RDMAClient::insertObjectLocation(ObjectID id,
                                       uint64_t size,
                                       const AllocationRecord& allocRec) {
