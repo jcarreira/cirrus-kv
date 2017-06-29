@@ -26,6 +26,7 @@ class CacheManager {
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
  private: 
+    void evict_vector(const std::vector<ObjectID>& to_remove);
     void evict(ObjectID oid);
     /**
       * A pointer to a store that contains the same type of object as the
@@ -94,10 +95,7 @@ CacheManager<T>::CacheManager(
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
     std::vector<ObjectID> to_remove = policy->get(oid);
-    for (auto const& oid : to_remove) {
-        evict(oid);
-    }
-
+    evict_vector(to_remove);
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
@@ -129,9 +127,7 @@ T CacheManager<T>::get(ObjectID oid) {
 template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     std::vector<ObjectID> to_remove = policy->put(oid);
-    for (auto const& oid : to_remove) {
-        evict(oid);
-    }
+    evict_vector(to_remove);
     // Push the object to the store under the given id
     store->put(oid, obj);
 }
@@ -147,12 +143,7 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
     std::vector<ObjectID> to_remove = policy->prefetch(oid);
-    ObjectID remove_id;
-    std::for_each(to_remove.begin(), to_remove.end(),
-            std::bind(&CacheManager<T>::evict,
-            this,
-            std::placeholders::_1));
-
+    evict_vector(to_remove);
     if (cache.find(oid) == cache.end()) {
       struct cache_entry& entry = cache[oid];
       entry.obj = store->get(oid);
@@ -182,6 +173,18 @@ void CacheManager<T>::evict(ObjectID oid) {
         throw cirrus::Exception("Attempted to remove item not in cache.");
     } else {
         cache.erase(it);
+    }
+}
+
+/**
+ * Removes the cache entry corresponding to each oid in the vector passed in.
+ * @param to_remove an std::vector of ids corresponding to the objects
+ * to remove.
+ */
+template<class T>
+void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
+    for (auto const& oid : to_remove) {
+        evict(oid);
     }
 }
 }  // namespace cirrus

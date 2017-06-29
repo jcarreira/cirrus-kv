@@ -77,10 +77,7 @@ std::vector<ObjectID> LRAddedEvictionPolicy::process_oid(ObjectID oid) {
             ObjectID to_remove = object_deque.front();
 
             // remove item from deque
-            auto deque_iterator = std::find(object_deque.begin(),
-                                            object_deque.end(),
-                                            to_remove);
-            object_deque.erase(deque_iterator);
+            object_deque.pop_front();
             // remove oldest from set
             auto set_iterator = object_set.find(to_remove);
             object_set.erase(set_iterator);
