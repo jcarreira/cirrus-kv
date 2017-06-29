@@ -3,6 +3,8 @@
 
 #include <map>
 #include <vector>
+#include <functional>
+#include <algorithm>
 #include "cache_manager/EvictionPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
 #include "common/Exception.h"
@@ -146,9 +148,11 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
     std::vector<ObjectID> to_remove = policy->prefetch(oid);
-    for (auto const& oid : to_remove) {
-        remove(oid);
-    }
+    ObjectID remove_id;
+    std::for_each(to_remove.begin(), to_remove.end(),
+            std::bind(&CacheManager<T>::remove,
+            this,
+            std::placeholders::_1));
 
     if (cache.find(oid) == cache.end()) {
       struct cache_entry& entry = cache[oid];

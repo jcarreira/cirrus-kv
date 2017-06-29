@@ -15,7 +15,7 @@ using ObjectID = uint64_t;
  */
 class EvictionPolicy {
  public:
-    EvictionPolicy() {}
+    EvictionPolicy() = default;
     /**
      * Counterpart to the get method. Returns a list of the ObjectIDs to be
      * purged from the cache.

@@ -92,6 +92,33 @@ void test_instantiation() {
     cirrus::CacheManager<int> cm(&store, &policy, 0);
 }
 
+/**
+ * This test checks the behavior of the LRAddedEvictionPolicy by ensuring
+ * that it always returns the one oldest item, and only does so when at
+ * capacity.
+ */
+void test_lradded() { 
+    cirrus::LRAddedEvictionPolicy policy(10);
+    int i;
+    for (i = 0; i < 10; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 0) {
+            std::cout << i << "id where error occured" << std::endl;
+            throw std::runtime_error("Item evicted when cache not full");
+         }
+    }
+    for (i = 10; i < 20; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 1) {
+            throw std::runtime_error("More or less than one item returned "
+                    "when at capacity.");
+        } else if (ret_vec.front() != i - 10) {
+            throw std::runtime_error("Item returned was not oldest in "
+                    "the cache.");
+        }
+    }
+}
+
 auto main() -> int {
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
@@ -119,6 +146,6 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException & e) {
     }
-
+    test_lradded();
     return 0;
 }
