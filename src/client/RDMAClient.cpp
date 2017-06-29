@@ -14,7 +14,7 @@
 #include <cassert>
 
 #include "utils/utils.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/logging.h"
 
 #include "common/ThreadPinning.h"

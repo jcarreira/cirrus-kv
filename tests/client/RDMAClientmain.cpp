@@ -9,7 +9,7 @@
 #include "common/AllocationRecord.h"
 #include "utils/logging.h"
 #include "authentication/AuthenticationToken.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "client/RDMAClient.h"
 // TODO(Tyler): Remove hardcoded IP and PORT
 
