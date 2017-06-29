@@ -3,8 +3,12 @@
 
 #include <errno.h>
 #include <semaphore.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <atomic>
+#include <string>
 #include <stdexcept>
+#include <algorithm>
 #include "common/Decls.h"
 
 namespace cirrus {
@@ -38,20 +42,22 @@ class Lock {
 class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
-        sem_init(&m_sema, 0, initialCount);
+        sem_name = random_string();
+        m_sema = sem_open(sem_name.c_str(), S_IRWXU, O_CREAT, initialCount);
     }
 
     virtual ~PosixSemaphore() {
-        sem_destroy(&m_sema);
+        sem_close(m_sema);
+        sem_unlink(sem_name.c_str());
     }
 
     /**
       * Waits until entered into semaphore.
       */
     void wait() final {
-        int rc = sem_wait(&m_sema);
+        int rc = sem_wait(m_sema);
         while (rc == -1 && errno == EINTR) {
-            rc = sem_wait(&m_sema);
+            rc = sem_wait(m_sema);
         }
     }
 
@@ -59,7 +65,7 @@ class PosixSemaphore : public Lock {
       * Posts to one waiter
       */
     void signal() final {
-        sem_post(&m_sema);
+        sem_post(m_sema);
     }
 
     /**
@@ -68,7 +74,7 @@ class PosixSemaphore : public Lock {
       */
     void signal(int count) final {
         while (count-- > 0) {
-            sem_post(&m_sema);
+            sem_post(m_sema);
         }
     }
 
@@ -77,7 +83,7 @@ class PosixSemaphore : public Lock {
       * @return True if the semaphore had a positive value and was decremented.
       */
     bool trywait() final {
-        int ret = sem_trywait(&m_sema);
+        int ret = sem_trywait(m_sema);
         if (ret == -1 && errno != EAGAIN) {
             throw std::runtime_error("trywait error");
         }
@@ -85,7 +91,32 @@ class PosixSemaphore : public Lock {
     }
 
  private:
-    sem_t m_sema; /**< underlying semaphore that operations are performed on. */
+    /** underlying semaphore that operations are performed on. */
+    sem_t *m_sema;
+    std::string sem_name;
+    /** Length of randomly names for semaphores. */
+    size_t rand_string_length = 16;
+
+    /**
+     * Method to generate random strings for named semaphores.
+     */
+
+    // Code from goo.gl/2NS4ri
+    std::string random_string() {
+        auto randchar = []() -> char {
+            const char charset[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+            const size_t max_index = (sizeof(charset) - 1);
+            return charset[ rand() % max_index ];
+        };
+    std::string str(rand_string_length, 0);
+    // First character of semaphore name must be a slash
+    str.front() = '/';
+    std::generate_n(str.begin() + 1, rand_string_length, randchar);
+    return str;
+    }
 };
 
 /**
