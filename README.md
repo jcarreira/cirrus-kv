@@ -23,7 +23,7 @@ It has been tested with the following environment:
 You can install these with
 
     $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint
-    
+
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
     $ sudo apt-get install g++-6
@@ -32,12 +32,12 @@ Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
 MacOS Requirements
 ============
-Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use.
+Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use.
 gettext can be installed as follows using homebrew. Read the warning before running the link command:
 
     $ brew install gettext
     $ brew link --force gettext
-    
+
 
 Building
 =========
@@ -52,7 +52,7 @@ Running Tests
 To run tests, run the following command from the top level of the project:
 
     $ make check
-    
+
 To create additional tests, add them to the TESTS variable in the top level Makefile.am . Tests are currently located in the tests directory.
 
 
@@ -62,7 +62,7 @@ Benchmarks
 To run benchmarks execute the following command from the top of the project directory
 
     $ make benchmark
-    
+
 This will leave log files for each benchmark run in the top directory. To add additional benchmarks, modify the script `run_benchmarks.py`, located in the benchmarks directory. The benchmarks are currently set to run locally, but may be set to run using a remote server by manually changing the ip address in the benchmark files. However, this then makes it so that the benchmarks must be manually launched from the command line after starting the server remotely. Additionally, the log files will be left in the benchmarks directory.
 
 * Single node burst of 128 byte put (synchronous) - latencies
