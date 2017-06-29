@@ -30,6 +30,15 @@ Make sure the compilation is done with g++-6. *update-alternatives* can be used:
     $ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 100
     $ sudo update-alternatives --config g++ # choose g++-6
 
+MacOS Requirements
+============
+Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use.
+gettext can be installed as follows using homebrew. Read the warning before running the link command:
+
+    $ brew install gettext
+    $ brew link --force gettext
+    
+
 Building
 =========
 
