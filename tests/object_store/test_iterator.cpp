@@ -1,10 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <iterator>
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <cctype>
 #include <memory>
 
@@ -26,12 +23,11 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
-    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                    PORT,
-                    &client,
-                    cirrus::struct_serializer_simple<SIZE>,
-                    cirrus::struct_deserializer_simple<SIZE>);
+            PORT,
+            &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -66,12 +62,11 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                      PORT,
-                      &client,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+            PORT,
+            &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 

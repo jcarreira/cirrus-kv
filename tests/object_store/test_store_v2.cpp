@@ -21,8 +21,8 @@ void test_store_simple() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         &client,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+                        cirrus::serializer_simple<int>,
+                        cirrus::deserializer_simple<int, sizeof(int)>);
     for (int oid = 0; oid <  10; oid++) {
       store.put(oid, oid);
     }

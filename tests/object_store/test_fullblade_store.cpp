@@ -1,16 +1,10 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <fstream>
-#include <iterator>
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <map>
 #include <string>
 #include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
 #include <memory>
 
 #include "object_store/FullBladeObjectStore.h"
@@ -33,12 +27,11 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       &client,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+                      cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                      cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -63,13 +56,11 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                      PORT,
-                      &client,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
-
+                PORT,
+                &client,
+                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);
@@ -104,10 +95,9 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-                        cirrus::serializer_simple,
-                        cirrus::deserializer_simple);
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
 
     for (int oid = 0; oid <  10; oid++) {
         store.put(oid, oid);

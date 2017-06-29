@@ -51,8 +51,8 @@ void test_sync() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-            cirrus::struct_serializer_simple<SIZE>,
-            cirrus::struct_deserializer_simple<SIZE>);
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
