@@ -2,7 +2,6 @@
 #define SRC_COMMON_SYNCHRONIZATION_H_
 
 #include <errno.h>
-#include <error.h>
 #include <semaphore.h>
 #include <atomic>
 #include <stdexcept>
