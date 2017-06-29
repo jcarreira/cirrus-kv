@@ -28,7 +28,8 @@ void test_iterator() {
             PORT,
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -68,7 +69,8 @@ void test_iterator_alt() {
             PORT,
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 

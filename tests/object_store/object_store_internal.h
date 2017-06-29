@@ -13,7 +13,7 @@ template<unsigned int SIZE>
 struct Dummy {
     char data[SIZE];
     int id;
-    explicit Dummy(int id = 0) : id(id) {}
+    explicit Dummy(int id = 1492) : id(id) {}
 };
 
 /* This function simply copies an object into a new portion of memory. */
