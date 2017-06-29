@@ -2,7 +2,7 @@
 #define SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
 
 #include "cache_manager/LRAddedEvictionPolicy.h"
-
+#include <stdint.h>
 #include <vector>
 #include <queue>
 #include <set>
@@ -42,7 +42,7 @@ std::vector<ObjectID> LRAddedEvictionPolicy::get(ObjectID oid) {
  * Put method for the eviction policy. Returns empty list as a put will never
  * require additional cache space.
  */
-std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID oid) {
+std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID /* oid */) {
     return std::vector<ObjectID>();
 }
 

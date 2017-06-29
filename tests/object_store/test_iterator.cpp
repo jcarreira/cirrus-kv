@@ -25,7 +25,8 @@ void test_iterator() {
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+            sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
@@ -63,7 +64,8 @@ void test_iterator() {
 void test_iterator_alt() {
   cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+            sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);

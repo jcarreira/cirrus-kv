@@ -1,6 +1,7 @@
 #ifndef SRC_CACHE_MANAGER_LRADDEDEVICTIONPOLICY_H_
 #define SRC_CACHE_MANAGER_LRADDEDEVICTIONPOLICY_H_
 
+#include <stdint.h>
 #include <vector>
 #include <queue>
 #include <set>
