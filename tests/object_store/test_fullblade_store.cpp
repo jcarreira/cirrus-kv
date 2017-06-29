@@ -27,11 +27,13 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       &client,
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                      cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+                      cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                        sizeof(cirrus::Dummy<SIZE>)>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -56,11 +58,13 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
                 &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+                cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                    sizeof(cirrus::Dummy<SIZE>)>);
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);
@@ -95,6 +99,7 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);

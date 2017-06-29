@@ -23,11 +23,13 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -62,11 +64,13 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -89,7 +93,7 @@ void test_iterator_alt() {
       if (data.id != j) {
         std::cout << "received " << data.id << " but expected " << j
                   << std::endl;
-        throw std::runtime_error("Wrong value");
+        throw std::runtime_error("Wrong value in alternate");
       }
       j++;
     }
