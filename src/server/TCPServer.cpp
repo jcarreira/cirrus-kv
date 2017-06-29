@@ -2,6 +2,7 @@
 
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <map>
@@ -46,8 +47,47 @@ void TCPServer::init() {
     LOG<INFO>("Created socket in TCPServer");
 
     int opt = 1;
-    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR, &opt,
                    sizeof(opt))) {
+        switch (errno) {
+            case EBADF:
+                LOG<ERROR>("EBADF");
+                break;
+            case ENOTSOCK:
+                LOG<ERROR>("ENOTSOCK");
+                break;
+            case ENOPROTOOPT:
+                LOG<ERROR>("ENOPROTOOPT");
+                break;
+            case EFAULT:
+                LOG<ERROR>("EFAULT");
+                break;
+            case EDOM:
+                LOG<ERROR>("EDOM");
+                break;
+        }
+        throw cirrus::ConnectionException("Error forcing port binding");
+    }
+
+    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEPORT, &opt,
+                   sizeof(opt))) {
+        switch (errno) {
+            case EBADF:
+                LOG<ERROR>("EBADF");
+                break;
+            case ENOTSOCK:
+                LOG<ERROR>("ENOTSOCK");
+                break;
+            case ENOPROTOOPT:
+                LOG<ERROR>("ENOPROTOOPT");
+                break;
+            case EFAULT:
+                LOG<ERROR>("EFAULT");
+                break;
+            case EDOM:
+                LOG<ERROR>("EDOM");
+                break;
+        }
         throw cirrus::ConnectionException("Error forcing port binding");
     }
 

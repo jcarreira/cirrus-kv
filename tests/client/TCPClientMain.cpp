@@ -12,10 +12,11 @@ auto main() -> int {
     std::string port = "12345";
     std::string ip = "127.0.0.1";
     cirrus::TCPClient client;
-
+    std::cout << "Test Starting." << std::endl;
     client.connect(ip, port);
-
+    std::cout << "Connected to server." << std::endl;
     int message = 42;
+    std::cout << "message declared." << std::endl;
     client.write_sync(1, &message, sizeof(int));
     std::cout << "write sync complete" << std::endl;
 

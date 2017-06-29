@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <string>
 #include <vector>
@@ -156,7 +157,9 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+    printf("creating future");
     cirrus::Future future = write_async(oid, data, size);
+    printf("returned from async");
     LOG<INFO>("returned from write async");
     return future.get();
 }
