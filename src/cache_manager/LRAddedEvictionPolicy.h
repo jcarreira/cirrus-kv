@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <vector>
-#include <queue>
+#include <deque>
 #include <set>
 #include "cache_manager/EvictionPolicy.h"
 
@@ -24,7 +24,8 @@ class LRAddedEvictionPolicy : public EvictionPolicy {
     std::vector<ObjectID> put(ObjectID oid) override;
 
     std::vector<ObjectID> prefetch(ObjectID oid) override;
-
+    
+    void remove(ObjectID oid) override;
  private:
      std::vector<ObjectID> process_oid(ObjectID oid);
    
@@ -37,7 +38,7 @@ class LRAddedEvictionPolicy : public EvictionPolicy {
      /**
       * Queue to store the order that objects were inserted.
       */
-     std::queue<ObjectID> object_queue;
+     std::deque<ObjectID> object_deque;
 
      /**
       * Set to keep track of which objects are present.

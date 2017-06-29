@@ -24,10 +24,9 @@ class CacheManager {
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
-
- private:
     void remove(ObjectID oid);
-
+ private: 
+    void evict(ObjectID oid);
     /**
       * A pointer to a store that contains the same type of object as the
       * cache. This is the store that the cache manager interfaces with in order
@@ -96,7 +95,7 @@ template<class T>
 T CacheManager<T>::get(ObjectID oid) {
     std::vector<ObjectID> to_remove = policy->get(oid);
     for (auto const& oid : to_remove) {
-        remove(oid);
+        evict(oid);
     }
 
     // check if entry exists for the oid in cache
@@ -131,7 +130,7 @@ template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     std::vector<ObjectID> to_remove = policy->put(oid);
     for (auto const& oid : to_remove) {
-        remove(oid);
+        evict(oid);
     }
     // Push the object to the store under the given id
     store->put(oid, obj);
@@ -150,7 +149,7 @@ void CacheManager<T>::prefetch(ObjectID oid) {
     std::vector<ObjectID> to_remove = policy->prefetch(oid);
     ObjectID remove_id;
     std::for_each(to_remove.begin(), to_remove.end(),
-            std::bind(&CacheManager<T>::remove,
+            std::bind(&CacheManager<T>::evict,
             this,
             std::placeholders::_1));
 
@@ -167,15 +166,24 @@ void CacheManager<T>::prefetch(ObjectID oid) {
  */
 template<class T>
 void CacheManager<T>::remove(ObjectID oid) {
+    evict(oid);
+    policy->remove(oid);
+}
+
+/**
+ * Removes the cache entry corresponding to oid from the cache.
+ * Throws an error if it is not present.
+ * @param oid the ObjectID corresponding to the object to remove.
+ */
+template<class T>
+void CacheManager<T>::evict(ObjectID oid) {
     auto it = cache.find(oid);
     if (it == cache.end()) {
-        throw cirrus::Exception("Eviction policy "
-                                "Attempted to remove item not in cache.");
+        throw cirrus::Exception("Attempted to remove item not in cache.");
     } else {
         cache.erase(it);
     }
 }
-
 }  // namespace cirrus
 
 #endif  // _CACHEMANAGER_H_
