@@ -19,6 +19,7 @@ using ObjectID = uint64_t;
 class Future {
  public:
     Future(std::shared_ptr<bool> result,
+           std::shared_ptr<bool> result_available,
            std::shared_ptr<cirrus::PosixSemaphore> sem,
            std::shared_ptr<cirrus::ErrorCodes> error_code);
 
@@ -28,10 +29,14 @@ class Future {
 
     bool get();
  private:
-    std::shared_ptr<bool> result; /**< Pointer to the result. */
-    std::shared_ptr<cirrus::PosixSemaphore> sem; /**< Sem for the result. */
-    std::shared_ptr<cirrus::ErrorCodes> error_code; /** Any errors thrown. */
-    bool result_available = false; /** Boolean monitoring result state. */
+    /** Pointer to the result. */
+    std::shared_ptr<bool> result;
+    /** Boolean monitoring result state. */
+    std::shared_ptr<bool> result_available;
+    /** Sem for the result. */
+    std::shared_ptr<cirrus::PosixSemaphore> sem;
+     /** Any errors thrown. */
+    std::shared_ptr<cirrus::ErrorCodes> error_code;
 };
 
 }  // namespace cirrus

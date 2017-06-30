@@ -157,9 +157,9 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
-    printf("creating future");
+    printf("creating future\n");
     cirrus::Future future = write_async(oid, data, size);
-    printf("returned from async");
+    printf("returned from async\n");
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -339,6 +339,7 @@ void TCPClient::process_received() {
                 break;
         }
         // Update the semaphore/CV so other know it is ready
+        *(txn->result_available) = true;
         txn->sem->signal();
         LOG<INFO>("client done processing message");
     }
@@ -448,7 +449,8 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->sem, txn->error_code);
+    cirrus::Future future(txn->result, txn->result_available,
+                          txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();

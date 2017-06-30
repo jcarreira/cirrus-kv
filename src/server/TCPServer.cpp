@@ -270,7 +270,8 @@ bool TCPServer::process(int sock) {
                 ObjectID oid = msg->message_as_Write()->oid();
                 // Throw error if put would exceed size of the store
                 if (store.size() >= max_objects) {
-                    error_code = cirrus::ErrorCodes::kServerMemoryErrorException;
+                    error_code =
+                        cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
