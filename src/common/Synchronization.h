@@ -45,8 +45,7 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
-        printf("%s\n", sem_name);
-        m_sema = sem_open(sem_name, S_IRWXU, O_CREAT, initialCount);
+        m_sema = sem_open(sem_name, O_CREAT, S_IRWXU, initialCount);
         if (m_sema == SEM_FAILED) {
             switch (errno) {
                 case EACCES:
