@@ -157,9 +157,8 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
-    printf("creating future\n");
+    LOG<INFO>("Call to write_sync");
     cirrus::Future future = write_async(oid, data, size);
-    printf("returned from async\n");
     LOG<INFO>("returned from write async");
     return future.get();
 }

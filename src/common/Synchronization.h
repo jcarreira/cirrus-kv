@@ -9,8 +9,10 @@
 #include <string>
 #include <stdexcept>
 #include <algorithm>
+#include <ctime>
+#include <random>
+#include <thread>
 #include "common/Decls.h"
-
 namespace cirrus {
 
 /**
@@ -43,12 +45,42 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
-        m_sema = sem_open(sem_name.c_str(), S_IRWXU, O_CREAT, initialCount);
+        m_sema = sem_open(sem_name, S_IRWXU, O_CREAT, initialCount);
+        if (m_sema == SEM_FAILED) {
+            switch (errno) {
+                case EACCES:
+                    printf("EACCESS");
+                    break;
+                case EEXIST:
+                    printf("EEXIST");
+                    break;
+                case EINVAL:
+                    printf("EINVAL");
+                    break;
+                case EMFILE:
+                    printf("EMFILE");
+                    break;
+                case ENAMETOOLONG:
+                    printf("ENAMETOOLONG");
+                    break;
+                case ENFILE:
+                    printf("ENFILE");
+                    break;
+                case ENOENT:
+                    printf("ENOENT");
+                    break;
+                case ENOMEM:
+                    printf("ENOMEM");
+                    break;
+            }
+            throw std::runtime_error("Creation of new semaphore failed");
+        }
     }
 
     virtual ~PosixSemaphore() {
         sem_close(m_sema);
-        sem_unlink(sem_name.c_str());
+        sem_unlink(sem_name);
+        delete[] sem_name;
     }
 
     /**
@@ -93,29 +125,39 @@ class PosixSemaphore : public Lock {
  private:
     /** underlying semaphore that operations are performed on. */
     sem_t *m_sema;
-    std::string sem_name;
+    char  *sem_name;
     /** Length of randomly names for semaphores. */
-    size_t rand_string_length = 16;
+    int rand_string_length = 16;
 
     /**
      * Method to generate random strings for named semaphores.
      */
 
     // Code from goo.gl/2NS4ri
-    std::string random_string() {
-        auto randchar = []() -> char {
-            const char charset[] =
+    char* random_string() {
+        const char charset[] =
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz";
-            const size_t max_index = (sizeof(charset) - 1);
-            return charset[ rand() % max_index ];
-        };
-    std::string str(rand_string_length, 0);
-    // First character of semaphore name must be a slash
-    str.front() = '/';
-    std::generate_n(str.begin() + 1, rand_string_length, randchar);
-    return str;
+        const size_t max_index = (sizeof(charset) - 1);
+
+        char* str = new char[rand_string_length + 1];
+        // First character of semaphore name must be a slash
+        str[0] = '/';
+        // Seed RNG
+        const auto time_seed = static_cast<size_t>(std::time(0));
+        const auto clock_seed = static_cast<size_t>(std::clock());
+        const size_t pid_seed =
+                  std::hash<std::thread::id>()(std::this_thread::get_id());
+
+        std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
+        std::mt19937 gen;
+        gen.seed(seed_value);
+
+        for (int i = 1; i < rand_string_length; i++) {
+            str[i] = charset[gen() % max_index];
+        }
+        return str;
     }
 };
 

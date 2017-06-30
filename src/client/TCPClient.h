@@ -21,7 +21,6 @@ using TxnID = uint64_t;
 class TCPClient : public BladeClient {
  public:
     virtual ~TCPClient();
-
     void connect(const std::string& address,
         const std::string& port) override;
 

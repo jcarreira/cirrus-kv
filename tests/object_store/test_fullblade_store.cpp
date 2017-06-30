@@ -118,6 +118,7 @@ void test_nonexistent_get() {
 }
 
 auto main() -> int {
+    std::cout << "Starting test." << std::endl;
     test_sync(10);
     test_sync();
 
@@ -128,6 +129,6 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
-
+    std::cout << "Test success" << std::endl;
     return 0;
 }
