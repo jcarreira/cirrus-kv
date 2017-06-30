@@ -7,7 +7,6 @@
 #include <map>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -28,9 +27,9 @@ class TCPClient : public BladeClient {
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
 
-    virtual cirrus::Future write_async(ObjectID oid, const void* data,
+    ClientFuture write_async(ObjectID oid, const void* data,
                                        uint64_t size);
-    virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
+    ClientFuture read_async(ObjectID oid, void* data, uint64_t size);
 
     bool remove(ObjectID id) override;
 

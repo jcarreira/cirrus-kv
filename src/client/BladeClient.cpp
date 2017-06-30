@@ -1,7 +1,8 @@
+#include "client/BladeClient.h"
+
 #include <string>
 #include <memory>
 #include "common/Synchronization.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -9,9 +10,9 @@ namespace cirrus {
 using ObjectID = uint64_t;
 
 /**
-  * Constructor for Future.
+  * Constructor for ClientFuture.
   */
-Future::Future(std::shared_ptr<bool> result,
+BladeClient::ClientFuture:ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code):
     result(result), sem(sem), error_code(error_code) {}
@@ -19,7 +20,7 @@ Future::Future(std::shared_ptr<bool> result,
 /**
   * Waits until the result the future is monitoring is available.
   */
-void Future::wait() {
+void BladeClient::ClientFuture::wait() {
     if (!result_available) {
         sem->wait();
         result_available = true;
@@ -30,7 +31,7 @@ void Future::wait() {
   * Checks the status of the result.
   * @return Returns true if the result is available, false otherwise.
   */
-bool Future::try_wait() {
+bool BladeClient::ClientFuture::try_wait() {
     if (!result_available) {
         bool sem_success = sem->trywait();
         result_available = sem_success;
@@ -45,7 +46,7 @@ bool Future::try_wait() {
   * yet available, waits until it is ready.
   * @return Returns the result given by the asynchronous operation.
   */
-bool Future::get() {
+bool BladeClient::ClientFuture::get() {
     if (!result_available) {
         sem->wait();
         result_available = true;
@@ -66,7 +67,7 @@ bool Future::get() {
         break;
       }
       case cirrus::ErrorCodes::kNoSuchIDException: {
-        throw cirrus::NoSuchIDException("Call to put was made for id that "
+        throw cirrus::NoSuchIDException("Call to get was made for id that "
                                         "did not exist on server.");
         break;
       }

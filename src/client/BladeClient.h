@@ -2,7 +2,7 @@
 #define SRC_CLIENT_BLADECLIENT_H_
 
 #include <string>
-#include "common/Future.h"
+#include <memory>
 
 namespace cirrus {
 
@@ -22,12 +22,34 @@ class BladeClient {
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 
     virtual bool remove(ObjectID id) = 0;
-// TODO(Tyler): add in async
-    //   virtual cirrus::Future write_async(ObjectID oid, const void* data,
-    //     uint64_t size) = 0;
 
-    //   virtual cirrus::Future read_async(ObjectID oid, void* data,
-    //     uint64_t size) = 0;
+    virtual ClientFuture write_async(ObjectID oid, const void* data,
+        uint64_t size) = 0;
+
+    virtual ClientFuture read_async(ObjectID oid, void* data,
+        uint64_t size) = 0;
+
+    class ClientFuture {
+     public:
+        ClientFuture(std::shared_ptr<bool> result,
+               std::shared_ptr<cirrus::PosixSemaphore> sem,
+               std::shared_ptr<cirrus::ErrorCodes> error_code);
+
+        void wait();
+
+        bool try_wait();
+
+        bool get();
+     private:
+        /** Pointer to the result. */
+        std::shared_ptr<bool> result;
+        /** Sem for the result. */
+        std::shared_ptr<cirrus::PosixSemaphore> sem;
+        /** Any errors thrown. */
+        std::shared_ptr<cirrus::ErrorCodes> error_code;
+        /** Boolean monitoring result state. */
+        bool result_available = false;
+    };
 };
 
 }  // namespace cirrus

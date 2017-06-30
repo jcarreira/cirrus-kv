@@ -12,7 +12,6 @@
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -84,10 +83,10 @@ void TCPClient::connect(const std::string& address,
   * be read read from.
   * @param size the size of the serialized object being read from
   * local memory.
-  * @return A Future that contains information about the status of the
+  * @return A ClientFuture that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
+cirrus::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
                                                     uint64_t size) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
@@ -125,7 +124,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
+ClientFuture TCPClient::read_async(ObjectID oid, void* data,
                                      uint64_t /* size */) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
@@ -156,7 +155,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
-    cirrus::Future future = write_async(oid, data, size);
+    ClientFuture future = write_async(oid, data, size);
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -172,7 +171,7 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * otherwise.
   */
 bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
-    cirrus::Future future = read_async(oid, data, size);
+    ClientFuture future = read_async(oid, data, size);
     return future.get();
 }
 
@@ -199,7 +198,7 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(builder);
+    ClientFuture future = enqueue_message(builder);
     return future.get();
 }
 
@@ -420,9 +419,9 @@ void TCPClient::process_send() {
   * @param builder a shared_ptr to a FlatBufferBuilder, containing the
   * message.
   * @param An optional argument. Pointer to memory for read operations.
-  * @return Returns a Future.
+  * @return Returns a ClientFuture.
   */
-cirrus::Future TCPClient::enqueue_message(
+ClientFuture TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
             void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
@@ -439,7 +438,7 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->sem, txn->error_code);
+    ClientFuture future(txn->result, txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();
