@@ -45,6 +45,7 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
+        printf("%s\n", sem_name);
         m_sema = sem_open(sem_name, S_IRWXU, O_CREAT, initialCount);
         if (m_sema == SEM_FAILED) {
             switch (errno) {
@@ -144,6 +145,7 @@ class PosixSemaphore : public Lock {
         char* str = new char[rand_string_length + 1];
         // First character of semaphore name must be a slash
         str[0] = '/';
+        str[rand_string_length] = '\0';
         // Seed RNG
         const auto time_seed = static_cast<size_t>(std::time(0));
         const auto clock_seed = static_cast<size_t>(std::clock());
