@@ -5,6 +5,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
+#include "cache_manager/LRAddedEvictionPolicy.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
 
@@ -22,7 +23,8 @@ void test_cache_manager_simple() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::CacheManager<int> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  10; oid++) {
         cm.put(oid, oid);
     }
@@ -44,7 +46,8 @@ void test_nonexistent_get() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::CacheManager<int> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  10; oid++) {
         cm.put(oid, oid);
     }
@@ -55,15 +58,15 @@ void test_nonexistent_get() {
 
 /**
   * This test tests the behavior of the cache manager when the cache is at
-  * capacity. At moment, the cache should throw
-  * a cirrus::CacheCapacityException.
+  * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::CacheManager<int> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
     for (int oid = 0; oid <  15; oid++) {
         cm.put(oid, oid);
     }
@@ -72,7 +75,7 @@ void test_capacity() {
         cm.get(oid);
     }
 
-    // Should fail
+    // Should not fail
     cm.get(10);
 }
 
@@ -85,7 +88,35 @@ void test_instantiation() {
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
-    cirrus::CacheManager<int> cm(&store, 0);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 0);
+}
+
+/**
+ * This test checks the behavior of the LRAddedEvictionPolicy by ensuring
+ * that it always returns the one oldest item, and only does so when at
+ * capacity.
+ */
+void test_lradded() { 
+    cirrus::LRAddedEvictionPolicy policy(10);
+    int i;
+    for (i = 0; i < 10; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 0) {
+            std::cout << i << "id where error occured" << std::endl;
+            throw std::runtime_error("Item evicted when cache not full");
+         }
+    }
+    for (i = 10; i < 20; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 1) {
+            throw std::runtime_error("More or less than one item returned "
+                    "when at capacity.");
+        } else if (ret_vec.front() != i - 10) {
+            throw std::runtime_error("Item returned was not oldest in "
+                    "the cache.");
+        }
+    }
 }
 
 auto main() -> int {
@@ -94,10 +125,10 @@ auto main() -> int {
 
     try {
         test_capacity();
-        std::cout << "Exception not thrown when cache"
-                     " capacity exceeded." << std::endl;
-        return -1;
     } catch (const cirrus::CacheCapacityException& e) {
+        std::cout << "Cache capacity exceeded when item should have been "
+                     " removed by eviction policy." << std::endl;
+        return -1;
     }
 
     try {
@@ -115,6 +146,6 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException & e) {
     }
-
+    test_lradded();
     return 0;
 }

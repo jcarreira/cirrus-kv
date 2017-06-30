@@ -2,6 +2,10 @@
 #define _CACHEMANAGER_H_
 
 #include <map>
+#include <vector>
+#include <functional>
+#include <algorithm>
+#include "cache_manager/EvictionPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
 #include "common/Exception.h"
 
@@ -15,12 +19,15 @@ template<class T>
 class CacheManager {
  public:
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
-                    uint64_t cache_size);
+                 cirrus::EvictionPolicy *policy,
+                 uint64_t cache_size);
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
-
- private:
+    void remove(ObjectID oid);
+ private: 
+    void evict_vector(const std::vector<ObjectID>& to_remove);
+    void evict(ObjectID oid);
     /**
       * A pointer to a store that contains the same type of object as the
       * cache. This is the store that the cache manager interfaces with in order
@@ -47,6 +54,12 @@ class CacheManager {
       * at time of instantiation.
       */
     uint64_t max_size;
+
+    /**
+     * EvictionPolicy used for all calls to the eviction policy. Call made
+     * before each operation that the cache manager makes.
+     */
+    cirrus::EvictionPolicy *policy;
 };
 
 
@@ -62,8 +75,9 @@ class CacheManager {
 template<class T>
 CacheManager<T>::CacheManager(
                            cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
+                           cirrus::EvictionPolicy *policy,
                            uint64_t cache_size) :
-                           store(store), max_size(cache_size) {
+                           store(store), policy(policy), max_size(cache_size) {
     if (cache_size < 1) {
         throw cirrus::CacheCapacityException(
               "Cache capacity must be at least one.");
@@ -80,9 +94,12 @@ CacheManager<T>::CacheManager(
   */
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
+    std::vector<ObjectID> to_remove = policy->get(oid);
+    evict_vector(to_remove);
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
+
     if (cache.find(oid) != cache.end()) {
         struct cache_entry& entry = cache.find(oid)->second;
         return entry.obj;
@@ -109,6 +126,8 @@ T CacheManager<T>::get(ObjectID oid) {
   */
 template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
+    std::vector<ObjectID> to_remove = policy->put(oid);
+    evict_vector(to_remove);
     // Push the object to the store under the given id
     store->put(oid, obj);
 }
@@ -123,13 +142,51 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
+    std::vector<ObjectID> to_remove = policy->prefetch(oid);
+    evict_vector(to_remove);
     if (cache.find(oid) == cache.end()) {
       struct cache_entry& entry = cache[oid];
       entry.obj = store->get(oid);
     }
 }
 
+/**
+ * Removes the cache entry corresponding to oid from the cache.
+ * Throws an error if it is not present.
+ * @param oid the ObjectID corresponding to the object to remove.
+ */
+template<class T>
+void CacheManager<T>::remove(ObjectID oid) {
+    evict(oid);
+    policy->remove(oid);
+}
 
+/**
+ * Removes the cache entry corresponding to oid from the cache.
+ * Throws an error if it is not present.
+ * @param oid the ObjectID corresponding to the object to remove.
+ */
+template<class T>
+void CacheManager<T>::evict(ObjectID oid) {
+    auto it = cache.find(oid);
+    if (it == cache.end()) {
+        throw cirrus::Exception("Attempted to remove item not in cache.");
+    } else {
+        cache.erase(it);
+    }
+}
+
+/**
+ * Removes the cache entry corresponding to each oid in the vector passed in.
+ * @param to_remove an std::vector of ids corresponding to the objects
+ * to remove.
+ */
+template<class T>
+void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
+    for (auto const& oid : to_remove) {
+        evict(oid);
+    }
+}
 }  // namespace cirrus
 
 #endif  // _CACHEMANAGER_H_
