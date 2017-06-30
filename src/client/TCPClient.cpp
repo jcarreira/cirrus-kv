@@ -390,7 +390,13 @@ void TCPClient::process_send() {
         }
         // This thread now owns the lock on the send queue
 
-        // Process the send queue until it is empty
+        // If a spurious wakeup, just continue
+        if (send_queue.empty()) {
+            queue_lock.signal();
+            LOG<INFO>("Spurious wakeup.");
+            continue;
+        }
+        // Take one item out of the send queue
         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
             send_queue.front();
         send_queue.pop();
