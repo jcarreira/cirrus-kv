@@ -1,13 +1,8 @@
 #include <stdlib.h>
-#include <fstream>
-#include <iterator>
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <map>
-#include <string>
 #include <cctype>
-#include <chrono>
 #include <thread>
 #include <memory>
 #include <random>
@@ -45,8 +40,8 @@ void test_multiple_clients() {
           cirrus::TCPClient client;
           cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
               store(IP, PORT, &client,
-                       cirrus::struct_serializer_simple<SIZE>,
-                       cirrus::struct_deserializer_simple<SIZE>);
+                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
           for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();

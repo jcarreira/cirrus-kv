@@ -1,10 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <iterator>
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <cctype>
 #include <memory>
 
@@ -28,10 +25,11 @@ const char IP[] = "127.0.0.1";
 void test_iterator() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                    PORT,
-                    &client,
-                    cirrus::struct_serializer_simple<SIZE>,
-                    cirrus::struct_deserializer_simple<SIZE>);
+            PORT,
+            &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -68,10 +66,11 @@ void test_iterator() {
 void test_iterator_alt() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                      PORT,
-                      &client,
-                      cirrus::struct_serializer_simple<SIZE>,
-                      cirrus::struct_deserializer_simple<SIZE>);
+            PORT,
+            &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
 
@@ -94,7 +93,7 @@ void test_iterator_alt() {
       if (data.id != j) {
         std::cout << "received " << data.id << " but expected " << j
                   << std::endl;
-        throw std::runtime_error("Wrong value");
+        throw std::runtime_error("Wrong value in alternate");
       }
       j++;
     }
