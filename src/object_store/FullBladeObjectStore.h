@@ -27,7 +27,7 @@ namespace ostore {
 template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
-    FullBladeObjectStoreTempl(const std::string& bladeIP,
+        FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
                               BladeClient *client,
                               std::function<std::pair<std::unique_ptr<char[]>,
@@ -40,39 +40,10 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     bool remove(ObjectID) override;
 
     // TODO(Tyler): add override, this may break every other store
-    ObjectStoreGetFuture get_async(const ObjectID& id);
-    ObjectStorePutFuture put_async(const ObjectID& id, const T& obj);
+    ObjectStoreGetFuture get_async(const ObjectID& id) override;
+    ObjectStorePutFuture put_async(const ObjectID& id, const T& obj) override;
 
     void printStats() const noexcept override;
-
-    class ObjectStorePutFuture {
-     public:
-        explicit ObjectStorePutFuture(cirrus::BladeClient::ClientFuture
-                                        client_future);
-        void wait();
-
-        bool try_wait();
-
-        bool get();
-     private:
-        cirrus::BladeClient::ClientFuture client_future;
-    }
-
-    class ObjectStoreGetFuture {
-     public:
-        ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
-                                void *mem);
-        void wait();
-
-        bool try_wait();
-
-        T get();
-     private:
-        cirrus::BladeClient::ClientFuture client_future;
-        void *mem;
-        // TODO(Tyler): Add pointer to parent, or a pointer to deserializer
-        // Add serialized size?
-    }
 
  private:
     /**
@@ -87,6 +58,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       */
     uint64_t serialized_size;
 
+    // TODO(Tyler): Change these to be references or pointers?
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -177,7 +149,7 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     // Read into the section of memory you just allocated
     auto client_future = client->read_async(id, ptr, serialized_size);
 
-    return ObjectStoreGetFuture(client_future, ptr);
+    return ObjectStoreGetFuture<T>(client_future, ptr);
 }
 
 /**
@@ -231,52 +203,6 @@ template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     return client->remove(id);
 }
-
-// Constructor
-template<class T>
-FullBladeObjectStoreTempl<T>::ObjectStorePutFuture::ObjectStorePutFuture(
-    cirrus::BladeClient::ClientFuture client_future) :
-        client_future(client_future) {}
-
-template<class T>
-bool FullBladeObjectStoreTempl<T>::ObjectStorePutFuture::wait() {
-    return client_future.wait();
-}
-
-template<class T>
-bool FullBladeObjectStoreTempl<T>::ObjectStorePutFuture::try_wait() {
-    return client_future.try_wait();
-}
-
-template<class T>
-bool FullBladeObjectStoreTempl<T>::ObjectStorePutFuture::get() {
-    return client_future.get();
-}
-
-// Constructor
-template<class T>
-FullBladeObjectStoreTempl<T>::ObjectStoreGetFuture::ObjectStorePutFuture(
-    cirrus::BladeClient::ClientFuture client_future) :
-        client_future(client_future) {}
-
-template<class T>
-bool FullBladeObjectStoreTempl<T>::ObjectStoreGetFuture::wait() {
-    return client_future.wait();
-}
-
-template<class T>
-bool FullBladeObjectStoreTempl<T>::ObjectStoreGetFuture::try_wait() {
-    return client_future.try_wait();
-}
-
-template<class T>
-T FullBladeObjectStoreTempl<T>::ObjectStoreGetFuture::get() {
-    client_future.get();
-    // TODO(Tyler): Fix this
-    return deserializer(mem, serialized_size);
-}
-
-
 
 template<class T>
 void FullBladeObjectStoreTempl<T>::printStats() const noexcept {

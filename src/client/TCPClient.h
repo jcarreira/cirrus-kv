@@ -34,13 +34,6 @@ class TCPClient : public BladeClient {
     bool remove(ObjectID id) override;
 
  private:
-    ssize_t send_all(int, const void*, size_t, int);
-    cirrus::Future enqueue_message(
-                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-                        void *ptr = nullptr);
-    void process_received();
-    void process_send();
-
     /**
       * A struct shared between futures and the receiver_thread. Used to
       * notify client of operation completeion, as well as to complete
@@ -62,6 +55,13 @@ class TCPClient : public BladeClient {
             error_code = std::make_shared<cirrus::ErrorCodes>();
         }
     };
+
+    ssize_t send_all(int, const void*, size_t, int);
+    ClientFuture enqueue_message(
+                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        void *ptr = nullptr);
+    void process_received();
+    void process_send();
 
     int sock = 0;  /**< fd of the socket used to communicate w/ remote store */
     TxnID curr_txn_id = 0;  /**< next txn_id to assign */

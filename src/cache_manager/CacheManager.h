@@ -2,15 +2,17 @@
 #define SRC_CACHE_MANAGER_CACHEMANAGER_H_
 
 #include <map>
-#include "object_store/FullBladeObjectStore.h"
+
+#include "object_store/ObjectStore.h"
 #include "common/Exception.h"
+
 
 namespace cirrus {
 using ObjectID = uint64_t;
 
-  /**
-    * A class that manages the cache and interfaces with the store.
-    */
+/**
+ * A class that manages the cache and interfaces with the store.
+ */
 template<class T>
 class CacheManager {
  public:
@@ -22,30 +24,35 @@ class CacheManager {
 
  private:
     /**
-      * A pointer to a store that contains the same type of object as the
-      * cache. This is the store that the cache manager interfaces with in order
-      * to access the remote store.
-      */
-    cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
-
-    /**
-      * Struct that is stored within the cache. Contains a copy of an object
-      * of the type that the cache is storing.
-      */
+     * Struct that is stored within the cache. Contains a copy of an object
+     * of the type that the cache is storing.
+     */
     struct cache_entry {
-      T obj; /**< Object that will be retrieved by a get() operation. */
+        /** Boolean indicating whether this item was prefetched. */
+        bool prefetched = false;
+        /** Object that will be retrieved by a get() operation. */
+        T obj;
+        /** Future indicating status of operation */
+        cirrus::ostore::ObjectStore<T>::ObjectStoreGetFuture future;
     };
 
     /**
-      * The map that serves as the actual cache. Maps ObjectIDs to cache
-      * entries.
-      */
+     * A pointer to a store that contains the same type of object as the
+     * cache. This is the store that the cache manager interfaces with in order
+     * to access the remote store.
+     */
+    cirrus::ostore::ObjectStore<T> *store;
+
+    /**
+     * The map that serves as the actual cache. Maps ObjectIDs to cache
+     * entries.
+     */
     std::map<ObjectID, struct cache_entry> cache;
 
     /**
-      * The maximum capacity of the cache. Will never be exceeded. Set
-      * at time of instantiation.
-      */
+     * The maximum capacity of the cache. Will never be exceeded. Set
+     * at time of instantiation.
+     */
     uint64_t max_size;
 };
 
@@ -83,13 +90,20 @@ T CacheManager<T>::get(ObjectID oid) {
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
-    if (cache.find(oid) != cache.end()) {
-        struct cache_entry& entry = cache.find(oid)->second;
+    auto cache_iterator = cache.find(oid);
+    if (cache_iterator != cache.end()) {
+        struct cache_entry& entry = cache_iterator->second;
+        if (entry.prefetched) {
+            // TODO(Tyler): Should we return the result of the get directly
+            // and avoid a potential extra copy? Tradeoff is copy now vs
+            // copy in the future in case of repeated access.
+            entry.obj = entry.future.get();
+        }
         return entry.obj;
 
     } else {
         // set up entry, pull synchronously
-        // Do we save to the cache in this case?
+        // TODO(Tyler): Do we save to the cache in this case?
         if (cache.size() == max_size) {
           throw cirrus::CacheCapacityException("Get operation would put cache "
                                              "over capacity.");
@@ -124,11 +138,11 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
     if (cache.find(oid) == cache.end()) {
-      struct cache_entry& entry = cache[oid];
-      entry.obj = store->get(oid);
+        struct cache_entry& entry = cache[oid];
+        entry.prefetched = true;
+        entry.future = store->get_async(oid);
     }
 }
-
 
 }  // namespace cirrus
 
