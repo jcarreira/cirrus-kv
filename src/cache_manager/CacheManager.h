@@ -88,10 +88,10 @@ CacheManager<T>::CacheManager(
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
     // check if entry exists for the oid in cache
-    // if entry exists, return if it is there, otherwise wait
-    // return pointer
     auto cache_iterator = cache.find(oid);
     if (cache_iterator != cache.end()) {
+        // entry exists
+        // Call future's get method if necessary
         struct cache_entry& entry = cache_iterator->second;
         if (entry.prefetched) {
             // TODO(Tyler): Should we return the result of the get directly
@@ -102,6 +102,7 @@ T CacheManager<T>::get(ObjectID oid) {
         return entry.obj;
 
     } else {
+        // entry does not exist.
         // set up entry, pull synchronously
         // TODO(Tyler): Do we save to the cache in this case?
         if (cache.size() == max_size) {
@@ -124,6 +125,8 @@ T CacheManager<T>::get(ObjectID oid) {
 template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     // Push the object to the store under the given id
+    // TODO(Tyler): Should we switch this to an async op for greater
+    // performance potentially? what to do with the futures?
     store->put(oid, obj);
 }
 
@@ -137,6 +140,7 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
+    // Check if it exists locally before prefetching
     if (cache.find(oid) == cache.end()) {
         struct cache_entry& entry = cache[oid];
         entry.prefetched = true;
