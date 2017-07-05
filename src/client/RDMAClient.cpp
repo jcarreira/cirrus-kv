@@ -31,10 +31,10 @@ static const int initial_buffer_size = 50;
   * Connects the client to the remote server.
   */
 
-  void RDMAClient::connect(const std::string& host, const std::string& port) {
-      seed = time(nullptr);
-      connect_rdma_cm(host, port);
-  }
+void RDMAClient::connect(const std::string& host, const std::string& port) {
+    seed = time(nullptr);
+    connect_rdma_cm(host, port);
+}
 
 /**
   * Asynchronously writes an object to remote storage under id.
@@ -47,8 +47,8 @@ static const int initial_buffer_size = 50;
   * operation.
   */
 
-ClientFuture RDMAClient::write_async(ObjectID oid,
-                                       void* data, uint64_t size) {
+BladeClient::ClientFuture RDMAClient::write_async(ObjectID id,
+                                       const void* data, uint64_t size) {
     BladeLocation loc;
 
     if (!objects_.find(id, loc)) {
@@ -72,7 +72,7 @@ ClientFuture RDMAClient::write_async(ObjectID oid,
   * otherwise.
   */
 
-ClientFuture RDMAClient::read_async(ObjectID oid, void* data,
+BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid, void* data,
                                      uint64_t /* size */) {
     BladeLocation loc;
     if (!objects_.find(oid, loc)) {
@@ -174,7 +174,7 @@ bool RDMAClient::readToLocal(BladeLocation loc, void* ptr) {
  * @param ptr a pointer to the memory where the object will be read to.
  * @return a ClientFuture for the operation that is set to be completed.
  */
-ClientFuture RDMAClient::readToLocalAsync(
+BladeClient::ClientFuture RDMAClient::readToLocalAsync(
         BladeLocation loc, void* ptr) {
     auto future = rdma_read_async(loc.allocRec, 0, loc.size, ptr);
     return future;
@@ -211,7 +211,7 @@ bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
  * for this object.
  * @return a ClientFuture containing information about the operation.
  */
-ClientFuture RDMAClient::writeRemoteAsync(
+BladeClient::ClientFuture RDMAClient::writeRemoteAsync(
         const void *data, BladeLocation loc) {
     auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
     return future;
@@ -415,77 +415,6 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
 }
 
 /**
-  * Sends + Receives synchronously.
-  * This function sends a message and then waits for a reply.
-  * @param id a pointer to a struct rdma_cm_id that holds the message to send
-  * @param size the size of the message being sent
-  * @return false if message fails to send, true otherwise. Only returns
-  * once a reply is received.
-  */
-bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
-        uint64_t size) {
-    auto con_ctx = reinterpret_cast<ConnectionContext*>(id->context);
-
-    // post receive. We are going to receive a reply
-    TEST_NZ(post_receive(id_));
-
-    // send our RPC
-
-    Lock* l = new SpinLock();
-    if (!send_message(id, size, l))
-        return false;
-
-    // wait for SEND completion
-    l->wait();
-
-    LOG<INFO>("Sent is done. Waiting for receive");
-
-    // Wait for reply
-    con_ctx->recv_sem->wait();
-
-    return true;
-}
-
-/**
-  * Sends an RDMA message.
-  * This function sends a message using RDMA.
-  * @param id a pointer to a struct rdma_cm_id that holds the message to send
-  * @param size the size of the message being sent
-  * @param lock lock used to create an RDMAOpInfo, then passed to
-  * a struct ibv_send_wr, which is passed to post_send()
-  * @return success of a call to post_send()
-  */
-bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
-        Lock* lock) {
-    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
-
-    struct ibv_send_wr wr, *bad_wr = nullptr;
-    struct ibv_sge sge;
-
-    memset(&wr, 0, sizeof(wr));
-
-    if (lock != nullptr)
-        lock->wait();
-
-    auto op_info  = new RDMAClient::RDMAOpInfo(id, lock);
-    wr.wr_id      = reinterpret_cast<uint64_t>(op_info);
-    wr.opcode     = IBV_WR_SEND;
-    wr.sg_list    = &sge;
-    wr.num_sge    = 1;
-    wr.send_flags = IBV_SEND_SIGNALED;
-    // XXX doesn't work for now
-    // if (size <= MAX_INLINE_DATA)
-    //    wr.send_flags |= IBV_SEND_INLINE;
-
-    sge.addr   = reinterpret_cast<uint64_t>(ctx->send_msg);
-    sge.length = size;
-    sge.lkey   = ctx->send_msg_mr->lkey;
-
-    return post_send(id->qp, &wr, &bad_wr);
-}
-
-
-/**
   * Writes over RDMA synchronously.
   * This function writes synchronously using RDMA. It will not return
   * until the message is sent.
@@ -611,7 +540,7 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     {
         TimerFunction tf("read_rdma_async wait for lock", true);
-        while (!*(opinfo->result_available)) {
+        while (!*(op_info->result_available)) {
             op_info->op_sem->wait();
         }
     }
@@ -889,7 +818,7 @@ bool RDMAClient::rdma_write_sync(const AllocationRecord& alloc_rec,
   * @return a ClientFuture
   * @see AllocationRecord
   */
-ClientFuture RDMAClient::rdma_write_async(
+BladeClient::ClientFuture RDMAClient::rdma_write_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -988,14 +917,17 @@ bool RDMAClient::rdma_read_sync(const AllocationRecord& alloc_rec,
   * @param mem pointer to RDMAMem struct for this read
   * @return a ClientFuture.
   */
-ClientFuture RDMAClient::rdma_read_async(
+BladeClient::ClientFuture RDMAClient::rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
         void *data,
         RDMAMem* mem) {
-    if (length > RECV_MSG_SIZE)
-        return nullptr;
+    if (length > RECV_MSG_SIZE) {
+        throw cirrus::Exception("Incoming message greater than RDMA "
+                "max message size.");
+    }
+        
 
     LOG<INFO>("reading rdma",
         " length: ", length,

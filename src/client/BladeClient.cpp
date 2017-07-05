@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+
 #include "common/Synchronization.h"
 #include "common/Exception.h"
 
@@ -12,7 +13,7 @@ using ObjectID = uint64_t;
 /**
  * Constructor for ClientFuture.
  */
-BladeClient::ClientFuture:ClientFuture(std::shared_ptr<bool> result,
+BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code):
@@ -25,7 +26,6 @@ BladeClient::ClientFuture:ClientFuture(std::shared_ptr<bool> result,
 void BladeClient::ClientFuture::wait() {
     if (!*result_available) {
         sem->wait();
-        result_available = true;
     }
 }
 

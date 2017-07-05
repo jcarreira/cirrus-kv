@@ -4,6 +4,9 @@
 #include <string>
 #include <memory>
 
+#include "common/Synchronization.h"
+#include "common/Exception.h"
+
 namespace cirrus {
 
 using ObjectID = uint64_t;
@@ -14,21 +17,6 @@ using ObjectID = uint64_t;
   */
 class BladeClient {
  public:
-    virtual void connect(const std::string& address,
-                         const std::string& port) = 0;
-
-    virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
-
-    virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
-
-    virtual bool remove(ObjectID id) = 0;
-
-    virtual ClientFuture write_async(ObjectID oid, const void* data,
-        uint64_t size) = 0;
-
-    virtual ClientFuture read_async(ObjectID oid, void* data,
-        uint64_t size) = 0;
-
     class ClientFuture {
      public:
         ClientFuture(std::shared_ptr<bool> result,
@@ -54,6 +42,23 @@ class BladeClient {
         /** Any errors thrown. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
     };
+
+    virtual void connect(const std::string& address,
+                         const std::string& port) = 0;
+
+    virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
+
+    virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
+
+    virtual bool remove(ObjectID id) = 0;
+
+    virtual BladeClient::ClientFuture write_async(ObjectID oid,
+        const void* data,
+        uint64_t size) = 0;
+
+    virtual BladeClient::ClientFuture read_async(ObjectID oid, void* data,
+        uint64_t size) = 0;
+
 };
 
 }  // namespace cirrus
