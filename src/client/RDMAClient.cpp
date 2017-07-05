@@ -389,6 +389,8 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
 
     op_info->apply();
 
+    // TODO(Tyler): Should we delete the op info here?
+    // TODO(Tyler): Remove the checks that the lock exists?
     switch (wc->opcode) {
         case IBV_WC_RECV:
             if (op_info->op_sem)
@@ -412,7 +414,78 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
             exit(-1);
             break;
     }
+    delete op_info;
 }
+
+/**
+  * Sends + Receives synchronously.
+  * This function sends a message and then waits for a reply.
+  * @param id a pointer to a struct rdma_cm_id that holds the message to send
+  * @param size the size of the message being sent
+  * @return false if message fails to send, true otherwise. Only returns
+  * once a reply is received.
+  */
+bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
+        uint64_t size) {
+    auto con_ctx = reinterpret_cast<ConnectionContext*>(id->context);
+
+    // post receive. We are going to receive a reply
+    TEST_NZ(post_receive(id_));
+
+    // send our RPC
+
+    RDMAOpInfo *op_info = send_message(id, size);
+    if (op_info == nullptr) {
+        return false;
+    }
+
+    // wait for SEND completion
+    op_info->op_sem->wait();
+
+    LOG<INFO>("Sent is done. Waiting for receive");
+
+    // Wait for reply
+    con_ctx->recv_sem->wait();
+
+    return true;
+}
+
+/**
+  * Sends an RDMA message.
+  * This function sends a message using RDMA.
+  * @param id a pointer to a struct rdma_cm_id that holds the message to send
+  * @param size the size of the message being sent
+  * @return success of a call to post_send()
+  */
+RDMAOpInfo* RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
+    auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
+
+    struct ibv_send_wr wr, *bad_wr = nullptr;
+    struct ibv_sge sge;
+
+    memset(&wr, 0, sizeof(wr));
+
+    auto op_info  = new RDMAClient::RDMAOpInfo(id);
+    wr.wr_id      = reinterpret_cast<uint64_t>(op_info);
+    wr.opcode     = IBV_WR_SEND;
+    wr.sg_list    = &sge;
+    wr.num_sge    = 1;
+    wr.send_flags = IBV_SEND_SIGNALED;
+    // XXX doesn't work for now
+    // if (size <= MAX_INLINE_DATA)
+    //    wr.send_flags |= IBV_SEND_INLINE;
+
+    sge.addr   = reinterpret_cast<uint64_t>(ctx->send_msg);
+    sge.length = size;
+    sge.lkey   = ctx->send_msg_mr->lkey;
+
+    if (post_send(id->qp, &wr, &bad_wr)) {
+        return op_info;
+    } else {
+        return nullptr;
+    }
+}
+
 
 /**
   * Writes over RDMA synchronously.
@@ -439,8 +512,6 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         TimerFunction tf("waiting semaphore", true);
         op_info->op_sem->wait();
     }
-
-    delete op_info;
 
     return true;
 }
@@ -544,8 +615,6 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             op_info->op_sem->wait();
         }
     }
-
-    delete op_info;
 }
 
 
@@ -927,7 +996,7 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         throw cirrus::Exception("Incoming message greater than RDMA "
                 "max message size.");
     }
-        
+
 
     LOG<INFO>("reading rdma",
         " length: ", length,

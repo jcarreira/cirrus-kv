@@ -108,8 +108,6 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applied fn");
             *result_available = true;
             *result = true;
-            // Signal to any waiters.
-            op_sem->signal();
         }
 
         struct rdma_cm_id* id;
@@ -285,6 +283,10 @@ class RDMAClient : public BladeClient {
     void build_qp_attr(struct ibv_qp_init_attr *qp_attr, ConnectionContext*);
     void build_connection(struct rdma_cm_id *id);
     void build_context(struct ibv_context *verbs, ConnectionContext*);
+
+    // Message (Send/Recv)
+    RDMAOpInfo* send_message(rdma_cm_id*, uint64_t size);
+    bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
