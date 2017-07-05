@@ -19,7 +19,7 @@ struct sample_struct {
     double data[6];
 };
 
-/*
+/**
  * Print vector contents
  */
 template <typename T>

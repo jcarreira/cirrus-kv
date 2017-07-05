@@ -335,6 +335,7 @@ void TCPClient::process_received() {
                 break;
         }
         // Update the semaphore/CV so other know it is ready
+        *(txn->result_available) = true;
         txn->sem->signal();
         LOG<INFO>("client done processing message");
     }
@@ -438,7 +439,8 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    BladeClient::ClientFuture future(txn->result, txn->sem, txn->error_code);
+    BladeClient::ClientFuture future(txn->result, txn->result_available,
+                                     txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();

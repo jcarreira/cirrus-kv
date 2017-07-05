@@ -32,6 +32,7 @@ class BladeClient {
     class ClientFuture {
      public:
         ClientFuture(std::shared_ptr<bool> result,
+               std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code);
 
@@ -43,12 +44,15 @@ class BladeClient {
      private:
         /** Pointer to the result. */
         std::shared_ptr<bool> result;
+
+        /** Boolean monitoring result state. */
+        std::shared_ptr<bool> result_available;
+
         /** Sem for the result. */
         std::shared_ptr<cirrus::PosixSemaphore> sem;
+
         /** Any errors thrown. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
-        /** Boolean monitoring result state. */
-        bool result_available = false;
     };
 };
 

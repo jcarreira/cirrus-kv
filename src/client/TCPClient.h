@@ -42,6 +42,8 @@ class TCPClient : public BladeClient {
     struct txn_info {
         /** result of the transaction */
         std::shared_ptr<bool> result;
+        /** Boolean indicating whether transaction is complete */
+        std::shared_ptr<bool> result_available;
         /** Error code if any were thrown on the server. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
         /** Semaphore for the transaction. */
@@ -51,6 +53,8 @@ class TCPClient : public BladeClient {
 
         txn_info() {
             result = std::make_shared<bool>();
+            result_available = std::make_shared<bool>();
+            *result_available = false;
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
         }
