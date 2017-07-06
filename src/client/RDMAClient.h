@@ -184,6 +184,7 @@ class RDMAClient : public BladeClient {
                     LOG<ERROR>("ENOMEM from ibv_reg_mr");
                 } else {
                     LOG<ERROR>("ibv_reg_mr returned null, errno unrecognized");
+                    LOG<ERROR>(gctx.pd, " ", addr_, " ", " ", size_);
                 }
             }
             if (mr) {

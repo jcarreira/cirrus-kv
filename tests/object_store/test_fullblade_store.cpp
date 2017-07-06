@@ -33,7 +33,7 @@ void test_sync() {
                       &client,
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                        sizeof(cirrus::Dummy<SIZE>)>);
+                      sizeof(cirrus::Dummy<SIZE>)>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -59,7 +59,8 @@ void test_sync(int N) {
                 &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                    sizeof(cirrus::Dummy<SIZE>)>);
+                sizeof(cirrus::Dummy<SIZE>)>);
+
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);
