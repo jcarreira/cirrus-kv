@@ -21,7 +21,7 @@ class BladeClient {
      public:
         ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
-               std::shared_ptr<cirrus::PosixSemaphore> sem,
+               std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code);
 
         void wait();
@@ -37,7 +37,7 @@ class BladeClient {
         std::shared_ptr<bool> result_available;
 
         /** Sem for the result. */
-        std::shared_ptr<cirrus::PosixSemaphore> sem;
+        std::shared_ptr<cirrus::Lock> sem;
 
         /** Any errors thrown. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
@@ -58,7 +58,6 @@ class BladeClient {
 
     virtual BladeClient::ClientFuture read_async(ObjectID oid, void* data,
         uint64_t size) = 0;
-
 };
 
 }  // namespace cirrus

@@ -98,6 +98,18 @@ class RDMAClient : public BladeClient {
                 error_code = std::make_shared<cirrus::ErrorCodes>();
             }
 
+        RDMAOpInfo(struct rdma_cm_id* id_,
+                   std::shared_ptr<cirrus::Lock> op_sem,
+                std::function<void(void)> fn = []() -> void {}) :
+            id(id_), op_sem(op_sem), apply_fn(fn) {
+                if (fn == nullptr)
+                    throw std::runtime_error("BUG");
+                result = std::make_shared<bool>();
+                result_available = std::make_shared<bool>();
+                *result_available = false;
+                error_code = std::make_shared<cirrus::ErrorCodes>();
+            }
+
         /**
          * Apply the given function on completion. Mark the operation as
          * completed.
@@ -112,7 +124,7 @@ class RDMAClient : public BladeClient {
 
         struct rdma_cm_id* id;
         /** Pointer to the semaphore for the operation. */
-        std::shared_ptr<cirrus::PosixSemaphore> op_sem;
+        std::shared_ptr<cirrus::Lock> op_sem;
         /** Pointer to the boolean success of the operation. */
         std::shared_ptr<bool> result;
         /** Pointer to operation completion. */
@@ -133,7 +145,7 @@ class RDMAClient : public BladeClient {
             recv_msg_mr(0), qp(nullptr),
             peer_addr(0), peer_rkey(0),
             setup_done(false) {
-            recv_sem = new SpinLock();
+            recv_sem = std::make_shared<cirrus::SpinLock>();
             recv_sem->wait();  // lock
             memset(&gen_ctx_, 0, sizeof(gen_ctx_));
         }
@@ -159,9 +171,8 @@ class RDMAClient : public BladeClient {
         uint64_t peer_addr;
         uint32_t peer_rkey;
 
-        // these are used for SEND and RECV
-        Lock* send_sem;
-        Lock* recv_sem;
+        // This is used for recv
+        std::shared_ptr<cirrus::Lock> recv_sem;
 
         GeneralContext gen_ctx_;
         bool setup_done = false;

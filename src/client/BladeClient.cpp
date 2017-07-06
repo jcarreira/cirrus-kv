@@ -15,7 +15,7 @@ using ObjectID = uint64_t;
  */
 BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
-               std::shared_ptr<cirrus::PosixSemaphore> sem,
+               std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code):
     result(result), result_available(result_available),
     sem(sem), error_code(error_code) {}
