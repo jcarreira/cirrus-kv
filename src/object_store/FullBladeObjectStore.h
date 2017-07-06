@@ -151,7 +151,8 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     // Read into the section of memory you just allocated
     auto client_future = client->read_async(id, ptr, serialized_size);
 
-    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr);
+    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr,
+            serialized_size, deserializer);
 }
 
 /**
