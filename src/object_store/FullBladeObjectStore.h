@@ -194,7 +194,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
                                            serialized_size);
 
     // Constructor takes a pointer to a client future
-    return ObjectStore<T>::ObjectStorePutFuture(client_future);
+    return typename ObjectStore<T>::ObjectStorePutFuture(client_future);
 }
 
 /**

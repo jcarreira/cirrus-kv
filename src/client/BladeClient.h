@@ -23,7 +23,7 @@ class BladeClient {
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code);
-
+        ClientFuture() {}
         void wait();
 
         bool try_wait();
