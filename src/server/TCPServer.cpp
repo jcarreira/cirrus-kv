@@ -270,6 +270,7 @@ bool TCPServer::process(int sock) {
                 ObjectID oid = msg->message_as_Write()->oid();
                 // Throw error if put would exceed size of the store
                 if (store.size() >= max_objects) {
+                    LOG<ERROR>("Store is at capacity. Remove items.");
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {

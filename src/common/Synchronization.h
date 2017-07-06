@@ -46,9 +46,11 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
+        std::cout << sem_name << std::endl;
         m_sema = sem_open(sem_name.c_str(), O_CREAT, S_IRWXU, initialCount);
         if (m_sema == SEM_FAILED) {
             std::cout << "errno is: " << errno << std::endl;
+            std::cout << "Name is: " << sem_name << std::endl;
             throw std::runtime_error("Creation of new semaphore failed");
         }
     }
@@ -109,19 +111,31 @@ class PosixSemaphore : public Lock {
      * Method to generate random strings for named semaphores.
      */
     std::string random_string() {
-        auto randchar = []() -> char {
-            const char charset[] =
+        const char charset[] =
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz";
-            const size_t max_index = (sizeof(charset) - 1);
-            return charset[ rand() % max_index ];
-        };
-        std::string str(rand_string_length, 0);
+        
+        const size_t max_index = (sizeof(charset) - 1);
+        // Seed RNG
+        const auto time_seed = static_cast<size_t>(std::time(0));
+        const auto clock_seed = static_cast<size_t>(std::clock());
+        const size_t pid_seed =
+            std::hash<std::thread::id>()(std::this_thread::get_id());
+        
+        std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
+        std::mt19937 gen;
+        gen.seed(seed_value);
+        
+        std::string ret_string;
         // First character of name must be a slash
-        str.front() = '/';
-        std::generate_n(str.begin() + 1, rand_string_length, randchar);
-        return str;
+        ret_string.push_back('/');
+
+        for (int i = 1; i < rand_string_length; i++) {
+            char next_char = charset[gen() % max_index];
+            ret_string.push_back(next_char);
+        }
+        return ret_string;
     }
 };
 

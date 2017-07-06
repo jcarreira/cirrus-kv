@@ -115,8 +115,9 @@ void test_nonexistent_get() {
 auto main() -> int {
     std::cout << "Starting test." << std::endl;
     test_sync(10);
+    std::cout << "Starting test sync no args." << std::endl;
     test_sync();
-
+    std::cout << "Testing nonexistent get." << std::endl;
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"
