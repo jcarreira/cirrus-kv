@@ -457,7 +457,8 @@ bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
   * @param size the size of the message being sent
   * @return success of a call to post_send()
   */
-RDMAOpInfo* RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size) {
+RDMAClient::RDMAOpInfo* RDMAClient::send_message(struct rdma_cm_id *id,
+        uint64_t size) {
     auto ctx = reinterpret_cast<ConnectionContext*>(id->context);
 
     struct ibv_send_wr wr, *bad_wr = nullptr;

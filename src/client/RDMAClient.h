@@ -156,7 +156,6 @@ class RDMAClient : public BladeClient {
                 ibv_dereg_mr(recv_msg_mr);
             }
 
-            delete recv_sem;
             // XXX release send_msg and recv_msg
         }
 

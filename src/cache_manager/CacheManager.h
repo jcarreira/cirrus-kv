@@ -33,7 +33,7 @@ class CacheManager {
         /** Object that will be retrieved by a get() operation. */
         T obj;
         /** Future indicating status of operation */
-        cirrus::ostore::ObjectStore<T>::ObjectStoreGetFuture future;
+        typename cirrus::ObjectStore<T>::ObjectStoreGetFuture future;
     };
 
     /**
@@ -41,7 +41,7 @@ class CacheManager {
      * cache. This is the store that the cache manager interfaces with in order
      * to access the remote store.
      */
-    cirrus::ostore::ObjectStore<T> *store;
+    cirrus::ObjectStore<T> *store;
 
     /**
      * The map that serves as the actual cache. Maps ObjectIDs to cache

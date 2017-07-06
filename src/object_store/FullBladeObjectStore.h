@@ -40,8 +40,10 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     bool remove(ObjectID) override;
 
     // TODO(Tyler): add override, this may break every other store
-    ObjectStoreGetFuture get_async(const ObjectID& id) override;
-    ObjectStorePutFuture put_async(const ObjectID& id, const T& obj) override;
+    typename ObjectStore<T>::ObjectStoreGetFuture get_async(
+            const ObjectID& id) override;
+    typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
+            const T& obj) override;
 
     void printStats() const noexcept override;
 
@@ -133,7 +135,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
   * @return Returns an ObjectStoreGetFuture;
   */
 template<class T>
-ObjectStoreGetFuture<T>
+typename ObjectStore<T>::ObjectStoreGetFuture
 FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     /* This is safe as we will only reach here if a previous put has
        occured, thus setting the value of serialized_size. */
@@ -149,7 +151,7 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     // Read into the section of memory you just allocated
     auto client_future = client->read_async(id, ptr, serialized_size);
 
-    return ObjectStoreGetFuture<T>(client_future, ptr);
+    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr);
 }
 
 /**
@@ -179,7 +181,7 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
   * @return Returns an ObjectStorePutFuture.
   */
 template<class T>
-ObjectStoreWriteFuture<T>
+typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
@@ -191,7 +193,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
                                            serialized_size);
 
     // Constructor takes a pointer to a client future
-    return ObjectStorePutFuture<T>(client_future);
+    return ObjectStore<T>::ObjectStorePutFuture(client_future);
 }
 
 /**
