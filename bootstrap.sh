@@ -18,7 +18,6 @@ make -j 10
 if [ "$(uname)" == "Darwin" ]; then
     # Rename the library on Mac.
     # Mac uses .dylib extension
-    echo "MacOS"
     mv cityhash-1.1.1/src/.libs/libcityhash.dylib cityhash-1.1.1/src/.libs/ignorelibcityhash.dylib
     mv cityhash-1.1.1/src/.libs/libcityhash.0.dylib cityhash-1.1.1/src/.libs/ignorelibcityhash.0.dylib
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then

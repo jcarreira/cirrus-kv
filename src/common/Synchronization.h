@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <atomic>
+#include <iostream>
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -45,42 +46,16 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
-        m_sema = sem_open(sem_name, O_CREAT, S_IRWXU, initialCount);
+        m_sema = sem_open(sem_name.c_str(), O_CREAT, S_IRWXU, initialCount);
         if (m_sema == SEM_FAILED) {
-            switch (errno) {
-                case EACCES:
-                    printf("EACCESS");
-                    break;
-                case EEXIST:
-                    printf("EEXIST");
-                    break;
-                case EINVAL:
-                    printf("EINVAL");
-                    break;
-                case EMFILE:
-                    printf("EMFILE");
-                    break;
-                case ENAMETOOLONG:
-                    printf("ENAMETOOLONG");
-                    break;
-                case ENFILE:
-                    printf("ENFILE");
-                    break;
-                case ENOENT:
-                    printf("ENOENT");
-                    break;
-                case ENOMEM:
-                    printf("ENOMEM");
-                    break;
-            }
+            std::cout << "errno is: " << errno << std::endl;
             throw std::runtime_error("Creation of new semaphore failed");
         }
     }
 
     virtual ~PosixSemaphore() {
         sem_close(m_sema);
-        sem_unlink(sem_name);
-        delete[] sem_name;
+        sem_unlink(sem_name.c_str());
     }
 
     /**
@@ -123,41 +98,29 @@ class PosixSemaphore : public Lock {
     }
 
  private:
-    /** underlying semaphore that operations are performed on. */
+    /** Underlying semaphore that operations are performed on. */
     sem_t *m_sema;
-    char  *sem_name;
+    /** Name of the underlying semaphore. */
+    std::string sem_name;
     /** Length of randomly names for semaphores. */
-    int rand_string_length = 16;
+    const int rand_string_length = 16;
 
     /**
      * Method to generate random strings for named semaphores.
      */
-
-    // Code from goo.gl/2NS4ri
-    char* random_string() {
-        const char charset[] =
+    std::string random_string() {
+        auto randchar = []() -> char {
+            const char charset[] =
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz";
-        const size_t max_index = (sizeof(charset) - 1);
-
-        char* str = new char[rand_string_length + 1];
-        // First character of semaphore name must be a slash
-        str[0] = '/';
-        str[rand_string_length] = '\0';
-        // Seed RNG
-        const auto time_seed = static_cast<size_t>(std::time(0));
-        const auto clock_seed = static_cast<size_t>(std::clock());
-        const size_t pid_seed =
-                  std::hash<std::thread::id>()(std::this_thread::get_id());
-
-        std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
-        std::mt19937 gen;
-        gen.seed(seed_value);
-
-        for (int i = 1; i < rand_string_length; i++) {
-            str[i] = charset[gen() % max_index];
-        }
+            const size_t max_index = (sizeof(charset) - 1);
+            return charset[ rand() % max_index ];
+        };
+        std::string str(rand_string_length, 0);
+        // First character of name must be a slash
+        str.front() = '/';
+        std::generate_n(str.begin() + 1, rand_string_length, randchar);
         return str;
     }
 };
