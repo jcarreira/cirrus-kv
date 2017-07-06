@@ -37,12 +37,7 @@ void test_sync() {
 
     struct cirrus::Dummy<SIZE> d(42);
 
-    try {
-        store.put(1, d);
-    } catch(...) {
-        std::cerr << "Error inserting" << std::endl;
-    }
-
+    store.put(1, d);
     struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
     // should be 42

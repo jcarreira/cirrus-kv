@@ -3,7 +3,7 @@
 #include "common/Synchronization.h"
 #include "common/Future.h"
 #include "common/Exception.h"
-
+#include "utils/Log.h"
 namespace cirrus {
 
 using ObjectID = uint64_t;
@@ -24,6 +24,7 @@ Future::Future(std::shared_ptr<bool> result,
 void Future::wait() {
     // Wait on the semaphore as long as the result is not available
     while (!*result_available) {
+        LOG<INFO>("Result not available, waiting.");
         sem->wait();
     }
 }
@@ -48,8 +49,10 @@ bool Future::try_wait() {
   */
 bool Future::get() {
     // Wait until result is available
+    LOG<INFO>("Waiting for result.");
     wait();
-
+    LOG<INFO>("Result is available.");
+    LOG<INFO>("Error code is: ", *error_code);
     // Check the error code enum. Throw exception if one happened on server.
     switch (*error_code) {
       case cirrus::ErrorCodes::kOk: {

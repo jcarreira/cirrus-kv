@@ -288,7 +288,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -322,7 +322,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -345,7 +345,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -366,7 +366,7 @@ bool TCPServer::process(int sock) {
     }
 
     LOG<INFO>("Server sent size.");
-
+    LOG<INFO>("On server error code is: ", static_cast<int64_t>(error_code));
     // Send main message
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {

@@ -24,7 +24,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AX_CXX_COMPILE_STDCXX_14
 
-CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
+CXXFLAGS="-ggdb -fPIC -std=c++1z -Werror"
 
 # Checks for libraries.
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])

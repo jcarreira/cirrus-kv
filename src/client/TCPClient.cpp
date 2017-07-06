@@ -10,6 +10,7 @@
 #include <thread>
 #include <algorithm>
 #include <memory>
+#include <iostream>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
@@ -174,7 +175,9 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * otherwise.
   */
 bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
+    LOG<INFO>("Call to read_sync.");
     cirrus::Future future = read_async(oid, data, size);
+    LOG<INFO>("Returned from read_async.");
     return future.get();
 }
 
@@ -300,9 +303,9 @@ void TCPClient::process_received() {
 
         // release lock
         map_lock.signal();
-
         // Save the error code so that the future can read it
         *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
+        LOG<INFO>("Error code read is: ", *(txn->error_code));
         // Process the ack
         switch (ack->message_type()) {
             case message::TCPBladeMessage::Message_WriteAck:

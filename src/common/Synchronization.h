@@ -46,7 +46,6 @@ class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
         sem_name = random_string();
-        std::cout << sem_name << std::endl;
         m_sema = sem_open(sem_name.c_str(), O_CREAT, S_IRWXU, initialCount);
         if (m_sema == SEM_FAILED) {
             std::cout << "errno is: " << errno << std::endl;
