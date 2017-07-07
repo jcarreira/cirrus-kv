@@ -10,7 +10,7 @@
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
 #include "client/TCPClient.h"
-
+#include "cache_manager/LRAddedEvictionPolicy.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -31,7 +31,8 @@ void test_iterator() {
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
-    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
@@ -66,9 +67,10 @@ void test_iterator_alt() {
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                sizeof(cirrus::Dummy<SIZE>)>);
+            sizeof(cirrus::Dummy<SIZE>)>);
 
-    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
 
     // Put items in the store
