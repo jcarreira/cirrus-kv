@@ -119,7 +119,8 @@ void test_remove() {
     store.remove(0);
 
     // Should fail
-    store.get(0);
+    int i = store.get(0);
+    std::cout << "Received following value incorrectly: " << i << std::endl;
 }
 
 auto main() -> int {
