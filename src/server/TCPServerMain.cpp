@@ -4,6 +4,7 @@
 
 const int port = 12345;
 const int queue_len = 10;
+static const uint64_t GB = (1024*1024*1024);
 
 /* Start a server that runs and prints messages received. */
 auto main(int argc, char *argv[]) -> int {
@@ -18,7 +19,7 @@ auto main(int argc, char *argv[]) -> int {
     } else {
         std::cout << "Pass desired poolsize in bytes" << std::endl;
     }
-    cirrus::TCPServer server(port, queue_len, pool_size);
+    cirrus::TCPServer server(port, pool_size, queue_len);
     server.init();
     server.loop();
     return 0;

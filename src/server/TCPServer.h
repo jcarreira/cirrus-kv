@@ -16,8 +16,7 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, int queue_len = 100,
-        uint64_t pool_size_);
+    explicit TCPServer(int port, uint64_t pool_size_, int queue_len = 100);
     ~TCPServer() = default;
 
     virtual void init();

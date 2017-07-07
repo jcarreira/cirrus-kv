@@ -36,12 +36,8 @@ void test_iterator() {
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve
@@ -79,12 +75,8 @@ void test_iterator_alt() {
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve

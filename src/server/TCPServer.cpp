@@ -25,7 +25,7 @@ static const int initial_buffer_size = 50;
   * server.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, int queue_len, uint64_t pool_size_) {
+TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
     port_ = port;
     queue_len_ = queue_len;
     pool_size = pool_size_;
@@ -236,7 +236,8 @@ bool TCPServer::process(int sock) {
 
                 // Throw error if put would exceed size of the store
                 auto data_fb = msg->message_as_Write()->data();
-                if (curr_size + data_fb.size() >= max_objects) {
+                if (curr_size + data_fb->size() > pool_size) {
+                    LOG<ERROR>("Put would go over capacity on server.");
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {
@@ -244,7 +245,7 @@ bool TCPServer::process(int sock) {
                     //  storing the serialized object
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id
-                    curr_size += data_fb.size();
+                    curr_size += data_fb->size();
                     store[oid] = data;
                 }
 
@@ -303,7 +304,7 @@ bool TCPServer::process(int sock) {
                 auto entry_itr = store.find(oid);
                 if (entry_itr != store.end()) {
                     store.erase(entry_itr);
-                    curr_size -= entry_itr->second->size();
+                    curr_size -= entry_itr->second.size();
                     success = true;
                 }
                 // Create and send ack

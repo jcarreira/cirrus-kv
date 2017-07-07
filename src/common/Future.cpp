@@ -64,7 +64,7 @@ bool Future::get() {
         break;
       }
       case cirrus::ErrorCodes::kNoSuchIDException: {
-        throw cirrus::NoSuchIDException("Call to put was made for id that "
+        throw cirrus::NoSuchIDException("Call to get was made for id that "
                                         "did not exist on server.");
         break;
       }
