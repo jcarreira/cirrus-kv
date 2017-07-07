@@ -53,9 +53,10 @@ void test_exhaustion_remove() {
     struct cirrus::Dummy<SIZE> d(42);
 
     std::cout << "Putting one million objects" << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
+    uint64_t i;
+    for (i = 0; i < MILLION; ++i) {
         try {
-            store.put(i, d);;
+            store.put(i, d);
         } catch (const cirrus::ServerMemoryErrorException& e) {
             break;
         }
@@ -64,7 +65,7 @@ void test_exhaustion_remove() {
     store.remove(0);
 
     // Attempt to use the newly freed space
-    store.put(i, d)
+    store.put(i, d);
 }
 
 auto main() -> int {
