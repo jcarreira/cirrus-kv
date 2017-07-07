@@ -39,7 +39,6 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     bool put(const ObjectID& id, const T& obj) override;
     bool remove(ObjectID) override;
 
-    // TODO(Tyler): add override, this may break every other store
     typename ObjectStore<T>::ObjectStoreGetFuture get_async(
             const ObjectID& id) override;
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
@@ -146,10 +145,11 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
 
     /* This allocation provides a buffer to read the serialized object
        into. */
-    void* ptr = ::operator new (serialized_size);
-
+    std::shared_ptr<std::vector<char>> ptr =
+        std::make_shared<std::vector<char>>(std::vector<char>(serialized_size));
+    
     // Read into the section of memory you just allocated
-    auto client_future = client->read_async(id, ptr, serialized_size);
+    auto client_future = client->read_async(id, ptr->data(), serialized_size);
 
     return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr,
             serialized_size, deserializer);

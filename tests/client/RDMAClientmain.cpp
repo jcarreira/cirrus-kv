@@ -127,7 +127,7 @@ void test_performance() {
  */
 void test_async() {
     cirrus::RDMAClient client;
-    client.connect(ip, port);
+    client.connect(IP, PORT);
 
     int message = 42;
     auto future = client.write_async(1, &message, sizeof(int));

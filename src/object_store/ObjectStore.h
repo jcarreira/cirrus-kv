@@ -2,6 +2,7 @@
 #define SRC_OBJECT_STORE_OBJECTSTORE_H_
 
 #include <cstdint>
+#include <vector>
 
 #include "client/BladeClient.h"
 
@@ -39,11 +40,10 @@ class ObjectStore {
     class ObjectStoreGetFuture {
      public:
         ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
-                            void *mem,
+                            std::shared_ptr<std::vector<char>> mem,
                             uint64_t serialized_size,
                             std::function<T(void*, unsigned int)> deserializer);
         ObjectStoreGetFuture() {}
-        ~ObjectStoreGetFuture();
         void wait();
 
         bool try_wait();
@@ -61,7 +61,7 @@ class ObjectStore {
          * A pointer to the memory that the BladeClient will write the
          * serialized object into.
          */
-        void *mem;
+        std::shared_ptr<std::vector<char>> mem;
 
         /**
          * The size of serialized objects. This is obtained from the return
@@ -150,28 +150,19 @@ bool ObjectStore<T>::ObjectStorePutFuture::get() {
  * Constructor for an ObjectStoreGetFuture.
  * @param client_future the client_future that will be used for all
  * calls to wait, etc.
- * @param mem a pointer to the memory that the serialized object will be read
- * into by the BladeClient.
+ * @param mem a shared pointer to the memory that the serialized object will
+ * be read into by the BladeClient.
  * @param serialized_size the size of a serialized object.
  * @param deserializer a deserializer.
  */
 template<class T>
 ObjectStore<T>::ObjectStoreGetFuture::ObjectStoreGetFuture(
-    cirrus::BladeClient::ClientFuture client_future, void *mem,
+    cirrus::BladeClient::ClientFuture client_future,
+    std::shared_ptr<std::vector<char>> mem,
     uint64_t serialized_size,
     std::function<T(void*, unsigned int)> deserializer) :
         client_future(client_future), mem(mem),
         serialized_size(serialized_size), deserializer(deserializer) {}
-
-/**
- * Destructor for an ObjectStoreGetFuture.
- */
-template<class T>
-ObjectStore<T>::ObjectStoreGetFuture::~ObjectStoreGetFuture() {
-    // Free the memory where the serialized object is being stored.
-    // It will no longer be needed;
-    ::operator delete (mem);
-}
 
 /**
  * Waits until the result of the Get operation is available.
@@ -203,7 +194,7 @@ T ObjectStore<T>::ObjectStoreGetFuture::get() {
     // Ensure that the result is available, and throw error if needed
     client_future.get();
     // Deserialize and return the memory.
-    return deserializer(mem, serialized_size);
+    return deserializer(mem->data(), serialized_size);
 }
 
 }  // namespace cirrus

@@ -245,7 +245,7 @@ bool TCPServer::process(int sock) {
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
-                                           success, oid);
+                                           oid, success);
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
