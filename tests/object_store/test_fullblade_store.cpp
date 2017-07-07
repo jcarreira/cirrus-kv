@@ -33,7 +33,7 @@ void test_sync() {
                       &client,
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                        sizeof(cirrus::Dummy<SIZE>)>);
+                      sizeof(cirrus::Dummy<SIZE>)>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -64,7 +64,8 @@ void test_sync(int N) {
                 &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                    sizeof(cirrus::Dummy<SIZE>)>);
+                sizeof(cirrus::Dummy<SIZE>)>);
+
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);
@@ -112,10 +113,67 @@ void test_nonexistent_get() {
     store.get(10);
 }
 
+/**
+ * Tests a simple asynchronous put and get.
+ */
+void test_async() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    auto returned_future = store.put_async(0, 42);
+    if (!returned_future.get()) {
+        throw std::runtime_error("Error occured during async put.");
+    }
+
+    auto get_future = store.get_async(0);
+    if (get_future.get() != 42) {
+        std::cout << "Expected 42 but got: " << get_future.get() << std::endl;
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+void test_async_N(int N) { 
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    std::vector<cirrus::ObjectStore<int>::ObjectStorePutFuture> put_futures;
+    std::vector<cirrus::ObjectStore<int>::ObjectStoreGetFuture> get_futures;
+    
+    int i;
+    for (i = 0; i < N; i++) {
+        put_futures.push_back(store.put_async(i, i));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put."); 
+        }
+    }
+
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(store.get_async(i));
+    } 
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        int val = get_futures[i].get();
+        if (val != i) {
+            std::cout << "Expected " << i << " but got " << val << std::endl;
+        }
+    }
+}
+
 auto main() -> int {
     test_sync(10);
     test_sync();
-
+    test_async();
+    test_async_N(10);
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"

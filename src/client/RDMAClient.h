@@ -156,7 +156,6 @@ class RDMAClient : public BladeClient {
                 ibv_dereg_mr(recv_msg_mr);
             }
 
-            delete recv_sem;
             // XXX release send_msg and recv_msg
         }
 
@@ -215,6 +214,7 @@ class RDMAClient : public BladeClient {
                     LOG<ERROR>("ENOMEM from ibv_reg_mr");
                 } else {
                     LOG<ERROR>("ibv_reg_mr returned null, errno unrecognized");
+                    LOG<ERROR>(gctx.pd, " ", addr_, " ", " ", size_);
                 }
             }
             if (mr) {

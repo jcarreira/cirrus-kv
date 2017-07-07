@@ -10,7 +10,7 @@
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
 #include "client/TCPClient.h"
-
+#include "cache_manager/LRAddedEvictionPolicy.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -31,16 +31,13 @@ void test_iterator() {
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
-    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve
@@ -70,19 +67,16 @@ void test_iterator_alt() {
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                sizeof(cirrus::Dummy<SIZE>)>);
+            sizeof(cirrus::Dummy<SIZE>)>);
 
-    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, 10);
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve
@@ -100,7 +94,10 @@ void test_iterator_alt() {
 }
 
 auto main() -> int {
+    std::cout << "Test Started." << std::endl;
     test_iterator();
+    std::cout << "Starting iterator alt test." << std::endl;
     test_iterator_alt();
+    std::cout << "Test successful." << std::endl;
     return 0;
 }

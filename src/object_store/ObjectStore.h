@@ -19,6 +19,7 @@ class ObjectStore {
      public:
         explicit ObjectStorePutFuture(cirrus::BladeClient::ClientFuture
                                           client_future);
+        ObjectStorePutFuture() {}
         void wait();
 
         bool try_wait();
@@ -30,7 +31,7 @@ class ObjectStore {
          * all calls to wait and get.
          */
         cirrus::BladeClient::ClientFuture client_future;
-    }
+    };
 
     /**
      * A future used for asynchronous get operations.
@@ -41,7 +42,8 @@ class ObjectStore {
                             void *mem,
                             uint64_t serialized_size,
                             std::function<T(void*, unsigned int)> deserializer);
-        ~ObjectStoreGetFuture()
+        ObjectStoreGetFuture() {}
+        ~ObjectStoreGetFuture();
         void wait();
 
         bool try_wait();
@@ -74,7 +76,7 @@ class ObjectStore {
           * returning an object constructed from the information in the buffer.
           */
         std::function<T(void*, unsigned int)> deserializer;
-    }
+    };
 
     ObjectStore() {}
 
@@ -91,20 +93,17 @@ class ObjectStore {
 };
 
 template<class T>
-ObjectStore<T>::ObjectStoreGetFuture<T> ObjectStore<T>::get_async(
+typename ObjectStore<T>::ObjectStoreGetFuture ObjectStore<T>::get_async(
     const ObjectID& id) {
     // TODO(Tyler): Return a blank instance somehow?
-    return ObjectStoreGetFuture(client_future,
-                        nullptr,
-                        0,
-                        nullptr);
+    return ObjectStoreGetFuture();
 }
 
 template<class T>
-ObjectStore<T>::ObjectStorePutFuture<T> ObjectStore<T>::put_async(
+typename ObjectStore<T>::ObjectStorePutFuture ObjectStore<T>::put_async(
     const ObjectID& id, const T& obj) {
     // TODO(Tyler): Return a blank instance somehow?
-    return ObjectStorePutFuture(client_future);
+    return ObjectStorePutFuture();
 }
 
 /**
@@ -122,7 +121,7 @@ ObjectStore<T>::ObjectStorePutFuture::ObjectStorePutFuture(
  * @return A boolean indicating whether the result is available.
  */
 template<class T>
-bool ObjectStore<T>::ObjectStorePutFuture::wait() {
+void ObjectStore<T>::ObjectStorePutFuture::wait() {
     return client_future.wait();
 }
 
@@ -179,7 +178,7 @@ ObjectStore<T>::ObjectStoreGetFuture::~ObjectStoreGetFuture() {
  * @return A boolean indicating whether the result is available.
  */
 template<class T>
-bool ObjectStore<T>::ObjectStoreGetFuture::wait() {
+void ObjectStore<T>::ObjectStoreGetFuture::wait() {
     return client_future.wait();
 }
 
