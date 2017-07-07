@@ -1,15 +1,22 @@
 #include <sstream>
 #include <iostream>
 #include "server/TCPServer.h"
+#include "utils/logging.h"
 
 const int port = 12345;
 const int queue_len = 10;
 static const uint64_t GB = (1024*1024*1024);
 
-/* Start a server that runs and prints messages received. */
+/**
+ * Starts a TCP based key value store server. Accepts the pool size as
+ * a command line argument. This specifies how large a memory pool will be
+ * available to the server. Pool size defaults to 10 GB if not specified.
+ */
 auto main(int argc, char *argv[]) -> int {
     uint64_t pool_size;
+    // Parse arguments
     if (argc == 1) {
+        // Default of 10 gigabytes
         pool_size = 10 * GB;
     } else if (argc == 2) {
         std::istringstream iss(argv[1]);
@@ -19,8 +26,13 @@ auto main(int argc, char *argv[]) -> int {
     } else {
         std::cout << "Pass desired poolsize in bytes" << std::endl;
     }
+    // Instantiate the server
+    cirrus::LOG<cirrus::INFO>("Starting TCPServer in port: ", port);
     cirrus::TCPServer server(port, pool_size, queue_len);
+    // Initialize the server
     server.init();
+    // Loop the server and listen for clients. Act on requests
+    cirrus::LOG<cirrus::INFO>("Running server's loop");
     server.loop();
     return 0;
 }

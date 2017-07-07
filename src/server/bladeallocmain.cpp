@@ -23,9 +23,16 @@ void set_ctrlc_handler() {
     sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
+/**
+ * Starts an RDMA based key value store server. Accepts the pool size as
+ * a command line argument. This specifies how large a memory pool will be
+ * available to the server. Pool size defaults to 10 GB if not specified.
+ */
 auto main(int argc, char *argv[]) -> int {
     uint64_t pool_size;
+    // Parse arguments
     if (argc == 1) {
+        // Default of 10 gigabytes
         pool_size = 10 * GB;
     } else if (argc == 2) {
         std::istringstream iss(argv[1]);
