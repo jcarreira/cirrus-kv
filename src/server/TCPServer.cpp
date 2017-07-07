@@ -222,6 +222,7 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server checking type of message");
     // Check message type
+    bool success = true;
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
@@ -232,6 +233,7 @@ bool TCPServer::process(int sock) {
                 if (store.size() >= max_objects) {
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
+                    success = false;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
@@ -243,7 +245,7 @@ bool TCPServer::process(int sock) {
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
-                                           true, oid);
+                                           success, oid);
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
@@ -260,16 +262,16 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
                 LOG<INFO>("Server extracted oid");
-                bool exists = true;
                 auto entry_itr = store.find(oid);
                 LOG<INFO>("Got pair from store");
+                // If the oid is not on the server, this operation has failed
                 if (entry_itr == store.end()) {
-                    exists = false;
+                    success = false;
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
                 std::vector<int8_t> data;
-                if (exists) {
+                if (success) {
                     data = store[oid];
                 }
 
@@ -277,7 +279,7 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
-                                            oid, exists, fb_vector);
+                                            oid, success, fb_vector);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
@@ -292,8 +294,9 @@ bool TCPServer::process(int sock) {
             {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
-                bool success = false;
+                success = false;
                 auto entry_itr = store.find(oid);
+                // Remove the object if it exists on the server.
                 if (entry_itr != store.end()) {
                     store.erase(entry_itr);
                     success = true;

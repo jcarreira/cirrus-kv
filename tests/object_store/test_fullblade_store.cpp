@@ -138,14 +138,14 @@ void test_async() {
  * all N were successful. It then gets N items, and ensures each value matches.
  * @param N the number of puts and gets to perform.
  */
-void test_async_N(int N) { 
+void test_async_N(int N) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
     std::vector<cirrus::ObjectStore<int>::ObjectStorePutFuture> put_futures;
     std::vector<cirrus::ObjectStore<int>::ObjectStoreGetFuture> get_futures;
-    
+
     int i;
     for (i = 0; i < N; i++) {
         put_futures.push_back(store.put_async(i, i));
@@ -153,13 +153,13 @@ void test_async_N(int N) {
     // Check the success of each put operation
     for (i = 0; i < N; i++) {
         if (!put_futures[i].get()) {
-            throw std::runtime_error("Error during an async put."); 
+            throw std::runtime_error("Error during an async put.");
         }
     }
 
     for (i = 0; i < N; i++) {
         get_futures.push_back(store.get_async(i));
-    } 
+    }
     // check the value of each get
     for (i = 0; i < N; i++) {
         int val = get_futures[i].get();
