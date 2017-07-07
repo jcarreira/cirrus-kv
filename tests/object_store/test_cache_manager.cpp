@@ -102,7 +102,7 @@ void test_instantiation() {
  * that it always returns the one oldest item, and only does so when at
  * capacity.
  */
-void test_lradded() { 
+void test_lradded() {
     cirrus::LRAddedEvictionPolicy policy(10);
     int i;
     for (i = 0; i < 10; i++) {

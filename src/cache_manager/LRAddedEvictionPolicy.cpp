@@ -44,7 +44,7 @@ std::vector<ObjectID> LRAddedEvictionPolicy::prefetch(ObjectID oid) {
 }
 
 /**
- * Remove method for the eviction policy. Simply records internally that the 
+ * Remove method for the eviction policy. Simply records internally that the
  * object is no longer in the cache.
  */
 void LRAddedEvictionPolicy::remove(ObjectID oid) {
@@ -60,7 +60,6 @@ void LRAddedEvictionPolicy::remove(ObjectID oid) {
                                     object_deque.end(),
                                     oid);
     object_deque.erase(deque_iterator);
-
 }
 /**
  * Method that processes an item being added to the cache. If the cache
