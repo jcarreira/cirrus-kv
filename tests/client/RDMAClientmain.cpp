@@ -122,9 +122,39 @@ void test_performance() {
     free(data);
 }
 
+/**
+ * Simple test verifying that basic asynchronous put/get works as intended.
+ */
+void test_async() {
+    cirrus::RDMAClient client;
+    client.connect(ip, port);
+
+    int message = 42;
+    auto future = client.write_async(1, &message, sizeof(int));
+    std::cout << "write sync complete" << std::endl;
+
+    if (!future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    int returned;
+    auto read_future = client.read_async(1, &returned, sizeof(int));
+
+    if (!read_future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    std::cout << returned << " returned from server" << std::endl;
+
+    if (returned != message) {
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
 auto main() -> int {
     test_1_client();
     test_2_clients();
     test_performance();
+    test_async();
     return 0;
 }
