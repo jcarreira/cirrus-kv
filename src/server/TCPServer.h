@@ -16,7 +16,8 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, int queue_len = 100);
+    explicit TCPServer(int port, int queue_len = 100,
+        uint64_t pool_size_);
     ~TCPServer() = default;
 
     virtual void init();
@@ -37,8 +38,12 @@ class TCPServer : public Server {
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 
-    /** Max objects that can be stored on server at once. */
-    uint64_t max_objects = 2000;
+    /** Maximum number of bytes that can be stored in the pool. */
+    uint64_t pool_size;
+
+    /** Number of bytes currently in the pool. */
+    uint64_t curr_size = 0;
+
     /** Max number of sockets open at once. */
     // TODO(TYLER): Enforce this limit, or remove it and allow scaling
     uint64_t num_fds = 100;

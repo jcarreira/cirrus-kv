@@ -20,10 +20,15 @@ static const int initial_buffer_size = 50;
 /**
   * Constructor for the server. Given a port and queue length, sets the values
   * of the variables.
+  * @param port the port the server will listen on
+  * @param queue_len the length of the queue to make connections with the
+  * server.
+  * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, int queue_len) {
+TCPServer::TCPServer(int port, int queue_len, uint64_t pool_size_) {
     port_ = port;
     queue_len_ = queue_len;
+    pool_size = pool_size_;
     server_sock_ = 0;
 }
 
@@ -228,16 +233,18 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Server processing write request.");
 
                 ObjectID oid = msg->message_as_Write()->oid();
+
                 // Throw error if put would exceed size of the store
-                if (store.size() >= max_objects) {
+                auto data_fb = msg->message_as_Write()->data();
+                if (curr_size + data_fb.size() >= max_objects) {
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
-                    auto data_fb = msg->message_as_Write()->data();
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id
+                    curr_size += data_fb.size();
                     store[oid] = data;
                 }
 
@@ -296,6 +303,7 @@ bool TCPServer::process(int sock) {
                 auto entry_itr = store.find(oid);
                 if (entry_itr != store.end()) {
                     store.erase(entry_itr);
+                    curr_size -= entry_itr->second->size();
                     success = true;
                 }
                 // Create and send ack

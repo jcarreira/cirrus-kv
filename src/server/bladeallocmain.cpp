@@ -1,4 +1,6 @@
 #include <csignal>
+#include <sstream>
+#include <iostream>
 #include "BladeAllocServer.h"
 #include "utils/logging.h"
 
@@ -21,10 +23,22 @@ void set_ctrlc_handler() {
     sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    uint64_t pool_size;
+    if (argc == 1) {
+        pool_size = 10 * GB;
+    } else if (argc == 2) {
+        std::istringstream iss(argv[1]);
+        if (!(iss >> pool_size)) {
+            std::cout << "Pool size in invalid format." << std::endl;
+        }
+    } else {
+        std::cout << "Pass desired poolsize in bytes" << std::endl;
+    }
+
     cirrus::LOG<cirrus::INFO>("Starting BladeAllocServer in port: ", PORT);
 
-    cirrus::BladeAllocServer server(PORT, 10 * GB);
+    cirrus::BladeAllocServer server(PORT, pool_size);
 
     server.init();
 
@@ -33,4 +47,3 @@ auto main() -> int {
 
     return 0;
 }
-
