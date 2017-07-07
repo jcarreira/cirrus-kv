@@ -9,12 +9,12 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
 
 /* This function simply copies a std::array into a new portion of memory. */
-template <unsigned int SIZE>
-std::pair<std::unique_ptr<char[]>, unsigned int> array_serializer_simple(
+template <uint64_t SIZE>
+std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
             const std::array<char, SIZE>& v) {
     std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
     std::memcpy(ptr.get(), &v, sizeof(v));
@@ -22,9 +22,9 @@ std::pair<std::unique_ptr<char[]>, unsigned int> array_serializer_simple(
 }
 
 /* Takes a pointer to std::array passed in and returns as object. */
-template <unsigned int SIZE>
+template <uint64_t SIZE>
 std::array<char, SIZE> array_deserializer_simple(void* data,
-            unsigned int /* size */) {
+            uint64_t /* size */) {
     std::array<char, SIZE> *ptr = (std::array<char, SIZE> *) data;
     std::array<char, SIZE> retArray;
     retArray = *ptr;
@@ -37,13 +37,14 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
   * numRuns objects of size SIZE under one objectID. The time to put the
   * objects is recorded, and statistics are computed.
   */
-template <unsigned int SIZE>
+template <uint64_t SIZE>
 void test_throughput(int numRuns) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client, array_serializer_simple<SIZE>,
                 array_deserializer_simple<SIZE>);
 
+    std::cout << "Creating the array to put." << std::endl;
     std::array<char, SIZE> array;
 
     // warm up
@@ -58,7 +59,7 @@ void test_throughput(int numRuns) {
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * numRuns; ++i) {
+    for (; i < numRuns; ++i) {
         store.put(0, array);
     }
     end = start.getUsElapsed();
@@ -74,13 +75,13 @@ void test_throughput(int numRuns) {
 }
 
 auto main() -> int {
-    int num_runs = 2000;
+    uint64_t num_runs = 20000;
 
     test_throughput<128>(num_runs);                // 128B
     test_throughput<4    * 1024>(num_runs);        // 4K
     test_throughput<50   * 1024>(num_runs);        // 50K
-    test_throughput<1024 * 1024>(num_runs);        // 1MB
-    test_throughput<10   * 1024 * 1024>(num_runs);  // 10MB
-    test_throughput<100  * 1024 * 1024>(num_runs);  // 100MB
+    test_throughput<1024 * 1024>(num_runs / 20);        // 1MB, total 1 gig
+    test_throughput<10   * 1024 * 1024>(num_runs / 100);  // 10MB, total 2 gig
+    test_throughput<100  * 1024 * 1024>(50);  // 100MB, total 5 gig
     return 0;
 }

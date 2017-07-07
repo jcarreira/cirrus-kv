@@ -272,12 +272,22 @@ bool TCPServer::process(int sock) {
             {
                 LOG<INFO>("Server processing write request.");
 
+                // first see if the object exists on the server.
+                // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
+
+                auto entry_itr = store.find(oid);
+                if (entry_itr != store.end()) {
+                    curr_size -= entry_itr->second.size();
+                }
 
                 // Throw error if put would exceed size of the store
                 auto data_fb = msg->message_as_Write()->data();
                 if (curr_size + data_fb->size() > pool_size) {
-                    LOG<ERROR>("Put would go over capacity on server.");
+                    LOG<ERROR>("Put would go over capacity on server. ",
+                                "Current size: ", curr_size,
+                                " Incoming size: ", data_fb->size(),
+                                " Pool size: ", pool_size);
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                 } else {
