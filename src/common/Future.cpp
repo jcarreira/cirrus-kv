@@ -35,7 +35,6 @@ void Future::wait() {
   */
 bool Future::try_wait() {
     if (!*result_available) {
-        bool sem_success = sem->trywait();
         return sem->trywait();
     } else {
         return true;
