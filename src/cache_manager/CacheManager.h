@@ -5,7 +5,7 @@
 
 #include "object_store/ObjectStore.h"
 #include "common/Exception.h"
-
+#include "utils/Log.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -88,12 +88,15 @@ CacheManager<T>::CacheManager(
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
     // check if entry exists for the oid in cache
+    LOG<INFO>("Cache get called on oid: ", oid);
     auto cache_iterator = cache.find(oid);
     if (cache_iterator != cache.end()) {
+        LOG<INFO>("Entry exists for oid: ", oid);
         // entry exists
         // Call future's get method if necessary
         struct cache_entry& entry = cache_iterator->second;
         if (entry.prefetched) {
+            LOG<INFO>("oid was prefetched");
             // TODO(Tyler): Should we return the result of the get directly
             // and avoid a potential extra copy? Tradeoff is copy now vs
             // copy in the future in case of repeated access.
