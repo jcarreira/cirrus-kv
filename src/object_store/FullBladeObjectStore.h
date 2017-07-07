@@ -5,6 +5,7 @@
 #include <iostream>
 #include <utility>
 #include <memory>
+#include <vector>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -147,7 +148,7 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
        into. */
     std::shared_ptr<std::vector<char>> ptr =
         std::make_shared<std::vector<char>>(std::vector<char>(serialized_size));
-    
+
     // Read into the section of memory you just allocated
     auto client_future = client->read_async(id, ptr->data(), serialized_size);
 
