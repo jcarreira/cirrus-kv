@@ -24,11 +24,12 @@ class LRAddedEvictionPolicy : public EvictionPolicy {
     std::vector<ObjectID> put(ObjectID oid) override;
 
     std::vector<ObjectID> prefetch(ObjectID oid) override;
-    
+
     void remove(ObjectID oid) override;
+
  private:
      std::vector<ObjectID> process_oid(ObjectID oid);
-   
+
      /**
       * The maximum capacity of the cache. Will never be exceeded. Set
       * at time of instantiation.

@@ -36,7 +36,7 @@ void Future::wait() {
 bool Future::try_wait() {
     if (!*result_available) {
         bool sem_success = sem->trywait();
-        return sem_success;
+        return sem->trywait();
     } else {
         return true;
     }
@@ -68,7 +68,7 @@ bool Future::get() {
         break;
       }
       case cirrus::ErrorCodes::kNoSuchIDException: {
-        throw cirrus::NoSuchIDException("Call to put was made for id that "
+        throw cirrus::NoSuchIDException("Call to get was made for id that "
                                         "did not exist on server.");
         break;
       }

@@ -38,6 +38,7 @@ void test_sync() {
     struct cirrus::Dummy<SIZE> d(42);
 
     store.put(1, d);
+
     struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
     // should be 42
