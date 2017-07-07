@@ -103,6 +103,23 @@ void test_nonexistent_get() {
     store.get(10);
 }
 
+/**
+  * This test tests the remove method. It ensures that you cannot "get"
+  * an item if it has been removed from the store.
+  */
+void test_remove() {
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    store.put(0, 42);
+
+    store.remove(0);
+
+    // Should fail
+    store.get(0);
+}
+
 auto main() -> int {
     test_sync(1000);
     test_sync();
@@ -114,6 +131,15 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
+
+    try {
+        test_remove();
+        std::cout << "Exception not thrown when get"
+                     " called on removed ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
 
     return 0;
 }
