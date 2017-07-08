@@ -312,7 +312,6 @@ class RDMAClient : public BladeClient {
             const RDMAMem& mem);
 
     void connect_rdma_cm(const std::string& host, const std::string& port);
-    void connect_eth(const std::string& host, const std::string& port);
 
     void fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
