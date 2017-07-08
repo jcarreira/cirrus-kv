@@ -41,7 +41,7 @@ void test_async(int N) {
     cirrus::TimerFunction tfs[N];
 
     cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture futures[N];
-
+    std::cout << "Warming up." << std::endl;
     // warm up
     for (int i = 0; i < N; ++i) {
         store.put(i, d);
@@ -57,7 +57,7 @@ void test_async(int N) {
         tfs[i].reset();
         futures[i] = store.put_async(i, d);
     }
-
+    std::cout << "N puts started." << std::endl;
     while (total_done != N) {
         for (int i = 0; i < N; ++i) {
             if (!done[i]) {
@@ -91,8 +91,9 @@ void test_async(int N) {
 }
 
 auto main() -> int {
-    // test burst of 1000 async writes
-    test_async(1000);
+    std::cout << "Benchmark 1_2 started." << std::endl;
+    // test burst of 100 async writes
+    test_async(100);
 
     return 0;
 }
