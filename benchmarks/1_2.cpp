@@ -40,7 +40,7 @@ void test_async(int N) {
     struct cirrus::Dummy<SIZE> d(42);
     cirrus::TimerFunction tfs[N];
 
-    std::function<bool(bool)> futures[N];
+    cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture futures[N];
 
     // warm up
     for (int i = 0; i < N; ++i) {
@@ -55,13 +55,13 @@ void test_async(int N) {
 
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
-        futures[i] = store.put_async(&d, sizeof(cirrus::Dummy<SIZE>), i);
+        futures[i] = store.put_async(i, d);
     }
 
     while (total_done != N) {
         for (int i = 0; i < N; ++i) {
             if (!done[i]) {
-                bool ret = futures[i](true);
+                bool ret = futures[i].try_wait();
                 if (ret) {
                     done[i] = true;
                     total_done++;
