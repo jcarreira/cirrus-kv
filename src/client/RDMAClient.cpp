@@ -320,6 +320,11 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
     qp_attr->cap.max_recv_sge = MAX_RECV_SGE;
 }
 
+/**
+ * Posts a work request to the receive queue.
+ * @param id a pointer to the rdma_cm_id that contains the information
+ * needed to construct the receive request.
+ */
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -380,6 +385,11 @@ void RDMAClient::build_context(struct ibv_context *verbs,
             rv(gen));  // random core
 }
 
+/**
+ * Polls the completion queue, monitoring it for any event completions.
+ * If a request is completed successfully, it is acted upon.
+ * @param ctx a pointer to the ConnectionContext that should be monitored.
+ */
 void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     struct ibv_cq *cq;
     struct ibv_wc wc;
@@ -406,6 +416,11 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     return nullptr;
 }
 
+/**
+ * Method that handles ibv Work completion structs. Signals the op_sem
+ * attached to the op_info that tracks the ibv_wc.
+ * @param wc a pointer to the ibv_wc to be handled.
+ */
 void RDMAClient::on_completion(struct ibv_wc *wc) {
     RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(
                                                                     wc->wr_id);
@@ -705,6 +720,10 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
     return op_info;
 }
 
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
 void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
     LOG<INFO>("RDMAClient:: fetchadd_rdma_sync");
@@ -721,7 +740,10 @@ void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
     delete op_info;
 }
 
-// Fetch and add
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
 RDMAClient::RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t /*value*/) {
 #if __GNUC__ >= 7
@@ -859,6 +881,11 @@ void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
         throw std::runtime_error("Error recv'ing");
 }
 
+/**
+ * Connects to the RDMA host at the given ip and port.
+ * @param host the ip address of the host
+ * @param port the port the host is listening on
+ */
 void RDMAClient::connect_rdma_cm(const std::string& host,
                                  const std::string& port) {
     struct addrinfo *addr;
@@ -1218,6 +1245,9 @@ std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::rdma_read_async(
     return std::make_shared<RDMAClient::FutureBladeOp>(op_info);
 }
 
+/**
+ * A wrapper for fetchadd_rdma_sync.
+ */
 bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t value) {
@@ -1232,6 +1262,9 @@ bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
     return true;
 }
 
+/**
+ * A wrapper for fetchadd_rdma_async. 
+ */
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::fetchadd_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
