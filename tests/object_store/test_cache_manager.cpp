@@ -13,7 +13,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 
 /**
   * Test simple synchronous put and get to/from the object store.
