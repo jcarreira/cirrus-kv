@@ -38,9 +38,11 @@ auto main(int argc, char *argv[]) -> int {
         std::istringstream iss(argv[1]);
         if (!(iss >> pool_size)) {
             std::cout << "Pool size in invalid format." << std::endl;
+            return -1;
         }
     } else {
-        std::cout << "Pass desired poolsize in bytes" << std::endl;
+        std::cout << "Error: ./bladeallocmain [pool_size]" << std::endl;
+        return -1;
     }
 
     cirrus::LOG<cirrus::INFO>("Starting BladeAllocServer in port: ", PORT);

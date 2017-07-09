@@ -56,21 +56,17 @@ bool Future::get() {
       }
       case cirrus::ErrorCodes::kException: {
         throw cirrus::Exception("Server threw generic exception.");
-        break;
       }
       case cirrus::ErrorCodes::kServerMemoryErrorException: {
         throw cirrus::ServerMemoryErrorException("Server memory exhausted "
                                                  "during call to put.");
-        break;
       }
       case cirrus::ErrorCodes::kNoSuchIDException: {
         throw cirrus::NoSuchIDException("Call to get was made for id that "
                                         "did not exist on server.");
-        break;
       }
       default: {
         throw cirrus::Exception("Unrecognized error code during get().");
-        break;
       }
     }
     return *result;
