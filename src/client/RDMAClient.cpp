@@ -258,39 +258,6 @@ bool RDMAClient::insertObjectLocation(ObjectID id,
     return true;
 }
 
-
-/**
- * Writes an object from local memory to the remote store asynchronously.
- * @param data a pointer to the data to be written.
- * @param loc a BladeLocation, containing the size of the object and
- * the location to be written to.
- * @param mem a pointer to an RDMAMem, which is the registered memory
- * where the data currently resides. If null, a new RDMAMem is used
- * for this object.
- * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
- * contains information about the status of the operation.
- */
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
-        const void *data, BladeLocation loc) {
-    auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
-    return future;
-}
-
-/**
- * Inserts an object into objects_ , which maps ObjectIDs to
- * BladeLocation objects.
- * @param id the ObjectID of the object.
- * @param size the size of the object.
- * @param allocRec the AllocationRecord being used for this object.
- */
-bool RDMAClient::insertObjectLocation(ObjectID id,
-                                      uint64_t size,
-                                      const AllocationRecord& allocRec) {
-    objects_[id] = BladeLocation(size, allocRec);
-    return true;
-}
-
-
 /**
   * Initializes rdma params.
   * This method takes a pointer to a struct rdma_conn_param and assigns initial
