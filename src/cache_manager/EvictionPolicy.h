@@ -33,11 +33,12 @@ class EvictionPolicy {
      * to be purged from the cache.
      */
     virtual std::vector<ObjectID> prefetch(ObjectID oid) = 0;
-    
+
     /**
-     * Counterpart to the remove method.  
+     * Counterpart to the remove method.
      */
     virtual void remove(ObjectID oid) = 0;
+
  private:
      /**
        * The maximum capacity of the cache. Will never be exceeded. Set

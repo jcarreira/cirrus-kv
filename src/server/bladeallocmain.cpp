@@ -1,4 +1,6 @@
 #include <csignal>
+#include <sstream>
+#include <iostream>
 #include "BladeAllocServer.h"
 #include "utils/logging.h"
 
@@ -21,10 +23,31 @@ void set_ctrlc_handler() {
     sigaction(SIGINT, &sig_int_handler, nullptr);
 }
 
-auto main() -> int {
+/**
+ * Starts an RDMA based key value store server. Accepts the pool size as
+ * a command line argument. This specifies how large a memory pool will be
+ * available to the server. Pool size defaults to 10 GB if not specified.
+ */
+auto main(int argc, char *argv[]) -> int {
+    uint64_t pool_size;
+    // Parse arguments
+    if (argc == 1) {
+        // Default of 10 gigabytes
+        pool_size = 10 * GB;
+    } else if (argc == 2) {
+        std::istringstream iss(argv[1]);
+        if (!(iss >> pool_size)) {
+            std::cout << "Pool size in invalid format." << std::endl;
+            return -1;
+        }
+    } else {
+        std::cout << "Error: ./bladeallocmain [pool_size]" << std::endl;
+        return -1;
+    }
+
     cirrus::LOG<cirrus::INFO>("Starting BladeAllocServer in port: ", PORT);
 
-    cirrus::BladeAllocServer server(PORT, 10 * GB);
+    cirrus::BladeAllocServer server(PORT, pool_size);
 
     server.init();
 
@@ -33,4 +56,3 @@ auto main() -> int {
 
     return 0;
 }
-

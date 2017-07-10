@@ -13,6 +13,7 @@
 #include "utils/Time.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
+#include "common/Future.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -28,7 +29,7 @@ namespace ostore {
 template<class T>
 class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
-        FullBladeObjectStoreTempl(const std::string& bladeIP,
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
                               BladeClient *client,
                               std::function<std::pair<std::unique_ptr<char[]>,
