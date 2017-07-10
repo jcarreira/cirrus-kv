@@ -4,7 +4,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
-#include "client/TCPClient.h"
+#include "client/RDMAClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -21,7 +21,7 @@ static const uint64_t MILLION = 1000000;
   * the server must have been running to send the message.
   */
 void test_exhaustion() {
-    cirrus::TCPClient client;
+    cirrus::RDMAClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
