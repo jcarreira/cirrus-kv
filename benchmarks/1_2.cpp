@@ -17,8 +17,9 @@
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.83";
@@ -29,10 +30,11 @@ static const uint32_t SIZE = 128;
   * N asynchronous puts.
   */
 void test_async(int N) {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+        store(IP, PORT, &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     cirrus::Stats stats;
 
     struct cirrus::Dummy<SIZE> d(42);

@@ -1,5 +1,5 @@
-#ifndef _CONNECTION_CONTEXT_H_
-#define _CONNECTION_CONTEXT_H_
+#ifndef SRC_SERVER_CONNECTIONCONTEXT_H_
+#define SRC_SERVER_CONNECTIONCONTEXT_H_
 
 #include <semaphore.h>
 #include <rdma/rdma_cma.h>
@@ -39,4 +39,4 @@ class ConnectionContext {
 
 }  // namespace cirrus
 
-#endif // _CONNECTION_CONTEXT_H_
+#endif  // SRC_SERVER_CONNECTIONCONTEXT_H_

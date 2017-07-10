@@ -1,5 +1,5 @@
-#ifndef _ALLOCATORMESSAGE_H_
-#define _ALLOCATORMESSAGE_H_
+#ifndef SRC_COMMON_ALLOCATORMESSAGE_H_
+#define SRC_COMMON_ALLOCATORMESSAGE_H_
 
 #include <cstdint>
 #include "authentication/AuthenticationToken.h"
@@ -49,4 +49,4 @@ struct AllocatorMessage {
 
 }  // namespace cirrus
 
-#endif  // _ALLOCATORMESSAGE_H_
+#endif  // SRC_COMMON_ALLOCATORMESSAGE_H_

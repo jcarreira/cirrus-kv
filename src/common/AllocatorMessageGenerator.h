@@ -1,5 +1,5 @@
-#ifndef _ALLOC_MESSAGE_GENERATOR_H_
-#define _ALLOC_MESSAGE_GENERATOR_H_
+#ifndef SRC_COMMON_ALLOCATORMESSAGEGENERATOR_H_
+#define SRC_COMMON_ALLOCATORMESSAGEGENERATOR_H_
 
 #include <stdint.h>
 #include "common/AllocatorMessage.h"
@@ -24,4 +24,4 @@ class AllocatorMessageGenerator {
 
 }  // namespace cirrus
 
-#endif  // _ALLOC_MESSAGE_GENERATOR_H_
+#endif  // SRC_COMMON_ALLOCATORMESSAGEGENERATOR_H_

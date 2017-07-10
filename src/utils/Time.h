@@ -1,5 +1,5 @@
-#ifndef _TIME_H_
-#define _TIME_H_
+#ifndef SRC_UTILS_TIME_H_
+#define SRC_UTILS_TIME_H_
 
 #include <chrono>
 #include <string>
@@ -10,9 +10,9 @@ namespace cirrus {
 std::string getTimeNow();
 
 class TimerFunction {
-public:
-    TimerFunction(const std::string& name = "", bool print = false)
-        : name_ (name),
+ public:
+    explicit TimerFunction(const std::string& name = "", bool print = false)
+        : name_(name),
         t0(Time::now()),
         print_(print) { }
 
@@ -23,15 +23,15 @@ public:
     uint64_t getUsElapsed() const;
 
     using Time = std::chrono::high_resolution_clock;
-    using us = std::chrono::microseconds; 
-    using ms = std::chrono::milliseconds; 
+    using us = std::chrono::microseconds;
+    using ms = std::chrono::milliseconds;
 
-private:
+ private:
     std::string name_;
     Time::time_point t0;
     bool print_;
 };
 
-} // namespace cirrus
+}  // namespace cirrus
 
-#endif // _TIME_H_
+#endif  // SRC_UTILS_TIME_H_

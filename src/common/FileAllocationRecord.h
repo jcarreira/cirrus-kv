@@ -1,5 +1,5 @@
-#ifndef _FILE_ALLOCATION_RECORD_H_
-#define _FILE_ALLOCATION_RECORD_H_
+#ifndef SRC_COMMON_FILEALLOCATIONRECORD_H_
+#define SRC_COMMON_FILEALLOCATIONRECORD_H_
 
 namespace cirrus {
 
@@ -21,6 +21,6 @@ struct FileAllocationRecord {
     {}
 };
 
-}
+}  // namespace cirrus
 
-#endif // _FILE_ALLOCATION_RECORD_H_
+#endif  // SRC_COMMON_FILEALLOCATIONRECORD_H_

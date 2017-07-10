@@ -1,5 +1,5 @@
-#ifndef _SERVER_H_
-#define _SERVER_H_
+#ifndef SRC_SERVER_SERVER_H_
+#define SRC_SERVER_SERVER_H_
 
 namespace cirrus {
 
@@ -14,4 +14,4 @@ class Server {
 
 }  // namespace cirrus
 
-#endif  // _SERVER_H_
+#endif  // SRC_SERVER_SERVER_H_

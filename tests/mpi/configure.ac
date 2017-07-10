@@ -18,9 +18,6 @@ AX_CXX_COMPILE_STDCXX_14
 
 CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
 
-AC_CHECK_LIB([ibverbs], [main])
-AC_CHECK_LIB([rdmacm], [main])
-
 # Checks for header files.
 AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
         stdlib.h sys/types.h sys/socket.h sys/epoll.h\

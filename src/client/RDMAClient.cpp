@@ -1,9 +1,11 @@
 #include "client/RDMAClient.h"
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <time.h>
 
 #include <string>
 #include <cstring>
@@ -11,25 +13,251 @@
 #include <random>
 #include <cassert>
 
-#include "common/ThreadPinning.h"
 #include "utils/utils.h"
 #include "utils/Time.h"
 #include "utils/logging.h"
 
+#include "common/ThreadPinning.h"
 #include "common/Synchronization.h"
+#include "common/Exception.h"
+#include "common/schemas/BladeMessage_generated.h"
+
 
 namespace cirrus {
 
-RDMAClient::RDMAClient(int timeout_ms) {
-    id_ = nullptr;
-    ec_ = nullptr;
-    timeout_ms_ = timeout_ms;
+static const int initial_buffer_size = 50;
+
+/**
+  * Connects the client to the remote server.
+  */
+
+  void RDMAClient::connect(const std::string& host, const std::string& port) {
+      seed = time(nullptr);
+      connect_rdma_cm(host, port);
+  }
+
+/**
+  * Asynchronously writes an object to remote storage under id.
+  * @param id the id of the object the user wishes to write to remote memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read read from.
+  * @param size the size of the serialized object being read from
+  * local memory.
+  * @return A Future that contains information about the status of the
+  * operation.
+  */
+
+  // TODO(Tyler): implement async method
+// cirrus::Future RDMAClient::write_async(ObjectID oid,
+//                                        void* data, uint64_t size) {
+//     // Make sure that the pointer is not null
+//     TEST_NZ(data == nullptr);
+//     // Create flatbuffer builder
+//     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+//                             std::make_shared<flatbuffers::FlatBufferBuilder>(
+//                                 initial_buffer_size);
+//
+//     // Create and send write request
+//     int8_t *data_cast = reinterpret_cast<int8_t*>(data);
+//     std::vector<int8_t> data_vector(data_cast, data_cast + size);
+//     auto data_fb_vector = builder->CreateVector(data_vector);
+//     auto msg_contents = message::BladeMessage::CreateWrite(*builder,
+//                                                               oid,
+//                                                               data_fb_vector);
+//     auto msg = message::BladeMessage::CreateBladeMessage(
+//                                         *builder,
+//                                         curr_txn_id,
+//                                         message::BladeMessage::Message_Write,
+//                                         msg_contents.Union());
+//     builder->Finish(msg);
+//
+//     return enqueue_message(builder);
+// }
+
+/**
+  * Asynchronously reads an object corresponding to ObjectID
+  * from the remote server.
+  * @param id the id of the object the user wishes to read to local memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read to.
+  * @param size the size of the serialized object being read from
+  * remote storage.
+  * @return True if the object was successfully read from the server, false
+  * otherwise.
+  */
+
+// TODO(Tyler): ADD ASYNC
+// cirrus::Future RDMAClient::read_async(ObjectID oid, void* data,
+//                                      uint64_t /* size */) {
+//     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+//                             std::make_shared<flatbuffers::FlatBufferBuilder>(
+//                                 initial_buffer_size);
+//
+//     // Create and send read request
+//
+//     auto msg_contents = message::BladeMessage::CreateRead(*builder, oid);
+//
+//     auto msg = message::BladeMessage::CreateBladeMessage(
+//                                         *builder,
+//                                         curr_txn_id,
+//                                         message::BladeMessage::Message_Read,
+//                                         msg_contents.Union());
+//     builder->Finish(msg);
+//
+//     return enqueue_message(builder, data);
+// }
+
+/**
+  * Writes an object to remote storage under id.
+  * @param id the id of the object the user wishes to write to remote memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read read from.
+  * @param size the size of the serialized object being read from
+  * local memory.
+  * @return True if the object was successfully written to the server, false
+  * otherwise.
+  */
+bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+    bool retval;
+    BladeLocation loc;
+    if (objects_.find(oid, loc)) {
+        retval = writeRemote(data, loc, nullptr);
+    } else {
+        // we could merge this into a single message (?)
+        cirrus::AllocationRecord allocRec;
+        {
+            TimerFunction tf("FullBladeObjectStoreTempl::put allocate", true);
+            allocRec = allocate(size);
+        }
+        insertObjectLocation(oid, size, allocRec);
+        LOG<INFO>("FullBladeObjectStoreTempl::writeRemote after alloc");
+        retval = writeRemote(data,
+                          BladeLocation(size, allocRec),
+                          nullptr);
+    }
+    return retval;
 }
 
-RDMAClient::~RDMAClient() {
-    // we can't free a running thread (?)
-    // delete gen_ctx_.cq_poller_thread;
+/**
+  * Reads an object corresponding to ObjectID from the remote server.
+  * @param id the id of the object the user wishes to read to local memory.
+  * @param data a pointer to the buffer where the serialized object should
+  * be read to.
+  * @param size the size of the serialized object being read from
+  * remote storage.
+  * @return True if the object was successfully read from the server, false
+  * otherwise.
+  */
+bool RDMAClient::read_sync(ObjectID oid, void* data, uint64_t /* size */) {
+    BladeLocation loc;
+    if (objects_.find(oid, loc)) {
+        // Read into the section of memory you just allocated
+        readToLocal(loc, data);
+        return true;
+    } else {
+        throw cirrus::NoSuchIDException("Requested ObjectID "
+                                        "does not exist remotely.");
+    }
+    return false;
 }
+
+/**
+  * Removes the object corresponding to the given ObjectID from the
+  * remote store.
+  * @param oid the ObjectID of the object to be removed.
+  * @return True if the object was successfully removed from the server, false
+  * if the object does not exist remotely or if another error occurred.
+  */
+bool RDMAClient::remove(ObjectID oid) {
+    BladeLocation loc;
+    if (objects_.find(oid, loc)) {
+        objects_.erase(oid);
+        return deallocate(loc.allocRec);
+    } else {
+        throw cirrus::NoSuchIDException(
+                                      "Error. Trying to do inexistent object");
+    }
+    return false;
+}
+
+/**
+ * Reads an object to local memory from the remote store.
+ * @param loc the BladeLocation for the desired object. Contains the
+ * address and size of the object.
+ * @param ptr a pointer to the memory where the object will be read to.
+ */
+bool RDMAClient::readToLocal(BladeLocation loc, void* ptr) {
+    RDMAMem mem(ptr, loc.size);
+    rdma_read_sync(loc.allocRec, 0, loc.size, ptr, &mem);
+    return true;
+}
+
+/**
+ * Reads an object to local memory from the remote store asynchronously.
+ * @param loc the BladeLocation for the desired object. Contains the
+ * address and size of the object.
+ * @param ptr a pointer to the memory where the object will be read to.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::readToLocalAsync(
+        BladeLocation loc, void* ptr) {
+    auto future = rdma_read_async(loc.allocRec, 0, loc.size, ptr);
+    return future;
+}
+
+/**
+ * Writes an object from local memory to the remote store.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ */
+bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
+                             RDMAMem* mem) {
+    RDMAMem mm(data, loc.size);
+    {
+        // TimerFunction tf("writeRemote", true);
+        // LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
+        rdma_write_sync(loc.allocRec, 0, loc.size, data,
+                nullptr == mem ? &mm : mem);
+    }
+    return true;
+}
+
+/**
+ * Writes an object from local memory to the remote store asynchronously.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
+        const void *data, BladeLocation loc) {
+    auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
+    return future;
+}
+
+/**
+ * Inserts an object into objects_ , which maps ObjectIDs to
+ * BladeLocation objects.
+ * @param id the ObjectID of the object.
+ * @param size the size of the object.
+ * @param allocRec the AllocationRecord being used for this object.
+ */
+bool RDMAClient::insertObjectLocation(ObjectID id,
+                                      uint64_t size,
+                                      const AllocationRecord& allocRec) {
+    objects_[id] = BladeLocation(size, allocRec);
+    return true;
+}
+
 
 /**
   * Initializes rdma params.
@@ -44,8 +272,8 @@ void RDMAClient::build_params(struct rdma_conn_param *params) {
     params->retry_count = 7;
 }
 
-void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
-    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx.recv_msg),
+void RDMAClient::alloc_rdma_memory(ConnectionContext *ctx) {
+    TEST_NZ(posix_memalign(reinterpret_cast<void **>(&ctx->recv_msg),
                 sysconf(_SC_PAGESIZE),
                 RECV_MSG_SIZE));
     TEST_NZ(posix_memalign(reinterpret_cast<void **>(&con_ctx_.send_msg),
@@ -53,24 +281,25 @@ void RDMAClient::alloc_rdma_memory(ConnectionContext& ctx) {
                 SEND_MSG_SIZE));
 }
 
-void RDMAClient::setup_memory(ConnectionContext& ctx) {
+void RDMAClient::setup_memory(ConnectionContext *ctx) {
     alloc_rdma_memory(ctx);
 
     LOG<INFO>("Registering region with size: ",
             (RECV_MSG_SIZE / 1024 / 1024), " MB");
     TEST_Z(con_ctx_.recv_msg_mr =
-            ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.recv_msg,
+            ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.recv_msg,
                 RECV_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
-    TEST_Z(con_ctx_.send_msg_mr = ibv_reg_mr(ctx.gen_ctx_.pd, con_ctx_.send_msg,
+    TEST_Z(con_ctx_.send_msg_mr =
+            ibv_reg_mr(ctx->gen_ctx_.pd, con_ctx_.send_msg,
                 SEND_MSG_SIZE,
                 IBV_ACCESS_LOCAL_WRITE |
                 IBV_ACCESS_REMOTE_WRITE));
 
-    default_recv_mem_ = RDMAMem(ctx.recv_msg,
+    default_recv_mem_ = RDMAMem(ctx->recv_msg,
             RECV_MSG_SIZE, con_ctx_.recv_msg_mr);
-    default_send_mem_ = RDMAMem(ctx.send_msg,
+    default_send_mem_ = RDMAMem(ctx->send_msg,
             SEND_MSG_SIZE, con_ctx_.send_msg_mr);
 
     con_ctx_.setup_done = true;
@@ -91,6 +320,11 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
     qp_attr->cap.max_recv_sge = MAX_RECV_SGE;
 }
 
+/**
+ * Posts a work request to the receive queue.
+ * @param id a pointer to the rdma_cm_id that contains the information
+ * needed to construct the receive request.
+ */
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -102,7 +336,7 @@ int RDMAClient::post_receive(struct rdma_cm_id *id) {
 
     memset(&wr, 0, sizeof(wr));
 
-    auto op_info = new RDMAOpInfo(id, ctx->recv_sem);
+    auto op_info = new RDMAClient::RDMAOpInfo(id, ctx->recv_sem);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.sg_list = &sge;
     wr.num_sge = 1;
@@ -151,6 +385,11 @@ void RDMAClient::build_context(struct ibv_context *verbs,
             rv(gen));  // random core
 }
 
+/**
+ * Polls the completion queue, monitoring it for any event completions.
+ * If a request is completed successfully, it is acted upon.
+ * @param ctx a pointer to the ConnectionContext that should be monitored.
+ */
 void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     struct ibv_cq *cq;
     struct ibv_wc wc;
@@ -177,8 +416,14 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     return nullptr;
 }
 
+/**
+ * Method that handles ibv Work completion structs. Signals the op_sem
+ * attached to the op_info that tracks the ibv_wc.
+ * @param wc a pointer to the ibv_wc to be handled.
+ */
 void RDMAClient::on_completion(struct ibv_wc *wc) {
-    RDMAOpInfo* op_info = reinterpret_cast<RDMAOpInfo*>(wc->wr_id);
+    RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(
+                                                                    wc->wr_id);
 
     LOG<INFO>("on_completion. wr_id: ", wc->wr_id,
         " opcode: ", wc->opcode,
@@ -264,7 +509,7 @@ bool RDMAClient::send_message(struct rdma_cm_id *id, uint64_t size,
     if (lock != nullptr)
         lock->wait();
 
-    auto op_info  = new RDMAOpInfo(id, lock);
+    auto op_info  = new RDMAClient::RDMAOpInfo(id, lock);
     wr.wr_id      = reinterpret_cast<uint64_t>(op_info);
     wr.opcode     = IBV_WR_SEND;
     wr.sg_list    = &sge;
@@ -350,8 +595,11 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
   * @return A pointer to an RDMAOpInfo containing information about the status
   * of the write.
   */
-RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-        uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
+RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
+                                                    uint64_t size,
+                                                    uint64_t remote_addr,
+                                                    uint64_t peer_rkey,
+                                                    const RDMAMem& mem) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
@@ -368,7 +616,7 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
     Lock* l = new SpinLock();
     l->wait();
 
-    auto op_info = new RDMAOpInfo(id, l);
+    auto op_info = new RDMAClient::RDMAOpInfo(id, l);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_RDMA_WRITE;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -402,7 +650,7 @@ RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id, uint64_t size,
   */
 void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
-    RDMAOpInfo* op_info = read_rdma_async(id, size,
+        RDMAClient::RDMAOpInfo* op_info = read_rdma_async(id, size,
             remote_addr, peer_rkey, mem);
 
     // wait until operation is completed
@@ -429,9 +677,12 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
   * @return A pointer to an RDMAOpInfo containing information about the status
   * of the read.
   */
-RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
-        uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem,
-        std::function<void()> apply_fn) {
+RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
+                                            uint64_t size,
+                                            uint64_t remote_addr,
+                                            uint64_t peer_rkey,
+                                            const RDMAMem& mem,
+                                            std::function<void()> apply_fn) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
@@ -448,7 +699,7 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     Lock* l = new SpinLock();
     l->wait();
 
-    auto op_info    = new RDMAOpInfo(id, l, apply_fn);
+    auto op_info    = new RDMAClient::RDMAOpInfo(id, l, apply_fn);
     wr.wr_id        = reinterpret_cast<uint64_t>(op_info);
     wr.opcode       = IBV_WR_RDMA_READ;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -469,6 +720,10 @@ RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id, uint64_t size,
     return op_info;
 }
 
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
 void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
     LOG<INFO>("RDMAClient:: fetchadd_rdma_sync");
@@ -485,8 +740,11 @@ void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
     delete op_info;
 }
 
-// Fetch and add
-RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
+RDMAClient::RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t /*value*/) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
@@ -504,7 +762,7 @@ RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
     Lock* l = new SpinLock();
     l->wait();
 
-    auto op_info = new RDMAOpInfo(id, l);
+    auto op_info = new RDMAClient::RDMAOpInfo(id, l);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
     wr.wr.atomic.remote_addr = remote_addr;
@@ -520,114 +778,11 @@ RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
     return op_info;
 }
 
-void RDMAClient::connect(const std::string& host, const std::string& port) {
-    connect_rdma_cm(host, port);
-    // connect_eth(host, port);
-}
-
-void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
-    // Get device
-    int num_device;
-    struct ibv_device **dev_list;
-    dev_list = ibv_get_device_list(&num_device);
-
-    if (num_device <= 0 || dev_list == nullptr) {
-        throw std::runtime_error("Error in ibv_get_device_list");
-    }
-
-#ifdef DEBUG
-    for (int i = 0; i < num_device; ++i) {
-        std::cout << "device: ". ibv_get_device_name(dev_list[i]) << std::endl;
-    }
-#endif
-
-    // we get first one
-    struct ibv_device *ib_dev = dev_list[0];
-    struct ibv_context* dev_ctx = ibv_open_device(ib_dev);
-
-    if (nullptr == dev_ctx) {
-        throw std::runtime_error("Error opening ib device");
-    }
-
-    LOG<INFO>("Opened ib device");
-
-    ibv_query_device(dev_ctx, &con_ctx_.gen_ctx_.device_attr);
-
-    // Check some information
-    int ret = ibv_query_port(dev_ctx, 1, &con_ctx_.gen_ctx_.port_attr);
-    ibv_query_gid(dev_ctx, 1, 0, &con_ctx_.gen_ctx_.gid);
-
-    LOG<INFO>("Creating IB CQs");
-
-    // creates PD
-    // creates Comp channel
-    // creates CQ
-    // creates handling thread
-    build_context(dev_ctx, &con_ctx_);
-    build_qp_attr(&con_ctx_.gen_ctx_.qp_attr, &con_ctx_);
-
-    con_ctx_.qp = ibv_create_qp(con_ctx_.gen_ctx_.pd,
-                                &con_ctx_.gen_ctx_.qp_attr);
-
-    if (nullptr == con_ctx_.qp)
-        throw std::runtime_error("Error creating qp");
-
-    LOG<INFO>("Created QP");
-    // ******************
-    // Connect to client
-    // ******************
-    LOG<INFO>("Doing eth connect");
-    struct addrinfo *res;
-    struct addrinfo hints;
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family   = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-
-    ret = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
-
-    if (ret < 0) {
-        throw std::runtime_error("Error getaddrinfo");
-    }
-
-    int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-    if (!::connect(sockfd, res->ai_addr, res->ai_addrlen)) {
-        throw std::runtime_error("Error connecting to host");
-    }
-
-    freeaddrinfo(res);
-
-
-    LOG<INFO>("Handshaking");
-    // handshake
-
-    struct {
-        int lid        = 0;
-        int qpn        = 0;
-        int psn        = 0;
-        int rkey       = 0;
-        uint64_t vaddr = 0;
-    } handshake_msg;
-
-    handshake_msg.lid = con_ctx_.gen_ctx_.port_attr.lid;
-    handshake_msg.qpn = con_ctx_.qp->qp_num;
-    handshake_msg.psn = rand();
-    // handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
-    // handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
-
-    ret = ::send(sockfd, &handshake_msg, sizeof(handshake_msg), 0);
-    if (ret != sizeof(handshake_msg)) {
-        throw std::runtime_error("Error sending handshake");
-    }
-
-    char recv_buffer[1000];
-    ret = ::recv(sockfd, &recv_buffer, sizeof(recv_buffer), 0);
-
-    if (ret <= 0)
-        throw std::runtime_error("Error recv'ing");
-}
-
+/**
+ * Connects to the RDMA host at the given ip and port.
+ * @param host the ip address of the host
+ * @param port the port the host is listening on
+ */
 void RDMAClient::connect_rdma_cm(const std::string& host,
                                  const std::string& port) {
     struct addrinfo *addr;
@@ -666,7 +821,7 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
             LOG<INFO>("id: ",
                 reinterpret_cast<uint64_t>(event_copy.id));
 
-            setup_memory(con_ctx_);
+            setup_memory(&con_ctx_);
             TEST_NZ(rdma_resolve_route(event_copy.id, timeout_ms_));
             LOG<INFO>("resolved route");
         } else if (event_copy.event == RDMA_CM_EVENT_ROUTE_RESOLVED) {
@@ -696,5 +851,355 @@ void RDMAClient::connect_rdma_cm(const std::string& host,
 
     LOG<INFO>("Connection successful");
 }
+
+/**
+  * A function that requests a given number of bytes be allocated
+  * from the server.
+  * @param size the number of bytes the client is requesting be allocated
+  * @return AllocationRecord for the new AllocationRecord
+  */
+AllocationRecord RDMAClient::allocate(uint64_t size) {
+    LOG<INFO>("Allocating ",
+        size, " bytes");
+
+    // Create message using flatbuffers
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+    auto data = message::BladeMessage::CreateAlloc(builder, size);
+    auto alloc_msg = message::BladeMessage::CreateBladeMessage(builder,
+                              message::BladeMessage::Data_Alloc, data.Union());
+    builder.Finish(alloc_msg);
+
+    int message_size = builder.GetSize();
+
+    // Copy message contents into send buffer
+    std::memcpy(con_ctx_.send_msg,
+                builder.GetBufferPointer(),
+                message_size);
+
+
+    // post receive
+    LOG<INFO>("Sending alloc msg size: ", message_size);
+    send_receive_message_sync(id_, message_size);
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
+
+    auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
+
+    if (msg->data_as_AllocAck()->remote_addr() == 0) {
+      // Throw error message
+      LOG<ERROR>("Server threw exception when allocating memory.");
+      throw cirrus::ServerMemoryErrorException("Server threw "
+               "exception when allocating memory.");
+    }
+
+    AllocationRecord alloc(
+                msg->data_as_AllocAck()->mr_id(),
+                msg->data_as_AllocAck()->remote_addr(),
+                msg->data_as_AllocAck()->peer_rkey());
+
+    LOG<INFO>("Received allocation. mr_id: ", msg->data_as_AllocAck()->mr_id(),
+            " remote_addr: " , msg->data_as_AllocAck()->remote_addr(),
+            " peer_rkey: ", msg->data_as_AllocAck()->peer_rkey());
+
+    if (msg->data_as_AllocAck()->remote_addr() == 0)
+        throw std::runtime_error("Error with allocation");
+
+    LOG<INFO>("Received allocation from Blade. remote_addr: ",
+        msg->data_as_AllocAck()->remote_addr(),
+        " mr_id: ", msg->data_as_AllocAck()->mr_id());
+    return alloc;
+}
+
+/**
+  * A function that requests a given allocation be freed in the remote store.
+  * @param ar the allocation record that records the allocation to be freed.
+  * @return success
+  */
+bool RDMAClient::deallocate(const AllocationRecord& ar) {
+    LOG<INFO>("Deallocating addr: ", ar.remote_addr);
+
+    flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
+    auto data = message::BladeMessage::CreateDealloc(builder, ar.remote_addr);
+    auto dealloc_msg = message::BladeMessage::CreateBladeMessage(builder,
+                            message::BladeMessage::Data_Dealloc, data.Union());
+    builder.Finish(dealloc_msg);
+    int message_size = builder.GetSize();
+    // Copy message into send buffer
+    std::memcpy(con_ctx_.send_msg,
+                builder.GetBufferPointer(),
+                message_size);
+
+
+    // post receive
+    LOG<INFO>("Sending dealloc msg size: ", message_size);
+    send_receive_message_sync(id_, message_size);
+    LOG<INFO>("send_receive_message_sync done: ", message_size);
+
+    auto msg = message::BladeMessage::GetBladeMessage(con_ctx_.recv_msg);
+
+    if (msg->data_as_DeallocAck()->result() == 0)
+        throw std::runtime_error("Error with deallocation");
+    return true;
+}
+
+/**
+  * Write synchronously.
+  * A function that writes data to the remote store synchronously. Reads from
+  * data and passes length bytes.
+  * @param alloc_rec the AllocationRecord corresponding to an adequately sized
+  * allocation.
+  * @param offset the offset from data at which to start reading
+  * @param length the number of bytes to send
+  * @param mem pointer to RDMAMem struct for this write
+  * @return write success
+  * @see AllocationRecord
+  */
+bool RDMAClient::rdma_write_sync(const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        const void* data,
+        RDMAMem* mem) {
+    LOG<INFO>("writing rdma",
+        " length: ", length,
+        " offset: ", offset,
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
+
+    if (length > SEND_MSG_SIZE)
+        return false;
+
+    if (mem) {
+        {
+            // TimerFunction tf("BladeClient::write_sync prepare", true);
+            mem->addr_ = reinterpret_cast<uint64_t>(data);
+            mem->prepare(con_ctx_.gen_ctx_);
+        }
+
+        write_rdma_sync(id_, length,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
+                *mem);
+
+    } else {
+        std::memcpy(con_ctx_.send_msg, data, length);
+        write_rdma_sync(id_, length,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+                default_send_mem_);
+    }
+
+    return true;
+}
+
+/**
+  * Write asynchronously.
+  * A function that writes data to the remote store asynchronously. Reads from
+  * data and passes length bytes.
+  * @param alloc_rec the AllocationRecord corresponding to an adequately sized
+  * allocation.
+  * @param offset the offset from data at which to start reading
+  * @param length the number of bytes to send
+  * @param mem pointer to RDMAMem struct for this write
+  * @return std::shared_ptr<FutureBladeOp> a shared_ptr to a FutureBladeOp
+  * that the caller can then extract a future from. Null if length >
+  * the max sendable message size
+  * @see AllocationRecord
+  */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::rdma_write_async(
+        const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        const void* data,
+        RDMAMem* mem) {
+    LOG<INFO>("writing rdma",
+        " length: ", length,
+        " offset: ", offset,
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
+
+    if (length > SEND_MSG_SIZE)
+        return nullptr;
+
+    RDMAClient::RDMAOpInfo* op_info = nullptr;
+    if (mem) {
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->size_ = length;
+        mem->prepare(con_ctx_.gen_ctx_);
+
+        op_info = write_rdma_async(id_, length,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
+                *mem);
+    } else {
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
+        op_info = write_rdma_async(id_, length,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey,
+                *mem);
+    }
+
+    return std::make_shared<RDMAClient::FutureBladeOp>(op_info);
+}
+
+/**
+  * Read synchronously.
+  * A function that reads data from the remote store synchronously. Reads
+  * length bytes offset by offset bytes from data.
+  * @param alloc_rec the AllocationRecord containing the necessary info
+  * @param offset the offset from the remote_addr at which to start reading
+  * @param length the number of bytes to read
+  * @param data the location in local memory to write to
+  * @param mem pointer to RDMAMem struct for this read
+  * @return success if length is less than max receivable size
+  */
+bool RDMAClient::rdma_read_sync(const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        void *data,
+        RDMAMem* mem) {
+    if (length > RECV_MSG_SIZE)
+        return false;
+
+    LOG<INFO>("reading rdma",
+        " length: ", length,
+        " offset: ", offset,
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
+
+    if (mem) {
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->size_ = length;
+        mem->prepare(con_ctx_.gen_ctx_);
+
+        read_rdma_sync(id_, length,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey, *mem);
+    } else {
+        read_rdma_sync(id_, length,
+                alloc_rec.remote_addr + offset,
+                alloc_rec.peer_rkey, default_recv_mem_);
+
+        {
+            TimerFunction tf("Memcpy time", true);
+            std::memcpy(data, con_ctx_.recv_msg, length);
+        }
+    }
+
+    return true;
+}
+
+/**
+  * Read asynchronously.
+  * A function that reads data from the remote store asynchronously. Reads
+  * length bytes offset by offset bytes from the remote address.
+  * @param alloc_rec the AllocationRecord containing the necessary info
+  * @param offset the offset from the remote_addr at which to start reading
+  * @param length the number of bytes to read
+  * @param data the location in local memory to write to
+  * @param mem pointer to RDMAMem struct for this read
+  * @return std::shared_ptr<FutureBladeOp> a shared_ptr to a FutureBladeOp
+  * that the caller can then extract a future from. Null if length >
+  * the max receivable message size
+  */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::rdma_read_async(
+        const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t length,
+        void *data,
+        RDMAMem* mem) {
+    if (length > RECV_MSG_SIZE)
+        return nullptr;
+
+    LOG<INFO>("reading rdma",
+        " length: ", length,
+        " offset: ", offset,
+        " remote_addr: ", alloc_rec.remote_addr,
+        " rkey: ", alloc_rec.peer_rkey);
+
+    RDMAClient::RDMAOpInfo* op_info;
+    if (mem) {
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
+        op_info = read_rdma_async(id_, length,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+                *mem,
+                []() -> void {});
+    } else {
+        RDMAMem* mem = new RDMAMem(data, length);
+
+        mem->addr_ = reinterpret_cast<uint64_t>(data);
+        mem->prepare(con_ctx_.gen_ctx_);
+
+        op_info = read_rdma_async(id_, length,
+                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+                *mem,
+                [mem]() -> void { delete mem; });
+    }
+
+    return std::make_shared<RDMAClient::FutureBladeOp>(op_info);
+}
+
+/**
+ * A wrapper for fetchadd_rdma_sync.
+ */
+bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t value) {
+    LOG<INFO>("fetchadd (sync) rdma",
+            " offset: ", offset,
+            " value: ", value);
+
+    fetchadd_rdma_sync(id_,
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            value);
+
+    return true;
+}
+
+/**
+ * A wrapper for fetchadd_rdma_async. 
+ */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::fetchadd_async(
+        const AllocationRecord& alloc_rec,
+        uint64_t offset,
+        uint64_t value) {
+    LOG<INFO>("fetchadd (sync) rdma",
+            " offset: ", offset,
+            " value: ", value);
+
+    RDMAClient::RDMAOpInfo* op_info = fetchadd_rdma_async(id_,
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            value);
+
+    return std::make_shared<RDMAClient::FutureBladeOp>(op_info);
+}
+
+
+/**
+  * Wait for operation to finish.
+  * A function that calls the FutureBladeOp's operation's wait() method.
+  * Waits until the operation is complete.
+  * @see RDMAOpInfo
+  * @see Lock
+  */
+void RDMAClient::FutureBladeOp::wait() {
+    op_info->op_sem->wait();
+}
+
+/**
+  * Check operation status.
+  * A function that calls the FutureBladeOp's operation's try_wait() method.
+  * Returns instantly with the status of the operation.
+  * @return true if operation is finished, false otherwise
+  * @see RDMAOpInfo
+  * @see Lock
+  */
+bool RDMAClient::FutureBladeOp::try_wait() {
+    return op_info->op_sem->trywait();
+}
+
 
 }  // namespace cirrus

@@ -1,5 +1,5 @@
-#ifndef _STATS_H_
-#define _STATS_H_
+#ifndef SRC_UTILS_STATS_H_
+#define SRC_UTILS_STATS_H_
 
 #include <vector>
 #include <cstdint>
@@ -7,7 +7,7 @@
 namespace cirrus {
 
 class Stats {
-public:
+ public:
     Stats();
 
     void add(double d);
@@ -21,9 +21,9 @@ public:
     double total() const;
 
     int getCount() const;
-    
+
     void reserve(uint64_t);
-private:
+ private:
     mutable std::vector<double> data;
 
 
@@ -32,6 +32,6 @@ private:
     double count = 0;
 };
 
-}
+}  // namespace cirrus
 
-#endif // _STATS_H_
+#endif  // SRC_UTILS_STATS_H_

@@ -8,4 +8,4 @@ import test_runner
 # Set name of test to run
 testPath = "./tests/object_store/exhaustion"
 # Call script to run the test
-test_runner.runTest(testPath)
+test_runner.runExhaustion(testPath)

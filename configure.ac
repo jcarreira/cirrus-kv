@@ -7,6 +7,12 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/server/RDMAServer.h])
 #AC_CONFIG_HEADERS([config.h])
 
+# Checks for presence of dependencies
+AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
+if test x"$CPPLINT_CHECK" != x"yes" ; then
+    AC_MSG_ERROR([Please install cpplint with 'sudo pip install cpplint' before installing.])
+fi
+
 # Checks for programs.
 AC_PROG_CXX([g++-6])
 AC_PROG_AWK
@@ -24,9 +30,14 @@ CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])
 #AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
 
-AC_CHECK_LIB([ibverbs], [main])
-AC_CHECK_LIB([rdmacm], [main])
+# check presence
+#AC_CHECK_LIB([ibverbs], [main])
+#AC_CHECK_LIB([rdmacm], [main])
 
+AC_LIB_HAVE_LINKFLAGS(rdmacm)
+AC_LIB_HAVE_LINKFLAGS(ibverbs)
+
+AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
 # Checks for header files.
 AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
         stdlib.h sys/types.h sys/socket.h sys/epoll.h\
@@ -57,14 +68,10 @@ AC_CONFIG_FILES([Makefile
                  src/cache_manager/Makefile
                  src/common/schemas/Makefile
                  tests/object_store/Makefile
-                 tests/raw/Makefile
+		 tests/client/Makefile
                  tests/Makefile
                  benchmarks/Makefile])
-# Checks for presence of dependencies
-AC_CHECK_PROG(CPPLINT_CHECK, cpplint, yes)
-if test x"$CPPLINT_CHECK" != x"yes" ; then
-    AC_MSG_ERROR([Please install cpplint with 'sudo pip install cpplint' before installing.])
-fi
+
 
 AC_CONFIG_SUBDIRS([tests/mpi])
 

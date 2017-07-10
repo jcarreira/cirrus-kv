@@ -9,9 +9,9 @@ DEFAULT_INCLUDES = -I$(source_dir)
 .PHONY: docs
 
 check_style:
-	find . -path ./third_party -prune -o  -name "*.cpp" -o -name "*.h" | xargs cpplint
+	find . -path ./third_party -prune -o -path ./src/common/schemas -prune -o -name "*.h" -o -name "*.cpp"  | xargs cpplint
 
-benchmark:
+benchmark: all
 	./benchmarks/run_benchmarks.py
 
 docs:

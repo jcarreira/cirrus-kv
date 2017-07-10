@@ -1,14 +1,14 @@
-#ifndef _INFINIBAND_SUPPORT_H_
-#define _INFINIBAND_SUPPORT_H_
+#ifndef SRC_UTILS_INFINIBANDSUPPORT_H_
+#define SRC_UTILS_INFINIBANDSUPPORT_H_
 
-#include <mutex>
 #include <rdma/rdma_cma.h>
+#include <mutex>
 #include "utils/logging.h"
 
 namespace cirrus {
 
 class InfinibandSupport {
-public:
+ public:
     InfinibandSupport() = default;
 
     void check_mw_support(ibv_context* ctx);
@@ -18,6 +18,6 @@ public:
     std::once_flag odp_support_check_;
 };
 
-} // cirrus
+}  // namespace cirrus
 
-#endif // _INFINIBAND_SUPPORT_H_
+#endif  // SRC_UTILS_INFINIBANDSUPPORT_H_

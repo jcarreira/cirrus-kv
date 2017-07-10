@@ -1,5 +1,5 @@
-#ifndef _LOG_H_
-#define _LOG_H_
+#ifndef SRC_UTILS_LOG_H_
+#define SRC_UTILS_LOG_H_
 
 #include <iostream>
 #include <utility>
@@ -26,12 +26,14 @@ struct NO_FLUSH { };
 struct TIME { };
 struct NO_TIME { };
 
-template<typename T, typename K = NO_FLUSH, typename TT = TIME, typename ... Params>
+template<typename T,
+          typename K = NO_FLUSH,
+          typename TT = TIME,
+          typename ... Params>
 #else
 template<typename T, typename ... Params>
 #endif
 bool LOG(Params&& ... param) {
-
     static int THRESHOLD = -1;
     if (THRESHOLD == -1) {
         if (const char* env = std::getenv("CIRRUS_LOG")) {
@@ -41,6 +43,9 @@ bool LOG(Params&& ... param) {
             } else {
                 THRESHOLD = DEFAULT_THRESHOLD;
             }
+        } else {
+            // if env not defined we default to not show logs
+            THRESHOLD = DEFAULT_THRESHOLD;
         }
     }
 
@@ -62,7 +67,7 @@ bool LOG(Params&& ... param) {
         std::cout << " " << arg;
     };
 
- __attribute__((unused))
+     __attribute__((unused))
     int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... };
 
 #if __GNUC__ >= 7
@@ -78,4 +83,4 @@ bool LOG(Params&& ... param) {
 
 }  // namespace cirrus
 
-#endif  // _LOG_H_
+#endif  // SRC_UTILS_LOG_H_

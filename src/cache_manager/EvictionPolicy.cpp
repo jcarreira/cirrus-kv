@@ -2,8 +2,7 @@
 
 namespace cirrus {
 
-	EvictionPolicy::EvictionPolicy() {
-	}
+    EvictionPolicy::EvictionPolicy() {
+    }
 
 }  // namespace cirrus
-

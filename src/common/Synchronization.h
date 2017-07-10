@@ -1,5 +1,5 @@
-#ifndef _SYNCHRONIZATION_H_
-#define _SYNCHRONIZATION_H_
+#ifndef SRC_COMMON_SYNCHRONIZATION_H_
+#define SRC_COMMON_SYNCHRONIZATION_H_
 
 #include <errno.h>
 #include <error.h>
@@ -15,11 +15,8 @@ namespace cirrus {
   */
 class Lock {
  public:
-    Lock() {
-    }
-
-    virtual ~Lock() {
-    }
+    Lock() = default;
+    virtual ~Lock() = default;
 
     virtual void wait() = 0; /** A pure virtual member. */
     virtual void signal() = 0; /** A pure virtual member. */
@@ -53,11 +50,10 @@ class PosixSemaphore : public Lock {
       * Waits until entered into semaphore.
       */
     void wait() final {
-        int rc;
-        do {
+        int rc = sem_wait(&m_sema);
+        while (rc == -1 && errno == EINTR) {
             rc = sem_wait(&m_sema);
         }
-        while (rc == -1 && errno == EINTR);
     }
 
     /**
@@ -68,7 +64,7 @@ class PosixSemaphore : public Lock {
     }
 
     /**
-      * Posts to count waiters
+      * Posts to a specified number of waiters
       * @param count number of waiters to wake
       */
     void signal(int count) final {
@@ -77,6 +73,10 @@ class PosixSemaphore : public Lock {
         }
     }
 
+    /**
+      * Attempts to lock the semaphore and returns its success.
+      * @return True if the semaphore had a positive value and was decremented.
+      */
     bool trywait() final {
         int ret = sem_trywait(&m_sema);
         if (ret == -1 && errno != EAGAIN) {
@@ -86,7 +86,7 @@ class PosixSemaphore : public Lock {
     }
 
  private:
-    sem_t m_sema;
+    sem_t m_sema; /**< underlying semaphore that operations are performed on. */
 };
 
 /**
@@ -104,7 +104,8 @@ class SpinLock : public Lock {
       * This function busywaits until it obtains the lock.
       */
     void wait() final {
-        while (lock.test_and_set(std::memory_order_acquire));
+        while (lock.test_and_set(std::memory_order_acquire))
+            continue;
     }
 
     /**
@@ -129,4 +130,4 @@ class SpinLock : public Lock {
 
 }  // namespace cirrus
 
-#endif  // _SYNCHRONIZATION_H_
+#endif  // SRC_COMMON_SYNCHRONIZATION_H_

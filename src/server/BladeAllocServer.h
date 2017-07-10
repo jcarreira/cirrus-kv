@@ -1,5 +1,5 @@
-#ifndef _BLADE_ALLOC_SERVER_H_
-#define _BLADE_ALLOC_SERVER_H_
+#ifndef SRC_SERVER_BLADEALLOCSERVER_H_
+#define SRC_SERVER_BLADEALLOCSERVER_H_
 
 #include <rdma/rdma_cma.h>
 #include <semaphore.h>
@@ -23,23 +23,25 @@ struct BladeAllocation {
   * This server supports allocations on top of a big mem pool.
   * Allocations are isolated through the use of mem. windows
   * We use a mem. allocator to manage mem.
+  * @param port the port the server will listen on
+  * @param pool_size the number of bytes in the memory pool
   */
 class BladeAllocServer : public RDMAServer {
  public:
     BladeAllocServer(int port, uint64_t pool_size,
             int timeout_ms = 500);
     virtual ~BladeAllocServer() = default;
-    void init() final override;
+    void init() final;
 
  private:
-    void process_message(rdma_cm_id*, void* msg) final override;
-    void handle_connection(struct rdma_cm_id* id) final override;
-    void handle_disconnection(struct rdma_cm_id* id) final override;
+    void process_message(rdma_cm_id*, void* msg) final;
+    void handle_connection(struct rdma_cm_id* id) final;
+    void handle_disconnection(struct rdma_cm_id* id) final;
 
     bool create_pool(uint64_t size);
 
-    void allocate_mem(rdma_cm_id* id, uint64_t size, void*& ptr,
-                                                            uint32_t& rkey);
+    void allocate_mem(rdma_cm_id* id, uint64_t size, const void* ptr,
+                      const uint32_t& rkey);
     void* find_free_data(uint64_t size);
 
     // mr and pointer to big pool
@@ -62,4 +64,4 @@ class BladeAllocServer : public RDMAServer {
 
 }  // namespace cirrus
 
-#endif // _BLADE_ALLOC_SERVER_H_
+#endif  // SRC_SERVER_BLADEALLOCSERVER_H_

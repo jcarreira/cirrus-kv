@@ -1,8 +1,8 @@
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef SRC_UTILS_UTILS_H_
+#define SRC_UTILS_UTILS_H_
 
-#include <cstdio>
 #include <errno.h>
+#include <cstdio>
 
 #define DIE(s) { \
     fprintf(stderr, s);\
@@ -18,8 +18,8 @@
         DIE("error: " #x " failed (returned non-zero).");}\
 } while (0)
 
-//template<typename T>
-//void TEST_NZ(const T& t) {
+// template<typename T>
+// void TEST_NZ(const T& t) {
 //    if (t) {
 //        DIE("error: " #x " failed (returned non-zero).");
 //    }
@@ -32,4 +32,4 @@
         DIE("error: " #x " failed (returned zero/null).");}\
 } while (0)
 
-#endif // _UTILS_H_
+#endif  // SRC_UTILS_UTILS_H_

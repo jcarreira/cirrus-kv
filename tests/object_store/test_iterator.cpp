@@ -9,36 +9,35 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
+#include "client/TCPClient.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 1;
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 
 /**
   * This test ensures that items can be properly retrieved using
   * the iterator interface.
   */
 void test_iterator() {
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+            PORT,
+            &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-            sizeof(cirrus::Dummy<SIZE>)>);
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve
@@ -62,7 +61,10 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-  cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+            PORT,
+            &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
             sizeof(cirrus::Dummy<SIZE>)>);
@@ -73,12 +75,8 @@ void test_iterator_alt() {
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-      try {
-          cirrus::Dummy<SIZE> d(i);
-          cm.put(i, d);
-      } catch(...) {
-          std::cerr << "Error inserting" << std::endl;
-      }
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
     }
 
     // Use iterator to retrieve
@@ -89,7 +87,7 @@ void test_iterator_alt() {
       if (data.id != j) {
         std::cout << "received " << data.id << " but expected " << j
                   << std::endl;
-        throw std::runtime_error("Wrong value");
+        throw std::runtime_error("Wrong value in alternate");
       }
       j++;
     }

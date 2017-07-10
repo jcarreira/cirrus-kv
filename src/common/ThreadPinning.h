@@ -1,5 +1,5 @@
-#ifndef _THREADPINNING_H
-#define _THREADPINNING_H
+#ifndef SRC_COMMON_THREADPINNING_H_
+#define SRC_COMMON_THREADPINNING_H_
 
 #include <pthread.h>
 #include <thread>
@@ -25,4 +25,4 @@ class ThreadPinning {
 
 }  // namespace cirrus
 
-#endif  // _THREADPINNING_H
+#endif  // SRC_COMMON_THREADPINNING_H_

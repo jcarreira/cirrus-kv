@@ -8,8 +8,8 @@ RandomEvictionPolicy::RandomEvictionPolicy(size_t num_objs) :
 }
 
 bool RandomEvictionPolicy::evictIfNeeded(FullCacheStore& fc) {
-    if (fc.getNumObjs() > max_num_objs_) {
-        fc.dropRandomObj();
+    if (fc->getNumObjs() > max_num_objs_) {
+        fc->dropRandomObj();
         return true;
     }
     return false;

@@ -1,5 +1,5 @@
-#ifndef _OBJECT_STORE_INTERNAL_H_
-#define _OBJECT_STORE_INTERNAL_H_
+#ifndef TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_
+#define TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_
 
 #include <utility>
 #include <memory>
@@ -13,7 +13,7 @@ template<unsigned int SIZE>
 struct Dummy {
     char data[SIZE];
     int id;
-    explicit Dummy(int id = 0) : id(id) {}
+    explicit Dummy(int id = 1492) : id(id) {}
 };
 
 /* This function simply copies an object into a new portion of memory. */
@@ -36,4 +36,4 @@ T deserializer_simple(void* data, unsigned int /* size */) {
 
 }  // namespace cirrus
 
-#endif  // _OBJECT_STORE_INTERNAL_H_
+#endif  // TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_

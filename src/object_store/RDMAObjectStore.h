@@ -1,5 +1,7 @@
-#ifndef _RDMA_OBJECT_STORE_H_
-#define _RDMA_OBJECT_STORE_H_
+#ifndef SRC_OBJECT_STORE_RDMAOBJECTSTORE_H_
+#define SRC_OBJECT_STORE_RDMAOBJECTSTORE_H_
+
+#include <string>
 
 #include "object_store/ObjectStore.h"
 #include "object_store/FullCacheStore.h"
@@ -9,7 +11,7 @@
 namespace cirrus {
 
 class RDMAObjectStore : public ObjectStore {
-public:
+ public:
     RDMAObjectStore(const std::string& blade_addr,
         const std::string& port, EvictionPolicy* ev);
     virtual ~RDMAObjectStore() = default;
@@ -18,14 +20,13 @@ public:
     bool put(Object, uint64_t, ObjectID);
     virtual void printStats();
 
-private:
+ private:
     std::unique_ptr<EvictionPolicy> ep;
     // cache of objects
     mutable FullCacheStore cache_;
     BladeClient client;
 };
 
-}
+}  // namespace cirrus
 
-#endif // _RDMA_OBJECT_STORE_H_
-
+#endif  // SRC_OBJECT_STORE_RDMAOBJECTSTORE_H_

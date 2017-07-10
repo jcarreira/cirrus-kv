@@ -1,5 +1,5 @@
-#ifndef _RESOURCE_ALLOCATOR_H_
-#define _RESOURCE_ALLOCATOR_H_
+#ifndef SRC_SERVER_RESOURCEALLOCATOR_H_
+#define SRC_SERVER_RESOURCEALLOCATOR_H_
 
 #include <rdma/rdma_cma.h>
 #include <semaphore.h>
@@ -36,4 +36,4 @@ class ResourceAllocator : public RDMAServer {
 
 }  // namespace cirrus
 
-#endif  // _RESOURCE_ALLOCATOR_H_
+#endif  // SRC_SERVER_RESOURCEALLOCATOR_H_

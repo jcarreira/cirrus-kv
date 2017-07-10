@@ -1,5 +1,5 @@
-#ifndef _AUTHENTICATION_TOKEN_H_
-#define _AUTHENTICATION_TOKEN_H_
+#ifndef SRC_AUTHENTICATION_AUTHENTICATIONTOKEN_H_
+#define SRC_AUTHENTICATION_AUTHENTICATIONTOKEN_H_
 
 #include "GrantingKey.h"
 
@@ -21,4 +21,4 @@ class AuthenticationToken {
 
 };  // namespace cirrus
 
-#endif  // _AUTHENTICATION_TOKEN_H_
+#endif  // SRC_AUTHENTICATION_AUTHENTICATIONTOKEN_H_

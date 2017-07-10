@@ -11,8 +11,8 @@ LRUEvictionPolicy::~LRUEvictionPolicy() {
 }
 
 bool LRUEvictionPolicy::evictIfNeeded(FullCacheStore& fc) {
-    if (fc.getNumObjs() > max_num_objs_) {
-        fc.dropLRUObj();
+    if (fc->getNumObjs() > max_num_objs_) {
+        fc->dropLRUObj();
         return true;
     }
     return false;

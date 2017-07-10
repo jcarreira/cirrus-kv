@@ -1,20 +1,19 @@
-#ifndef _CACHE_STORE_H_
-#define _CACHE_STORE_H_
+#ifndef SRC_OBJECT_STORE_FULLCACHESTORE_H_
+#define SRC_OBJECT_STORE_FULLCACHESTORE_H_
 
-#include "object_store/ObjectStore.h"
+#include "object_store/FullCacheStore.h"
+
 #include <semaphore.h>
-
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"   
-#include "third_party/libcuckoo/src/city_hasher.hh"
-
 #include <vector>
-
 #include <iostream>
 #include <cstring>
-#include "object_store/FullCacheStore.h"
+
+#include "object_store/ObjectStore.h"
+#include "third_party/libcuckoo/src/cuckoohash_map.hh"
+#include "third_party/libcuckoo/src/city_hasher.hh"
 #include "utils/utils.h"
 
-//#define GOOGLE
+// #define GOOGLE
 #define CUCKOO
 
 #ifdef GOOGLE
@@ -22,15 +21,14 @@
 #endif
 
 static const uint64_t GB = 1024*1024*1024;
-static const size_t SIZE = 10000000; // FIX 
+static const size_t SIZE = 10000000;  // FIX
 
 namespace cirrus {
 
 class FullCacheStore : public ObjectStore {
-public:
+ public:
     FullCacheStore()
-       : ObjectStore()
-    {
+       : ObjectStore() {
 #ifdef GOOGLE
         objects_.set_empty_key(ObjectID());
         sem_init(&hash_sem, 0, 1);
@@ -56,15 +54,15 @@ public:
         if (alloc_mem)
             delete[] alloc_mem;
     }
-        
+
     inline Object get(const ObjectID& name) const {
         return objects_[name];
     }
 
     inline bool put(Object obj, uint64_t size, ObjectID name) {
         void *mem = 0;
-        
-#ifdef GOOGLE 
+
+#ifdef GOOGLE
         sem_wait(&hash_sem);
         google::dense_hash_map<ObjectID, Object>::iterator it;
         it = objects_.find(name);
@@ -85,26 +83,26 @@ public:
 #else
 #endif
         }
-       
-#ifdef GOOGLE 
+
+#ifdef GOOGLE
         sem_post(&hash_sem);
 #endif
-        
+
         std::memcpy(mem, obj, size);
-        
+
         return true;
     }
 
     void printStats() const noexcept {
 #if defined(GOOGLE) || defined(CUCKOO)
-        std::cout << "Cache size: " 
+        std::cout << "Cache size: "
             << objects_.size() << std::endl;
 #endif
 
 #ifdef GOOGLE
-        std::cout << "Max size: " 
+        std::cout << "Max size: "
             << objects_.max_size() << std::endl;
-        std::cout << "Max bucket count: " 
+        std::cout << "Max bucket count: "
             << objects_.max_bucket_count() << std::endl;
 #endif
     }
@@ -115,7 +113,6 @@ public:
 #else
 #error "We don't support this right now"
 #endif
-
     }
 
     // we assume cache is not empty
@@ -132,12 +129,12 @@ public:
 #endif
         return true;
     }
-    
+
     bool dropLRUObj() {
         return false;
     }
 
-private:
+ private:
     char* alloc_mem;
     uint64_t mem_last_index = 0;
 #ifdef GOOGLE
@@ -149,7 +146,7 @@ private:
     void** objects_;
 #endif
     sem_t hash_sem;
-};
-
 }
-#endif // _CACHE_STORE_H_
+
+}  // namespace cirrus
+#endif  // SRC_OBJECT_STORE_FULLCACHESTORE_H_

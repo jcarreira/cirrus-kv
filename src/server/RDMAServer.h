@@ -1,8 +1,8 @@
-#ifndef _RDMA_SERVER_H_
-#define _RDMA_SERVER_H_
+#ifndef SRC_SERVER_RDMASERVER_H_
+#define SRC_SERVER_RDMASERVER_H_
 
-#include <mutex>
 #include <rdma/rdma_cma.h>
+#include <mutex>
 #include <vector>
 #include <memory>
 #include "utils/utils.h"
@@ -81,4 +81,4 @@ class RDMAServer : public Server {
 
 }  // namespace cirrus
 
-#endif  // _RDMA_SERVER_H_
+#endif  // SRC_SERVER_RDMASERVER_H_
