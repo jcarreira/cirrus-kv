@@ -241,7 +241,7 @@ bool TCPServer::process(int sock) {
                     LOG<ERROR>("Put would go over capacity on server.");
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
-                    seccess = false;
+                    success = false;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
