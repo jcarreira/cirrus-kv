@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <string>
 #include <vector>
 #include <thread>
@@ -58,6 +59,11 @@ void TCPClient::connect(const std::string& address,
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         throw cirrus::ConnectionException("Error when creating socket.");
     }
+    int opt = 1;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+        throw cirrus::ConnectionException("Error setting socket options.");
+    }
+
     struct sockaddr_in serv_addr;
 
     // Set the type of address being used, assuming ip v4
