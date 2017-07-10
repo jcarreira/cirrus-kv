@@ -9,11 +9,11 @@ Cirrus is a remote data access system for interacting with disaggregated memory 
 Requirements
 ============
 
-This library has been tested on Ubuntu >= 14.04.
+This library has been tested on Ubuntu >= 14.04 as well as MacOS 10.12.5. Additional Mac requirements and instructions are listed below.
 
 It has been tested with the following environment:
 * Ubuntu 14.04
-* g++ 6.2 (needs C++17)
+* g++ 5.4 (needs C++17)
 * Boost
 * autotools
 * Mellanox OFED 3.4 (requires Mellanox drivers)
@@ -32,7 +32,8 @@ Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
 MacOS Requirements
 ============
-Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use.
+Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use. The remaining programs can be installed using homebrew. cpplint can still be installed via pip
+
 gettext can be installed as follows using homebrew. Read the warning before running the link command:
 
     $ brew install gettext
