@@ -233,6 +233,38 @@ bool RDMAClient::insertObjectLocation(ObjectID id,
 
 
 /**
+ * Writes an object from local memory to the remote store asynchronously.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
+        const void *data, BladeLocation loc) {
+    auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
+    return future;
+}
+
+/**
+ * Inserts an object into objects_ , which maps ObjectIDs to
+ * BladeLocation objects.
+ * @param id the ObjectID of the object.
+ * @param size the size of the object.
+ * @param allocRec the AllocationRecord being used for this object.
+ */
+bool RDMAClient::insertObjectLocation(ObjectID id,
+                                      uint64_t size,
+                                      const AllocationRecord& allocRec) {
+    objects_[id] = BladeLocation(size, allocRec);
+    return true;
+}
+
+
+/**
   * Initializes rdma params.
   * This method takes a pointer to a struct rdma_conn_param and assigns initial
   * values.
@@ -293,6 +325,11 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
     qp_attr->cap.max_recv_sge = MAX_RECV_SGE;
 }
 
+/**
+ * Posts a work request to the receive queue.
+ * @param id a pointer to the rdma_cm_id that contains the information
+ * needed to construct the receive request.
+ */
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -353,6 +390,11 @@ void RDMAClient::build_context(struct ibv_context *verbs,
             rv(gen));  // random core
 }
 
+/**
+ * Polls the completion queue, monitoring it for any event completions.
+ * If a request is completed successfully, it is acted upon.
+ * @param ctx a pointer to the ConnectionContext that should be monitored.
+ */
 void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     struct ibv_cq *cq;
     struct ibv_wc wc;
@@ -379,6 +421,11 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     return nullptr;
 }
 
+/**
+ * Method that handles ibv Work completion structs. Signals the op_sem
+ * attached to the op_info that tracks the ibv_wc.
+ * @param wc a pointer to the ibv_wc to be handled.
+ */
 void RDMAClient::on_completion(struct ibv_wc *wc) {
     RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(
                                                                     wc->wr_id);

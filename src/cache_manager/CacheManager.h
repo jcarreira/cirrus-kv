@@ -28,7 +28,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
- private: 
+
+ private:
     void evict_vector(const std::vector<ObjectID>& to_remove);
     void evict(ObjectID oid);
     /**

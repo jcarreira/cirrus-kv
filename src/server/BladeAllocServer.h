@@ -23,6 +23,8 @@ struct BladeAllocation {
   * This server supports allocations on top of a big mem pool.
   * Allocations are isolated through the use of mem. windows
   * We use a mem. allocator to manage mem.
+  * @param port the port the server will listen on
+  * @param pool_size the number of bytes in the memory pool
   */
 class BladeAllocServer : public RDMAServer {
  public:
