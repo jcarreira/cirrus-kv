@@ -312,7 +312,6 @@ class RDMAClient : public BladeClient {
             const RDMAMem& mem);
 
     void connect_rdma_cm(const std::string& host, const std::string& port);
-    void connect_eth(const std::string& host, const std::string& port);
 
     void fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
@@ -335,10 +334,15 @@ class RDMAClient : public BladeClient {
 
     const size_t MB            = (1024 * 1024);
     const size_t GB            = (1024 * MB);
+    /** Maximum size of message that can be received at once. */
     const size_t RECV_MSG_SIZE = 200 * MB;
+    /** Maximum size of message that can be sent at once. */
     const size_t SEND_MSG_SIZE = 200 * MB;
+    /** Maximum number of items in completion queue. */
     const size_t CQ_DEPTH      = 500;
+    /** Maximum number of items in send queue. */
     const size_t MAX_SEND_WR   = 500;
+    /** Maximum number of items in receive queue. */
     const size_t MAX_RECV_WR   = 100;
     const size_t MAX_SEND_SGE  = 2;
     const size_t MAX_RECV_SGE  = 2;

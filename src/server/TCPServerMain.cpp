@@ -22,9 +22,11 @@ auto main(int argc, char *argv[]) -> int {
         std::istringstream iss(argv[1]);
         if (!(iss >> pool_size)) {
             std::cout << "Pool size in invalid format." << std::endl;
+            return -1;
         }
     } else {
-        std::cout << "Pass desired poolsize in bytes" << std::endl;
+        std::cout << "Error: ./tcpservermain [pool_size]" << std::endl;
+        return -1;
     }
     // Instantiate the server
     cirrus::LOG<cirrus::INFO>("Starting TCPServer in port: ", port);

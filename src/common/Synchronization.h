@@ -114,18 +114,18 @@ class PosixSemaphore : public Lock {
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz";
-        
+
         const size_t max_index = (sizeof(charset) - 1);
         // Seed RNG
         const auto time_seed = static_cast<size_t>(std::time(0));
         const auto clock_seed = static_cast<size_t>(std::clock());
         const size_t pid_seed =
             std::hash<std::thread::id>()(std::this_thread::get_id());
-        
+
         std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
         std::mt19937 gen;
         gen.seed(seed_value);
-        
+
         std::string ret_string;
         // First character of name must be a slash
         ret_string.push_back('/');

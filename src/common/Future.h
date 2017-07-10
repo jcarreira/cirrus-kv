@@ -28,6 +28,7 @@ class Future {
     bool try_wait();
 
     bool get();
+
  private:
     /** Pointer to the result. */
     std::shared_ptr<bool> result;

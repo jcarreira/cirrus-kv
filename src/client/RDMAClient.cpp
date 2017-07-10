@@ -260,6 +260,38 @@ bool RDMAClient::insertObjectLocation(ObjectID id,
 
 
 /**
+ * Writes an object from local memory to the remote store asynchronously.
+ * @param data a pointer to the data to be written.
+ * @param loc a BladeLocation, containing the size of the object and
+ * the location to be written to.
+ * @param mem a pointer to an RDMAMem, which is the registered memory
+ * where the data currently resides. If null, a new RDMAMem is used
+ * for this object.
+ * @return a std::shared_ptr to a FutureBladeOp. This FutureBladeOp
+ * contains information about the status of the operation.
+ */
+std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::writeRemoteAsync(
+        const void *data, BladeLocation loc) {
+    auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
+    return future;
+}
+
+/**
+ * Inserts an object into objects_ , which maps ObjectIDs to
+ * BladeLocation objects.
+ * @param id the ObjectID of the object.
+ * @param size the size of the object.
+ * @param allocRec the AllocationRecord being used for this object.
+ */
+bool RDMAClient::insertObjectLocation(ObjectID id,
+                                      uint64_t size,
+                                      const AllocationRecord& allocRec) {
+    objects_[id] = BladeLocation(size, allocRec);
+    return true;
+}
+
+
+/**
   * Initializes rdma params.
   * This method takes a pointer to a struct rdma_conn_param and assigns initial
   * values.
@@ -320,6 +352,11 @@ void RDMAClient::build_qp_attr(struct ibv_qp_init_attr *qp_attr,
     qp_attr->cap.max_recv_sge = MAX_RECV_SGE;
 }
 
+/**
+ * Posts a work request to the receive queue.
+ * @param id a pointer to the rdma_cm_id that contains the information
+ * needed to construct the receive request.
+ */
 int RDMAClient::post_receive(struct rdma_cm_id *id) {
     ConnectionContext *ctx =
         reinterpret_cast<ConnectionContext*>(id->context);
@@ -380,6 +417,11 @@ void RDMAClient::build_context(struct ibv_context *verbs,
             rv(gen));  // random core
 }
 
+/**
+ * Polls the completion queue, monitoring it for any event completions.
+ * If a request is completed successfully, it is acted upon.
+ * @param ctx a pointer to the ConnectionContext that should be monitored.
+ */
 void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     struct ibv_cq *cq;
     struct ibv_wc wc;
@@ -406,6 +448,11 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
     return nullptr;
 }
 
+/**
+ * Method that handles ibv Work completion structs. Signals the op_sem
+ * attached to the op_info that tracks the ibv_wc.
+ * @param wc a pointer to the ibv_wc to be handled.
+ */
 void RDMAClient::on_completion(struct ibv_wc *wc) {
     RDMAClient::RDMAOpInfo* op_info = reinterpret_cast<RDMAClient::RDMAOpInfo*>(
                                                                     wc->wr_id);
@@ -705,6 +752,10 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
     return op_info;
 }
 
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
 void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t value) {
     LOG<INFO>("RDMAClient:: fetchadd_rdma_sync");
@@ -721,7 +772,10 @@ void RDMAClient::fetchadd_rdma_sync(struct rdma_cm_id *id,
     delete op_info;
 }
 
-// Fetch and add
+/**
+ * Method that fetches value from a remote address, then adds a value to it
+ * before pushing it back to the remote store.
+ */
 RDMAClient::RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t /*value*/) {
 #if __GNUC__ >= 7
@@ -756,109 +810,11 @@ RDMAClient::RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
     return op_info;
 }
 
-void RDMAClient::connect_eth(const std::string& host, const std::string& port) {
-    // Get device
-    int num_device;
-    struct ibv_device **dev_list;
-    dev_list = ibv_get_device_list(&num_device);
-
-    if (num_device <= 0 || dev_list == nullptr) {
-        throw std::runtime_error("Error in ibv_get_device_list");
-    }
-
-#ifdef DEBUG
-    for (int i = 0; i < num_device; ++i) {
-        std::cout << "device: ". ibv_get_device_name(dev_list[i]) << std::endl;
-    }
-#endif
-
-    // we get first one
-    struct ibv_device *ib_dev = dev_list[0];
-    struct ibv_context* dev_ctx = ibv_open_device(ib_dev);
-
-    if (nullptr == dev_ctx) {
-        throw std::runtime_error("Error opening ib device");
-    }
-
-    LOG<INFO>("Opened ib device");
-
-    ibv_query_device(dev_ctx, &con_ctx_.gen_ctx_.device_attr);
-
-    // Check some information
-    int ret = ibv_query_port(dev_ctx, 1, &con_ctx_.gen_ctx_.port_attr);
-    ibv_query_gid(dev_ctx, 1, 0, &con_ctx_.gen_ctx_.gid);
-
-    LOG<INFO>("Creating IB CQs");
-
-    // creates PD
-    // creates Comp channel
-    // creates CQ
-    // creates handling thread
-    build_context(dev_ctx, &con_ctx_);
-    build_qp_attr(&con_ctx_.gen_ctx_.qp_attr, &con_ctx_);
-
-    con_ctx_.qp = ibv_create_qp(con_ctx_.gen_ctx_.pd,
-                                &con_ctx_.gen_ctx_.qp_attr);
-
-    if (nullptr == con_ctx_.qp)
-        throw std::runtime_error("Error creating qp");
-
-    LOG<INFO>("Created QP");
-    // ******************
-    // Connect to client
-    // ******************
-    LOG<INFO>("Doing eth connect");
-    struct addrinfo *res;
-    struct addrinfo hints;
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family   = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-
-    ret = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
-
-    if (ret < 0) {
-        throw std::runtime_error("Error getaddrinfo");
-    }
-
-    int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-    if (!::connect(sockfd, res->ai_addr, res->ai_addrlen)) {
-        throw std::runtime_error("Error connecting to host");
-    }
-
-    freeaddrinfo(res);
-
-
-    LOG<INFO>("Handshaking");
-    // handshake
-
-    struct {
-        int lid        = 0;
-        int qpn        = 0;
-        int psn        = 0;
-        int rkey       = 0;
-        uint64_t vaddr = 0;
-    } handshake_msg;
-
-    handshake_msg.lid = con_ctx_.gen_ctx_.port_attr.lid;
-    handshake_msg.qpn = con_ctx_.qp->qp_num;
-    handshake_msg.psn = rand_r(&seed);
-    // handshake_msg.rkey = con_ctx_.recv_msg_mr->rkey;
-    // handshake_msg.vaddr = reinterpret_cast<uint64_t>(con_ctx_.recv_msg);
-
-    ret = ::send(sockfd, &handshake_msg, sizeof(handshake_msg), 0);
-    if (ret != sizeof(handshake_msg)) {
-        throw std::runtime_error("Error sending handshake");
-    }
-
-    char recv_buffer[1000];
-    ret = ::recv(sockfd, &recv_buffer, sizeof(recv_buffer), 0);
-
-    if (ret <= 0)
-        throw std::runtime_error("Error recv'ing");
-}
-
+/**
+ * Connects to the RDMA host at the given ip and port.
+ * @param host the ip address of the host
+ * @param port the port the host is listening on
+ */
 void RDMAClient::connect_rdma_cm(const std::string& host,
                                  const std::string& port) {
     struct addrinfo *addr;
@@ -1218,6 +1174,9 @@ std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::rdma_read_async(
     return std::make_shared<RDMAClient::FutureBladeOp>(op_info);
 }
 
+/**
+ * A wrapper for fetchadd_rdma_sync.
+ */
 bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t value) {
@@ -1232,6 +1191,9 @@ bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
     return true;
 }
 
+/**
+ * A wrapper for fetchadd_rdma_async.
+ */
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::fetchadd_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,

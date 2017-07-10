@@ -41,6 +41,7 @@ AC_LIB_HAVE_LINKFLAGS(mpi)
 AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
 AM_CONDITIONAL([USE_MPI], [test "x${HAVE_LIBMPI}" = "xyes"])
 
+AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
 # Checks for header files.
 AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
         stdlib.h sys/types.h sys/socket.h sys/epoll.h\
