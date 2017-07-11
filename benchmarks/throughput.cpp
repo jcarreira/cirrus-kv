@@ -45,22 +45,22 @@ void test_throughput(int numRuns) {
                 array_deserializer_simple<SIZE>);
 
     std::cout << "Creating the array to put." << std::endl;
-    std::array<char, SIZE> array;
+    std::array<char, SIZE> *array = new std::array<char, SIZE>;
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    store.put(0, array);
+    store.put(0, *array);
 
     std::cout << "Warm up done" << std::endl;
 
-    std::cout <<"size is " << sizeof(array) << std::endl;
+    std::cout <<"size is " << sizeof(*array) << std::endl;
 
     uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < numRuns; ++i) {
-        store.put(0, array);
+        store.put(0, *array);
     }
     end = start.getUsElapsed();
 
