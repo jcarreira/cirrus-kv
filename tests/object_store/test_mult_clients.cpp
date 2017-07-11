@@ -41,19 +41,22 @@ void test_multiple_clients() {
           cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
               store(IP, PORT, &client,
                        cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                           sizeof(cirrus::Dummy<SIZE>)>);
 
           for (int i = 0; i < 100; ++i) {
                 int rnd = std::rand();
-
                 struct cirrus::Dummy<SIZE> d(rnd);
 
                 store.put(1, d);
 
                 struct cirrus::Dummy<SIZE> d2 = store.get(1);
 
-                if (d2.id != rnd)
-                    throw std::runtime_error("mismatch");
+                if (d2.id != rnd) {
+                    std::cout << "Expected " << rnd << " but got " << d2.id
+                        << std::endl;
+                    throw std::runtime_error("Wrong value returned.");
+                }
 
                 total_puts++;
             }
