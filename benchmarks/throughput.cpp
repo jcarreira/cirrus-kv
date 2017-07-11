@@ -60,7 +60,6 @@ void test_throughput(int numRuns) {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < numRuns; ++i) {
-        std::cout << i << std::endl;
         store.put(0, array);
     }
     end = start.getUsElapsed();
