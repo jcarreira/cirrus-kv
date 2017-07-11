@@ -114,7 +114,8 @@ void test_nonexistent_get() {
   * an item if it has been removed from the store.
   */
 void test_remove() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 

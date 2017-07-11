@@ -40,8 +40,9 @@ void test_exhaustion() {
  * the server is at capacity, an item can be removed to make more room.
  */
 void test_exhaustion_remove() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+        store(IP, PORT, &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -55,9 +56,11 @@ void test_exhaustion_remove() {
             break;
         }
     }
+    std::cout << "Removing an object to make room." << std::endl;
     // Remove an object to make room
     store.remove(0);
-
+    std::cout << "Attempting to insert an object in the newly freed space." 
+        << std::endl;
     // Attempt to use the newly freed space
     store.put(i, d);
 }
