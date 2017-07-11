@@ -1,12 +1,12 @@
-#ifndef _APPLICATION_RECORD_H_
-#define _APPLICATION_RECORD_H_
+#ifndef SRC_SERVER_APPLICATIONRECORD_H_
+#define SRC_SERVER_APPLICATIONRECORD_H_
 
 #include <vector>
 
 namespace cirrus {
 
 class ApplicationRecord {
-  public:
+ public:
     ApplicationRecord();
     virtual ~ApplicationRecord();
 
@@ -19,4 +19,4 @@ class ApplicationRecord {
 
 }  // namespace cirrus
 
-#endif  // _APPLICATION_RECORD_H_
+#endif  // SRC_SERVER_APPLICATIONRECORD_H_

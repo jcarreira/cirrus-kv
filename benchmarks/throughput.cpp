@@ -4,11 +4,12 @@
 
 #include "object_store/FullBladeObjectStore.h"
 #include "utils/Time.h"
+#include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.84";
+const char IP[] = "10.10.49.83";
 static const uint64_t MILLION = 1000000;
 
 /* This function simply copies a std::array into a new portion of memory. */
@@ -38,8 +39,9 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
   */
 template <unsigned int SIZE>
 void test_throughput(int numRuns) {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-        store(IP, PORT, array_serializer_simple<SIZE>,
+        store(IP, PORT, &client, array_serializer_simple<SIZE>,
                 array_deserializer_simple<SIZE>);
 
     std::array<char, SIZE> array;
@@ -72,11 +74,13 @@ void test_throughput(int numRuns) {
 }
 
 auto main() -> int {
-    test_throughput<128>(2000);
-    test_throughput<4096>(2000);
-    test_throughput<50 * 1024>(2000);
-    test_throughput<1024 * 1024>(2000);
-    test_throughput<10 * 1024 * 1024>(2000);
-    test_throughput<100 * 1024 * 1024>(2000);
+    int num_runs = 2000;
+
+    test_throughput<128>(num_runs);                // 128B
+    test_throughput<4    * 1024>(num_runs);        // 4K
+    test_throughput<50   * 1024>(num_runs);        // 50K
+    test_throughput<1024 * 1024>(num_runs);        // 1MB
+    test_throughput<10   * 1024 * 1024>(num_runs);  // 10MB
+    test_throughput<100  * 1024 * 1024>(num_runs);  // 100MB
     return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef _QUOTA_MANAGER_H_
-#define _QUOTA_MANAGER_H_
+#ifndef SRC_SERVER_QUOTAMANAGER_H_
+#define SRC_SERVER_QUOTAMANAGER_H_
 
 #include <cstdint>
 
@@ -15,4 +15,4 @@ class QuotaManager {
 
 }  // namespace cirrus
 
-#endif  // _QUOTA_MANAGER_H_
+#endif  // SRC_SERVER_QUOTAMANAGER_H_

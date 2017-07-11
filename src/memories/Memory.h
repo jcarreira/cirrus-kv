@@ -1,5 +1,5 @@
-#ifndef _MEMORY_H_
-#define _MEMORY_H_
+#ifndef SRC_MEMORIES_MEMORY_H_
+#define SRC_MEMORIES_MEMORY_H_
 
 namespace cirrus {
 
@@ -11,3 +11,5 @@ struct Memory {
 };
 
 }  // namespace cirrus
+
+#endif  // SRC_MEMORIES_MEMORY_H_

@@ -20,6 +20,7 @@ make -j 10
 cd ../..
 
 # main compilation
+touch config.rpath
 autoreconf
 automake --add-missing
 autoreconf

@@ -4,11 +4,12 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
+#include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
 
@@ -21,19 +22,12 @@ static const uint64_t MILLION = 1000000;
  * the server must have been running to send the message.
  */
 void test_exhaustion() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+        store(IP, PORT, &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
-
-    // warm up
-    std::cout << "Putting 1000" << std::endl;
-    for (int i = 0; i < 1000; ++i) {
-        store.put(i, d);
-    }
-
-    std::cout << "Done putting 1000" << std::endl;
 
     std::cout << "Putting one million objects" << std::endl;
     for (uint64_t i = 0; i < MILLION; ++i) {

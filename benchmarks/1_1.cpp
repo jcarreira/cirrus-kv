@@ -17,13 +17,28 @@
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 128;
 static const uint64_t MILLION = 1000000;
+static const uint64_t N_ITER = 100;
+
+void print_stats(std::ostream& out, const cirrus::Stats& stats,
+        uint64_t msg_sent, uint64_t elapsed_us) {
+    out << "1_1 test" << std::endl;
+    out << "count: " << stats.getCount() << std::endl;
+    out << "msg/s: " << (msg_sent * 1.0 / elapsed_us * MILLION)
+        << std::endl;
+    out << "min: " << stats.min() << std::endl;
+    out << "avg: " << stats.avg() << std::endl;
+    out << "max: " << stats.max() << std::endl;
+    out << "sd: " << stats.sd() << std::endl;
+    out << "99%: " << stats.getPercentile(0.99) << std::endl;
+}
 
 /**
   * This benchmarks has two aims. The first aim is to find the distribution of
@@ -33,8 +48,9 @@ static const uint64_t MILLION = 1000000;
   * achieves by measuring the time needed for ten million puts.
   */
 void test_sync() {
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT,
+        store(IP, PORT, &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
 
@@ -42,57 +58,39 @@ void test_sync() {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < N_ITER; ++i) {
         store.put(i, d);
     }
 
     std::cout << "Warm up done" << std::endl;
 
     cirrus::Stats stats;
-    stats.reserve(MILLION);
+    stats.reserve(N_ITER);
 
     std::cout << "Measuring latencies.." << std::endl;
-    for (uint64_t i = 0; i < MILLION; ++i) {
+    for (uint64_t i = 0; i < N_ITER; ++i) {
         cirrus::TimerFunction tf;
         store.put(i % 1000, d);
         uint64_t elapsed_us = tf.getUsElapsed();
         stats.add(elapsed_us);
     }
 
-    uint64_t end;
     std::cout << "Measuring msgs/s.." << std::endl;
     uint64_t i = 0;
     cirrus::TimerFunction start;
-    for (; i < 10 * MILLION; ++i) {
-        store.put(i % 1000, d);
 
-        if (i % 100000 == 0) {
-            if ((end = start.getUsElapsed()) > MILLION) {
-                break;
-            }
-        }
+    for (; i < N_ITER; ++i) {
+        store.put(i % 10, d);
     }
+
+    uint64_t elapsed_us = start.getUsElapsed();
 
     std::ofstream outfile;
     outfile.open("1_1.log");
-    outfile << "1_1 test" << std::endl;
-    outfile << "count: " << stats.getCount() << std::endl;
-    outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "min: " << stats.min() << std::endl;
-    outfile << "avg: " << stats.avg() << std::endl;
-    outfile << "max: " << stats.max() << std::endl;
-    outfile << "sd: " << stats.sd() << std::endl;
-    outfile << "99%: " << stats.getPercentile(0.99) << std::endl;
+    print_stats(outfile, stats, i, elapsed_us);
     outfile.close();
 
-    std::cout << "1_1 test" << std::endl;
-    std::cout << "count: " << stats.getCount() << std::endl;
-    std::cout << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    std::cout << "min: " << stats.min() << std::endl;
-    std::cout << "avg: " << stats.avg() << std::endl;
-    std::cout << "max: " << stats.max() << std::endl;
-    std::cout << "sd: " << stats.sd() << std::endl;
-    std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
+    print_stats(std::cout, stats, i, elapsed_us);
 }
 
 auto main() -> int {

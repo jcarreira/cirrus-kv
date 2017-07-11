@@ -1,5 +1,5 @@
-#ifndef _ALLOCATION_H_
-#define _ALLOCATION_H_
+#ifndef SRC_SERVER_ALLOCATION_H_
+#define SRC_SERVER_ALLOCATION_H_
 
 
 
@@ -17,4 +17,4 @@ class Allocation {
 
 }  // namespace cirrus
 
-#endif  // _ALLOCATION_H_
+#endif  // SRC_SERVER_ALLOCATION_H_

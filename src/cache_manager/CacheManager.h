@@ -1,5 +1,5 @@
-#ifndef _CACHEMANAGER_H_
-#define _CACHEMANAGER_H_
+#ifndef SRC_CACHE_MANAGER_CACHEMANAGER_H_
+#define SRC_CACHE_MANAGER_CACHEMANAGER_H_
 
 #include <map>
 #include <vector>
@@ -25,7 +25,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
- private: 
+
+ private:
     void evict_vector(const std::vector<ObjectID>& to_remove);
     void evict(ObjectID oid);
     /**
@@ -189,4 +190,4 @@ void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
 }
 }  // namespace cirrus
 
-#endif  // _CACHEMANAGER_H_
+#endif  // SRC_CACHE_MANAGER_CACHEMANAGER_H_

@@ -1,3 +1,6 @@
+#ifndef SRC_MEMORIES_3DXPOINT_H_
+#define SRC_MEMORIES_3DXPOINT_H_
+
 namespace cirrus {
 
 class 3DXPoint : public Memory {
@@ -15,3 +18,5 @@ class 3DXPoint : public Memory {
 };
 
 }  // namespace cirrus
+
+#endif  // SRC_MEMORIES_3DXPOINT_H_

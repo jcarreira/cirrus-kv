@@ -1,10 +1,19 @@
-#ifndef _EXCEPTION_H_
-#define _EXCEPTION_H_
+#ifndef SRC_COMMON_EXCEPTION_H_
+#define SRC_COMMON_EXCEPTION_H_
 
 #include <string>
 #include <exception>
 
 namespace cirrus {
+
+// TODO(Tyler): Add in enum for exceptions
+
+enum ErrorCodes {
+  kOk = 0,
+  kException,
+  kServerMemoryErrorException,
+  kNoSuchIDException,
+};
 
 /**
   * A class for cirrus generated exceptions.
@@ -53,6 +62,25 @@ class NoSuchIDException : public cirrus::Exception {
         cirrus::Exception(msg) {}
 };
 
+/**
+  * An exception generated when the client or server fail to make a connection
+  * with the other.
+  */
+class ConnectionException : public cirrus::Exception {
+ public:
+    explicit ConnectionException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
+/**
+  * An exception generated when a read on the server fails.
+  */
+class ServerReadException : public cirrus::Exception {
+ public:
+    explicit ServerReadException(std::string msg):
+        cirrus::Exception(msg) {}
+};
+
 }  // namespace cirrus
 
-#endif  // _EXCEPTION_H_
+#endif  // SRC_COMMON_EXCEPTION_H_

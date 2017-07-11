@@ -1,5 +1,5 @@
-#ifndef _GRANTING_KEY_H_
-#define _GRANTING_KEY_H_
+#ifndef SRC_AUTHENTICATION_GRANTINGKEY_H_
+#define SRC_AUTHENTICATION_GRANTINGKEY_H_
 
 namespace cirrus {
 
@@ -17,4 +17,4 @@ class GrantingKey {
 
 }  // namespace cirrus
 
-#endif  // _GRANTING_KEY_H_
+#endif  // SRC_AUTHENTICATION_GRANTINGKEY_H_

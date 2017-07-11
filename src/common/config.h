@@ -1,6 +1,6 @@
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef SRC_COMMON_CONFIG_H_
+#define SRC_COMMON_CONFIG_H_
 
 #include "utils/logging.h"
 
-#endif // _CONFIG_H_
+#endif  // SRC_COMMON_CONFIG_H_

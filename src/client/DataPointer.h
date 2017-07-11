@@ -1,5 +1,5 @@
-#ifndef _DATA_POINTER_H_
-#define _DATA_POINTER_H_
+#ifndef SRC_CLIENT_DATAPOINTER_H_
+#define SRC_CLIENT_DATAPOINTER_H_
 
 #include <string>
 
@@ -23,4 +23,4 @@ class DataPointer {
 
 }  // namespace cirrus
 
-#endif  // _DATA_POINTER_H_
+#endif  // SRC_CLIENT_DATAPOINTER_H_

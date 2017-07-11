@@ -8,18 +8,20 @@
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
+#include "client/TCPClient.h"
 
-// TODO: Remove hardcoded IP and PORT
+// TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 
 /**
   * Test simple synchronous put and get to/from the object store.
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -42,7 +44,8 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -53,7 +56,7 @@ void test_nonexistent_get() {
     }
 
     // Should fail
-    cm.get(10);
+    cm.get(1492);
 }
 
 /**
@@ -61,7 +64,8 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -84,7 +88,8 @@ void test_capacity() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -97,7 +102,7 @@ void test_instantiation() {
  * that it always returns the one oldest item, and only does so when at
  * capacity.
  */
-void test_lradded() { 
+void test_lradded() {
     cirrus::LRAddedEvictionPolicy policy(10);
     int i;
     for (i = 0; i < 10; i++) {
@@ -147,5 +152,6 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+    std::cout << "test successful" << std::endl;
     return 0;
 }

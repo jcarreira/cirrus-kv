@@ -1,5 +1,5 @@
-#ifndef _GENERAL_CONTEXT_H_
-#define _GENERAL_CONTEXT_H_
+#ifndef SRC_SERVER_GENERALCONTEXT_H_
+#define SRC_SERVER_GENERALCONTEXT_H_
 
 #include <thread>
 
@@ -23,4 +23,4 @@ class GeneralContext {
 
 }  // namespace cirrus
 
-#endif  // _RDMA_SERVER_H_
+#endif  // SRC_SERVER_GENERALCONTEXT_H_
