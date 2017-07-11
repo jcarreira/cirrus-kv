@@ -162,6 +162,7 @@ void test_async_N(int N) {
         int val = get_futures[i].get();
         if (val != i) {
             std::cout << "Expected " << i << " but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
         }
     }
 }
