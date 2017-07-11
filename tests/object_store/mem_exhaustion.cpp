@@ -59,7 +59,7 @@ void test_exhaustion_remove() {
     std::cout << "Removing an object to make room." << std::endl;
     // Remove an object to make room
     store.remove(0);
-    std::cout << "Attempting to insert an object in the newly freed space." 
+    std::cout << "Attempting to insert an object in the newly freed space."
         << std::endl;
     // Attempt to use the newly freed space
     store.put(i, d);
