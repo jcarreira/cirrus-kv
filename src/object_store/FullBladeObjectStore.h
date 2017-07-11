@@ -13,7 +13,6 @@
 #include "utils/Time.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
-#include "common/Future.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
