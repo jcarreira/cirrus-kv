@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <map>
 #include <vector>
@@ -72,6 +73,10 @@ void TCPServer::init() {
                 break;
         }
         throw cirrus::ConnectionException("Error forcing port binding");
+    }
+
+    if (setsockopt(server_sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+        throw cirrus::ConnectionException("Error setting socket options.");
     }
 
     if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEPORT, &opt,
