@@ -180,7 +180,7 @@ void test_bulk() {
         values[i] = i;
     }
 
-    store.putBulk(0, 9, values.data());
+    store.put_bulk(0, 9, values.data());
 
     std::vector<int> ret_values(10);
     store.get_bulk(0, 9, ret_values.data());

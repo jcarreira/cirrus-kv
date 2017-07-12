@@ -46,8 +46,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
             const T& obj) override;
 
-    void get_bulk(ObjID start, ObjID last, Type* data) override;
-    void put_bulk(ObjID start, ObjID last, Type* data) override;
+    void get_bulk(ObjectID start, ObjectID last, T* data) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data) override;
 
     void printStats() const noexcept override;
 
@@ -211,14 +211,14 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
  * remote store.
  */
 template<class T>
-void FullBladeObjectStoreTempl<T>::get_bulk(ObjID start,
-    ObjID last, Type* data) {
+void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
+    ObjectID last, T* data) {
     if (last < start) {
         throw cirrus::Exception("Last objectID for getBulk must be greater "
             "than start objectID.");
     }
     const int numObjects = last - start + 1;
-    std::vector<ObjectStore<T>::ObjectStoreGetFuture> futures(numObjects);
+    std::vector<typename cirrus::ObjectStore<T>::ObjectStoreGetFuture> futures(numObjects);
     // Start each get asynchronously
     for (int i = 0; i < numObjects; i++) {
         futures[i] = get_async(start + i);
@@ -228,7 +228,7 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjID start,
 
     // Wait for each item to complete
     while (total_done != numObjects) {
-        for (int i = 0; i < numObjects) {
+        for (int i = 0; i < numObjects; i++) {
             // Check status if not already completed
             if (!done[i]) {
                 bool ret = futures[i].try_wait();
@@ -250,13 +250,14 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjID start,
  * @param data a pointer the first object in a c style array that will
  * be put to the remote store.
  */
-void put_bulk(ObjID start, ObjID last, Type* data) {
+template<class T>
+void put_bulk(ObjectID start, ObjectID last, T* data) {
     if (last < start) {
         throw cirrus::Exception("Last objectID for putBulk must be greater "
             "than start objectID.");
     }
     const int numObjects = last - start + 1;
-    std::vector<ObjectStore<T>::ObjectStorePutFuture> futures(numObjects);
+    std::vector<typename ObjectStore<T>::ObjectStorePutFuture> futures(numObjects);
     // Start each put asynchronously
     for (int i = 0; i < numObjects; i++) {
         futures[i] = put_async(start + i, &data[i]);
@@ -266,7 +267,7 @@ void put_bulk(ObjID start, ObjID last, Type* data) {
 
     // Wait for each item to complete
     while (total_done != numObjects) {
-        for (int i = 0; i < numObjects) {
+        for (int i = 0; i < numObjects; i++) {
             // Check status if not already completed
             if (!done[i]) {
                 bool ret = futures[i].try_wait();

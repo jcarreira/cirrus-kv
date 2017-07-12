@@ -91,8 +91,8 @@ class ObjectStore {
     virtual ObjectStoreGetFuture get_async(const ObjectID& id);
     virtual ObjectStorePutFuture put_async(const ObjectID& id, const T& obj);
 
-    void getBulk(ObjID start, ObjID last, Type* data);
-    void putBulk(ObjID start, ObjID last, Type* data);
+    virtual void get_bulk(ObjectID start, ObjectID last, T* data);
+    virtual void put_bulk(ObjectID start, ObjectID last, T* data);
 };
 
 template<class T>
@@ -110,14 +110,14 @@ typename ObjectStore<T>::ObjectStorePutFuture ObjectStore<T>::put_async(
 }
 
 template<class T>
-void ObjectStore<T>::putBulk(ObjID /* start */,
-    ObjID /* last */, Type* /* data */) {
+void ObjectStore<T>::put_bulk(ObjectID /* start */,
+    ObjectID /* last */, T* /* data */) {
     return;
 }
 
 template<class T>
-void ObjectStore<T>::getBulk(ObjID /* start */,
-    ObjID /* last */, Type* /* data */) {
+void ObjectStore<T>::get_bulk(ObjectID /* start */,
+    ObjectID /* last */, T* /* data */) {
     return;
 }
 

@@ -28,8 +28,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
-    void get_bulk(ObjID start, ObjID last, Type* data);
-    void put_bulk(ObjID start, ObjID last, Type* data);
+    void get_bulk(ObjectID start, ObjectID last, T* data);
+    void put_bulk(ObjectID start, ObjectID last, T* data);
 
  private:
     void evict_vector(const std::vector<ObjectID>& to_remove);
@@ -163,7 +163,8 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
  * @param data a pointer to a c style array that will be filled from the
  * remote store.
  */
-void get_bulk(ObjID start, ObjID last, Type* data) {
+template<class T>
+void CacheManager<T>::get_bulk(ObjectID start, ObjectID last, T* data) {
     if (last < start) {
         throw cirrus::Exception("Last objectID for get_bulk must be greater "
             "than start objectID.");
@@ -181,7 +182,8 @@ void get_bulk(ObjID start, ObjID last, Type* data) {
  * @param data a pointer the first object in a c style array that will
  * be put to the remote store.
  */
-void put_bulk(ObjID start, ObjID last, Type* data) {
+template<class T>
+void CacheManager<T>::put_bulk(ObjectID start, ObjectID last, T* data) {
     if (last < start) {
         throw cirrus::Exception("Last objectID for put_bulk must be greater "
             "than start objectID.");

@@ -142,7 +142,7 @@ void test_bulk() {
         values[i] = i;
     }
 
-    cm.putBulk(0, 9, values.data());
+    cm.put_bulk(0, 9, values.data());
 
     std::vector<int> ret_values(10);
     cm.get_bulk(0, 9, ret_values.data());
