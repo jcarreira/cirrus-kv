@@ -43,9 +43,9 @@ void test_multiple_clients() {
             cirrus::TCPClient client;
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
                 store(IP, PORT, &client,
-                    cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                    cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                        sizeof(cirrus::Dummy<SIZE>)>);
+                      cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                      cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                          sizeof(cirrus::Dummy<SIZE>)>);
             for (int i = start; i < stop; i++) {
                 int rnd = std::rand();
                 struct cirrus::Dummy<SIZE> d(rnd);
