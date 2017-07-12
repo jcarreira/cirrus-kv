@@ -38,6 +38,7 @@ class TCPClient : public BladeClient {
     ssize_t send_all(int, const void*, size_t, int);
     cirrus::Future enqueue_message(
                         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        const int txn_id,
                         void *ptr = nullptr);
     void process_received();
     void process_send();
@@ -63,9 +64,12 @@ class TCPClient : public BladeClient {
             error_code = std::make_shared<cirrus::ErrorCodes>();
         }
     };
-
-    int sock = 0;  /**< fd of the socket used to communicate w/ remote store */
-    TxnID curr_txn_id = 0;  /**< next txn_id to assign */
+    /** fd of the socket used to communicate w/ remote store */
+    int sock = 0;
+    /**< next txn_id to assign */
+    TxnID curr_txn_id = 0;
+    /** Lock on the current transaction id. */
+    cirrus::SpinLock curr_txn_id_lock;
 
     /**
       * Map that allows receiver thread to map transactions to their
