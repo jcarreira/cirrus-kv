@@ -8,19 +8,19 @@
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
-#include "client/RDMAClient.h"
+#include "client/TCPClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char IP[] = "10.10.49.83";
 
 /**
   * Test simple synchronous put and get to/from the object store.
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -44,7 +44,7 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -64,7 +64,7 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -88,7 +88,7 @@ void test_capacity() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -124,12 +124,11 @@ void test_lradded() {
     }
 }
 
-// TODO(Tyler): Write tests that verify it fails if nonexistent, oom, etc.
 /**
  * This test tests that get_bulk() and put_bulk() return proper values.
  */
 void test_bulk() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -153,6 +152,22 @@ void test_bulk() {
             throw std::runtime_error("Wrong value returned");
         }
     }
+}
+
+/**
+ * This test ensures that error messages that would normally be generated
+ * during a get are still received during a get bulk.
+ */
+void test_bulk_nonexistent() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+    std::vector<int> ret_values(10);
+    cm.get_bulk(1492, 1591, ret_values.data());
 }
 
 auto main() -> int {
@@ -184,6 +199,15 @@ auto main() -> int {
     }
     test_lradded();
     test_bulk();
+
+    try {
+        test_bulk_nonexistent();
+        std::cout << "No exception thrown when get bulk called on nonexistent "
+            " ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException & e) {
+    }
+
     std::cout << "test successful" << std::endl;
     return 0;
 }

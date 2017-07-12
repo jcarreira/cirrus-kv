@@ -14,7 +14,7 @@ def runTest(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/bladeallocmain"])
+    server = subprocess.Popen(["./src/server/tcpservermain"])
 
     # Sleep to give server time to start
     print("Started server, sleeping.")

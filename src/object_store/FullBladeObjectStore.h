@@ -218,7 +218,8 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
             "than start objectID.");
     }
     const int numObjects = last - start + 1;
-    std::vector<typename cirrus::ObjectStore<T>::ObjectStoreGetFuture> futures(numObjects);
+    std::vector<typename cirrus::ObjectStore<T>::ObjectStoreGetFuture> futures(
+        numObjects);
     // Start each get asynchronously
     for (int i = 0; i < numObjects; i++) {
         futures[i] = get_async(start + i);
@@ -251,16 +252,18 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
  * be put to the remote store.
  */
 template<class T>
-void put_bulk(ObjectID start, ObjectID last, T* data) {
+void FullBladeObjectStoreTempl<T>::put_bulk(ObjectID start,
+    ObjectID last, T* data) {
     if (last < start) {
         throw cirrus::Exception("Last objectID for putBulk must be greater "
             "than start objectID.");
     }
     const int numObjects = last - start + 1;
-    std::vector<typename ObjectStore<T>::ObjectStorePutFuture> futures(numObjects);
+    std::vector<typename ObjectStore<T>::ObjectStorePutFuture> futures(
+        numObjects);
     // Start each put asynchronously
     for (int i = 0; i < numObjects; i++) {
-        futures[i] = put_async(start + i, &data[i]);
+        futures[i] = put_async(start + i, data[i]);
     }
     std::vector<bool> done(numObjects, false);
     int total_done = 0;
