@@ -46,7 +46,8 @@ void test_multiple_clients() {
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
                 store(IP, PORT, &client,
                     cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
-                    cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
+                    cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                        sizeof(cirrus::Dummy<SIZE>)>);
             std::cout << "New thread connected." << std::endl;
             struct cirrus::Dummy<SIZE> d(42);
             // warm up

@@ -67,7 +67,7 @@ void test_iterator_alt() {
             &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-            sizeof(cirrus::Dummy<SIZE>)>);
+                sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
