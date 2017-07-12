@@ -17,7 +17,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
@@ -123,8 +123,9 @@ void test_async() {
     }
 
     auto get_future = store.get_async(0);
-    if (get_future.get() != 42) {
-        std::cout << "Expected 42 but got: " << get_future.get() << std::endl;
+    int result = get_future.get();
+    if (result != 42) {
+        std::cout << "Expected 42 but got: " << result << std::endl;
         throw std::runtime_error("Wrong value returned.");
     }
 }
@@ -161,6 +162,7 @@ void test_async_N(int N) {
         int val = get_futures[i].get();
         if (val != i) {
             std::cout << "Expected " << i << " but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
         }
     }
 }
@@ -208,6 +210,7 @@ void test_bulk_nonexistent() {
 }
 
 auto main() -> int {
+    std::cout << "Starting synchronous tests." << std::endl;
     test_sync(10);
     test_sync();
     test_bulk();
@@ -220,7 +223,9 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
+    std::cout << "Starting asynchronous tests." << std::endl;
     test_async();
+    std::cout << "Test async n." << std::endl;
     test_async_N(10);
     try {
         test_nonexistent_get();

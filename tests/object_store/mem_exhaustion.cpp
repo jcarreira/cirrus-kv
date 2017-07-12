@@ -9,7 +9,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char IP[] = "10.10.49.83";
 static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
 
