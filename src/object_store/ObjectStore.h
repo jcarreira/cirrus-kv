@@ -90,6 +90,9 @@ class ObjectStore {
 
     virtual ObjectStoreGetFuture get_async(const ObjectID& id);
     virtual ObjectStorePutFuture put_async(const ObjectID& id, const T& obj);
+
+    void getBulk(ObjID start, ObjID last, Type* data);
+    void putBulk(ObjID start, ObjID last, Type* data);
 };
 
 template<class T>
@@ -104,6 +107,18 @@ typename ObjectStore<T>::ObjectStorePutFuture ObjectStore<T>::put_async(
     const ObjectID& id, const T& obj) {
     // TODO(Tyler): Return a blank instance somehow?
     return ObjectStorePutFuture();
+}
+
+template<class T>
+void ObjectStore<T>::putBulk(ObjID /* start */,
+    ObjID /* last */, Type* /* data */) {
+    return;
+}
+
+template<class T>
+void ObjectStore<T>::getBulk(ObjID /* start */,
+    ObjID /* last */, Type* /* data */) {
+    return;
 }
 
 /**

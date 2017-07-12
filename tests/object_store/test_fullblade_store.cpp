@@ -165,11 +165,40 @@ void test_async_N(int N) {
     }
 }
 
+// TODO(Tyler): Write tests that verify it fails if nonexistent, oom, etc.
+/**
+ * This test tests that get_bulk() and put_bulk() return proper values.
+ */
+void test_bulk() {
+    cirrus::RDMAClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    std::vector<int> values(10);
+    for (int i = 0; i < 10; i++) {
+        values[i] = i;
+    }
+
+    store.putBulk(0, 9, values.data());
+
+    std::vector<int> ret_values(10);
+    store.get_bulk(0, 9, ret_values.data());
+    for (int i = 0; i < 10; i++) {
+        if (ret_values[i] != values[i]) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned");
+        }
+    }
+}
+
 auto main() -> int {
     test_sync(10);
     test_sync();
     test_async();
     test_async_N(10);
+    test_bulk();
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"

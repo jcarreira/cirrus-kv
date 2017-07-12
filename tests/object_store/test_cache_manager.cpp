@@ -124,6 +124,37 @@ void test_lradded() {
     }
 }
 
+// TODO(Tyler): Write tests that verify it fails if nonexistent, oom, etc.
+/**
+ * This test tests that get_bulk() and put_bulk() return proper values.
+ */
+void test_bulk() {
+    cirrus::RDMAClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    std::vector<int> values(10);
+    for (int i = 0; i < 10; i++) {
+        values[i] = i;
+    }
+
+    cm.putBulk(0, 9, values.data());
+
+    std::vector<int> ret_values(10);
+    cm.get_bulk(0, 9, ret_values.data());
+    for (int i = 0; i < 10; i++) {
+        if (ret_values[i] != values[i]) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned");
+        }
+    }
+}
+
 auto main() -> int {
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
@@ -152,6 +183,7 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+    test_bulk();
     std::cout << "test successful" << std::endl;
     return 0;
 }
