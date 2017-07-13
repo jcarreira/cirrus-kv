@@ -106,6 +106,20 @@ class PosixSemaphore : public Lock {
     /** Length of randomly names for semaphores. */
     const int rand_string_length = 16;
 
+    uint64_t x = 123456789, y = 362436069, z = 521288629;
+    uint64_t xorshf96(void) {
+        uint64_t temp;
+        x ^= x << 16;
+        x ^= x >> 5;
+        x ^= x << 1;
+
+        temp = x;
+        x = y;
+        y = z;
+        z = temp ^ x ^ y;
+        return z;
+    }
+
     /**
      * Method to generate random strings for named semaphores.
      */
@@ -123,15 +137,14 @@ class PosixSemaphore : public Lock {
             std::hash<std::thread::id>()(std::this_thread::get_id());
 
         std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
-        unsigned int seed;
-        seed_value.generate(&seed, &seed + 1);
+        seed_value.generate(&x, &x + 1);
 
         std::string ret_string;
         // First character of name must be a slash
         ret_string.push_back('/');
 
         for (int i = 1; i < rand_string_length; i++) {
-            char next_char = charset[rand_r(&seed) % max_index];
+            char next_char = charset[xorshf96() % max_index];
             ret_string.push_back(next_char);
         }
         return ret_string;
