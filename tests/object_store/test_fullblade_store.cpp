@@ -12,12 +12,12 @@
 #include "common/Exception.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
-#include "client/RDMAClient.h"
+#include "client/TCPClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
@@ -27,7 +27,7 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       &client,
@@ -54,7 +54,7 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
                 &client,
@@ -96,7 +96,7 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -114,7 +114,7 @@ void test_nonexistent_get() {
   * an item if it has been removed from the store.
   */
 void test_remove() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
