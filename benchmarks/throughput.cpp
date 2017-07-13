@@ -67,7 +67,7 @@ void test_throughput(int numRuns) {
     outfile.open("throughput_" + std::to_string(SIZE) + ".log");
     outfile << "throughput " + std::to_string(SIZE) + " test" << std::endl;
     outfile << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << "bytes/s: " << (i * sizeof(array)) / (end * 1.0 / MILLION)
+    outfile << "bytes/s: " << (i * sizeof(*array)) / (end * 1.0 / MILLION)
             << std::endl;
 
     outfile.close();
