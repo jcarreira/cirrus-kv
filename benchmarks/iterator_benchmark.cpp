@@ -37,6 +37,8 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
 /**
  * Compares the time to retrieve N items using the iterator vs 
  * fetching each individually.
+ * @param num_items the number of items to put on the remote store,
+ * which will then be iterated over.
  */
 void test_iterator(int num_items) {
     cirrus::TCPClient client;
@@ -85,7 +87,6 @@ void test_iterator(int num_items) {
 }
 
 auto main() -> int {
-    // test burst of sync writes
     const int num_items = 1000;
     test_iterator(num_items);
     return 0;
