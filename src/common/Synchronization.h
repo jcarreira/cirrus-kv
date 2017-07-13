@@ -123,15 +123,15 @@ class PosixSemaphore : public Lock {
             std::hash<std::thread::id>()(std::this_thread::get_id());
 
         std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
-        std::mt19937 gen;
-        gen.seed(seed_value);
+        unsigned int seed;
+        seed_value.generate(&seed, &seed + 1);
 
         std::string ret_string;
         // First character of name must be a slash
         ret_string.push_back('/');
 
         for (int i = 1; i < rand_string_length; i++) {
-            char next_char = charset[gen() % max_index];
+            char next_char = charset[rand_r(&seed) % max_index];
             ret_string.push_back(next_char);
         }
         return ret_string;
