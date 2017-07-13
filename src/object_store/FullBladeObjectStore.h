@@ -44,7 +44,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
             const ObjectID& id) override;
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
             const T& obj) override;
-
+    void removeBulk(ObjectID first, ObjectID last) override;
     void printStats() const noexcept override;
 
  private:
@@ -206,6 +206,21 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     return client->remove(id);
+}
+
+/**
+ * Removes a range of items from the store. 
+ * @param first the first in a range of continuous ObjectIDs to be removed
+ * @param last the last in a range of continuous ObjectIDs to be removed
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::removeBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("First ObjectID to remove must be leq last.");
+    }
+    for (int oid = first; oid <= last; oid++) {
+        client->remove(oid);
+    }
 }
 
 template<class T>

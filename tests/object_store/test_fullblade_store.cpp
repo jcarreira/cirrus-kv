@@ -12,7 +12,7 @@
 #include "common/Exception.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
-#include "client/RDMAClient.h"
+#include "client/TCPClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -27,7 +27,7 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       &client,
@@ -54,7 +54,7 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
                 &client,
@@ -96,7 +96,7 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -113,7 +113,7 @@ void test_nonexistent_get() {
  * Tests a simple asynchronous put and get.
  */
 void test_async() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -136,7 +136,7 @@ void test_async() {
  * @param N the number of puts and gets to perform.
  */
 void test_async_N(int N) {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -167,6 +167,22 @@ void test_async_N(int N) {
     }
 }
 
+/**
+ * Tests that remove_bulk correctly removes items from the store.
+ */
+void test_remove_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    for (int i = 0; i < 10; i++) {
+        store.put(i, i);
+    }
+
+    store.removeBulk(0, 9);
+    // Should fail
+    store.get(9);
+}
 auto main() -> int {
     std::cout << "Starting synchronous tests." << std::endl;
     test_sync(10);
@@ -183,5 +199,13 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
+    try {
+        test_remove_bulk();
+        std::cout << "Exception not thrown in remove bulk test." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    std::cout << "Test successful." << std::endl;
     return 0;
 }
