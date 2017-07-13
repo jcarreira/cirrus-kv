@@ -20,7 +20,7 @@ const char PORT[] = "12345";
 const unsigned int SIZE = 128;
 const char IP[] = "10.10.49.83";
 const int cache_size = 200;  // Arbitrary
-const int read_ahead = 20; // Arbitrary 
+const int read_ahead = 20;  // Arbitrary
 const int MILLION = 1000000;
 
 void print_stats(std::ostream& out, uint64_t iterator_elapsed,
@@ -60,7 +60,7 @@ void test_iterator(int num_items) {
     cirrus::CirrusIterable<cirrus::Dummy<SIZE>> iter(&cm, read_ahead, 0,
         num_items - 1);
 
-    cirrus::TimerFunction iterator_start;    
+    cirrus::TimerFunction iterator_start;
     for (auto it = iter.begin(); it != iter.end(); it++) {
         cirrus::Dummy<SIZE> val = *it;
     }
