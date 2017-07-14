@@ -6,6 +6,7 @@
 #include <thread>
 #include <memory>
 #include <random>
+#include <atomic>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -21,7 +22,7 @@ const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1024;
 
-uint64_t total_puts = 0;
+std::atomic<std::uint64_t> total_puts = {0};
 cirrus::SpinLock total_puts_lock;
 
 /**
