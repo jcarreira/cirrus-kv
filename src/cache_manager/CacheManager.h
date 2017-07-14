@@ -160,6 +160,7 @@ template<class T>
 void CacheManager<T>::remove(ObjectID oid) {
     evict(oid);
     policy->remove(oid);
+    store->remove(oid);
 }
 
 /**
