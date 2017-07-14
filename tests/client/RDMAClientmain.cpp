@@ -35,11 +35,11 @@ void test_1_client() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    client1.write_sync(0, to_send.c_str(), std::strlen(to_send.c_str()));
+    client1.write_sync(0, to_send.c_str(), to_send.size());
 
     client1.read_sync(0, data, std::strlen(to_send.c_str()));
 
-    if (strncmp(data, to_send.c_str(), std::strlen(to_send.c_str())))
+    if (strncmp(data, to_send.c_str(), to_send.size()))
         throw std::runtime_error("Error in test");
 }
 
@@ -69,7 +69,7 @@ void test_2_clients() {
         client1.write_sync(0, oss.str().c_str(), oss.str().size());
     }
     std::string message("data2");
-    client2.write_sync(0, message.c_str(), std::strlen(message.c_str()));
+    client2.write_sync(0, message.c_str(), message.size());
 
     cirrus::LOG<cirrus::INFO>("Old data: ", data);
     client1.read_sync(0, data, oss.str().size());
@@ -79,11 +79,11 @@ void test_2_clients() {
     if (strncmp(data, oss.str().c_str(), oss.str().size()))
         throw std::runtime_error("Error in test");
 
-    client2.read_sync(0, data, std::strlen(message.c_str()));
+    client2.read_sync(0, data, message.size());
     cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
 
     // Check that client2 receives "data2"
-    if (strncmp(data, message.c_str(), std::strlen(message.c_str())))
+    if (strncmp(data, message.c_str(), message.size()))
         throw std::runtime_error("Error in test");
 }
 
