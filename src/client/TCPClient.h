@@ -5,6 +5,7 @@
 #include <thread>
 #include <queue>
 #include <map>
+#include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Future.h"
@@ -66,10 +67,8 @@ class TCPClient : public BladeClient {
     };
     /** fd of the socket used to communicate w/ remote store */
     int sock = 0;
-    /**< next txn_id to assign */
-    TxnID curr_txn_id = 0;
-    /** Lock on the current transaction id. */
-    cirrus::SpinLock curr_txn_id_lock;
+    /** next txn_id to assign */
+    std::atomic<std::uint64_t> curr_txn_id = {0};
 
     /**
       * Map that allows receiver thread to map transactions to their

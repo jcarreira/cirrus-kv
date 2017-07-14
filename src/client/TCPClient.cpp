@@ -9,6 +9,7 @@
 #include <thread>
 #include <algorithm>
 #include <memory>
+#include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
@@ -104,9 +105,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
-    curr_txn_id_lock.wait();
     const int txn_id = curr_txn_id++;
-    curr_txn_id_lock.signal();
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
                                         txn_id,
@@ -138,9 +137,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
     // Create and send read request
     auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
 
-    curr_txn_id_lock.wait();
     const int txn_id = curr_txn_id++;
-    curr_txn_id_lock.signal();
 
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
@@ -199,9 +196,7 @@ bool TCPClient::remove(ObjectID oid) {
     // Create and send removal request
     auto msg_contents = message::TCPBladeMessage::CreateRemove(*builder, oid);
 
-    curr_txn_id_lock.wait();
     const int txn_id = curr_txn_id++;
-    curr_txn_id_lock.signal();
 
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                     *builder,
