@@ -177,10 +177,9 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // serialized_size is saved in the class, it is the size of pushed objects
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
     serialized_size = serializer_out.second;
 
-    return client->write_sync(id, serial_ptr.get(), serialized_size);
+    return client->write_sync(id, serializer_out.first.get(), serialized_size);
 }
 
 /**

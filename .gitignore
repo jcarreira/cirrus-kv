@@ -25,3 +25,4 @@ docs/html/
 *.pyc
 __pycache__/
 *.dSYM/
+*.gch

@@ -298,10 +298,11 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     //  storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
+
                     // Create entry in store mapping the data to the id
+                    store[oid] = std::vector<int8_t>(data_fb->begin(),
+                                                     data_fb->end());;
                     curr_size += data_fb->size();
-                    store[oid] = data;
                 }
 
                 // Create and send ack

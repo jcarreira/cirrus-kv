@@ -102,12 +102,11 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
     // Create flatbuffer builder
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
-                                initial_buffer_size);
+                                size + 64);
 
     // Create and send write request
     const int8_t *data_cast = reinterpret_cast<const int8_t*>(data);
-    std::vector<int8_t> data_vector(data_cast, data_cast + size);
-    auto data_fb_vector = builder->CreateVector(data_vector);
+    auto data_fb_vector = builder->CreateVector(data_cast, size);
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
