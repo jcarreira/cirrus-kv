@@ -81,10 +81,21 @@ class TCPClient : public BladeClient {
      */
     std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
+    /**
+     * Queue of FlatBufferBuilders that are ready for reuse for writes.
+     */
+    std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> reuse_queue;
+
+    /** Max number of flatbuffer builders in reuse_queue. */
+    const unsigned int reuse_max = 5;
+
+
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    /** Lock on the reuse_queue. */
+    cirrus::SpinLock reuse_lock;
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */

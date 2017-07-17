@@ -99,10 +99,21 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
                                                     uint64_t size) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
-    // Create flatbuffer builder
-    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_shared<flatbuffers::FlatBufferBuilder>(
-                                size + 64);
+    // Create flatbuffer builder if none to reuse;
+
+    // Add the builder to the queue if it is of the right type (a write)
+    // And if not over capacity
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder;
+    reuse_lock.wait();
+    if (!reuse_queue.empty()) {
+        builder = reuse_queue.front();
+        reuse_queue.pop();
+        reuse_lock.signal();
+    } else {
+        reuse_lock.signal();
+        builder = std::make_shared<flatbuffers::FlatBufferBuilder>(size + 64);
+    }
+
 
     // Create and send write request
     const int8_t *data_cast = reinterpret_cast<const int8_t*>(data);
@@ -428,6 +439,22 @@ void TCPClient::process_send() {
 
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
+
+        // Add the builder to the queue if it is of the right type (a write)
+        // And if not over capacity
+        reuse_lock.wait();
+
+        if (reuse_queue.size() < reuse_max) {
+            // Clean the builder and reuse if it is the right type
+            auto message_type = message::TCPBladeMessage::GetTCPBladeMessage(
+                builder->GetBufferPointer())->message_type();
+
+            if (message_type == message::TCPBladeMessage::Message_Write) {
+                builder->Clear();
+                reuse_queue.push(builder);
+            }
+        }
+        reuse_lock.signal();
     }
 }
 
