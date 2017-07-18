@@ -158,9 +158,13 @@ void CacheManager<T>::prefetch(ObjectID oid) {
  */
 template<class T>
 void CacheManager<T>::remove(ObjectID oid) {
-    evict(oid);
-    policy->remove(oid);
+    // Call remove on store first. Exception will be thrown if oid nonexistent.
     store->remove(oid);
+    auto it = cache.find(oid);
+    if (it != cache.end()) {
+        cache.erase(it);
+    }
+    policy->remove(oid);
 }
 
 /**
