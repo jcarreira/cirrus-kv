@@ -2,10 +2,10 @@
 #define SRC_CACHE_MANAGER_CACHEMANAGER_H_
 
 #include <map>
-
 #include <vector>
 #include <functional>
 #include <algorithm>
+
 #include "object_store/ObjectStore.h"
 #include "cache_manager/EvictionPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
@@ -39,8 +39,8 @@ class CacheManager {
      * of the type that the cache is storing.
      */
     struct cache_entry {
-        /** Boolean indicating whether this item was prefetched. */
-        bool prefetched = false;
+        /** Boolean indicating whether this item is in the cache. */
+        bool cached = true;
         /** Object that will be retrieved by a get() operation. */
         T obj;
         /** Future indicating status of operation */
@@ -115,12 +115,13 @@ T CacheManager<T>::get(ObjectID oid) {
         // entry exists
         // Call future's get method if necessary
         struct cache_entry& entry = cache_iterator->second;
-        if (entry.prefetched) {
+        if (!entry.cached) {
             LOG<INFO>("oid was prefetched");
             // TODO(Tyler): Should we return the result of the get directly
             // and avoid a potential extra copy? Tradeoff is copy now vs
             // copy in the future in case of repeated access.
             entry.obj = entry.future.get();
+            entry.cached = true;
         }
         return entry.obj;
 
@@ -170,7 +171,7 @@ void CacheManager<T>::prefetch(ObjectID oid) {
     evict_vector(to_remove);
     if (cache.find(oid) == cache.end()) {
         struct cache_entry& entry = cache[oid];
-        entry.prefetched = true;
+        entry.cached = false;
         entry.future = store->get_async(oid);
     }
 }
