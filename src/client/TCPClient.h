@@ -41,11 +41,11 @@ class TCPClient : public BladeClient<T> {
         const std::string& port) override;
 
     bool write_sync(ObjectID id,  const T& obj,
-        cirrus::Serializer<T>& serializer) override;
+        const Serializer<T>& serializer) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
 
     virtual cirrus::Future write_async(ObjectID oid, const T& obj,
-                                       cirrus::Serializer<T>& serializer);
+                                       const Serializer<T>& serializer);
     virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
 
     bool remove(ObjectID id) override;
@@ -206,7 +206,7 @@ void TCPClient<T>::connect(const std::string& address,
   */
 template<class T>
 cirrus::Future TCPClient<T>::write_async(ObjectID oid, const T& obj,
-    cirrus::Serializer<T>& serializer) {
+    const Serializer<T>& serializer) {
     // Create flatbuffer builder if none to reuse;
 
     // Add the builder to the queue if it is of the right type (a write)
@@ -230,8 +230,6 @@ cirrus::Future TCPClient<T>::write_async(ObjectID oid, const T& obj,
     int8_t *mem;
     auto data_fb_vector = builder->CreateUninitializedVector(size, &mem);
     serializer.serialize(obj, mem);
-
-    // auto data_fb_vector_cast = static_cast<flatbuffers::Offset<flatbuffers::Vector<signed char>>>(data_fb_vector);
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
@@ -290,7 +288,7 @@ cirrus::Future TCPClient<T>::read_async(ObjectID oid, void* data,
   */
 template<class T>
 bool TCPClient<T>::write_sync(ObjectID id,  const T& obj,
-    cirrus::Serializer<T>& serializer) {
+    const Serializer<T>& serializer) {
     LOG<INFO>("Call to write_sync");
     cirrus::Future future = write_async(id, obj, serializer);
     LOG<INFO>("returned from write async");

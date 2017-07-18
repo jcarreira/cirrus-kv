@@ -22,9 +22,9 @@ template<class T>
 class serializer_simple : public cirrus::Serializer<T> {
  public:
     serializer_simple();
-    uint64_t size(const T& object) override;
+    uint64_t size(const T& object) const override;
 
-    void serialize(const T& object, void *mem) override;
+    void serialize(const T& object, void *mem) const override;
 };
 
 template<typename T>
@@ -32,12 +32,12 @@ serializer_simple<T>::serializer_simple() {
 }
 
 template<typename T>
-uint64_t serializer_simple<T>::size(const T& object) {
+uint64_t serializer_simple<T>::size(const T& object) const {
     return sizeof(object);
 }
 
 template<typename T>
-void serializer_simple<T>::serialize(const T& object, void *mem) {
+void serializer_simple<T>::serialize(const T& object, void *mem) const {
     std::memcpy(mem, &object, sizeof(object));
 }
 

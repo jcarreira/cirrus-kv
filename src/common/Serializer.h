@@ -8,9 +8,9 @@ template<class T>
 class Serializer {
  public:
     Serializer() {}
-    virtual uint64_t size(const T& object) = 0;
+    virtual uint64_t size(const T& object) const = 0;
 
-    virtual void serialize(const T& object, void* mem) = 0;
+    virtual void serialize(const T& object, void* mem) const = 0;
 };
 
 }  // namespace cirrus

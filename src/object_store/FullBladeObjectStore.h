@@ -31,7 +31,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
                               BladeClient<T> *client,
-                              Serializer<T>& serializer,
+                              const Serializer<T>& serializer,
                               std::function<T(void*, unsigned int)>
                               deserializer);
 
@@ -61,7 +61,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     /**
       * A cirrus::Serializer used for all write operations.
       */
-    Serializer<T>& serializer;
+    const Serializer<T>& serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -87,7 +87,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
         BladeClient<T>* client,
-        Serializer<T>& serializer,
+        const Serializer<T>& serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {

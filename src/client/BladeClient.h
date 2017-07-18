@@ -19,7 +19,8 @@ class BladeClient {
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
 
-    virtual bool write_sync(ObjectID id,  const T& obj, cirrus::Serializer<T>& serializer) = 0;
+    virtual bool write_sync(ObjectID id,  const T& obj,
+        const Serializer<T>& serializer) = 0;
 
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 
