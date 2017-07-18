@@ -37,7 +37,7 @@ void test_1_client() {
 
     client1.write_sync(0, to_send.c_str(), to_send.size());
 
-    client1.read_sync(0, data, std::strlen(to_send.c_str()));
+    client1.read_sync(0, data, to_send.size());
 
     if (strncmp(data, to_send.c_str(), to_send.size()))
         throw std::runtime_error("Error in test");
