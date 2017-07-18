@@ -41,7 +41,6 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
 template <uint64_t SIZE>
 void test_throughput(int numRuns) {
     cirrus::TCPClient<std::array<char, SIZE>> client;
-    client.connect(IP, PORT);
     cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client,
