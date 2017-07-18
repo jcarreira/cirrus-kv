@@ -32,6 +32,8 @@ TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
     queue_len_ = queue_len;
     pool_size = pool_size_;
     server_sock_ = 0;
+    current_buf_size = sizeof(uint32_t);
+    buffer.reserve(current_buf_size);
 }
 
 /**
@@ -205,13 +207,8 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
   */
 bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
-    std::vector<char> buffer;
 
     // Read in the incoming message
-
-    // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
-    buffer.reserve(current_buf_size);
     int bytes_read = 0;
 
     bool first_loop = true;
@@ -236,10 +233,10 @@ bool TCPServer::process(int sock) {
     }
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                            buffer.data());
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     int incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
+
     // Resize the buffer to be larger if necessary
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
@@ -301,7 +298,7 @@ bool TCPServer::process(int sock) {
 
                     // Create entry in store mapping the data to the id
                     store[oid] = std::vector<int8_t>(data_fb->begin(),
-                                                     data_fb->end());;
+                                                     data_fb->end());
                     curr_size += data_fb->size();
                 }
 
