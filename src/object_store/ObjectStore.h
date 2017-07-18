@@ -88,38 +88,14 @@ class ObjectStore {
 
     virtual bool remove(ObjectID id) = 0;
 
-    virtual ObjectStoreGetFuture get_async(const ObjectID& id);
-    virtual ObjectStorePutFuture put_async(const ObjectID& id, const T& obj);
+    virtual ObjectStoreGetFuture get_async(const ObjectID& id) = 0;
+    virtual ObjectStorePutFuture put_async(const ObjectID& id,
+        const T& obj) = 0;
 
-    virtual void get_bulk(ObjectID start, ObjectID last, T* data);
-    virtual void put_bulk(ObjectID start, ObjectID last, T* data);
+    virtual void get_bulk(ObjectID start, ObjectID last, T* data) = 0;
+    virtual void put_bulk(ObjectID start, ObjectID last, T* data) = 0;
 };
 
-template<class T>
-typename ObjectStore<T>::ObjectStoreGetFuture ObjectStore<T>::get_async(
-    const ObjectID& id) {
-    // TODO(Tyler): Return a blank instance somehow?
-    return ObjectStoreGetFuture();
-}
-
-template<class T>
-typename ObjectStore<T>::ObjectStorePutFuture ObjectStore<T>::put_async(
-    const ObjectID& id, const T& obj) {
-    // TODO(Tyler): Return a blank instance somehow?
-    return ObjectStorePutFuture();
-}
-
-template<class T>
-void ObjectStore<T>::put_bulk(ObjectID /* start */,
-    ObjectID /* last */, T* /* data */) {
-    return;
-}
-
-template<class T>
-void ObjectStore<T>::get_bulk(ObjectID /* start */,
-    ObjectID /* last */, T* /* data */) {
-    return;
-}
 
 /**
  * Constructor for an ObjectStoreputFuture.
