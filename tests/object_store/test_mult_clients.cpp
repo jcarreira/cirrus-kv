@@ -23,7 +23,6 @@ const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1024;
 
 std::atomic<std::uint64_t> total_puts = {0};
-cirrus::SpinLock total_puts_lock;
 
 /**
  * Checks that the system works properly when multiple clients get and put.
@@ -59,9 +58,7 @@ void test_multiple_clients() {
                         << std::endl;
                     throw std::runtime_error("Wrong value returned.");
                 }
-                total_puts_lock.wait();
                 total_puts++;
-                total_puts_lock.signal();
             }
         });
         start += 10;
