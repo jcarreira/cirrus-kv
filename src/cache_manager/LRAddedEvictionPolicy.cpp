@@ -53,6 +53,8 @@ void LRAddedEvictionPolicy::remove(ObjectID oid) {
         // remove item from set
         object_set.erase(it);
         // remove item from deque
+        // This is a linear search and is thus O(n), which will severely impact
+        // performance when the store is very full.
         auto deque_iterator = std::find(object_deque.begin(),
                                     object_deque.end(),
                                     oid);
