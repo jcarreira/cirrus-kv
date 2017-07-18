@@ -5,6 +5,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "utils/CirrusTime.h"
 #include "client/TCPClient.h"
+#include "tests/object_store/object_store_internal.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -12,14 +13,14 @@ const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
 
-/* This function simply copies a std::array into a new portion of memory. */
-template <uint64_t SIZE>
-std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
-            const std::array<char, SIZE>& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
-    std::memcpy(ptr.get(), &v, sizeof(v));
-    return std::make_pair(std::move(ptr), sizeof(v));
-}
+// /* This function simply copies a std::array into a new portion of memory. */
+// template <uint64_t SIZE>
+// std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
+//             const std::array<char, SIZE>& v) {
+//     std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
+//     std::memcpy(ptr.get(), &v, sizeof(v));
+//     return std::make_pair(std::move(ptr), sizeof(v));
+// }
 
 /* Takes a pointer to std::array passed in and returns as object. */
 template <uint64_t SIZE>
@@ -39,11 +40,13 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
   */
 template <uint64_t SIZE>
 void test_throughput(int numRuns) {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<std::array<char, SIZE>> client;
     client.connect(IP, PORT);
-    // cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-    //     store(IP, PORT, &client, array_serializer_simple<SIZE>,
-    //             array_deserializer_simple<SIZE>);
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
+        store(IP, PORT, &client,
+                serializer,
+                array_deserializer_simple<SIZE>);
 
     std::cout << "Creating the array to put." << std::endl;
     std::unique_ptr<std::array<char, SIZE>> array =
@@ -51,7 +54,7 @@ void test_throughput(int numRuns) {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    client.write_sync(0, array.get(), sizeof(*array));
+    store.put(0, *array);
 
     std::cout << "Warm up done" << std::endl;
 
@@ -60,7 +63,7 @@ void test_throughput(int numRuns) {
     uint64_t i = 0;
     cirrus::TimerFunction start;
     for (; i < numRuns; ++i) {
-        client.write_sync(0, array.get(), sizeof(*array));
+        store.put(0, *array);
     }
     end = start.getUsElapsed();
 
