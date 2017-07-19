@@ -16,7 +16,7 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 1;
-const char IP[] = "127.0.0.1";
+const char *IP;
 bool use_rdma_client;
 
 /**
@@ -98,6 +98,7 @@ void test_iterator_alt() {
 
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::parse_mode(argc, argv);
+    IP = cirrus::parse_ip(argc, argv);
     test_iterator();
     test_iterator_alt();
     std::cout << "Test success" << std::endl;
