@@ -13,7 +13,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char *IP;
 bool use_rdma_client;
 
 /**
@@ -131,6 +131,7 @@ void test_lradded() {
 
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::parse_mode(argc, argv);
+    IP = cirrus::parse_ip(argc, argv);
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
 

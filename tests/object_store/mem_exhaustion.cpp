@@ -9,7 +9,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char *IP;
 static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
 bool use_rdma_client;
@@ -39,6 +39,7 @@ void test_exhaustion() {
 
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::parse_mode(argc, argv);
+    IP = cirrus::parse_ip(argc, argv);
     try {
         test_exhaustion();
     } catch (const cirrus::ServerMemoryErrorException& e) {

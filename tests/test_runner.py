@@ -8,6 +8,9 @@ import time
 # status. Will automatically start and kill the server before and after
 # the test.
 
+# Change this to change the ip that the client connects to
+ip = "127.0.0.1"
+
 # NOTE: all pathnames start from the top directory where make check is run
 def runTestTCP(testPath):
     # Launch the server in the background
@@ -21,7 +24,7 @@ def runTestTCP(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--tcp"], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -45,7 +48,7 @@ def runTestRDMA(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--rdma"], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -68,7 +71,7 @@ def runExhaustionTCP(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -85,13 +88,13 @@ def runExhaustionRDMA(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/tcpservermain", "1000"])
+    server = subprocess.Popen(["./src/server/bladeallocmain", "1000"])
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:

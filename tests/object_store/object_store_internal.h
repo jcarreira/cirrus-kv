@@ -4,6 +4,7 @@
 #include <string.h>
 #include <utility>
 #include <memory>
+#include <string>
 #include "client/BladeClient.h"
 #include "client/TCPClient.h"
 
@@ -71,24 +72,32 @@ std::unique_ptr<BladeClient> getClient(bool use_rdma_client) {
  */
 auto parse_mode(int argc, char *argv[]) -> bool {
     bool use_rdma_client;
-    if (argc == 1) {
-        // Default to TCP
-        use_rdma_client = false;
-    } else if (argc == 2) {
+    if (argc >= 2) {
         if (strcmp(argv[1], "--tcp") == 0) {
             use_rdma_client = false;
         } else if (strcmp(argv[1], "--rdma") == 0) {
             use_rdma_client = true;
         } else {
-            throw std::runtime_error("Mode argument unrecognized.");
+            throw std::runtime_error("Error: Mode argument unrecognized. "
+            "Usage: ./test_*.cpp [mode] (--tcp or --rdma) [ip]");
         }
-    } else {
-        std::cout << "Error: ./test_*.cpp [mode] "
-            "(--tcp or --rdma)" << std::endl;
-        throw std::runtime_error("Error: ./test_*.cpp [mode] "
-            "(--tcp or --rdma)");
     }
     return use_rdma_client;
+}
+
+/**
+ * Given argc and argv, returns the ip as a std::string.
+ * @param argc number of command line arguments
+ * @param argv array of pointers to actual arguments
+ * @return pointer to third command line argument, which should be ip address
+ */
+auto parse_ip(int argc, char *argv[]) -> char* {
+    if (argc >= 3) {
+        return argv[2];
+    } else {
+        throw std::runtime_error("Error: invalid number of arguments. "
+        "Usage: ./test_*.cpp [mode] (--tcp or --rdma) [ip]");
+    }
 }
 
 }  // namespace cirrus
