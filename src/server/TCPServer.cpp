@@ -238,7 +238,9 @@ bool TCPServer::process(int sock) {
                 // Throw error if put would exceed size of the store
                 auto data_fb = msg->message_as_Write()->data();
                 if (curr_size + data_fb->size() > pool_size) {
-                    LOG<ERROR>("Put would go over capacity on server.");
+                    LOG<ERROR>("Put would go over capacity on server. "
+                            "Curr_size, pool_size, incoming size:",
+                            curr_size, pool_size, data_fb->size());
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                     success = false;

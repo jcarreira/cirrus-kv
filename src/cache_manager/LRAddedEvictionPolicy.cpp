@@ -49,17 +49,17 @@ std::vector<ObjectID> LRAddedEvictionPolicy::prefetch(ObjectID oid) {
  */
 void LRAddedEvictionPolicy::remove(ObjectID oid) {
     auto it = object_set.find(oid);
-    if (it == object_set.end()) {
-        throw cirrus::Exception("Call to LRAdded remove() "
-                "with unrecognized oid");
-    }
-    // remove item from set
-    object_set.erase(it);
-    // remove item from deque
-    auto deque_iterator = std::find(object_deque.begin(),
+    if (it != object_set.end()) {
+        // remove item from set
+        object_set.erase(it);
+        // remove item from deque
+        // This is a linear search and is thus O(n), which will severely impact
+        // performance when the store is very full.
+        auto deque_iterator = std::find(object_deque.begin(),
                                     object_deque.end(),
                                     oid);
-    object_deque.erase(deque_iterator);
+        object_deque.erase(deque_iterator);
+    }
 }
 /**
  * Method that processes an item being added to the cache. If the cache
