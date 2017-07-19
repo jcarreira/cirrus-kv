@@ -24,7 +24,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AX_CXX_COMPILE_STDCXX_14
 
-CXXFLAGS="-O0 -g -fPIC -std=c++1z -Werror"
+CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
 
 # Checks for libraries.
 #AC_CHECK_LIB([ibverbs], [ibv_create_qp])
@@ -55,8 +55,6 @@ AC_FUNC_MALLOC
 AC_FUNC_STRCOLL
 AC_CHECK_FUNCS([gettimeofday localtime_r memchr memmove memset mkdir stpcpy strchr strcspn strdup strerror strpbrk strrchr strspn strstr])
 AC_CONFIG_FILES([Makefile
-                 examples/Makefile
-                 examples/log_reg/Makefile
                  src/Makefile
                  src/authentication/Makefile
                  src/utils/Makefile

@@ -33,7 +33,7 @@ void test_sync() {
                       &client,
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                      sizeof(cirrus::Dummy<SIZE>)>);
+                        sizeof(cirrus::Dummy<SIZE>)>);
 
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -60,7 +60,7 @@ void test_sync(int N) {
                 &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                sizeof(cirrus::Dummy<SIZE>)>);
+                    sizeof(cirrus::Dummy<SIZE>)>);
 
     cirrus::Stats stats;
 
@@ -176,7 +176,6 @@ void test_bulk() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
-
     std::vector<int> values(10);
     for (int i = 0; i < 10; i++) {
         values[i] = i;
@@ -195,6 +194,24 @@ void test_bulk() {
     }
 }
 
+/**
+ * This test tests the remove method. It ensures that you cannot "get"
+ * an item if it has been removed from the store.
+ */
+void test_remove() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    store.put(0, 42);
+
+    store.remove(0);
+
+    // Should fail
+    int i = store.get(0);
+    std::cout << "Received following value incorrectly: " << i << std::endl;
+}
+   
 /**
  * This test ensures that error messages that would normally be generated
  * during a get are still received during a get bulk.
@@ -234,6 +251,15 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
+    std::cout << "Test remove starting." << std::endl;
+    try {
+        test_remove();
+        std::cout << "Exception not thrown when get"
+                     " called on removed ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
 
+    std::cout << "Test Successful." << std::endl;
     return 0;
 }
