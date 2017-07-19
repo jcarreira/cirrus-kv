@@ -180,8 +180,16 @@ void test_remove_bulk() {
      }
 
     store.removeBulk(0, 9);
-    // Should fail
-    store.get(9);
+    // Attempt to get all items in the removed range, should fail
+    for (int i = 0; i < 10; i++) {
+        try {
+            store.get(i);
+            std::cout << "Exception not thrown after attempting to access item "
+                "that should have been removed." << std::endl;
+            throw std::runtime_error("No exception when getting removed id.");
+        } catch (const cirrus::NoSuchIDException& e) {
+        }
+    }
 }
 
 /**
@@ -226,13 +234,7 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
-    try {
-        test_remove_bulk();
-        std::cout << "Exception not thrown in remove bulk test." << std::endl;
-        return -1;
-    } catch (const cirrus::NoSuchIDException& e) {
-    }
-
+    test_remove_bulk();
     std::cout << "Test successful." << std::endl;
 
     return 0;
