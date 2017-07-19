@@ -12,13 +12,14 @@
 #include "common/Exception.h"
 #include "utils/CirrusTime.h"
 #include "utils/Stats.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1;
+bool use_rdma_client;
 
 // #define CHECK_RESULTS
 
@@ -27,10 +28,11 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
+        use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
-                      &client,
+                      client.get(),
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                         sizeof(cirrus::Dummy<SIZE>)>);
@@ -54,10 +56,11 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
+        use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
-                &client,
+                client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
@@ -96,8 +99,9 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
+        use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -109,7 +113,8 @@ void test_nonexistent_get() {
     store.get(10);
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    use_rdma_client = cirrus::parse_mode(argc, argv);
     std::cout << "Starting test." << std::endl;
     test_sync(10);
     std::cout << "Starting test sync no args." << std::endl;
