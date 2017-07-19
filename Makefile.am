@@ -1,7 +1,14 @@
 AUTOMAKE_OPTIONS = foreign serial-tests
 SUBDIRS = src tests benchmarks
-TESTS = ./tests/basic_test.py ./tests/test_mem_exhaustion.py ./tests/test_store_simple.py \
-	./tests/test_cache_manager.py ./tests/test_iterator.py ./tests/test_store.py
+TESTS = ./tests/test_client_TCP.py ./tests/test_mem_exhaustion_TCP.py \
+		./tests/test_store_simple_TCP.py ./tests/test_cache_manager_TCP.py \
+		./tests/test_iterator_TCP.py ./tests/test_store_TCP.py
+
+if USE_RDMA
+TESTS += ./tests/test_client_RDMA.py ./tests/test_mem_exhaustion_RDMA.py  \
+		 ./tests/test_store_simple_RDMA.py ./tests/test_cache_manager_RDMA.py \
+		 ./tests/test_iterator_RDMA.py ./tests/test_store_RDMA.py
+endif
 
 source_dir = src/
 DEFAULT_INCLUDES = -I$(source_dir)

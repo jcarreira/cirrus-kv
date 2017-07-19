@@ -6,6 +6,6 @@ import time
 import test_runner
 
 # Set name of test to run
-testPath = "./tests/object_store/exhaustion"
+testPath = "./tests/object_store/test_store_v2"
 # Call script to run the test
-test_runner.runExhaustion(testPath)
+test_runner.runTestTCP(testPath)
