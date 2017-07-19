@@ -182,8 +182,8 @@ void test_remove_bulk() {
     store.removeBulk(0, 9);
     // Should fail
     store.get(9);
-} 
-  
+}
+
 /**
  * This test tests the remove method. It ensures that you cannot "get"
  * an item if it has been removed from the store.
@@ -192,7 +192,7 @@ void test_remove() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
-            cirrus::deserializer_simple<int, sizeof(int)>);    
+            cirrus::deserializer_simple<int, sizeof(int)>);
     store.put(0, 42);
 
     store.remove(0);

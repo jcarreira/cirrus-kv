@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -8,7 +10,7 @@
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include "utils/Time.h"
 #include "utils/Stats.h"
-#include "client/RDMAClient.h"
+#include "client/TCPClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -20,7 +22,7 @@ const char IP[] = "10.10.49.83";
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -44,7 +46,7 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -64,7 +66,7 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -104,12 +106,74 @@ void test_remove() {
     // Attempt to get item, this should fail
     cm.get(0);
 }
+
+/**
+ * Tests to ensure that when the cache manager's removeBulk method is called
+ * the objects are removed from the store as well.
+ */
+void test_remove_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    // Remove the items
+    cm.removeBulk(0, 9);
+
+    // Attempt to get an item at the end of the range, should fail
+    cm.get(9);
+}
+
+/**
+ * Tests to ensure that when prefetchBulk is called the items are actually
+ * prefetched.
+ */
+void test_prefetch_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    cm.prefetchBulk(0, 9);
+
+    // Sleep for a bit to allow the items to be retrieved
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Fail if any of the gets take more than a few microseconds
+    for (int i = 0; i < 10; i++) {
+        auto start = std::chrono::system_clock::now();
+        cm.get(i);
+        auto end = std::chrono::system_clock::now();
+        auto duration = end - start;
+        auto duration_micro =
+            std::chrono::duration_cast<std::chrono::microseconds>(duration);
+        if (duration_micro.count() > 5) {
+            std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
+            throw std::runtime_error("Get took too long, "
+                "likely not prefetched.");
+        }
+    }
+}
 /**
   * This test tests the behavior of the cache manager when instantiated with
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -166,6 +230,14 @@ auto main() -> int {
     }
 
     try {
+        test_remove_bulk();
+        std::cout << "Exception not thrown after attempting to access item "
+            "that should have been removed." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    try {
         test_instantiation();
         std::cout << "Exception not thrown when cache"
                      " capacity set to zero." << std::endl;
@@ -181,6 +253,7 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+    test_prefetch_bulk();
     std::cout << "test successful" << std::endl;
     return 0;
 }
