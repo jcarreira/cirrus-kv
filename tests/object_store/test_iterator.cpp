@@ -9,7 +9,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
-#include "client/RDMAClient.h"
+#include "client/TCPClient.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
@@ -23,7 +23,7 @@ const char IP[] = "10.10.49.83";
   * the iterator interface.
   */
 void test_iterator() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
@@ -61,7 +61,7 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
