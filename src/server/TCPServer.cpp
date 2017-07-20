@@ -331,12 +331,14 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
-                std::vector<int8_t> data;
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (exists) {
-                    data = store[oid];
+                    fb_vector = builder.CreateVector(store[oid]);
+                } else {
+                    std::vector<int8_t> data;
+                    fb_vector = builder.CreateVector(data);
                 }
 
-                auto fb_vector = builder.CreateVector(data);
                 LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
