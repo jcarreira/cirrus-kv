@@ -172,7 +172,7 @@ void test_async_N(int N) {
  * an item if it has been removed from the store.
  */
 void test_remove() {
-    cirrus::TCPClient client;
+    cirrus::RDMAClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
