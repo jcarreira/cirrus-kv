@@ -148,9 +148,9 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
-  
+
     std::cout << "Test remove starting." << std::endl;
-  
+
     try {
         test_remove();
         std::cout << "Exception not thrown when get"

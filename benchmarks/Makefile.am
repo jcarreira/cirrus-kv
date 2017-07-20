@@ -4,7 +4,7 @@ bin_PROGRAMS = 	1_1 1_3 throughput #TODO(Tyler): add 1_2 as it requires async la
 
 LIBS         = 	-lcityhash -lclient \
                	-lauthentication -lutils -lcommon \
-				$(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
