@@ -11,6 +11,7 @@
 #include "authentication/AuthenticationToken.h"
 #include "utils/CirrusTime.h"
 #include "client/RDMAClient.h"
+#include "tests/object_store/object_store_internal.h"
 // TODO(Tyler): Remove hardcoded IP and PORT
 
 const char PORT[] = "12345";

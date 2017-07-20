@@ -89,7 +89,7 @@ def runExhaustionRDMA(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/bladeallocmain", "1000"])
+    server = subprocess.Popen(["./src/server/bladeallocmain", "2097152"])
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)
