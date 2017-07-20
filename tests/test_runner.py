@@ -37,7 +37,8 @@ def runExhaustion(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/tcpservermain", "1000"])
+    # 2 * 1024 * 1024 is the max pool. 2MB
+    server = subprocess.Popen(["./src/server/tcpservermain", "2097152"])
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)
