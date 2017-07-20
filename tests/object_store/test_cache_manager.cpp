@@ -217,6 +217,52 @@ void test_lradded() {
     }
 }
 
+/**
+ * This test tests that get_bulk() and put_bulk() return proper values.
+ */
+void test_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    std::vector<int> values(10);
+    for (int i = 0; i < 10; i++) {
+        values[i] = i;
+    }
+
+    cm.put_bulk(0, 9, values.data());
+
+    std::vector<int> ret_values(10);
+    cm.get_bulk(0, 9, ret_values.data());
+    for (int i = 0; i < 10; i++) {
+        if (ret_values[i] != values[i]) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned");
+        }
+    }
+}
+
+/**
+ * This test ensures that error messages that would normally be generated
+ * during a get are still received during a get bulk.
+ */
+void test_bulk_nonexistent() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+    std::vector<int> ret_values(10);
+    cm.get_bulk(1492, 1591, ret_values.data());
+}
+
 auto main() -> int {
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
@@ -255,7 +301,18 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+
     test_prefetch_bulk();
+    test_bulk();
+
+    try {
+        test_bulk_nonexistent();
+        std::cout << "No exception thrown when get bulk called on nonexistent "
+            " ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException & e) {
+    }
+
     std::cout << "test successful" << std::endl;
     return 0;
 }
