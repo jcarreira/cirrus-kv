@@ -77,8 +77,8 @@ void test_throughput(int numRuns) {
 
 /**
   * This benchmark tests the throughput of the system at various sizes
-  * of message. When given a parameter SIZE and numRuns, it stores
-  * numRuns objects of size SIZE under one objectID. The time to put the
+  * of message. When given a parameter SIZE and numRuns, it retrieves
+  * numRuns objects of size SIZE from one objectID. The time to get the
   * objects is recorded, and statistics are computed.
   */
 template <uint64_t SIZE>
