@@ -1,8 +1,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <chrono>
-#include <thread>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "utils/CirrusTime.h"
@@ -53,7 +51,6 @@ void test_throughput(int numRuns) {
     // warm up
     std::cout << "Warming up" << std::endl;
     store.put(0, *array);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::cout << "Warm up done" << std::endl;
 
     uint64_t end;
@@ -95,7 +92,6 @@ void test_throughput_get(int numRuns) {
     // warm up
     std::cout << "Setting up" << std::endl;
     store.put(0, *array);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::cout << "Setup done" << std::endl;
 
     uint64_t end;
