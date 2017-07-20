@@ -21,8 +21,8 @@ bool use_rdma_client;
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -46,8 +46,8 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -67,8 +67,8 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -92,8 +92,8 @@ void test_capacity() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -130,8 +130,8 @@ void test_lradded() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    use_rdma_client = cirrus::parse_mode(argc, argv);
-    IP = cirrus::parse_ip(argc, argv);
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
 

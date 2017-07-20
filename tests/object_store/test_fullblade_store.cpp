@@ -28,8 +28,8 @@ bool use_rdma_client;
   * works properly.
   */
 void test_sync() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       client.get(),
@@ -56,8 +56,8 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
                 client.get(),
@@ -99,8 +99,8 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -118,8 +118,8 @@ void test_nonexistent_get() {
   * an item if it has been removed from the store.
   */
 void test_remove() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -134,8 +134,8 @@ void test_remove() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    use_rdma_client = cirrus::parse_mode(argc, argv);
-    IP = cirrus::parse_ip(argc, argv);
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Starting test." << std::endl;
     test_sync(10);
     std::cout << "Starting test sync no args." << std::endl;

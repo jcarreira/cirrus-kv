@@ -42,6 +42,7 @@ T deserializer_simple(void* data, unsigned int /* size */) {
     return ret;
 }
 
+namespace test_internal {
 /**
  * Given a boolean indicating whether or not to return an RDMA client, returns
  * a std::unique_ptr to a BladeClient for use by the test.
@@ -49,15 +50,19 @@ T deserializer_simple(void* data, unsigned int /* size */) {
  * RDMAClient.
  * @return a std::unique_ptr for either an RDMAClient or a TCPClient.
  */
-std::unique_ptr<BladeClient> getClient(bool use_rdma_client) {
+std::unique_ptr<BladeClient> GetClient(bool use_rdma_client) {
     std::unique_ptr<BladeClient> retClient;
 
     if (!use_rdma_client) {
         retClient = std::make_unique<TCPClient>();
-    }
     #ifdef HAVE_LIBRDMACM
-    else if (use_rdma_client) retClient = std::make_unique<RDMAClient>();
+    } else if (use_rdma_client) {
+        retClient = std::make_unique<RDMAClient>();
+    }
+    #else
+    }
     #endif  // HAVE_LIBRDMACM
+
     else
         throw std::runtime_error("RDMA specified on system without RDMA");
 
@@ -70,7 +75,7 @@ std::unique_ptr<BladeClient> getClient(bool use_rdma_client) {
  * @param argv array of pointers to actual arguments
  * @return boolean indicating true if RDMA should be used.
  */
-auto parse_mode(int argc, char *argv[]) -> bool {
+auto ParseMode(int argc, char *argv[]) -> bool {
     bool use_rdma_client;
     if (argc >= 2) {
         if (strcmp(argv[1], "--tcp") == 0) {
@@ -79,11 +84,12 @@ auto parse_mode(int argc, char *argv[]) -> bool {
             use_rdma_client = true;
         } else {
             throw std::runtime_error("Error: Mode argument unrecognized. "
-            "Usage: ./test_*.cpp [mode] (--tcp or --rdma) [ip]");
+            "Usage: ./test_*.cpp <--tcp | --rdma> <ip>");
         }
     }
     return use_rdma_client;
 }
+
 
 /**
  * Given argc and argv, returns the ip as a std::string.
@@ -91,14 +97,16 @@ auto parse_mode(int argc, char *argv[]) -> bool {
  * @param argv array of pointers to actual arguments
  * @return pointer to third command line argument, which should be ip address
  */
-auto parse_ip(int argc, char *argv[]) -> char* {
+auto ParseIP(int argc, char *argv[]) -> char* {
     if (argc >= 3) {
         return argv[2];
     } else {
         throw std::runtime_error("Error: invalid number of arguments. "
-        "Usage: ./test_*.cpp [mode] (--tcp or --rdma) [ip]");
+        "Usage: ./test_*.cpp <--tcp | --rdma> <ip>");
     }
 }
+
+}  // namespace test_internal
 
 }  // namespace cirrus
 

@@ -24,8 +24,8 @@ bool use_rdma_client;
   * the iterator interface.
   */
 void test_iterator() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
@@ -63,8 +63,8 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
@@ -97,8 +97,8 @@ void test_iterator_alt() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    use_rdma_client = cirrus::parse_mode(argc, argv);
-    IP = cirrus::parse_ip(argc, argv);
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_iterator();
     test_iterator_alt();
     std::cout << "Test success" << std::endl;

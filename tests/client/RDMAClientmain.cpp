@@ -16,7 +16,7 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-static const char IP[] = "10.10.49.83";
+char *IP;
 
 
 /**
@@ -122,7 +122,8 @@ void test_performance() {
     free(data);
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_1_client();
     test_2_clients();
     test_performance();

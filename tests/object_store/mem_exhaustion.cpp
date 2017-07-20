@@ -23,8 +23,8 @@ bool use_rdma_client;
  * the server must have been running to send the message.
  */
 void test_exhaustion() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
@@ -43,8 +43,8 @@ void test_exhaustion() {
  * the server is at capacity, an item can be removed to make more room.
  */
 void test_exhaustion_remove() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
@@ -70,8 +70,8 @@ void test_exhaustion_remove() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    use_rdma_client = cirrus::parse_mode(argc, argv);
-    IP = cirrus::parse_ip(argc, argv);
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_exhaustion_remove();
     try {
         test_exhaustion();

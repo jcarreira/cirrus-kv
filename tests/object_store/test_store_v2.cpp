@@ -19,8 +19,8 @@ bool use_rdma_client;
   * Uses simpler objects than test_fullblade_store.
   */
 void test_store_simple() {
-    std::unique_ptr<cirrus::BladeClient> client = cirrus::getClient(
-        use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         client.get(),
                         cirrus::serializer_simple<int>,
@@ -38,8 +38,8 @@ void test_store_simple() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    use_rdma_client = cirrus::parse_mode(argc, argv);
-    IP = cirrus::parse_ip(argc, argv);
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Test starting" << std::endl;
     test_store_simple();
     std::cout << "Test successful" << std::endl;
