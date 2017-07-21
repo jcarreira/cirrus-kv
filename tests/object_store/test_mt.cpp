@@ -28,8 +28,8 @@ cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
 
 /**
   * Tests that behavior is as expected when multiple threads make get and put
-  * requests to the remote store. These clients all use the same instance of
-  * the store to connect. Currently not working.
+  * requests to the remote store. These threads all use the same instance of
+  * the store to connect.
   */
 void test_mt() {
     cirrus::TimerFunction tf("connect time", true);
@@ -39,20 +39,23 @@ void test_mt() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(1, 10);
-
+    int start = 0;
+    int stop = 10;
     for (int i = 0; i < N_THREADS; ++i) {
-        threads[i] = new std::thread([dis, gen]() {
-            for (int i = 0; i < 100; ++i) {
+        threads[i] = new std::thread([dis, gen, start, stop]() {
+            for (int i = start; i < stop; i++) {
                 int rnd = std::rand();
                 struct cirrus::Dummy<SIZE> d(rnd);
 
-                store.put(1, d);
-                cirrus::Dummy<SIZE> d2 = store.get(1);
+                store.put(i, d);
+                cirrus::Dummy<SIZE> d2 = store.get(i);
 
                 if (d2.id != rnd)
-                    throw std::runtime_error("mismatch");
+                    throw std::runtime_error("Incorrect value returned.");
             }
         });
+        start += 10;
+        stop += 10;
     }
 
     for (int i = 0; i < N_THREADS; ++i)

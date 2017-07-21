@@ -35,7 +35,8 @@ class EvictionPolicy {
     virtual std::vector<ObjectID> prefetch(ObjectID oid) = 0;
 
     /**
-     * Counterpart to the remove method.
+     * Counterpart to the remove method. If an oid is passed in that is not
+     * currently in the cache, should return immediately with no error.
      */
     virtual void remove(ObjectID oid) = 0;
 
