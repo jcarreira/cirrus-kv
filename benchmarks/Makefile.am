@@ -1,15 +1,17 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = 	1_1 1_3 throughput #TODO(Tyler): add 1_2 as it requires async later
+bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark #TODO(Tyler): add 1_2 as it requires async later
 
 LIBS         = 	-lcityhash -lclient \
-               	-lauthentication -lutils -lcommon \
+               	-lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
+
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
+		-L$(top_srcdir)/src/cache_manager \
 		-L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
 
 1_1_SOURCES  = 	1_1.cpp
@@ -43,3 +45,10 @@ throughput_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/
                       -I$(top_srcdir)/src \
                       -I$(top_srcdir)/third_party/flatbuffers/include
 throughput_LDADD    = $(LINCLUDES) $(LIBS)
+
+iterator_benchmark_SOURCES  = iterator_benchmark.cpp
+iterator_benchmark_LDFLAGS  = -pthread
+iterator_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			      -I$(top_srcdir)/examples/sparsehash/src/ \
+			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+iterator_benchmark_LDADD    = $(LINCLUDES) $(LIBS)

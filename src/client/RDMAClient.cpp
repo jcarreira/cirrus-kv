@@ -174,8 +174,8 @@ bool RDMAClient::remove(ObjectID oid) {
         objects_.erase(oid);
         return deallocate(loc.allocRec);
     } else {
-        throw cirrus::NoSuchIDException(
-                                      "Error. Trying to do inexistent object");
+        throw cirrus::NoSuchIDException("Error. Trying to remove "
+                                        "nonnexistent object");
     }
     return false;
 }

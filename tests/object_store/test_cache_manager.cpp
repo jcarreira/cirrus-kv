@@ -88,6 +88,27 @@ void test_capacity() {
 }
 
 /**
+ * Tests to ensure that when the cache manager's remove() method is called
+ * the given object is removed from the store as well.
+ */
+void test_remove() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    cm.put(0, 0);
+
+    // Remove item
+    cm.remove(0);
+
+    // Attempt to get item, this should fail
+    cm.get(0);
+}
+/**
   * This test tests the behavior of the cache manager when instantiated with
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
@@ -141,6 +162,14 @@ auto main(int argc, char *argv[]) -> int {
         std::cout << "Cache capacity exceeded when item should have been "
                      " removed by eviction policy." << std::endl;
         return -1;
+    }
+
+    try {
+        test_remove();
+        std::cout << "Exception not thrown after attempting to access item "
+            "that should have been removed." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
     }
 
     try {
