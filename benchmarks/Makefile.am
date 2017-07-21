@@ -1,10 +1,10 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark #TODO(Tyler): add 1_2 as it requires async later
+bin_PROGRAMS = 	throughput #1_1 1_2 iterator_benchmark #TODO(Tyler): add 1_2 as it requires async later
 
-LIBS         = 	-lcityhash -lclient \
+LIBS         = 	-lcityhash \
                	-lauthentication -lutils -lcommon -levictionpolicies \
-				$(LIBRDMACM) $(LIBIBVERBS)
+			    $(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \

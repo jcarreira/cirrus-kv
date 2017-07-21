@@ -3,6 +3,7 @@
 
 #include <string>
 #include "common/Future.h"
+#include "common/Serializer.h"
 
 namespace cirrus {
 
@@ -12,12 +13,14 @@ using ObjectID = uint64_t;
   * A class that all clients inherit from. Outlines the interface that the
   * store will use to interface with the network level.
   */
+template<class T>
 class BladeClient {
  public:
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
 
-    virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
+    virtual bool write_sync(ObjectID id,  const T& obj,
+        const Serializer<T>& serializer) = 0;
 
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 

@@ -12,6 +12,7 @@
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/Future.h"
+#include "common/Serializer.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -29,9 +30,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
-                              BladeClient *client,
-                              std::function<std::pair<std::unique_ptr<char[]>,
-                              unsigned int>(const T&)> serializer,
+                              BladeClient<T> *client,
+                              const Serializer<T>& serializer,
                               std::function<T(void*, unsigned int)>
                               deserializer);
 
@@ -50,7 +50,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       * The client that the store uses to achieve all interaction with the
       * remote store.
       */
-    BladeClient *client;
+    BladeClient<T> *client;
 
     /** The size of serialized objects. This is obtained from the return
       * value of the serializer() function. We assume that all serialized
@@ -59,12 +59,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     uint64_t serialized_size;
 
     /**
-      * A function that takes an object and serializes it. Returns a pointer
-      * to the buffer containing the serialized object as well as the size of
-      * the buffer.
+      * A cirrus::Serializer used for all write operations.
       */
-    std::function<std::pair<std::unique_ptr<char[]>,
-                                unsigned int>(const T&)> serializer;
+    const Serializer<T>& serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -89,9 +86,8 @@ template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
-        BladeClient* client,
-        std::function<std::pair<std::unique_ptr<char[]>,
-        unsigned int>(const T&)> serializer,
+        BladeClient<T>* client,
+        const Serializer<T>& serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
@@ -174,13 +170,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
-    // serialized_size is saved in the class, it is the size of pushed objects
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
-
-    return client->write_sync(id, serial_ptr.get(), serialized_size);
+    serialized_size = serializer.size(obj);
+    return client->write_sync(id, obj, serializer);
 }
 
 /**

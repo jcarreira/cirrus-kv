@@ -62,6 +62,14 @@ class TCPServer : public Server {
      * struct pollfd objects. Used for calls to poll().
      */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
+    /**
+     * An std::vector that is used to manage the memory that read() calls read
+     * into.
+     */
+    std::vector<char> buffer;
+
+    /** The current size of the receive buffer. */
+    int current_buf_size;
 };
 
 }  // namespace cirrus

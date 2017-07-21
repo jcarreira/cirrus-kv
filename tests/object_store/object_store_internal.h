@@ -4,6 +4,8 @@
 #include <utility>
 #include <memory>
 
+#include "common/Serializer.h"
+
 namespace cirrus {
 
 /**
@@ -16,13 +18,27 @@ struct Dummy {
     explicit Dummy(int id = 1492) : id(id) {}
 };
 
-/* This function simply copies an object into a new portion of memory. */
+template<class T>
+class serializer_simple : public cirrus::Serializer<T> {
+ public:
+    serializer_simple();
+    uint64_t size(const T& object) const override;
+
+    void serialize(const T& object, void *mem) const override;
+};
+
 template<typename T>
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer_simple(const T& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(T)]);
-    std::memcpy(ptr.get(), &v, sizeof(T));
-    return std::make_pair(std::move(ptr), sizeof(T));
+serializer_simple<T>::serializer_simple() {
+}
+
+template<typename T>
+uint64_t serializer_simple<T>::size(const T& object) const {
+    return sizeof(object);
+}
+
+template<typename T>
+void serializer_simple<T>::serialize(const T& object, void *mem) const {
+    std::memcpy(mem, &object, sizeof(object));
 }
 
 /* Takes a pointer to raw mem passed in and returns as object. */
