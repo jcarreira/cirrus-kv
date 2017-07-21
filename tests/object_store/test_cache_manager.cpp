@@ -92,8 +92,9 @@ void test_capacity() {
  * the given object is removed from the store as well.
  */
 void test_remove() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
