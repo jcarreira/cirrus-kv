@@ -6,6 +6,7 @@
 #include <functional>
 #include <algorithm>
 #include "cache_manager/EvictionPolicy.h"
+#include "cache_manager/PrefetchPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
 #include "common/Exception.h"
 
@@ -18,17 +19,54 @@ using ObjectID = uint64_t;
 template<class T>
 class CacheManager {
  public:
+    /**
+     * This enum defines different prefetch modes for the cache manager.
+     * The default is no prefetching.
+     */
+    enum PrefetchMode {
+        kNone = 0, /**< The cache manager will not automatically prefetch. */
+        kOrdered, /**< The cache manager will prefetch a few items ahead. */
+        kCustom /**< The cache will prefetch in a user defined fashion. */
+    };
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
-                 cirrus::EvictionPolicy *policy,
+                 cirrus::EvictionPolicy *eviction_policy,
                  uint64_t cache_size);
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
+    void setMode(cirrus::CacheManager::PrefetchMode mode,
+         cirrus::PrefetchPolicy *policy = nullptr);
 
  private:
+    /**
+     * A prefetch policy that does not perform any prefetching.
+     */
+    class OffPolicy :public cirrus::PrefetchPolicy<T> {
+     public:
+        /**
+         * Return an empty vector to indicate no prefetching.
+         */
+        std::vector<ObjectID> get(const ObjectID& id, const T& obj) override {
+            return std::vector<ObjectID>();
+        }
+    };
+
+    // /**
+    //  * A prefetch policy that fetches the next k items when one is fetched.
+    //  */
+    // class OrderedPolicy :public cirrus::PrefetchPolicy<T> {
+    //  public:
+    //
+    //     std::vector<ObjectID> get(const ObjectID& id, const T& obj) override {
+    //         return std::vector<ObjectID>();
+    //     }
+    // private:
+    // };
+
     void evict_vector(const std::vector<ObjectID>& to_remove);
     void evict(ObjectID oid);
+
     /**
       * A pointer to a store that contains the same type of object as the
       * cache. This is the store that the cache manager interfaces with in order
@@ -60,7 +98,12 @@ class CacheManager {
      * EvictionPolicy used for all calls to the eviction policy. Call made
      * before each operation that the cache manager makes.
      */
-    cirrus::EvictionPolicy *policy;
+    cirrus::EvictionPolicy *eviction_policy;
+
+    /**
+     * PrefetchPolicy used to determine prefetch operations.
+     */
+    cirrus::PrefetchPolicy *prefetch_policy;
 };
 
 
@@ -76,9 +119,10 @@ class CacheManager {
 template<class T>
 CacheManager<T>::CacheManager(
                            cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
-                           cirrus::EvictionPolicy *policy,
+                           cirrus::EvictionPolicy *eviction_policy,
                            uint64_t cache_size) :
-                           store(store), policy(policy), max_size(cache_size) {
+                           store(store), eviction_policy(eviction_policy),
+                           max_size(cache_size) {
     if (cache_size < 1) {
         throw cirrus::CacheCapacityException(
               "Cache capacity must be at least one.");
@@ -95,16 +139,14 @@ CacheManager<T>::CacheManager(
   */
 template<class T>
 T CacheManager<T>::get(ObjectID oid) {
-    std::vector<ObjectID> to_remove = policy->get(oid);
+    std::vector<ObjectID> to_remove = eviction_policy->get(oid);
     evict_vector(to_remove);
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
-
+    struct cache_entry& entry;
     if (cache.find(oid) != cache.end()) {
-        struct cache_entry& entry = cache.find(oid)->second;
-        return entry.obj;
-
+        entry = cache.find(oid)->second;
     } else {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
@@ -112,10 +154,15 @@ T CacheManager<T>::get(ObjectID oid) {
           throw cirrus::CacheCapacityException("Get operation would put cache "
                                              "over capacity.");
         }
-        struct cache_entry& entry = cache[oid];
+        entry = cache[oid];
         entry.obj = store->get(oid);
-        return entry.obj;
     }
+
+    std::vector<ObjectID> to_prefetch = prefetch_policy->get(oid, entry.obj);
+    for (auto const& id_to_prefetch : to_prefetch) {
+        prefetch(id_to_prefetch);
+    }
+    return entry.obj;
 }
 
 /**
@@ -127,7 +174,7 @@ T CacheManager<T>::get(ObjectID oid) {
   */
 template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
-    std::vector<ObjectID> to_remove = policy->put(oid);
+    std::vector<ObjectID> to_remove = eviction_policy->put(oid);
     evict_vector(to_remove);
     // Push the object to the store under the given id
     store->put(oid, obj);
@@ -143,7 +190,7 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
   */
 template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
-    std::vector<ObjectID> to_remove = policy->prefetch(oid);
+    std::vector<ObjectID> to_remove = eviction_policy->prefetch(oid);
     evict_vector(to_remove);
     if (cache.find(oid) == cache.end()) {
       struct cache_entry& entry = cache[oid];
@@ -164,7 +211,7 @@ void CacheManager<T>::remove(ObjectID oid) {
     if (it != cache.end()) {
         cache.erase(it);
     }
-    policy->remove(oid);
+    eviction_policy->remove(oid);
 }
 
 /**
@@ -193,6 +240,33 @@ void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
         evict(oid);
     }
 }
+
+template<class T>
+void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
+    cirrus::PrefetchPolicy *policy = nullptr) {
+    // Set the mode
+    switch (mode) {
+      case CacheManager::PrefetchMode::kNone: {
+        // Set policy to the off policy
+        break;
+      }
+      case CacheManager::PrefetchMode::kOrdered: {
+        // set to the ordered policy
+        break;
+      }
+      case CacheManager::PrefetchMode::kCustom: {
+        if (policy == nullptr) {
+            throw cirrus::Exception("Custom mode specified without a policy.");
+        }
+        prefetch_policy = policy;
+        break;
+      }
+      default: {
+        throw cirrus::Exception("Unrecognized prefetch mode during setMode().");
+      }
+    }
+}
+
 }  // namespace cirrus
 
 #endif  // SRC_CACHE_MANAGER_CACHEMANAGER_H_
