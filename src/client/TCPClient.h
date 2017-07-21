@@ -172,9 +172,11 @@ template<class T>
 void TCPClient<T>::connect(const std::string& address,
                         const std::string& port_string) {
     // Create socket
+    LOG<INFO>("Creating socket");
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         throw cirrus::ConnectionException("Error when creating socket.");
     }
+    LOG<INFO>("Setting options");
     int opt = 1;
     if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
         throw cirrus::ConnectionException("Error setting socket options.");
@@ -191,12 +193,13 @@ void TCPClient<T>::connect(const std::string& address,
     // Save the port in the info
     serv_addr.sin_port = htons(port);
 
+    LOG<INFO>("Connecting to server");
     // Connect to the server
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         throw cirrus::ConnectionException("Client could "
                                           "not connect to server.");
     }
-
+    LOG<INFO>("Launching threads");
     receiver_thread = new std::thread(&TCPClient::process_received, this);
     sender_thread   = new std::thread(&TCPClient::process_send, this);
 }
@@ -609,7 +612,7 @@ cirrus::Future TCPClient<T>::enqueue_message(
     map_lock.wait();
 
     // Add to map
-    txn_map[curr_txn_id++] = txn;
+    txn_map[txn_id] = txn;
 
     // Release lock on map
     map_lock.signal();

@@ -10,7 +10,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
 
 // /* This function simply copies a std::array into a new portion of memory. */
@@ -120,7 +120,7 @@ void test_throughput_get(int numRuns) {
 
 auto main() -> int {
     uint64_t num_runs = 20000;
-
+    std::cout << "Starting" << std::endl;
     test_throughput<128>(num_runs);                // 128B
     test_throughput<4    * 1024>(num_runs);        // 4K
     test_throughput<50   * 1024>(num_runs);        // 50K
