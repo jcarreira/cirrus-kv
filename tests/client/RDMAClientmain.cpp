@@ -97,7 +97,7 @@ void test_performance() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = 1 * GB;
+    uint64_t mem_size = .25 * GB;
 
     char* data = reinterpret_cast<char*>(malloc(mem_size));
     if (!data)

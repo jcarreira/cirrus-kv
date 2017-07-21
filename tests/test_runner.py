@@ -10,7 +10,7 @@ import time
 
 # Change this to change the ip that the client connects to
 ip = "127.0.0.1"
-
+half_gig = "536870912"
 # NOTE: all pathnames start from the top directory where make check is run
 def runTestTCP(testPath):
     # Launch the server in the background
@@ -41,7 +41,7 @@ def runTestRDMA(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/bladeallocmain"])
+    server = subprocess.Popen(["./src/server/bladeallocmain", half_gig])
 
     # Sleep to give server time to start
     print("Started server, sleeping.")
