@@ -6,6 +6,6 @@ import time
 import test_runner
 
 # Set name of test to run
-testPath = "./tests/object_store/test_mult_clients"
+testPath = "./tests/object_store/test_mt"
 # Call script to run the test
-test_runner.runTest(testPath)
+test_runner.runTestTCP(testPath)

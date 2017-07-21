@@ -12,15 +12,16 @@
 #include "tests/object_store/object_store_internal.h"
 #include "utils/CirrusTime.h"
 #include "common/Synchronization.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 static const uint64_t MB = (1024*1024);
 static const int N_THREADS = 20;
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char *IP;
 static const uint32_t SIZE = 1024;
+bool use_rdma_client;
 
 std::atomic<std::uint64_t> total_puts = {0};
 
@@ -40,9 +41,10 @@ void test_multiple_clients() {
     int stop = 10;
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen, start, stop]() {
-            cirrus::TCPClient client;
+            std::unique_ptr<cirrus::BladeClient> client =
+                cirrus::test_internal::GetClient(use_rdma_client);
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-                store(IP, PORT, &client,
+                store(IP, PORT, client.get(),
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                           sizeof(cirrus::Dummy<SIZE>)>);
@@ -71,7 +73,9 @@ void test_multiple_clients() {
     std::cout << "Total puts: " << total_puts << std::endl;
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_multiple_clients();
 
     return 0;
