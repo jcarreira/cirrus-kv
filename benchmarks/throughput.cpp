@@ -83,9 +83,11 @@ void test_throughput(int numRuns) {
   */
 template <uint64_t SIZE>
 void test_throughput_get(int numRuns) {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<std::array<char, SIZE>> client;
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-        store(IP, PORT, &client, array_serializer_simple<SIZE>,
+        store(IP, PORT, &client,
+                serializer,
                 array_deserializer_simple<SIZE>);
 
     std::cout << "Creating the array to put." << std::endl;
@@ -126,7 +128,7 @@ auto main() -> int {
     test_throughput<10   * 1024 * 1024>(num_runs / 100);  // 10MB, total 2 gig
     test_throughput<50 * 1024 * 1024>(num_runs / 100);
     test_throughput<100  * 1024 * 1024>(50);  // 100MB, total 5 gig
-    
+
     test_throughput_get<128>(num_runs);                // 128B
     test_throughput_get<4    * 1024>(num_runs);        // 4K
     test_throughput_get<50   * 1024>(num_runs);        // 50K

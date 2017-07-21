@@ -93,7 +93,7 @@ class TCPClient : public BladeClient<T> {
     /**
       * Map that allows receiver thread to map transactions to their
       * completion information. When a message is added to the send queue,
-      * a struct txn_info is created and added to this map. This struct 
+      * a struct txn_info is created and added to this map. This struct
       * allows the receiver thread to place information regarding completion
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
@@ -240,15 +240,17 @@ cirrus::Future TCPClient<T>::write_async(ObjectID oid, const T& obj,
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
+    const int txn_id = curr_txn_id++;
+
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
-                                        curr_txn_id,
+                                        txn_id,
                                         0,
                                         message::TCPBladeMessage::Message_Write,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -272,15 +274,17 @@ cirrus::Future TCPClient<T>::read_async(ObjectID oid, void* data,
     // Create and send read request
     auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
 
+    const int txn_id = curr_txn_id++;
+
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
-                                        curr_txn_id,
+                                        txn_id,
                                         0,
                                         message::TCPBladeMessage::Message_Read,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder, data);
+    return enqueue_message(builder, txn_id, data);
 }
 
 /**
@@ -336,15 +340,16 @@ bool TCPClient<T>::remove(ObjectID oid) {
     // Create and send removal request
     auto msg_contents = message::TCPBladeMessage::CreateRemove(*builder, oid);
 
+    const int txn_id = curr_txn_id++;
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                     *builder,
-                                    curr_txn_id,
+                                    txn_id,
                                     0,
                                     message::TCPBladeMessage::Message_Remove,
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(builder);
+    cirrus::Future future = enqueue_message(builder, txn_id);
     return future.get();
 }
 
@@ -594,7 +599,7 @@ void TCPClient<T>::process_send() {
   */
 template<class T>
 cirrus::Future TCPClient<T>::enqueue_message(
-            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder, int txn_id,
             void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
