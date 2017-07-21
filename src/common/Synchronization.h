@@ -117,7 +117,7 @@ class PosixSemaphore : public Lock {
         #ifdef __APPLE__
         int ret = sem_trywait(m_sema);
         #else
-        sint ret = sem_trywait(&m_sema);
+        int ret = sem_trywait(&m_sema);
         #endif  // __APPLE__
         if (ret == -1 && errno != EAGAIN) {
             throw std::runtime_error("trywait error");
