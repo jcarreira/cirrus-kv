@@ -35,8 +35,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
-    void setMode(cirrus::CacheManager::PrefetchMode mode,
-         cirrus::PrefetchPolicy *policy = nullptr);
+    void setMode(PrefetchMode mode,
+         cirrus::PrefetchPolicy<T> *policy = nullptr);
 
  private:
     /**
@@ -103,13 +103,17 @@ class CacheManager {
     /**
      * PrefetchPolicy used to determine prefetch operations.
      */
-    cirrus::PrefetchPolicy *prefetch_policy;
+    cirrus::PrefetchPolicy<T> *prefetch_policy;
+
+    // Policies to use if specified
+    /** An instance of an off policy. */
+    OffPolicy off_policy;
 };
 
 
 /**
   * Constructor for the CacheManager class. Any object added to the cache
-  * needs to have a default constructor.
+  * needs to have a default constructor. Prefetching is off by default.
   * @param store a pointer to the ObjectStore that the CacheManager will
   * interact with. This is where all objects will be stored and retrieved
   * from.
@@ -127,6 +131,7 @@ CacheManager<T>::CacheManager(
         throw cirrus::CacheCapacityException(
               "Cache capacity must be at least one.");
     }
+    prefetch_policy = &off_policy;
 }
 
 
@@ -144,9 +149,9 @@ T CacheManager<T>::get(ObjectID oid) {
     // check if entry exists for the oid in cache
     // if entry exists, return if it is there, otherwise wait
     // return pointer
-    struct cache_entry& entry;
+    struct cache_entry *entry;
     if (cache.find(oid) != cache.end()) {
-        entry = cache.find(oid)->second;
+        entry = &(cache.find(oid)->second);
     } else {
         // set up entry, pull synchronously
         // Do we save to the cache in this case?
@@ -154,15 +159,15 @@ T CacheManager<T>::get(ObjectID oid) {
           throw cirrus::CacheCapacityException("Get operation would put cache "
                                              "over capacity.");
         }
-        entry = cache[oid];
-        entry.obj = store->get(oid);
+        entry = &cache[oid];
+        entry->obj = store->get(oid);
     }
 
-    std::vector<ObjectID> to_prefetch = prefetch_policy->get(oid, entry.obj);
+    std::vector<ObjectID> to_prefetch = prefetch_policy->get(oid, entry->obj);
     for (auto const& id_to_prefetch : to_prefetch) {
         prefetch(id_to_prefetch);
     }
-    return entry.obj;
+    return entry->obj;
 }
 
 /**
@@ -243,11 +248,12 @@ void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
 
 template<class T>
 void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
-    cirrus::PrefetchPolicy *policy = nullptr) {
+    cirrus::PrefetchPolicy<T> *policy) {
     // Set the mode
     switch (mode) {
       case CacheManager::PrefetchMode::kNone: {
         // Set policy to the off policy
+        prefetch_policy = &off_policy;
         break;
       }
       case CacheManager::PrefetchMode::kOrdered: {

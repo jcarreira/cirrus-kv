@@ -14,9 +14,9 @@ using ObjectID = uint64_t;
  * If these IDs are not in the cache, an error will be thrown.
  */
 template<class T>
-class EvictionPolicy {
+class PrefetchPolicy {
  public:
-    EvictionPolicy() = default;
+    PrefetchPolicy() = default;
     /**
      * Counterpart to the get method. Returns a list of the ObjectIDs to be
      * prefetched from the cache.
