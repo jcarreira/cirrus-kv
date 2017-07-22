@@ -52,17 +52,43 @@ class CacheManager {
         }
     };
 
-    // /**
-    //  * A prefetch policy that fetches the next k items when one is fetched.
-    //  */
-    // class OrderedPolicy :public cirrus::PrefetchPolicy<T> {
-    //  public:
-    //
-    //     std::vector<ObjectID> get(const ObjectID& id, const T& obj) override {
-    //         return std::vector<ObjectID>();
-    //     }
-    // private:
-    // };
+    /**
+     * A prefetch policy that fetches the next k items when one is fetched.
+     * Store cannot be modified while this policy is in use.
+     */
+    class OrderedPolicy :public cirrus::PrefetchPolicy<T> {
+     public:
+        std::vector<ObjectID> get(const ObjectID& id,
+            const T& /* obj */) override {
+            std::vector<ObjectID> to_return;
+            if (id < first || id > last) {
+                throw cirrus::Exception("Attempting to get id outside of "
+                        "continuous range present at time of prefetch  mode "
+                        "specification.");
+            }
+            for (int i = 1; i <= read_ahead; i++) {
+                ObjectID tenative_fetch = id + 1;
+                ObjectID shifted = tenative_fetch - first;
+                ObjectID modded = shifted % (last - first + 1);
+                to_return.push_back(modded + first);
+            }
+            return to_return;
+        }
+        /**
+         * Sets the range that this policy will use.
+         * @param first_ first objectID in a continuous range
+         * @param last_ last objectID that will be used
+         */
+        void SetRange(ObjectID first_, ObjectID last_) {
+            first = first_;
+            last = last_;
+        }
+
+     private:
+        const unsigned int read_ahead = 5;
+        ObjectID first;
+        ObjectID last;
+    };
 
     void evict_vector(const std::vector<ObjectID>& to_remove);
     void evict(ObjectID oid);
@@ -108,6 +134,8 @@ class CacheManager {
     // Policies to use if specified
     /** An instance of an off policy. */
     OffPolicy off_policy;
+    /** An instance of an ordered policy. */
+    OrderedPolicy ordered_policy;
 };
 
 
@@ -246,6 +274,14 @@ void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
     }
 }
 
+/**
+ * Sets the prefetching mode for the cache. The default is no prefetching.
+ * Note: Ordered prefetching can only be used if all objectIDs are sequential.
+ * Using ordered prefetching when IDs are not sequential will result in errors.
+ * Note: Cache/Store contents should not be modified (no put or remove) while 
+ * the ordered iterator is in use as this could cause issues. Disable the
+ * iterator before making changes.
+ */
 template<class T>
 void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
     cirrus::PrefetchPolicy<T> *policy) {
@@ -258,6 +294,8 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
       }
       case CacheManager::PrefetchMode::kOrdered: {
         // set to the ordered policy
+        ordered_policy.SetRange(cache.begin()->first, cache.rbegin()->first);
+        prefetch_policy = &ordered_policy;
         break;
       }
       case CacheManager::PrefetchMode::kCustom: {
