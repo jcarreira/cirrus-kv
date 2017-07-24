@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -10,6 +12,8 @@
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "cache_manager/PrefetchPolicy.h"
+
+using ObjectID = uint64_t;
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
@@ -22,6 +26,10 @@ const char IP[] = "127.0.0.1";
  */
 template<class T>
 class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
+ private:
+    ObjectID first;
+    ObjectID last;
+
  public:
     std::vector<ObjectID> get(const ObjectID& id,
         const T& /* obj */) override {
@@ -50,10 +58,6 @@ class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
         first = first_;
         last = last_;
     }
-
- private:
-    ObjectID first;
-    ObjectID last;
 };
 
 
@@ -119,7 +123,7 @@ void test_linear_prefetch() {
         cm.put(i, i);
     }
 
-    cm.setMode(cirrus::CacheManager<int>::kOrdered);
+    cm.setMode(cirrus::CacheManager<int>::kOrdered, 0, 9);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -133,8 +137,7 @@ void test_linear_prefetch() {
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
     if (duration_micro.count() > 5) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
-        throw std::runtime_error("Get took too long, "
-            "likely not prefetched.");
+        throw std::runtime_error("Get took too long likely not prefetched.");
     }
 }
 
@@ -297,6 +300,8 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+    test_linear_prefetch();
+    test_custom_prefetch();
     std::cout << "test successful" << std::endl;
     return 0;
 }

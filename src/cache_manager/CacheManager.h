@@ -5,10 +5,12 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <iostream>
 #include "cache_manager/EvictionPolicy.h"
 #include "cache_manager/PrefetchPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
 #include "common/Exception.h"
+#include "utils/logging.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -37,6 +39,7 @@ class CacheManager {
     void remove(ObjectID oid);
     void setMode(PrefetchMode mode,
          cirrus::PrefetchPolicy<T> *policy = nullptr);
+    void setMode(PrefetchMode mode, ObjectID first, ObjectID last);
 
  private:
     /**
@@ -70,7 +73,7 @@ class CacheManager {
                 // Math to make sure that prefetching loops back around
                 // Formula is:
                 // val = ((oid + i) - first) % (last - first + 1)) + first
-                ObjectID tenative_fetch = id + 1;
+                ObjectID tenative_fetch = id + i;
                 ObjectID shifted = tenative_fetch - first;
                 ObjectID modded = shifted % (last - first + 1);
                 to_return.push_back(modded + first);
@@ -136,7 +139,6 @@ class CacheManager {
      * PrefetchPolicy used to determine prefetch operations.
      */
     cirrus::PrefetchPolicy<T> *prefetch_policy;
-
     // Policies to use if specified
     /** An instance of an off policy. */
     OffPolicy off_policy;
@@ -231,6 +233,7 @@ template<class T>
 void CacheManager<T>::prefetch(ObjectID oid) {
     std::vector<ObjectID> to_remove = eviction_policy->prefetch(oid);
     evict_vector(to_remove);
+    LOG<INFO>("Prefetching oid: ", oid);
     if (cache.find(oid) == cache.end()) {
       struct cache_entry& entry = cache[oid];
       entry.obj = store->get(oid);
@@ -299,10 +302,8 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
         break;
       }
       case CacheManager::PrefetchMode::kOrdered: {
-        // set to the ordered policy
-        ordered_policy.SetRange(cache.begin()->first, cache.rbegin()->first);
-        prefetch_policy = &ordered_policy;
-        break;
+        throw cirrus::Exception("Ordered prefetching "
+                "specified without a range");
       }
       case CacheManager::PrefetchMode::kCustom: {
         if (policy == nullptr) {
@@ -317,6 +318,24 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
     }
 }
 
+template<class T>
+void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
+    ObjectID first, ObjectID last) {
+    switch (mode) {
+      case CacheManager::PrefetchMode::kOrdered: {
+        if (first > last) {
+            throw cirrus::Exception("Last oid must be >= first");
+        }
+        ordered_policy.SetRange(first, last);
+        prefetch_policy = &ordered_policy;
+        break;
+      }
+      default: {
+        throw cirrus::Exception("First and last arguments passed for "
+                "nonordered policy.");
+      }
+    }
+}
 }  // namespace cirrus
 
 #endif  // SRC_CACHE_MANAGER_CACHEMANAGER_H_
