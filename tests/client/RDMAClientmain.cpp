@@ -151,10 +151,53 @@ void test_async() {
     }
 }
 
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+template <int N>
+void test_async_N() {
+    cirrus::RDMAClient client;
+    client.connect(IP, PORT);
+    std::vector<cirrus::BladeClient::ClientFuture> put_futures;
+    std::vector<cirrus::BladeClient::ClientFuture> get_futures;
+
+    int i;
+    for (i = 0; i < N; i++) {
+        int val = i;
+        put_futures.push_back(client.write_async(i, &val, sizeof(int)));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put.");
+        }
+    }
+
+    int ret_values[10];
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(client.read_async(i, &ret_values[i],
+            sizeof(int)));
+    }
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        bool success = get_futures[i].get();
+        if (!success) {
+            throw std::runtime_error("Error during an async read");
+        }
+        if (ret_values[i] != i) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
+        }
+    }
+}
 auto main() -> int {
     test_1_client();
     test_2_clients();
     test_performance();
     test_async();
+    test_async_N<10>();
     return 0;
 }
