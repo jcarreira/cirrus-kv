@@ -60,13 +60,16 @@ class CacheManager {
      public:
         std::vector<ObjectID> get(const ObjectID& id,
             const T& /* obj */) override {
-            std::vector<ObjectID> to_return;
             if (id < first || id > last) {
                 throw cirrus::Exception("Attempting to get id outside of "
                         "continuous range present at time of prefetch  mode "
                         "specification.");
             }
+            std::vector<ObjectID> to_return;
             for (int i = 1; i <= read_ahead; i++) {
+                // Math to make sure that prefetching loops back around
+                // Formula is:
+                // val = ((oid + i) - first) % (last - first + 1)) + first
                 ObjectID tenative_fetch = id + 1;
                 ObjectID shifted = tenative_fetch - first;
                 ObjectID modded = shifted % (last - first + 1);
@@ -85,8 +88,11 @@ class CacheManager {
         }
 
      private:
+        /** How many objects to prefetch ahead. */
         const unsigned int read_ahead = 5;
+        /** First continuous oid. */
         ObjectID first;
+        /** Last continuous oid. */
         ObjectID last;
     };
 
@@ -278,7 +284,7 @@ void CacheManager<T>::evict_vector(const std::vector<ObjectID>& to_remove) {
  * Sets the prefetching mode for the cache. The default is no prefetching.
  * Note: Ordered prefetching can only be used if all objectIDs are sequential.
  * Using ordered prefetching when IDs are not sequential will result in errors.
- * Note: Cache/Store contents should not be modified (no put or remove) while 
+ * Note: Cache/Store contents should not be modified (no put or remove) while
  * the ordered iterator is in use as this could cause issues. Disable the
  * iterator before making changes.
  */
