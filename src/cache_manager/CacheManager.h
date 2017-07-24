@@ -28,6 +28,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
+    void get_bulk(ObjectID start, ObjectID last, T* data);
+    void put_bulk(ObjectID start, ObjectID last, T* data);
 
  private:
     void evict_vector(const std::vector<ObjectID>& to_remove);
@@ -152,6 +154,45 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
     // TODO(Tyler): Should we switch this to an async op for greater
     // performance potentially? what to do with the futures?
     store->put(oid, obj);
+}
+
+/**
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param start the first objectID that should be pulled from the store.
+ * @param the last objectID that should be pulled from the store.
+ * @param data a pointer to a c style array that will be filled from the
+ * remote store.
+ */
+template<class T>
+void CacheManager<T>::get_bulk(ObjectID start, ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for get_bulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    for (int i = 0; i < numObjects; i++) {
+        data[i] = get(start + i);
+    }
+}
+
+/**
+ * Puts many objects to the remote store at once.
+ * @param start the objectID that should be assigned to the first object
+ * @param the objectID that should be assigned to the last object
+ * @param data a pointer the first object in a c style array that will
+ * be put to the remote store.
+ */
+template<class T>
+void CacheManager<T>::put_bulk(ObjectID start, ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for put_bulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    for (int i = 0; i < numObjects; i++) {
+        put(start + i, data[i]);
+    }
 }
 
 /**

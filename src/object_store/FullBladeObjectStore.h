@@ -45,6 +45,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
             const T& obj) override;
 
+    void get_bulk(ObjectID start, ObjectID last, T* data) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data) override;
+
     void printStats() const noexcept override;
 
  private:
@@ -196,6 +199,90 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
 
     // Constructor takes a pointer to a client future
     return typename ObjectStore<T>::ObjectStorePutFuture(client_future);
+}
+
+/**
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param start the first objectID that should be pulled from the store.
+ * @param the last objectID that should be pulled from the store.
+ * @param data a pointer to a c style array that will be filled from the
+ * remote store.
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
+    ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for getBulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    std::vector<typename cirrus::ObjectStore<T>::ObjectStoreGetFuture> futures(
+        numObjects);
+    // Start each get asynchronously
+    for (int i = 0; i < numObjects; i++) {
+        futures[i] = get_async(start + i);
+    }
+    std::vector<bool> done(numObjects, false);
+    int total_done = 0;
+
+    // Wait for each item to complete
+    while (total_done != numObjects) {
+        for (int i = 0; i < numObjects; i++) {
+            // Check status if not already completed
+            if (!done[i]) {
+                bool ret = futures[i].try_wait();
+                // Copy object and mark true if it completed.
+                if (ret) {
+                    done[i] = true;
+                    data[i] = futures[i].get();
+                    total_done++;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Puts many objects to the remote store at once.
+ * @param start the objectID that should be assigned to the first object
+ * @param the objectID that should be assigned to the last object
+ * @param data a pointer the first object in a c style array that will
+ * be put to the remote store.
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::put_bulk(ObjectID start,
+    ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for putBulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    std::vector<typename ObjectStore<T>::ObjectStorePutFuture> futures(
+        numObjects);
+    // Start each put asynchronously
+    for (int i = 0; i < numObjects; i++) {
+        futures[i] = put_async(start + i, data[i]);
+    }
+    std::vector<bool> done(numObjects, false);
+    int total_done = 0;
+
+    // Wait for each item to complete
+    while (total_done != numObjects) {
+        for (int i = 0; i < numObjects; i++) {
+            // Check status if not already completed
+            if (!done[i]) {
+                bool ret = futures[i].try_wait();
+                // Copy object and mark true if it completed.
+                if (ret) {
+                    done[i] = true;
+                    // Check to see if exception was thrown.
+                    futures[i].get();
+                    total_done++;
+                }
+            }
+        }
+    }
 }
 
 /**
