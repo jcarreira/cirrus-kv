@@ -9,10 +9,12 @@
 #include <thread>
 #include <algorithm>
 #include <memory>
+#include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
 #include "common/Exception.h"
+#include "common/Synchronization.h"
 
 namespace cirrus {
 
@@ -102,15 +104,16 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
+    const int txn_id = curr_txn_id++;
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
-                                        curr_txn_id,
+                                        txn_id,
                                         0,
                                         message::TCPBladeMessage::Message_Write,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -133,15 +136,17 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
     // Create and send read request
     auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
 
+    const int txn_id = curr_txn_id++;
+
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                         *builder,
-                                        curr_txn_id,
+                                        txn_id,
                                         0,
                                         message::TCPBladeMessage::Message_Read,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder, data);
+    return enqueue_message(builder, txn_id, data);
 }
 
 /**
@@ -190,15 +195,17 @@ bool TCPClient::remove(ObjectID oid) {
     // Create and send removal request
     auto msg_contents = message::TCPBladeMessage::CreateRemove(*builder, oid);
 
+    const int txn_id = curr_txn_id++;
+
     auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
                                     *builder,
-                                    curr_txn_id,
+                                    txn_id,
                                     0,
                                     message::TCPBladeMessage::Message_Remove,
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    BladeClient::ClientFuture future = enqueue_message(builder);
+    BladeClient::ClientFuture future = enqueue_message(builder, txn_id);
     return future.get();
 }
 
@@ -424,7 +431,7 @@ void TCPClient::process_send() {
   */
 BladeClient::ClientFuture TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-            void *ptr) {
+            const int txn_id, void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn->mem_for_read = ptr;
@@ -433,7 +440,7 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     map_lock.wait();
 
     // Add to map
-    txn_map[curr_txn_id++] = txn;
+    txn_map[txn_id] = txn;
 
     // Release lock on map
     map_lock.signal();

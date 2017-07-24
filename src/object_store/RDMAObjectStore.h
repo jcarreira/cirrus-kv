@@ -24,7 +24,7 @@ class RDMAObjectStore : public ObjectStore<T> {
 
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
     void put_bulk(ObjectID start, ObjectID last, T* data) override;
-    virtual void printStats() override;
+    void printStats() override;
 
  private:
     std::unique_ptr<EvictionPolicy> ep;

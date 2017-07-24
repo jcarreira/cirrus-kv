@@ -6,7 +6,8 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = TCPClient.cpp BladeClient.cpp
 LIBS    = -l:libcityhash.a -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-	  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+	  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
+	  $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
 SOURCES += RDMAClient.cpp

@@ -5,7 +5,7 @@
 #include "utils/utils.h"
 
 namespace cirrus {
-    
+
 template<class T>
 RDMAObjectStore<T>::RDMAObjectStore(const std::string& blade_addr,
         const std::string& port,

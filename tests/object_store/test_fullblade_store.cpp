@@ -199,7 +199,7 @@ void test_bulk() {
  * an item if it has been removed from the store.
  */
 void test_remove() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -211,7 +211,7 @@ void test_remove() {
     int i = store.get(0);
     std::cout << "Received following value incorrectly: " << i << std::endl;
 }
-   
+
 /**
  * This test ensures that error messages that would normally be generated
  * during a get are still received during a get bulk.

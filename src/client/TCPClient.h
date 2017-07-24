@@ -5,6 +5,7 @@
 #include <thread>
 #include <queue>
 #include <map>
+#include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
@@ -63,16 +64,23 @@ class TCPClient : public BladeClient {
     ssize_t send_all(int, const void*, size_t, int);
     ClientFuture enqueue_message(
                         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        const int txn_id,
                         void *ptr = nullptr);
     void process_received();
     void process_send();
 
-    int sock = 0;  /**< fd of the socket used to communicate w/ remote store */
-    TxnID curr_txn_id = 0;  /**< next txn_id to assign */
+    /** fd of the socket used to communicate w/ remote store */
+    int sock = 0;
+    /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
+    std::atomic<std::uint64_t> curr_txn_id = {0};
 
     /**
       * Map that allows receiver thread to map transactions to their
-      * completion information.
+      * completion information. When a message is added to the send queue,
+      * a struct txn_info is created and added to this map. This struct 
+      * allows the receiver thread to place information regarding completion
+      * as well as data in a location that is accessible to the future
+      * corresponding to the transaction.
       */
     std::map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
     /**

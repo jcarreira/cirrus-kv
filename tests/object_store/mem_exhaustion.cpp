@@ -41,7 +41,7 @@ void test_exhaustion() {
  * the server is at capacity, an item can be removed to make more room.
  */
 void test_exhaustion_remove() {
-    cirrus::RDMAClient client;
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
