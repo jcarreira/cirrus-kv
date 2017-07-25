@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cctype>
 #include <memory>
+#include <chrono>
+#include <thread>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -93,8 +95,66 @@ void test_iterator_alt() {
     }
 }
 
+/**
+ * This test ensures that random prefetching works as expected.
+ */
+void test_random_prefetching() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
+            PORT,
+            &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<cirrus::Dummy<SIZE>> cm(&store, &policy, 10);
+
+
+    // Put items in the store
+    for (int i = 0; i < 10; i++) {
+        cirrus::Dummy<SIZE> d(i);
+        cm.put(i, d);
+    }
+
+    // Use iterator to retrieve
+    // Read 9 ahead so that all objects will be stashed
+    cirrus::CirrusIterable<cirrus::Dummy<SIZE>> iter(&cm, 9, 0, 9);
+    iter.setMode(cirrus::CirrusIterable<cirrus::Dummy<SIZE>>::kUnOrdered);
+    int j = 0;
+    auto start = std::chrono::system_clock::now();
+    auto end = std::chrono::system_clock::now();
+    auto duration = end - start;
+
+    for (const auto& data : iter) {
+        end = std::chrono::system_clock::now();
+        if (j != 0) {
+            // Time how long this last loop took
+            duration = end - start;
+            auto duration_micro =
+                std::chrono::duration_cast<std::chrono::microseconds>(duration);
+            if (duration_micro.count() > 5) {
+                std::cout << "Elapsed is: " << duration_micro.count()
+                    << std::endl;
+                throw std::runtime_error("Get took too long, likely not "
+                        "prefetched");
+            }
+        } else {
+            // Sleep a bit to let the prefetches finish
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        start = std::chrono::system_clock::now();
+        j++;
+    }
+    if (j != 10) {
+        throw std::runtime_error("Too few or too many items from iteration.");
+    }
+}
 auto main() -> int {
+    std::cout << "Test starting" << std::endl;
     test_iterator();
     test_iterator_alt();
+    test_random_prefetching();
+    std::cout << "Test successful" << std::endl;
     return 0;
 }
