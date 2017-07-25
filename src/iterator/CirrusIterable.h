@@ -1,6 +1,10 @@
 #ifndef SRC_ITERATOR_CIRRUSITERABLE_H_
 #define SRC_ITERATOR_CIRRUSITERABLE_H_
 
+#include <time.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
 #include "cache_manager/CacheManager.h"
 
 namespace cirrus {
@@ -14,8 +18,14 @@ template<class T>
 class CirrusIterable {
     class Iterator;
  public:
+    enum PrefetchMode {
+        kOrdered = 0, /**< The iterator will prefetch a few items ahead. */
+        kUnOrdered /**< The cache will iterate randomly. */
+    };
+
     CirrusIterable<T>::Iterator begin();
     CirrusIterable<T>::Iterator end();
+    void setMode(PrefetchMode mode);
 
     CirrusIterable<T>(cirrus::CacheManager<T>* cm,
                                  unsigned int readAhead,
@@ -31,7 +41,8 @@ class CirrusIterable {
      public:
         Iterator(cirrus::CacheManager<T>* cm,
                                     unsigned int readAhead, ObjectID first,
-                                    ObjectID last, ObjectID current_id);
+                                    ObjectID last, ObjectID current_id,
+                                    PrefetchMode mode);
         Iterator(const Iterator& it);
 
         T operator*();
@@ -42,6 +53,9 @@ class CirrusIterable {
         ObjectID get_curr_id() const;
 
      private:
+        /** Vector used to track ObjectIDs in unordered mode. */
+        std::vector<ObjectID> id_vector;
+
         /**
           * Pointer to CacheManager used for put, get, and prefetch.
           */
@@ -67,6 +81,9 @@ class CirrusIterable {
           * next time the iterator is dereferenced.
           */
         ObjectID current_id;
+
+        /** The mode that this iterator is operating in. */
+        PrefetchMode mode;
     };
 
     /**
@@ -88,6 +105,9 @@ class CirrusIterable {
       * Last sequential ID.
       */
     ObjectID last;
+
+    /** The mode that this iterator is operating in. */
+    PrefetchMode mode = PrefetchMode::kOrdered;
 };
 
 /**
@@ -106,11 +126,12 @@ class CirrusIterable {
   */
 template<class T>
 CirrusIterable<T>::CirrusIterable(cirrus::CacheManager<T>* cm,
-                             unsigned int readAhead,
-                             ObjectID first,
-                             ObjectID last):
-                             cm(cm), readAhead(readAhead), first(first),
-                             last(last) {}
+                            unsigned int readAhead,
+                            ObjectID first,
+                            ObjectID last,
+                            PrefetchMode mode):
+                            cm(cm), readAhead(readAhead), first(first),
+                            last(last), mode(mode) {}
 
 /**
   * Constructor for the Iterator class. Assumes that all objects
@@ -130,7 +151,7 @@ CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
                             unsigned int readAhead, ObjectID first,
                             ObjectID last, ObjectID current_id):
                             cm(cm), readAhead(readAhead), first(first),
-                            last(last), current_id(current_id) {}
+                            last(last), current_id(current_id), mode(mode) {}
 
 /**
   * Copy constructor for the Iterator class.
@@ -165,22 +186,35 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
-    for (unsigned int i = 1; i <= readAhead; i++) {
-        // Math to make sure that prefetching loops back around
-        // Formula is val = ((current_id + i) - first) % (last - first)) + first
-
-        // calculate what we WOULD fetch
-        ObjectID tentative_fetch = current_id + i;
-        // shift relative to first
-        ObjectID shifted = tentative_fetch - first;
-        // Mod relative to shifted last
-        ObjectID modded = shifted % (last - first);
-        // Add back to first for final result
-        ObjectID to_fetch = modded + first;
-        cm->prefetch(to_fetch);
+    if (current_id > last) {
+        throw cirrus::Exception("Attempting to dereference the "
+            ".end() iterator");
     }
 
-    return cm->get(current_id);
+    if (mode == CirrusIterable<T>::PrefetchMode::kOrdered) {
+        for (unsigned int i = 1; i <= readAhead; i++) {
+            // Check to make sure that prefetching does not happen
+            // past the last value.
+            // calculate what we WOULD fetch
+            ObjectID tentative_fetch = current_id + i;
+            if (tentative_fetch <= last) {
+                cm->prefetch(to_fetch);
+            }
+        }
+        return cm->get(current_id);
+    } else if (mode == CirrusIterable<T>::PrefetchMode::kUnOrdered) {
+        // Code for unordered accesses goes here
+        for (unsigned int i = 1; i <= readAhead; i++) {
+            ObjectID tentative_fetch = current_id + i;
+            if (tentative_fetch <= last) {
+                cm->prefetch(id_vector[tentative_fetch - first]);
+            }
+        }
+        // We are attempting to access index current_id - first
+        return cm->get(id_vector[current_id - first]);
+    } else {
+        throw cirrus::Exception("Unrecognized prefetch mode");
+    }
 }
 
 /**
