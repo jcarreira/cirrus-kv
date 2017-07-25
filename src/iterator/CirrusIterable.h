@@ -225,13 +225,17 @@ T CirrusIterable<T>::Iterator::operator*() {
 
     if (mode == CirrusIterable<T>::PrefetchMode::kOrdered) {
         for (unsigned int i = 1; i <= readAhead; i++) {
-            // Check to make sure that prefetching does not happen
-            // past the last value.
+            // Formula is
+            // val = ((current_id + i) - first) % (last - first + 1)) + first
             // calculate what we WOULD fetch
             ObjectID tentative_fetch = current_id + i;
-            if (tentative_fetch <= last) {
-                cm->prefetch(tentative_fetch);
-            }
+            // shift relative to first
+            ObjectID shifted = tentative_fetch - first;
+            // Mod relative to shifted last
+            ObjectID modded = shifted % (last - first + 1);
+            // Add back to first for final result
+            ObjectID to_fetch = modded + first;
+            cm->prefetch(to_fetch);
         }
         return cm->get(current_id);
     } else if (mode == CirrusIterable<T>::PrefetchMode::kUnOrdered) {
