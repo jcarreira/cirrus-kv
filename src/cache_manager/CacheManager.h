@@ -28,6 +28,8 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
+    void removeBulk(ObjectID first, ObjectID last);
+    void prefetchBulk(ObjectID first, ObjectID last);
     void get_bulk(ObjectID start, ObjectID last, T* data);
     void put_bulk(ObjectID start, ObjectID last, T* data);
 
@@ -229,6 +231,36 @@ void CacheManager<T>::remove(ObjectID oid) {
         cache.erase(it);
     }
     policy->remove(oid);
+}
+
+/**
+ * Prefetches a range of objects. 
+ * @param first the first ObjectID to prefetch
+ * @param last the last ObjectID to prefetch
+ */
+template<class T>
+void CacheManager<T>::prefetchBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("Last ObjectID to prefetch must be leq first.");
+    }
+    for (int oid = first; oid <= last; oid++) {
+        prefetch(oid);
+    }
+}
+
+/**
+ * Removes a range of objects from the cache.
+ * @param first the first continuous ObjectID to be removed from the cache
+ * @param last the last ObjectID to be removed
+ */
+template<class T>
+void CacheManager<T>::removeBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("Last ObjectID to remove must be leq first.");
+    }
+    for (int oid = first; oid <= last; oid++) {
+        remove(oid);
+    }
 }
 
 /**

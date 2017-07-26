@@ -88,6 +88,7 @@ class ObjectStore {
 
     virtual bool remove(ObjectID id) = 0;
 
+    virtual void removeBulk(ObjectID first, ObjectID last) = 0;
     virtual ObjectStoreGetFuture get_async(const ObjectID& id) = 0;
     virtual ObjectStorePutFuture put_async(const ObjectID& id,
         const T& obj) = 0;

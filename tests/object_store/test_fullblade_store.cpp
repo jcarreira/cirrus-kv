@@ -195,6 +195,31 @@ void test_bulk() {
 }
 
 /**
+ * Tests that remove_bulk correctly removes items from the store.
+ */
+void test_remove_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+     for (int i = 0; i < 10; i++) {
+        store.put(i, i);
+     }
+
+    store.removeBulk(0, 9);
+    // Attempt to get all items in the removed range, should fail
+    for (int i = 0; i < 10; i++) {
+        try {
+            store.get(i);
+            std::cout << "Exception not thrown after attempting to access item "
+                "that should have been removed." << std::endl;
+            throw std::runtime_error("No exception when getting removed id.");
+        } catch (const cirrus::NoSuchIDException& e) {
+        }
+    }
+}
+
+/**
  * This test tests the remove method. It ensures that you cannot "get"
  * an item if it has been removed from the store.
  */
@@ -260,6 +285,8 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
-    std::cout << "Test Successful." << std::endl;
+    test_remove_bulk();
+    std::cout << "Test successful." << std::endl;
+
     return 0;
 }

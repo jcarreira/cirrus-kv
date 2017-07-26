@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -103,6 +105,76 @@ void test_remove() {
 
     // Attempt to get item, this should fail
     cm.get(0);
+}
+
+/**
+ * Tests to ensure that when the cache manager's removeBulk method is called
+ * the objects are removed from the store as well.
+ */
+void test_remove_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    // Remove the items
+    cm.removeBulk(0, 9);
+
+    // Attempt to get all items in the removed range, should fail
+    for (int i = 0; i < 10; i++) {
+        try {
+            cm.get(i);
+            std::cout << "Exception not thrown after attempting to access item "
+                "that should have been removed." << std::endl;
+            throw std::runtime_error("No exception when getting removed id.");
+        } catch (const cirrus::NoSuchIDException& e) {
+        }
+    }
+}
+
+/**
+ * Tests to ensure that when prefetchBulk is called the items are actually
+ * prefetched.
+ */
+void test_prefetch_bulk() {
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    cm.prefetchBulk(0, 9);
+
+    // Sleep for a bit to allow the items to be retrieved
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Fail if any of the gets take more than a few microseconds
+    for (int i = 0; i < 10; i++) {
+        auto start = std::chrono::system_clock::now();
+        cm.get(i);
+        auto end = std::chrono::system_clock::now();
+        auto duration = end - start;
+        auto duration_micro =
+            std::chrono::duration_cast<std::chrono::microseconds>(duration);
+        if (duration_micro.count() > 5) {
+            std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
+            throw std::runtime_error("Get took too long, "
+                "likely not prefetched.");
+        }
+    }
 }
 /**
   * This test tests the behavior of the cache manager when instantiated with
@@ -211,6 +283,8 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
+    test_remove_bulk();
+
     try {
         test_instantiation();
         std::cout << "Exception not thrown when cache"
@@ -227,6 +301,8 @@ auto main() -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+
+    test_prefetch_bulk();
     test_bulk();
 
     try {
