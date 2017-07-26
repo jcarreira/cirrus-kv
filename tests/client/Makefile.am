@@ -11,7 +11,7 @@ LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 	       $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
-# TODO: Add back in bin_PROGRAMS += rdmaclientmain
+bin_PROGRAMS += rdmaclientmain
 endif
 
 rdmaclientmain_SOURCES  = RDMAClientmain.cpp

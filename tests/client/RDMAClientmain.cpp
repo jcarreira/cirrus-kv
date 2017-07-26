@@ -11,6 +11,8 @@
 #include "authentication/AuthenticationToken.h"
 #include "utils/CirrusTime.h"
 #include "client/RDMAClient.h"
+#include "tests/object_store/object_store_internal.h"
+
 // TODO(Tyler): Remove hardcoded IP and PORT
 
 const char PORT[] = "12345";
@@ -20,27 +22,26 @@ static const char IP[] = "10.10.49.83";
 
 
 /**
- * Tests that simple get and put work with a string.
+ * Tests that simple get and put work with integers.
  */
 void test_1_client() {
-    char data[1000];
-    std::string to_send("CIRRUS_DDC");
-
-    snprintf(data, sizeof(data), "%s", "WRONG");
+    int to_send = 42;
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
-    cirrus::RDMAClient client1;
+    cirrus::RDMAClient<int> client1;
+    cirrus::serializer_simple<int> serializer;
     client1.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    client1.write_sync(0, to_send.c_str(), to_send.size());
+    client1.write_sync(0, to_send, serializer);
 
-    client1.read_sync(0, data, to_send.size());
+    int ret_val;
+    client1.read_sync(0, &ret_val, sizeof(to_send));
 
-    if (strncmp(data, to_send.c_str(), to_send.size()))
-        throw std::runtime_error("Error in test");
+    if (ret_val != to_send)
+        throw std::runtime_error("Incorrect value returned");
 }
 
 /**
@@ -48,12 +49,12 @@ void test_1_client() {
  * another.
  */
 void test_2_clients() {
-    char data[1000];
-    snprintf(data, sizeof(data), "%s", "WRONG");
+    int data = 0;
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
-    cirrus::RDMAClient client1, client2;
+    cirrus::RDMAClient<int> client1, client2;
+    cirrus::serializer_simple<int> serializer;
 
     client1.connect(IP, PORT);
     client2.connect(IP, PORT);
@@ -61,65 +62,63 @@ void test_2_clients() {
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
     unsigned int seed = 42;
-    std::ostringstream oss;
+    int random;
     {
-        oss << "data" << rand_r(&seed);
-        cirrus::LOG<cirrus::INFO>("Writing ", oss.str().c_str());
+        random = rand_r(&seed);
+        cirrus::LOG<cirrus::INFO>("Writing ", random);
         cirrus::TimerFunction tf("client1.write");
-        client1.write_sync(0, oss.str().c_str(), oss.str().size());
+        client1.write_sync(0, random, serializer);
     }
-    std::string message("data2");
-    client2.write_sync(0, message.c_str(), message.size());
+    int data2 = 1442;
+    client2.write_sync(0, data2, message.size());
 
     cirrus::LOG<cirrus::INFO>("Old data: ", data);
-    client1.read_sync(0, data, oss.str().size());
+    client1.read_sync(0, &data, sizeof(random));
     cirrus::LOG<cirrus::INFO>("Received data 1: ", data);
 
-    // Check that client 2 receives the desired string
-    if (strncmp(data, oss.str().c_str(), oss.str().size()))
+    // Check that client 1 receives the desired random value
+    if (data != random)
         throw std::runtime_error("Error in test");
 
-    client2.read_sync(0, data, message.size());
+    client2.read_sync(0, &data, sizeof(data2));
     cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
 
     // Check that client2 receives "data2"
-    if (strncmp(data, message.c_str(), message.size()))
+    if (data != data2)
         throw std::runtime_error("Error in test");
 }
 
 /**
- * Test proper performance when writing large objects
+ * Test proper performance when writing large objects, in this case
+ * a std::array
  */
 void test_performance() {
-    cirrus::RDMAClient client;
+    cirrus::RDMAClient<cirrus::Dummy<1 * GB>> client;
+    cirrus::serializer_simple<cirrus::Dummy<1 * GB>> serializer;
     client.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
     uint64_t mem_size = 1 * GB;
+    std::unique_ptr<cirrus::Dummy<1 * GB>> d =
+        std::make_unique<cirrus::Dummy<1 * GB>>(42);
+    std::unique_ptr<cirrus::Dummy<1 * GB>> d2 =
+        std::make_unique<cirrus::Dummy<1 * GB>>(0);
 
-    char* data = reinterpret_cast<char*>(malloc(mem_size));
-    if (!data)
-        exit(-1);
-
-    memset(data, 0, mem_size);
-    data[0] = 'Y';
 
     {
         cirrus::TimerFunction tf("Timing write", true);
-        client.write_sync(0, data, mem_size);
+        client.write_sync(0, *d, serializer);
     }
 
     {
         cirrus::TimerFunction tf("Timing read", true);
-        client.read_sync(0, data, mem_size);
-        std::cout << "data[0]: " << data[0] << std::endl;
-        if (data[0] != 'Y') {
+        client.read_sync(0, d2.get(), sizeof(*d));
+        std::cout << "Returned id: " << d2->id << std::endl;
+        if (d2->id != 42) {
             throw std::runtime_error("Returned value does not match");
         }
     }
-
-    free(data);
 }
 
 auto main() -> int {
