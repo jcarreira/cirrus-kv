@@ -18,7 +18,7 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-static const char IP[] = "10.10.49.83";
+static const char IP[] = "10.10.49.84";
 
 
 /**
@@ -70,7 +70,7 @@ void test_2_clients() {
         client1.write_sync(0, random, serializer);
     }
     int data2 = 1442;
-    client2.write_sync(0, data2, message.size());
+    client2.write_sync(0, data2, serializer);
 
     cirrus::LOG<cirrus::INFO>("Old data: ", data);
     client1.read_sync(0, &data, sizeof(random));
@@ -93,19 +93,17 @@ void test_2_clients() {
  * a std::array
  */
 void test_performance() {
-    cirrus::RDMAClient<cirrus::Dummy<1 * GB>> client;
-    cirrus::serializer_simple<cirrus::Dummy<1 * GB>> serializer;
+    const int size = 199 * MB;
+    cirrus::RDMAClient<cirrus::Dummy<size>> client;
+    cirrus::serializer_simple<cirrus::Dummy<size>> serializer;
     client.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = 1 * GB;
-    std::unique_ptr<cirrus::Dummy<1 * GB>> d =
-        std::make_unique<cirrus::Dummy<1 * GB>>(42);
-    std::unique_ptr<cirrus::Dummy<1 * GB>> d2 =
-        std::make_unique<cirrus::Dummy<1 * GB>>(0);
-
-
+    std::unique_ptr<cirrus::Dummy<size>> d =
+        std::make_unique<cirrus::Dummy<size>>(42);
+    std::unique_ptr<cirrus::Dummy<size>> d2 =
+        std::make_unique<cirrus::Dummy<size>>(0);
     {
         cirrus::TimerFunction tf("Timing write", true);
         client.write_sync(0, *d, serializer);

@@ -467,7 +467,7 @@ void RDMAClient<T>::connect(const std::string& host, const std::string& port) {
   * otherwise.
   */
 template<class T>
-bool RDMAClient<T>::write_sync(ObjectID id,  const T& obj,
+bool RDMAClient<T>::write_sync(ObjectID oid,  const T& obj,
     const Serializer<T>& serializer) {
     bool retval;
     BladeLocation loc;
@@ -477,7 +477,7 @@ bool RDMAClient<T>::write_sync(ObjectID id,  const T& obj,
     std::unique_ptr<char[]> ptr(new char[size]);
     auto data = ptr.get();
     // serialize into the buffer
-    serializer.serialize(serializer.serialize(obj, data);)
+    serializer.serialize(obj, data);
     if (objects_.find(oid, loc)) {
         retval = writeRemote(data, loc, nullptr);
     } else {
@@ -562,8 +562,8 @@ bool RDMAClient<T>::readToLocal(BladeLocation loc, void* ptr) {
  * contains information about the status of the operation.
  */
 template<class T>
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::readToLocalAsync(
-        BladeLocation loc, void* ptr) {
+std::shared_ptr<typename RDMAClient<T>::FutureBladeOp>
+RDMAClient<T>::readToLocalAsync(BladeLocation loc, void* ptr) {
     auto future = rdma_read_async(loc.allocRec, 0, loc.size, ptr);
     return future;
 }
@@ -602,8 +602,8 @@ bool RDMAClient<T>::writeRemote(const void *data, BladeLocation loc,
  * contains information about the status of the operation.
  */
 template<class T>
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::writeRemoteAsync(
-        const void *data, BladeLocation loc) {
+std::shared_ptr<typename RDMAClient<T>::FutureBladeOp>
+RDMAClient<T>::writeRemoteAsync(const void *data, BladeLocation loc) {
     auto future = rdma_write_async(loc.allocRec, 0, loc.size, data);
     return future;
 }
@@ -1128,7 +1128,9 @@ void RDMAClient<T>::fetchadd_rdma_sync(struct rdma_cm_id *id,
  * Method that fetches value from a remote address, then adds a value to it
  * before pushing it back to the remote store.
  */
-RDMAClient::RDMAOpInfo* RDMAClient::fetchadd_rdma_async(struct rdma_cm_id *id,
+template<class T>
+typename RDMAClient<T>::RDMAOpInfo*
+RDMAClient<T>::fetchadd_rdma_async(struct rdma_cm_id *id,
         uint64_t remote_addr, uint64_t peer_rkey, uint64_t /*value*/) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
@@ -1392,7 +1394,8 @@ bool RDMAClient<T>::rdma_write_sync(const AllocationRecord& alloc_rec,
   * @see AllocationRecord
   */
 template<class T>
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::rdma_write_async(
+std::shared_ptr<typename RDMAClient<T>::FutureBladeOp>
+RDMAClient<T>::rdma_write_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -1404,8 +1407,10 @@ std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::rdma_write_async(
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
 
-    if (length > SEND_MSG_SIZE)
+    if (length > SEND_MSG_SIZE) {
+        LOG<ERROR>("Message too large to send");
         return nullptr;
+    }
 
     RDMAClient::RDMAOpInfo* op_info = nullptr;
     if (mem) {
@@ -1449,8 +1454,10 @@ bool RDMAClient<T>::rdma_read_sync(const AllocationRecord& alloc_rec,
         uint64_t length,
         void *data,
         RDMAMem* mem) {
-    if (length > RECV_MSG_SIZE)
+    if (length > RECV_MSG_SIZE) {
+        LOG<ERROR>("Message too long to receive.");
         return false;
+    }
 
     LOG<INFO>("reading rdma",
         " length: ", length,
@@ -1494,7 +1501,8 @@ bool RDMAClient<T>::rdma_read_sync(const AllocationRecord& alloc_rec,
   * the max receivable message size
   */
 template<class T>
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::rdma_read_async(
+std::shared_ptr<typename RDMAClient<T>::FutureBladeOp>
+RDMAClient<T>::rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t length,
@@ -1555,7 +1563,8 @@ bool RDMAClient<T>::fetchadd_sync(const AllocationRecord& alloc_rec,
  * A wrapper for fetchadd_rdma_async.
  */
 template<class T>
-std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient<T>::fetchadd_async(
+std::shared_ptr<typename RDMAClient<T>::FutureBladeOp>
+RDMAClient<T>::fetchadd_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset,
         uint64_t value) {
