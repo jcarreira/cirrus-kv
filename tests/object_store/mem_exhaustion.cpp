@@ -22,10 +22,11 @@ static const uint64_t MILLION = 1000000;
  * the server must have been running to send the message.
  */
 void test_exhaustion() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -41,10 +42,11 @@ void test_exhaustion() {
  * the server is at capacity, an item can be removed to make more room.
  */
 void test_exhaustion_remove() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
 

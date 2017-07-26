@@ -35,17 +35,18 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
 }
 
 /**
- * Compares the time to retrieve N items using the iterator vs 
+ * Compares the time to retrieve N items using the iterator vs
  * fetching each individually.
  * @param num_items the number of items to put on the remote store,
  * which will then be iterated over.
  */
 void test_iterator(int num_items) {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 

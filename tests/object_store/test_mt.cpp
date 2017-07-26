@@ -19,10 +19,11 @@ const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 1024;
 
-cirrus::TCPClient client;
+cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
 cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
                     &client,
-                    cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                    serializer,
                     cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                         sizeof(cirrus::Dummy<SIZE>)>);
 

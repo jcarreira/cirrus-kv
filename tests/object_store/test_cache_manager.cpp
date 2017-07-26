@@ -20,9 +20,10 @@ const char IP[] = "127.0.0.1";
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -44,9 +45,10 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -64,9 +66,10 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -88,9 +91,10 @@ void test_capacity() {
  * the given object is removed from the store as well.
  */
 void test_remove() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -109,9 +113,10 @@ void test_remove() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);

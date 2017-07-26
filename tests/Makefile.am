@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = object_store client
+SUBDIRS = client object_store
 
 if USE_MPI
-SUBDIRS += mpi
+# TODO: Add back in SUBDIRS += mpi
 endif

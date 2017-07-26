@@ -48,10 +48,11 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
   * achieves by measuring the time needed for ten million puts.
   */
 void test_sync() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 

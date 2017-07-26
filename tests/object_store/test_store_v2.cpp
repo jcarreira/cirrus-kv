@@ -18,10 +18,11 @@ const char IP[] = "127.0.0.1";
   * Uses simpler objects than test_fullblade_store.
   */
 void test_store_simple() {
-    cirrus::TCPClient client;
+    cirrus::TCPClient<int> client;
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         &client,
-                        cirrus::serializer_simple<int>,
+                        serializer,
                         cirrus::deserializer_simple<int, sizeof(int)>);
     for (int oid = 0; oid <  10; oid++) {
       store.put(oid, oid);

@@ -3,12 +3,11 @@ bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
 		test_mult_clients test_cache_manager test_iterator
 
 
-LIBS         =  -lcityhash -lclient \
+LIBS         =  -lcityhash \
 		-lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    =  -L$(top_srcdir)/src/utils/ \
-		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
 		-L$(top_srcdir)/src/cache_manager \
