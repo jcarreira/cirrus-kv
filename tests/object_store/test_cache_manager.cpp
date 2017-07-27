@@ -119,16 +119,17 @@ void test_linear_prefetch() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 5; i++) {
         cm.put(i, i);
     }
 
-    cm.setMode(cirrus::CacheManager<int>::kOrdered, 0, 9);
+    cm.setMode(cirrus::CacheManager<int>::kOrdered, 0, 4);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     // Ensure that oid 1 was prefetched
+    cm.setMode(cirrus::CacheManager<int>::kNone);
     auto start = std::chrono::system_clock::now();
     cm.get(1);
     auto end = std::chrono::system_clock::now();
@@ -137,7 +138,7 @@ void test_linear_prefetch() {
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
     if (duration_micro.count() > 5) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
-        throw std::runtime_error("Get took too long likely not prefetched.");
+        throw std::runtime_error("linear Get took too long likely not prefetched.");
     }
 }
 
@@ -153,17 +154,17 @@ void test_custom_prefetch() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 2; i++) {
         cm.put(i, i);
     }
 
     SimpleCustomPolicy<int> prefetch_policy;
-    prefetch_policy.SetRange(0, 9);
+    prefetch_policy.SetRange(0, 1);
     cm.setMode(cirrus::CacheManager<int>::kCustom, &prefetch_policy);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
+    cm.setMode(cirrus::CacheManager<int>::kNone);
     // Ensure that oid 1 was prefetched
     auto start = std::chrono::system_clock::now();
     cm.get(1);
