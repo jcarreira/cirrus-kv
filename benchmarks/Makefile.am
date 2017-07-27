@@ -5,7 +5,7 @@ bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
 
 LIBS         = 	-l:libcityhash.a -lclient \
                	-lauthentication -lutils -lcommon -levictionpolicies \
-				$(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
