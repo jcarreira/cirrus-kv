@@ -5,14 +5,14 @@
 
 // TODO(Tyler): Remove hardcoded port
 const char port[] = "12345";
-char *ip;
+const char *IP;
 
 /**
  * Simple test verifying that basic put/get works as intended.
  */
 void test_simple() {
     cirrus::TCPClient client;
-    client.connect(ip, port);
+    client.connect(IP, port);
     std::cout << "Connected to server." << std::endl;
     int message = 42;
     std::cout << "message declared." << std::endl;
@@ -29,7 +29,7 @@ void test_simple() {
 }
 
 auto main(int argc, char *argv[]) -> int {
-    ip = cirrus::test_internal::ParseIP(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Test Starting." << std::endl;
     test_simple();
     std::cout << "Test successful." << std::endl;

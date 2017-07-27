@@ -75,7 +75,7 @@ std::unique_ptr<BladeClient> GetClient(bool use_rdma_client) {
  * @param argv array of pointers to actual arguments
  * @return boolean indicating true if RDMA should be used.
  */
-auto ParseMode(int argc, char *argv[]) -> bool {
+bool ParseMode(int argc, char *argv[]) {
     bool use_rdma_client;
     if (argc >= 2) {
         if (strcmp(argv[1], "--tcp") == 0) {
@@ -97,7 +97,7 @@ auto ParseMode(int argc, char *argv[]) -> bool {
  * @param argv array of pointers to actual arguments
  * @return pointer to third command line argument, which should be ip address
  */
-auto ParseIP(int argc, char *argv[]) -> char* {
+char* ParseIP(int argc, char *argv[]) {
     if (argc >= 3) {
         return argv[2];
     } else {

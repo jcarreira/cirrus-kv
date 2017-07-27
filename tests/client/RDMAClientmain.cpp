@@ -17,7 +17,7 @@
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-char *IP;
+const char *IP;
 
 
 /**
