@@ -24,10 +24,10 @@ const int MILLION = 1000000;
 
 void print_stats(std::ostream& out, std::string test_name,
         uint64_t elapsed, uint64_t msg_sent) {
-    out << test_name << " elapsed us: " << iterator_elapsed * MILLION
+    out << test_name << " elapsed us: " << elapsed * MILLION
         << std::endl;
     out << test_name << " reads/s: "
-        << (msg_sent * 1.0 / iterator_elapsed * MILLION) << std::endl;
+        << (msg_sent * 1.0 / elapsed * MILLION) << std::endl;
 }
 
 /**
@@ -36,7 +36,7 @@ void print_stats(std::ostream& out, std::string test_name,
  * @param num_items the number of items to put on the remote store,
  * which will then be iterated over.
  */
-void test_cache(std::ofstream outfile, int num_items) {
+void test_cache(std::ofstream& outfile, int num_items) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
@@ -65,7 +65,7 @@ void test_cache(std::ofstream outfile, int num_items) {
     print_stats(std::cout, "cache no prefetch", end, num_items);
 }
 
-void test_store(std::ofstream outfile, int num_items) {
+void test_store(std::ofstream& outfile, int num_items) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
