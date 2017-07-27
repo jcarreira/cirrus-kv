@@ -38,8 +38,9 @@ class CacheManager {
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
     void setMode(PrefetchMode mode,
-         cirrus::PrefetchPolicy<T> *policy = nullptr);
-    void setMode(PrefetchMode mode, ObjectID first, ObjectID last);
+            cirrus::PrefetchPolicy<T> *policy = nullptr);
+    void setMode(PrefetchMode mode, ObjectID first, ObjectID last,
+            uint64_t read_ahead);
 
  private:
     /**
@@ -73,8 +74,8 @@ class CacheManager {
                 // Math to make sure that prefetching loops back around
                 // Formula is:
                 // val = ((oid + i) - first) % (last - first + 1)) + first
-                ObjectID tenative_fetch = id + i;
-                ObjectID shifted = tenative_fetch - first;
+                ObjectID tentative_fetch = id + i;
+                ObjectID shifted = tentative_fetch - first;
                 ObjectID modded = shifted % (last - first + 1);
                 to_return.push_back(modded + first);
             }
@@ -90,9 +91,17 @@ class CacheManager {
             last = last_;
         }
 
+        /**
+         * Sets the readahead for this prefetch policy.
+         * @param read_ahead_ how many items ahead the cache should prefetch.
+         */
+        void SetReadAhead(uint64_t read_ahead_) {
+            read_ahead = read_ahead_;
+        }
+
      private:
         /** How many objects to prefetch ahead. */
-        const unsigned int read_ahead = 5;
+        uint64_t read_ahead = 5;
         /** First continuous oid. */
         ObjectID first;
         /** Last continuous oid. */
@@ -318,20 +327,29 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
     }
 }
 
+/**
+ * Variant of setMode that is only used for switching to Ordered mode.
+ * @param mode the mode to switch to. This should be kOrdered.
+ * @param first the first continuous objectID in a range that prefetching will
+ * loop over.
+ * @param last the last continuous objectID in the above range.
+ * @param read_ahead how many items ahead the cache should prefetch.
+ */
 template<class T>
 void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
-    ObjectID first, ObjectID last) {
+    ObjectID first, ObjectID last, uint64_t read_ahead) {
     switch (mode) {
       case CacheManager::PrefetchMode::kOrdered: {
         if (first > last) {
             throw cirrus::Exception("Last oid must be >= first");
         }
         ordered_policy.SetRange(first, last);
+        ordered_policy.SetReadAhead(read_ahead);
         prefetch_policy = &ordered_policy;
         break;
       }
       default: {
-        throw cirrus::Exception("First and last arguments passed for "
+        throw cirrus::Exception("First/last/read_ahead arguments passed for "
                 "nonordered policy.");
       }
     }

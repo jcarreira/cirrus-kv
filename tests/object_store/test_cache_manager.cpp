@@ -123,7 +123,7 @@ void test_linear_prefetch() {
         cm.put(i, i);
     }
 
-    cm.setMode(cirrus::CacheManager<int>::kOrdered, 0, 4);
+    cm.setMode(cirrus::CacheManager<int>::kOrdered, 0, 4, 5);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -138,7 +138,7 @@ void test_linear_prefetch() {
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
     if (duration_micro.count() > 5) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
-        throw std::runtime_error("linear Get took too long likely not prefetched.");
+        throw std::runtime_error("Get took too long likely not prefetched.");
     }
 }
 
