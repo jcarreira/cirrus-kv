@@ -20,6 +20,10 @@ template<class T>
 class CirrusIterable {
     class Iterator;
  public:
+    /**
+     * This enum defines different prefetch modes for the iterable cache.
+     * The default is ordered prefetching.
+     */
     enum PrefetchMode {
         kOrdered = 0, /**< The iterator will prefetch a few items ahead. */
         kUnOrdered /**< The cache will iterate randomly. */
@@ -165,6 +169,7 @@ void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_) {
   * always be >= first.
   * @param current_id the id that will be fetched when the iterator is
   * dereferenced.
+  * @param mode the prefetching mode that this iterator should operate using.
   */
 template<class T>
 CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,

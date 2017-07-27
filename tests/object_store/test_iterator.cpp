@@ -147,7 +147,10 @@ void test_random_prefetching() {
         j++;
     }
     if (j != 10) {
-        throw std::runtime_error("Too few or too many items from iteration.");
+        std::cout << j << " items iterated over instead of ten." << std::endl;
+        throw std::runtime_error("Either greater or fewer than ten items were "
+                "iterated over, meaning either that some items were skipped "
+                "or that some were repeated.");
     }
 }
 auto main() -> int {
