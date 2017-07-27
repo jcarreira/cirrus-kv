@@ -13,25 +13,6 @@ const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
 
-// /* This function simply copies a std::array into a new portion of memory. */
-// template <uint64_t SIZE>
-// std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
-//             const std::array<char, SIZE>& v) {
-//     std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
-//     std::memcpy(ptr.get(), &v, sizeof(v));
-//     return std::make_pair(std::move(ptr), sizeof(v));
-// }
-
-/* Takes a pointer to std::array passed in and returns as object. */
-template <uint64_t SIZE>
-std::array<char, SIZE> array_deserializer_simple(void* data,
-            uint64_t /* size */) {
-    std::array<char, SIZE> *ptr = (std::array<char, SIZE> *) data;
-    std::array<char, SIZE> retArray;
-    retArray = *ptr;
-    return retArray;
-}
-
 /**
   * This benchmark tests the throughput of the system at various sizes
   * of message. When given a parameter SIZE and numRuns, it stores
@@ -45,7 +26,8 @@ void test_throughput(int numRuns) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client,
                 serializer,
-                array_deserializer_simple<SIZE>);
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
 
     std::cout << "Creating the array to put." << std::endl;
     std::unique_ptr<std::array<char, SIZE>> array =
@@ -88,7 +70,8 @@ void test_throughput_get(int numRuns) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client,
                 serializer,
-                array_deserializer_simple<SIZE>);
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
 
     std::cout << "Creating the array to put." << std::endl;
     std::unique_ptr<std::array<char, SIZE>> array =
