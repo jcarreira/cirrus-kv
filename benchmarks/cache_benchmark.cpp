@@ -22,12 +22,19 @@ const char IP[] = "10.10.49.83";
 const int cache_size = 200;  // Arbitrary
 const int MILLION = 1000000;
 
+/**
+ * Prints the stats to the given output. 
+ * @param out the ostream to write to
+ * @param test_name the name of the test that the stats correspond to
+ * @param elapsed the number of microseconds elapsed during the test
+ * @param msgs_sent number messages sent during the test
+ */
 void print_stats(std::ostream& out, std::string test_name,
-        uint64_t elapsed, uint64_t msg_sent) {
+        uint64_t elapsed, uint64_t msgs_sent) {
     out << test_name << " elapsed us: " << elapsed * MILLION
         << std::endl;
     out << test_name << " reads/s: "
-        << (msg_sent * 1.0 / elapsed * MILLION) << std::endl;
+        << (msgs_sent * 1.0 / elapsed * MILLION) << std::endl;
 }
 
 /**
