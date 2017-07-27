@@ -312,7 +312,7 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
       }
       case CacheManager::PrefetchMode::kOrdered: {
         throw cirrus::Exception("Ordered prefetching "
-                "specified without a range");
+                "specified without a range and read ahead.");
       }
       case CacheManager::PrefetchMode::kCustom: {
         if (policy == nullptr) {

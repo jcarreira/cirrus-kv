@@ -22,14 +22,14 @@ const char IP[] = "127.0.0.1";
 
 
 /**
- * A simple custom prefetching policy that prefetches the next oid available.
+ * A simple custom prefetching policy that prefetches in a downwards fashion.
  */
 template<class T>
 class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
  private:
     ObjectID first;
     ObjectID last;
-
+    uint64_t read_ahead = 1;
  public:
     std::vector<ObjectID> get(const ObjectID& id,
         const T& /* obj */) override {
@@ -42,11 +42,12 @@ class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
         // Formula is:
         // val = ((oid + i) - first) % (last - first + 1)) + first
         std::vector<ObjectID> to_return;
-        ObjectID tenative_fetch = id + 1;
-        ObjectID shifted = tenative_fetch - first;
-        ObjectID modded = shifted % (last - first + 1);
-        to_return.push_back(modded + first);
-
+        for (int i = 1; i <= read_ahead; i++) {
+            ObjectID tentative_fetch = id - i;
+            ObjectID shifted = tentative_fetch - first;
+            ObjectID modded = shifted % (last - first + 1);
+            to_return.push_back(modded + first);
+        }
         return to_return;
     }
     /**
@@ -154,20 +155,20 @@ void test_custom_prefetch() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<int> cm(&store, &policy, 10);
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
         cm.put(i, i);
     }
 
     SimpleCustomPolicy<int> prefetch_policy;
-    prefetch_policy.SetRange(0, 1);
+    prefetch_policy.SetRange(0, 3);
     cm.setMode(cirrus::CacheManager<int>::kCustom, &prefetch_policy);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     cm.setMode(cirrus::CacheManager<int>::kNone);
-    // Ensure that oid 1 was prefetched
+    // Ensure that oid 3 was prefetched
     auto start = std::chrono::system_clock::now();
-    cm.get(1);
+    cm.get(3);
     auto end = std::chrono::system_clock::now();
     auto duration = end - start;
     auto duration_micro =
