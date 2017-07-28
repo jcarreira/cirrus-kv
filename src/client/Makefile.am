@@ -5,8 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 #DEFINE_LOG=-DELPP_DISABLE_INFO_LOGS
 
 SOURCES = TCPClient.cpp
-LIBS    = -lcityhash -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-		  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+
 LIBS    = -lcityhash -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
 	  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
 	  $(LIBRDMACM) $(LIBIBVERBS)

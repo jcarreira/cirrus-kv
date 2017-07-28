@@ -1,19 +1,18 @@
 #include <string>
 #include <iostream>
 #include "client/TCPClient.h"
+#include "tests/object_store/object_store_internal.h"
 
-
+// TODO(Tyler): Remove hardcoded port
+const char port[] = "12345";
+const char *IP;
 
 /**
  * Simple test verifying that basic put/get works as intended.
  */
-// TODO(Tyler): Remove hardcoded port and ip
-auto main() -> int {
-    std::string port = "12345";
-    std::string ip = "127.0.0.1";
+void test_simple() {
     cirrus::TCPClient client;
-    std::cout << "Test Starting." << std::endl;
-    client.connect(ip, port);
+    client.connect(IP, port);
     std::cout << "Connected to server." << std::endl;
     int message = 42;
     std::cout << "message declared." << std::endl;
@@ -24,9 +23,14 @@ auto main() -> int {
     client.read_sync(1, &returned, sizeof(int));
     std::cout << returned << " returned from server" << std::endl;
 
-    if (returned == message) {
-        return 0;
-    } else {
-        return -1;
+    if (returned != message) {
+        throw std::runtime_error("Wrong value returned.");
     }
+}
+
+auto main(int argc, char *argv[]) -> int {
+    IP = cirrus::test_internal::ParseIP(argc, argv);
+    std::cout << "Test Starting." << std::endl;
+    test_simple();
+    std::cout << "Test successful." << std::endl;
 }

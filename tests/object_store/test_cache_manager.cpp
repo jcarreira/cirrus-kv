@@ -8,20 +8,22 @@
 #include "utils/CirrusTime.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include "utils/Stats.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char *IP;
+bool use_rdma_client;
 
 /**
   * Test simple synchronous put and get to/from the object store.
   * Uses simpler objects than test_fullblade_store.
   */
 void test_cache_manager_simple() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -44,8 +46,9 @@ void test_cache_manager_simple() {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -64,8 +67,9 @@ void test_nonexistent_get() {
   * capacity. Should not exceed capacity as the policy should remove items.
   */
 void test_capacity() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -88,8 +92,9 @@ void test_capacity() {
  * the given object is removed from the store as well.
  */
 void test_remove() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -109,8 +114,9 @@ void test_remove() {
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
   */
 void test_instantiation() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -145,7 +151,9 @@ void test_lradded() {
     }
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
 
