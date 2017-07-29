@@ -8,14 +8,15 @@
 #include <chrono>
 #include <random>
 #include "cache_manager/CacheManager.h"
+#include "iterator/IteratorPolicy.h"
 
 namespace cirrus {
 using ObjectID = uint64_t;
 
 /**
-  * A class that interfaces with the cache manager. Returns cirrus::Iterator
-  * objects for iteration.
-  */
+ * A class that interfaces with the cache manager. Returns cirrus::Iterator
+ * objects for iteration.
+ */
 template<class T>
 class CirrusIterable {
     class Iterator;
@@ -26,12 +27,14 @@ class CirrusIterable {
      */
     enum PrefetchMode {
         kOrdered = 0, /**< The iterator will prefetch a few items ahead. */
-        kUnOrdered /**< The cache will iterate randomly. */
+        kUnOrdered, /**< The cache will iterate randomly. */
+        kCustom /**< The iterator will use a custom user policy. */
     };
 
     CirrusIterable<T>::Iterator begin();
     CirrusIterable<T>::Iterator end();
-    void setMode(PrefetchMode mode_);
+    void setMode(PrefetchMode mode_,
+        IteratorPolicy* policy_ = nullptr);
 
     CirrusIterable<T>(cirrus::CacheManager<T>* cm,
                                  unsigned int readAhead,
@@ -40,15 +43,16 @@ class CirrusIterable {
 
  private:
     /**
-      * A class that interfaces with the cache manager. Making an access will
-      * prefetch a user defined distance ahead
-      */
+     * A class that interfaces with the cache manager. Making an access will
+     * prefetch a user defined distance ahead
+     */
     class Iterator {
      public:
         Iterator(cirrus::CacheManager<T>* cm,
-                                    unsigned int readAhead, ObjectID first,
-                                    ObjectID last, ObjectID current_id,
-                                    PrefetchMode mode);
+                                    unsigned int read_ahead, ObjectID first,
+                                    ObjectID last, bool is_begin,
+                                    bool is_end,
+                                    IteratorPolicy *policy);
         Iterator(const Iterator& it);
 
         T operator*();
@@ -56,80 +60,112 @@ class CirrusIterable {
         Iterator operator++(int i);
         bool operator!=(const Iterator& it) const;
         bool operator==(const Iterator& it) const;
-        ObjectID get_curr_id() const;
 
      private:
-        /** Vector used to track ObjectIDs in unordered mode. */
-        std::vector<ObjectID> id_vector;
-
         /**
-          * Pointer to CacheManager used for put, get, and prefetch.
-          */
+         * Pointer to CacheManager used for put, get, and prefetch.
+         */
         cirrus::CacheManager<T> *cm;
 
-        /**
-          * How many items ahead to prefetch on a dereference.
-          */
-        unsigned int readAhead;
-
-        /**
-          * First sequential ID.
-          */
-        ObjectID first;
-
-        /**
-          * Last sequential ID.
-          */
-        ObjectID last;
-
-        /**
-          * The ObjectID that will be get() will be called on the
-          * next time the iterator is dereferenced.
-          */
-        ObjectID current_id;
-
-        /** The mode that this iterator is operating in. */
-        PrefetchMode mode;
+        std::unique_ptr<IteratorPolicy> policy;
     };
 
+    class OrderedPolicy : public IteratorPolicy {
+     public:
+        OrderedPolicy() {}
+        OrderedPolicy(const OrderedPolicy& other): first(other.first),
+            last(other.last), read_ahead(other.read_ahead),
+            current_id(other.current_id) {}
+
+        void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
+            Position position_) override {
+            first = first_;
+            last = last_;
+            read_ahead = read_ahead_;
+
+            if (position_ == kBegin) {
+                current_id = first;
+            } else if (position_ == kEnd) {
+                current_id = last + 1;
+            } else {
+                throw cirrus::Exception("Unrecognized position argument.");
+            }
+        }
+        std::vector<ObjectID> GetPrefetchList() override {
+            std::vector<ObjectID> prefetch_vector;
+            for (unsigned int i = 1; i <= read_ahead; i++) {
+                ObjectID tentative_fetch = current_id + i;
+                ObjectID shifted = tentative_fetch - first;
+                ObjectID modded = shifted % (last - first + 1);
+                ObjectID to_fetch = modded + first;
+                prefetch_vector.push_back(to_fetch);
+            }
+            return prefetch_vector;
+        }
+
+        ObjectID Dereference() override {
+            return current_id;
+        }
+
+        void Increment() override {
+            current_id++;
+        }
+
+        uint64_t GetState() override {
+            return current_id;
+        }
+
+        std::unique_ptr<IteratorPolicy> Clone() override {
+            return std::make_unique<OrderedPolicy>(*this);
+        }
+
+     private:
+        ObjectID first;
+        ObjectID last;
+        uint64_t read_ahead;
+        ObjectID current_id;
+    };
     /**
-      * Pointer to CacheManager used for put, get, and prefetch.
-      */
+     * Pointer to CacheManager used for put, get, and prefetch.
+     */
     cirrus::CacheManager<T> *cm;
 
     /**
-      * How many items ahead to prefetch on a dereference.
-      */
+     * How many items ahead to prefetch on a dereference.
+     */
     unsigned int readAhead;
 
     /**
-      * First sequential ID.
-      */
+     * First sequential ID.
+     */
     ObjectID first;
 
     /**
-      * Last sequential ID.
-      */
+     * Last sequential ID.
+     */
     ObjectID last;
-
-    /** The mode that this iterator is operating in. */
-    PrefetchMode mode = PrefetchMode::kOrdered;
+    OrderedPolicy ordered;
+    /** 
+     * A pointer to the policy that will be used for the iterator. 
+     * ordered by default.
+     */
+    IteratorPolicy *policy = &ordered;
 };
 
 /**
-  * Constructor for the CirrusIterable class. Assumes that all objects
-  * are stored sequentially between first and last.
-  * @param cm a pointer to a CacheManager with that contains the same
-  * object type as this Iterable.
-  * @param first the first sequential objectID. Should always be <= than
-  * last.
-  * @param the last sequential id under which an object is stored. Should
-  * always be >= first.
-  * @param readAhead how many items ahead items should be prefetched.
-  * Should always be <= last - first. Additionally, should be less than
-  * the cache capacity that was specified in the creation of the
-  * CacheManager.
-  */
+ * Constructor for the CirrusIterable class. Assumes that all objects
+ * are stored sequentially between first and last.
+ * @param cm a pointer to a CacheManager with that contains the same
+ * object type as this Iterable.
+ * @param first the first sequential objectID. Should always be <= than
+ * last.
+ * @param the last sequential id under which an object is stored. Should
+ * always be >= first.
+ * @param readAhead how many items ahead items should be prefetched.
+ * Should always be <= last - first. Additionally, should be less than
+ * the cache capacity that was specified in the creation of the
+ * CacheManager.
+ */
 template<class T>
 CirrusIterable<T>::CirrusIterable(cirrus::CacheManager<T>* cm,
                             unsigned int readAhead,
@@ -140,16 +176,27 @@ CirrusIterable<T>::CirrusIterable(cirrus::CacheManager<T>* cm,
 /**
  * Changes the iteration mode of the iterable cache.
  * @param mode_ the desired prefetching mode.
+ * @param policy_ a pointer to an IteratorPolicy that will be used if in custom
+ * mode.
  */
 template<class T>
-void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_) {
+void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_,
+        IteratorPolicy *policy_) {
     switch (mode_) {
       case CirrusIterable::PrefetchMode::kOrdered: {
-        mode = mode_;
+        policy = &ordered;
         break;
       }
       case CirrusIterable::PrefetchMode::kUnOrdered: {
-        mode = mode_;
+        // policy = &unordered;
+        break;
+      }
+      case CirrusIterable::PrefetchMode::kCustom: {
+        if (policy_ == nullptr) {
+            throw cirrus::Exception("Custom prefetching specified without "
+                    " a pointer to a custom policy.");
+        }
+        policy = policy_;
         break;
       }
       default: {
@@ -162,121 +209,95 @@ void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_) {
   * are stored sequentially.
   * @param cm a pointer to a CacheManager with that contains the same
   * object type as this Iterable.
-  * @param readAhead how many items ahead items should be prefetched.
+  * @param read_ahead how many items ahead items should be prefetched.
   * @param first the first sequential objectID. Should always be <= than
   * last.
-  * @param the last sequential id under which an object is stored. Should
+  * @param last the last sequential id under which an object is stored. Should
   * always be >= first.
-  * @param current_id the id that will be fetched when the iterator is
-  * dereferenced.
-  * @param mode the prefetching mode that this iterator should operate using.
+  * @param is_begin a boolean indicating if this will be a begin iterator
+  * @param is_end a boolean indicating if this will be an end iterator
+  * @param policy_ptr a pointer to an IteratorPolicy that will be used for
+  *  all logic.
   */
 template<class T>
 CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
-                            unsigned int readAhead, ObjectID first,
-                            ObjectID last, ObjectID current_id,
-                            PrefetchMode mode):
-                            cm(cm), readAhead(readAhead), first(first),
-                            last(last), current_id(current_id), mode(mode) {
-    // Set up id_vector if in unordered mode
-    if (mode == CirrusIterable<T>::PrefetchMode::kUnOrdered) {
-        for (int i = first; i <= last; i++) {
-            id_vector.push_back(i);
-        }
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    shuffle(id_vector.begin(), id_vector.end(),
-            std::default_random_engine(seed));
+                            unsigned int read_ahead, ObjectID first,
+                            ObjectID last, bool is_begin, bool is_end,
+                            IteratorPolicy* policy_ptr):
+                            cm(cm), policy(policy_ptr->Clone()) {
+    IteratorPolicy::Position position;
+    if (is_begin) {
+        position = IteratorPolicy::Position::kBegin;
+    } else if (is_end) {
+        position = IteratorPolicy::Position::kEnd;
+    } else {
+        throw cirrus::Exception("Iterator constructor called "
+                "with begin and end false.");
     }
+    policy->SetState(first, last, read_ahead, position);
 }
 
 /**
-  * Copy constructor for the Iterator class.
-  */
+ * Copy constructor for the Iterator class.
+ */
 template<class T>
 CirrusIterable<T>::Iterator::Iterator(const Iterator& it):
-              cm(it.cm), readAhead(it.readAhead), first(it.first),
-              last(it.last), current_id(it.current_id) {}
+              cm(it.cm), policy(it.policy->Clone()) {}
 
 /**
-  * Function that returns a cirrus::Iterator at the start of the given range.
-  */
+ * Function that returns a cirrus::Iterator at the start of the given range.
+ */
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::begin() {
-    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, first, mode);
+    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, true,
+            false, policy);
 }
 
 /**
-  * Function that returns a cirrus::Iterator one past the end of the given
-  * range.
-  */
+ * Function that returns a cirrus::Iterator one past the end of the given
+ * range.
+ */
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
-    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, last + 1,
-                mode);
+    return CirrusIterable<T>::Iterator(cm, readAhead, first, last, false,
+            true, policy);
 }
 
 /**
-  * Function that dereferences the iterator, retrieving the underlying object
-  * of type T. When dereferenced, it prefetches the next readAhead items.
-  * @return Returns an object of type T.
-  */
+ * Function that dereferences the iterator, retrieving the underlying object
+ * of type T. When dereferenced, it prefetches the next readAhead items.
+ * @return Returns an object of type T.
+ */
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
-    if (current_id > last) {
-        throw cirrus::Exception("Attempting to dereference the "
-            ".end() iterator");
+    auto to_prefetch = policy->GetPrefetchList();
+    for (const auto& oid : to_prefetch) {
+        cm->prefetch(oid);
     }
 
-    if (mode == CirrusIterable<T>::PrefetchMode::kOrdered) {
-        for (unsigned int i = 1; i <= readAhead; i++) {
-            // Formula is
-            // val = ((current_id + i) - first) % (last - first + 1)) + first
-            // calculate what we WOULD fetch
-            ObjectID tentative_fetch = current_id + i;
-            // shift relative to first
-            ObjectID shifted = tentative_fetch - first;
-            // Mod relative to shifted last
-            ObjectID modded = shifted % (last - first + 1);
-            // Add back to first for final result
-            ObjectID to_fetch = modded + first;
-            cm->prefetch(to_fetch);
-        }
-        return cm->get(current_id);
-    } else if (mode == CirrusIterable<T>::PrefetchMode::kUnOrdered) {
-        // Code for unordered accesses goes here
-        for (unsigned int i = 1; i <= readAhead; i++) {
-            ObjectID tentative_fetch = current_id + i;
-            if (tentative_fetch <= last) {
-                cm->prefetch(id_vector[tentative_fetch - first]);
-            }
-        }
-        // We are attempting to access index current_id - first
-        return cm->get(id_vector[current_id - first]);
-    } else {
-        throw cirrus::Exception("Unrecognized prefetch mode");
-    }
+    cm->get(policy->Dereference());
 }
 
 /**
-  * A function that increments the Iterator by increasing the value of
-  * current_id. The next time the Iterator is dereferenced, an object stored
-  * under the incremented current_id will be retrieved. Serves as preincrement.
-  */
+ * A function that increments the Iterator by increasing the value of
+ * current_id. The next time the Iterator is dereferenced, an object stored
+ * under the incremented current_id will be retrieved. Serves as preincrement.
+ */
 template<class T>
 typename CirrusIterable<T>::Iterator&
 CirrusIterable<T>::Iterator::operator++() {
-    current_id++;
+    policy->Increment();
     return *this;
 }
 
 
 /**
-  * A function that increments the Iterator by increasing the value of
-  * current_id. The next time the Iterator is dereferenced, an object stored
-  * under the incremented current_id will be retrieved. Serves as post
-  * increment.
-  */
+ * A function that increments the Iterator by increasing the value of
+ * current_id. The next time the Iterator is dereferenced, an object stored
+ * under the incremented current_id will be retrieved. Serves as post
+ * increment.
+ */
 template<class T>
 typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
                                                                 int /* i */) {
@@ -286,33 +307,24 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
 }
 
 /**
-  * A function that compares two Iterators. Will return true if the two
-  * iterators have different values of current_id.
-  */
+ * A function that compares two Iterators. Will return true if the two
+ * iterators have different values of current_id.
+ */
 template<class T>
 bool CirrusIterable<T>::Iterator::operator!=(
                                const CirrusIterable<T>::Iterator& it) const {
-    return current_id != it.get_curr_id();
+    return !(*this == it);
 }
 
 /**
-  * A function that compares two Iterators. Will return true if the two
-  * iterators have identical values of current_id.
-  */
+ * A function that compares two Iterators. Will return true if the two
+ * iterators have identical values of current_id.
+ */
 template<class T>
 bool CirrusIterable<T>::Iterator::operator==(
                                  const CirrusIterable<T>::Iterator& it) const {
-    return current_id == it.get_curr_id();
+    return policy->GetState() == it.policy->GetState();
 }
-
-/**
-  * A function that returns the current_id of the Iterator that calls it.
-  */
-template<class T>
-ObjectID CirrusIterable<T>::Iterator::get_curr_id() const {
-    return current_id;
-}
-
 
 }  // namespace cirrus
 
