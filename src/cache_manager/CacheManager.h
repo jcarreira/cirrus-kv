@@ -62,6 +62,13 @@ class CacheManager {
      */
     class OrderedPolicy :public cirrus::PrefetchPolicy<T> {
      public:
+        /**
+         * Counterpart to the CacheManager's get method. Returns a list of items
+         * to prefetch.
+         * @param id the ObjectID being retrieved.
+         * @param obj unused
+         * @return a vector of ObjectIDs to be prefetched.
+         */
         std::vector<ObjectID> get(const ObjectID& id,
             const T& /* obj */) override {
             if (id < first || id > last) {
@@ -78,7 +85,14 @@ class CacheManager {
                 ObjectID tentative_fetch = id + i;
                 ObjectID shifted = tentative_fetch - first;
                 ObjectID modded = shifted % (last - first + 1);
-                to_return.push_back(modded + first);
+                ObjectID to_prefetch = modded + first;
+                // If attempting to prefetch the id that was just retrieved,
+                // then a full circle has been completed, so no further
+                // prefetching is necessary
+                if (to_prefetch == id) {
+                    break;
+                }
+                to_return.push_back(to_prefetch);
             }
             return to_return;
         }
