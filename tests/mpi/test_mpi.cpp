@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     gethostname(name, 200);
     std::cout << "MPI test running on hostname: " << name << std::endl;
 
-    test_sync();
+    test_sync(100);
 
     MPI_Finalize();
 
