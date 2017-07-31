@@ -43,6 +43,7 @@ class SimpleCustomPolicy : public cirrus::PrefetchPolicy<T> {
         // Formula is:
         // val = ((oid + i) - first) % (last - first + 1)) + first
         std::vector<ObjectID> to_return;
+        to_return.reserve(read_ahead);
         for (int i = 1; i <= read_ahead; i++) {
             ObjectID tentative_fetch = id - i;
             ObjectID shifted = tentative_fetch - first;

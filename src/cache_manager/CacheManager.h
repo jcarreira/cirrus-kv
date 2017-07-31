@@ -70,6 +70,7 @@ class CacheManager {
                         "specification.");
             }
             std::vector<ObjectID> to_return;
+            to_return.reserve(read_ahead);
             for (int i = 1; i <= read_ahead; i++) {
                 // Math to make sure that prefetching loops back around
                 // Formula is:
@@ -86,7 +87,7 @@ class CacheManager {
          * @param first_ first objectID in a continuous range
          * @param last_ last objectID that will be used
          */
-        void SetRange(ObjectID first_, ObjectID last_) {
+        void setRange(ObjectID first_, ObjectID last_) {
             first = first_;
             last = last_;
         }
@@ -95,7 +96,7 @@ class CacheManager {
          * Sets the readahead for this prefetch policy.
          * @param read_ahead_ how many items ahead the cache should prefetch.
          */
-        void SetReadAhead(uint64_t read_ahead_) {
+        void setReadAhead(uint64_t read_ahead_) {
             read_ahead = read_ahead_;
         }
 
@@ -343,8 +344,8 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
         if (first > last) {
             throw cirrus::Exception("Last oid must be >= first");
         }
-        ordered_policy.SetRange(first, last);
-        ordered_policy.SetReadAhead(read_ahead);
+        ordered_policy.setRange(first, last);
+        ordered_policy.setReadAhead(read_ahead);
         prefetch_policy = &ordered_policy;
         break;
       }
