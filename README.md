@@ -32,13 +32,17 @@ Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
 MacOS Requirements
 ============
-Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of G++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. G++ can be installed using macports, and the `port select` command allows you to set the new version of G++ as the one you want to use. The remaining programs can be installed using homebrew. cpplint can still be installed via pip
+Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of gcc/g++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. gcc/g++ can be installed using macports, and the `port select` command allows you to set the new version of gcc/g++ as the one you want to use. The remaining programs can be installed using homebrew. cpplint can still be installed via pip.
 
 gettext can be installed as follows using homebrew. Read the warning before running the link command:
 
     $ brew install gettext
     $ brew link --force gettext
 
+To install gcc/g++ you may have to do:
+
+    $ port install gcc5
+    $ port select --list gcc
 
 Building
 =========
