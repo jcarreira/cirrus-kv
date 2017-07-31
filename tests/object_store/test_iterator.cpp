@@ -86,12 +86,13 @@ void test_iterator_alt() {
 
     int j = 0;
     for (const auto& data : iter) {
-      if (data.id != j) {
-        std::cout << "received " << data.id << " but expected " << j
+        std::cout << "Retrieved an item" << std::endl;
+        if (data.id != j) {
+            std::cout << "received " << data.id << " but expected " << j
                   << std::endl;
-        throw std::runtime_error("Wrong value in alternate");
-      }
-      j++;
+            throw std::runtime_error("Wrong value in alternate");
+        }
+        j++;
     }
 }
 

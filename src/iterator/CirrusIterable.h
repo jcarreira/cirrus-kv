@@ -161,6 +161,107 @@ class CirrusIterable {
         /** The ObjectID that will be returned when dereference is called. */
         ObjectID current_id;
     };
+
+    /**
+     * An IteratorPolicy that will traverse the specified range in a random
+     * order. Each ObjectID is present only once in the pattern.
+     */
+    class UnorderedPolicy : public IteratorPolicy {
+     public:
+        /**
+         * Default constructor.
+         */
+        UnorderedPolicy() {}
+        /**
+         * Copy constructor, used by Clone method.
+         */
+        explicit UnorderedPolicy(const OrderedPolicy& other):
+            read_ahead(other.read_ahead),
+            id_vector(other.id_vector), current_index(other.current_index) {}
+        /**
+         * Used to set the internal state of the policy after creation.
+         * @param first_ the first ObjectID in a continuous range.
+         * @param last_ the last ObjectID in the continuous range.
+         * @param read_ahead_ how many items ahead the iterator shold prefetch.
+         * @param position_ an enum indicating if this instance of the policy
+         * should instantiate itself at the beginning or end of the range.
+         */
+        void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
+            Position position_) override {
+            read_ahead = read_ahead_;
+
+            // Create a vector holding all the ObjectIDs to iterate over
+            for (ObjectID i = first_; i <= last_; i++) {
+                id_vector.push_back(i);
+            }
+
+            // Shuffle the ObjectIDs
+            unsigned seed =
+                std::chrono::system_clock::now().time_since_epoch().count();
+            std::shuffle(id_vector.begin(), id_vector.end(),
+                std::default_random_engine(seed));
+
+            // Set the current index
+            if (position_ == kBegin) {
+                current_index = 0;
+            } else if (position_ == kEnd) {
+                current_index = last_ - first_ + 1;
+            } else {
+                throw cirrus::Exception("Unrecognized position argument.");
+            }
+        }
+
+        /**
+         * Returns the list of ObjectIDs to prefetch based on the current 
+         * internal state.
+         */
+        std::vector<ObjectID> GetPrefetchList() override {
+            std::vector<ObjectID> prefetch_vector;
+            for (unsigned int i = 1; i <= read_ahead; i++) {
+                if (current_index + i < id_vector.size()) {
+                    prefetch_vector.push_back(id_vector[current_index + i]);
+                }
+            }
+            return prefetch_vector;
+        }
+        /**
+         * Returns the ObjectID at the current position.
+         */
+        ObjectID Dereference() override {
+            return id_vector[current_index];
+        }
+
+        /**
+         * Increments the internal state of the policy, moving it to the next
+         * ObjectID to be returned.
+         */
+        void Increment() override {
+            current_index++;
+        }
+
+        /**
+         * Returns the value of current_id, which is indicative of the state
+         * of the policy.
+         */
+        uint64_t GetState() override {
+            return current_index;
+        }
+
+        /**
+         * An implementation of the clone method from the template.
+         */
+        std::unique_ptr<IteratorPolicy> Clone() override {
+            return std::make_unique<UnorderedPolicy>(*this);
+        }
+
+     private:
+        /** How many items ahead to prefetch. */
+        uint64_t read_ahead;
+        /** The current position within the vector of ObjectIDs to return. */
+        uint64_t current_index;
+        /** Vector used to track the order to iterate in. */
+        std::vector<ObjectID> id_vector;
+    };
     /**
      * Pointer to CacheManager used for put, get, and prefetch.
      */
@@ -180,7 +281,10 @@ class CirrusIterable {
      * Last sequential ID.
      */
     ObjectID last;
+    /** An ordered policy. */
     OrderedPolicy ordered;
+    /** An unordered policy. */
+    UnorderedPolicy unordered;
     /** 
      * A pointer to the policy that will be used for the iterator. 
      * ordered by default.
@@ -224,7 +328,7 @@ void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_,
         break;
       }
       case CirrusIterable::PrefetchMode::kUnOrdered: {
-        // policy = &unordered;
+        policy = &unordered;
         break;
       }
       case CirrusIterable::PrefetchMode::kCustom: {
