@@ -16,7 +16,7 @@ class IteratorPolicy {
  public:
     enum Position {
         kBegin = 0,
-        kEnd = 0
+        kEnd
     };
 
     virtual void SetState(ObjectID first, ObjectID last, uint64_t read_ahead,

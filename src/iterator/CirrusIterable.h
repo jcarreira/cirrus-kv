@@ -7,8 +7,11 @@
 #include <algorithm>
 #include <chrono>
 #include <random>
+
 #include "cache_manager/CacheManager.h"
 #include "iterator/IteratorPolicy.h"
+#include "utils/logging.h"
+
 
 namespace cirrus {
 using ObjectID = uint64_t;
@@ -212,7 +215,7 @@ class CirrusIterable {
         }
 
         /**
-         * Returns the list of ObjectIDs to prefetch based on the current 
+         * Returns the list of ObjectIDs to prefetch based on the current
          * internal state.
          */
         std::vector<ObjectID> GetPrefetchList() override {
@@ -285,8 +288,8 @@ class CirrusIterable {
     OrderedPolicy ordered;
     /** An unordered policy. */
     UnorderedPolicy unordered;
-    /** 
-     * A pointer to the policy that will be used for the iterator. 
+    /**
+     * A pointer to the policy that will be used for the iterator.
      * ordered by default.
      */
     IteratorPolicy *policy = &ordered;
@@ -412,11 +415,13 @@ template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
     auto to_prefetch = policy->GetPrefetchList();
+    // LOG<ERROR>("New call to dereference");
     for (const auto& oid : to_prefetch) {
+        // LOG<ERROR>("Prefetching: ", oid);
         cm->prefetch(oid);
     }
 
-    cm->get(policy->Dereference());
+    return cm->get(policy->Dereference());
 }
 
 /**
@@ -453,7 +458,7 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
 template<class T>
 bool CirrusIterable<T>::Iterator::operator!=(
                                const CirrusIterable<T>::Iterator& it) const {
-    return !(*this == it);
+    return policy->GetState() != it.policy->GetState();
 }
 
 /**
