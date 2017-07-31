@@ -70,6 +70,9 @@ class ReversePolicy : public cirrus::IteratorPolicy {
             ObjectID shifted = tentative_fetch - first;
             ObjectID modded = shifted % (last - first + 1);
             ObjectID to_fetch = modded + first;
+            if (to_fetch == current_id) {
+                break;
+            }
             prefetch_vector.push_back(to_fetch);
         }
         return prefetch_vector;
