@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = test_mpi
+bin_PROGRAMS = test_mpi test_multi_tasks
 
 TOP_DIR = $(top_srcdir)/../../
 
@@ -19,3 +19,13 @@ test_mpi_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
                     -I$(TOP_DIR)/src \
 		    -I$(TOP_DIR)/third_party/flatbuffers/include
 test_mpi_LDADD    = $(LINCLUDES) $(LIBS)
+
+    
+    
+test_multi_tasks_SOURCES  = test_multi_tasks.cpp
+test_multi_tasks_LDFLAGS  = -pthread
+test_multi_tasks_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+                	    -I$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+                            -I$(TOP_DIR)/src \
+                	    -I$(TOP_DIR)/third_party/flatbuffers/include
+test_multi_tasks_LDADD    = $(LINCLUDES) $(LIBS)
