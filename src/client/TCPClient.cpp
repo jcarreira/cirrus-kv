@@ -3,7 +3,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <string>
 #include <vector>
 #include <thread>
@@ -58,6 +60,11 @@ void TCPClient::connect(const std::string& address,
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         throw cirrus::ConnectionException("Error when creating socket.");
     }
+    int opt = 1;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+        throw cirrus::ConnectionException("Error setting socket options.");
+    }
+
     struct sockaddr_in serv_addr;
 
     // Set the type of address being used, assuming ip v4
@@ -161,6 +168,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   * otherwise.
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+    LOG<INFO>("Call to write_sync");
     cirrus::Future future = write_async(oid, data, size);
     LOG<INFO>("returned from write async");
     return future.get();
@@ -177,7 +185,9 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * otherwise.
   */
 bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
+    LOG<INFO>("Call to read_sync.");
     cirrus::Future future = read_async(oid, data, size);
+    LOG<INFO>("Returned from read_async.");
     return future.get();
 }
 
@@ -305,9 +315,9 @@ void TCPClient::process_received() {
 
         // release lock
         map_lock.signal();
-
         // Save the error code so that the future can read it
         *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
+        LOG<INFO>("Error code read is: ", *(txn->error_code));
         // Process the ack
         switch (ack->message_type()) {
             case message::TCPBladeMessage::Message_WriteAck:
@@ -343,6 +353,7 @@ void TCPClient::process_received() {
                 break;
         }
         // Update the semaphore/CV so other know it is ready
+        *(txn->result_available) = true;
         txn->sem->signal();
         LOG<INFO>("client done processing message");
     }
@@ -394,7 +405,13 @@ void TCPClient::process_send() {
         }
         // This thread now owns the lock on the send queue
 
-        // Process the send queue until it is empty
+        // If a spurious wakeup, just continue
+        if (send_queue.empty()) {
+            queue_lock.signal();
+            LOG<INFO>("Spurious wakeup.");
+            continue;
+        }
+        // Take one item out of the send queue
         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
             send_queue.front();
         send_queue.pop();
@@ -446,7 +463,8 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->sem, txn->error_code);
+    cirrus::Future future(txn->result, txn->result_available,
+                          txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();

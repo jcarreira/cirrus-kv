@@ -8,8 +8,11 @@ import time
 # status. Will automatically start and kill the server before and after
 # the test.
 
+# Change this to change the ip that the client connects to
+ip = "127.0.0.1"
+half_gig = "536870912"
 # NOTE: all pathnames start from the top directory where make check is run
-def runTest(testPath):
+def runTestTCP(testPath):
     # Launch the server in the background
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
@@ -21,7 +24,7 @@ def runTest(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -32,7 +35,32 @@ def runTest(testPath):
 
     server.kill()
     sys.exit(rc)
-def runExhaustion(testPath):
+
+def runTestRDMA(testPath):
+    # Launch the server in the background
+    print("Starting server.")
+    # Sleep to give the server from the previous test time to close
+    time.sleep(1)
+    server = subprocess.Popen(["./src/server/bladeallocmain", half_gig])
+
+    # Sleep to give server time to start
+    print("Started server, sleeping.")
+    time.sleep(2)
+    print("Sleep finished, launching client.")
+
+    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
+
+    # Print the output from the child
+    for line in child.stdout:
+        print(line.decode(), end='')
+
+    streamdata = child.communicate()[0]
+    rc = child.returncode
+
+    server.kill()
+    sys.exit(rc)
+
+def runExhaustionTCP(testPath):
     # Launch the server in the background
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
@@ -44,7 +72,30 @@ def runExhaustion(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
+
+    # Print the output from the child
+    for line in child.stdout:
+        print(line.decode(), end='')
+
+    streamdata = child.communicate()[0]
+    rc = child.returncode
+
+    server.kill()
+    sys.exit(rc)
+
+def runExhaustionRDMA(testPath):
+    # Launch the server in the background
+    print("Starting server.")
+    # Sleep to give the server from the previous test time to close
+    time.sleep(1)
+    server = subprocess.Popen(["./src/server/bladeallocmain", "2097152"])
+    # Sleep to give server time to start
+    print("Started server, sleeping.")
+    time.sleep(2)
+    print("Sleep finished, launching client.")
+
+    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:

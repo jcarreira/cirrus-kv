@@ -1,5 +1,5 @@
 #include <iostream>
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/Log.h"
 
 namespace cirrus {
