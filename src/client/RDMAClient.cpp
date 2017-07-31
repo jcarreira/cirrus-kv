@@ -14,7 +14,7 @@
 #include <cassert>
 
 #include "utils/utils.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/logging.h"
 
 #include "common/ThreadPinning.h"
@@ -174,8 +174,8 @@ bool RDMAClient::remove(ObjectID oid) {
         objects_.erase(oid);
         return deallocate(loc.allocRec);
     } else {
-        throw cirrus::NoSuchIDException(
-                                      "Error. Trying to do inexistent object");
+        throw cirrus::NoSuchIDException("Error. Trying to remove "
+                                        "nonnexistent object");
     }
     return false;
 }
@@ -257,7 +257,6 @@ bool RDMAClient::insertObjectLocation(ObjectID id,
     objects_[id] = BladeLocation(size, allocRec);
     return true;
 }
-
 
 /**
   * Initializes rdma params.
@@ -1160,7 +1159,7 @@ bool RDMAClient::fetchadd_sync(const AllocationRecord& alloc_rec,
 }
 
 /**
- * A wrapper for fetchadd_rdma_async. 
+ * A wrapper for fetchadd_rdma_async.
  */
 std::shared_ptr<RDMAClient::FutureBladeOp> RDMAClient::fetchadd_async(
         const AllocationRecord& alloc_rec,

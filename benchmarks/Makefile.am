@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
                 cache_benchmark #TODO(Tyler): add 1_2 as it requires async later
 
-LIBS         = 	-l:libcityhash.a -lclient \
+LIBS         = 	-lcityhash -lclient \
                	-lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
 

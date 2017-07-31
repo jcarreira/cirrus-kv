@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <utility>
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/StringUtils.h"
 #include "common/Synchronization.h"
 

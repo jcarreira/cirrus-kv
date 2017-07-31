@@ -8,4 +8,4 @@ import test_runner
 # Set name of test to run
 testPath = "./tests/client/tcpclientmain"
 # Call script to run the test
-test_runner.runTest(testPath)
+test_runner.runTestTCP(testPath)

@@ -3,7 +3,7 @@
 #include "common/Synchronization.h"
 #include "common/Future.h"
 #include "common/Exception.h"
-
+#include "utils/Log.h"
 namespace cirrus {
 
 using ObjectID = uint64_t;
@@ -12,17 +12,20 @@ using ObjectID = uint64_t;
   * Constructor for Future.
   */
 Future::Future(std::shared_ptr<bool> result,
+               std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code):
-    result(result), sem(sem), error_code(error_code) {}
+    result(result), result_available(result_available),
+    sem(sem), error_code(error_code) {}
 
 /**
   * Waits until the result the future is monitoring is available.
   */
 void Future::wait() {
-    if (!result_available) {
+    // Wait on the semaphore as long as the result is not available
+    while (!*result_available) {
+        LOG<INFO>("Result not available, waiting.");
         sem->wait();
-        result_available = true;
     }
 }
 
@@ -31,8 +34,8 @@ void Future::wait() {
   * @return Returns true if the result is available, false otherwise.
   */
 bool Future::try_wait() {
-    if (!result_available) {
-        return result_available = sem->trywait();
+    if (!*result_available) {
+        return sem->trywait();
     } else {
         return true;
     }
@@ -44,11 +47,11 @@ bool Future::try_wait() {
   * @return Returns the result given by the asynchronous operation.
   */
 bool Future::get() {
-    if (!result_available) {
-        sem->wait();
-        result_available = true;
-    }
-
+    // Wait until result is available
+    LOG<INFO>("Waiting for result.");
+    wait();
+    LOG<INFO>("Result is available.");
+    LOG<INFO>("Error code is: ", *error_code);
     // Check the error code enum. Throw exception if one happened on server.
     switch (*error_code) {
       case cirrus::ErrorCodes::kOk: {

@@ -35,7 +35,8 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
     out << "Iterator Throughput Benchmark" << std::endl;
     out << "Iterator elapsed us: " << iterator_elapsed * MILLION << std::endl;
     out << "Regular elapsed us: " << regular_elapsed * MILLION << std::endl;
-    out << "iterator reads/s: " << (msgs_sent * 1.0 / iterator_elapsed * MILLION)
+    out << "iterator reads/s: "
+        << (msgs_sent * 1.0 / iterator_elapsed * MILLION)
         << std::endl;
     out << "Regular reads/s: " << (msgs_sent * 1.0 / regular_elapsed * MILLION)
         << std::endl;

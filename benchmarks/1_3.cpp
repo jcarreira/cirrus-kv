@@ -14,7 +14,7 @@
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "client/TCPClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
