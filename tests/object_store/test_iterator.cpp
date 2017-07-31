@@ -11,24 +11,26 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "iterator/CirrusIterable.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 1;
-const char IP[] = "127.0.0.1";
+const char *IP;
+bool use_rdma_client;
 
 /**
   * This test ensures that items can be properly retrieved using
   * the iterator interface.
   */
 void test_iterator() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
-            &client,
+            client.get(),
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
@@ -63,10 +65,11 @@ void test_iterator() {
   * the iterator interface, but using c++ range based for loop.
   */
 void test_iterator_alt() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
-            &client,
+            client.get(),
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
@@ -154,11 +157,14 @@ void test_random_prefetching() {
                 "or that some were repeated.");
     }
 }
-auto main() -> int {
+
+auto main(int argc, char *argv[]) -> int {
     std::cout << "Test starting" << std::endl;
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_iterator();
     test_iterator_alt();
     test_random_prefetching();
-    std::cout << "Test successful" << std::endl;
+    std::cout << "Test success" << std::endl;
     return 0;
 }

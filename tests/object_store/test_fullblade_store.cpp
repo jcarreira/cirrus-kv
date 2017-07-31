@@ -10,15 +10,16 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/Stats.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char *IP;
 static const uint32_t SIZE = 1;
+bool use_rdma_client;
 
 // #define CHECK_RESULTS
 
@@ -27,10 +28,11 @@ static const uint32_t SIZE = 1;
   * works properly.
   */
 void test_sync() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
-                      &client,
+                      client.get(),
                       cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                         sizeof(cirrus::Dummy<SIZE>)>);
@@ -54,10 +56,11 @@ void test_sync() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                 PORT,
-                &client,
+                client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
@@ -96,8 +99,9 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -114,8 +118,9 @@ void test_nonexistent_get() {
   * an item if it has been removed from the store.
   */
 void test_remove() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -128,10 +133,14 @@ void test_remove() {
     std::cout << "Received following value incorrectly: " << i << std::endl;
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
+    std::cout << "Starting test." << std::endl;
     test_sync(10);
+    std::cout << "Starting test sync no args." << std::endl;
     test_sync();
-
+    std::cout << "Testing nonexistent get." << std::endl;
     try {
         test_nonexistent_get();
         std::cout << "Exception not thrown when get"
@@ -139,7 +148,9 @@ auto main() -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
+
     std::cout << "Test remove starting." << std::endl;
+
     try {
         test_remove();
         std::cout << "Exception not thrown when get"

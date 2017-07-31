@@ -1,5 +1,5 @@
-#ifndef SRC_UTILS_TIME_H_
-#define SRC_UTILS_TIME_H_
+#ifndef SRC_UTILS_CIRRUSTIME_H_
+#define SRC_UTILS_CIRRUSTIME_H_
 
 #include <chrono>
 #include <string>
@@ -34,4 +34,4 @@ class TimerFunction {
 
 }  // namespace cirrus
 
-#endif  // SRC_UTILS_TIME_H_
+#endif  // SRC_UTILS_CIRRUSTIME_H_

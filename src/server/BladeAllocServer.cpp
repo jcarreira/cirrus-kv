@@ -3,7 +3,7 @@
 #include <boost/interprocess/creation_tags.hpp>
 #include "server/BladeAllocServer.h"
 #include "utils/logging.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/InfinibandSupport.h"
 #include "common/schemas/BladeMessage_generated.h"
 
