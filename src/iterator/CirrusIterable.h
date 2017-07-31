@@ -30,7 +30,7 @@ class CirrusIterable {
      */
     enum PrefetchMode {
         kOrdered = 0, /**< The iterator will prefetch a few items ahead. */
-        kUnOrdered, /**< The cache will iterate randomly. */
+        kUnordered, /**< The cache will iterate randomly. */
         kCustom /**< The iterator will use a custom user policy. */
     };
 
@@ -86,7 +86,7 @@ class CirrusIterable {
          */
         OrderedPolicy() {}
         /**
-         * Copy constructor, used by Clone method.
+         * Copy constructor, used by clone method.
          */
         OrderedPolicy(const OrderedPolicy& other): first(other.first),
             last(other.last), read_ahead(other.read_ahead),
@@ -113,8 +113,9 @@ class CirrusIterable {
                 throw cirrus::Exception("Unrecognized position argument.");
             }
         }
-        std::vector<ObjectID> GetPrefetchList() override {
+        std::vector<ObjectID> getPrefetchList() override {
             std::vector<ObjectID> prefetch_vector;
+            prefetch_vector.reserve(read_ahead);
             for (unsigned int i = 1; i <= read_ahead; i++) {
                 ObjectID tentative_fetch = current_id + i;
                 ObjectID shifted = tentative_fetch - first;
@@ -127,7 +128,7 @@ class CirrusIterable {
         /**
          * Returns the ObjectID at the current position.
          */
-        ObjectID Dereference() override {
+        ObjectID dereference() override {
             return current_id;
         }
 
@@ -135,7 +136,7 @@ class CirrusIterable {
          * Increments the internal state of the policy, moving it to the next
          * ObjectID to be returned.
          */
-        void Increment() override {
+        void increment() override {
             current_id++;
         }
 
@@ -143,14 +144,14 @@ class CirrusIterable {
          * Returns the value of current_id, which is indicative of the state
          * of the policy.
          */
-        uint64_t GetState() override {
+        uint64_t getState() override {
             return current_id;
         }
 
         /**
          * An implementation of the clone method from the template.
          */
-        std::unique_ptr<IteratorPolicy> Clone() override {
+        std::unique_ptr<IteratorPolicy> clone() override {
             return std::make_unique<OrderedPolicy>(*this);
         }
 
@@ -176,7 +177,7 @@ class CirrusIterable {
          */
         UnorderedPolicy() {}
         /**
-         * Copy constructor, used by Clone method.
+         * Copy constructor, used by clone method.
          */
         explicit UnorderedPolicy(const OrderedPolicy& other):
             read_ahead(other.read_ahead),
@@ -218,8 +219,9 @@ class CirrusIterable {
          * Returns the list of ObjectIDs to prefetch based on the current
          * internal state.
          */
-        std::vector<ObjectID> GetPrefetchList() override {
+        std::vector<ObjectID> getPrefetchList() override {
             std::vector<ObjectID> prefetch_vector;
+            prefetch_vector.reserve(read_ahead);
             for (unsigned int i = 1; i <= read_ahead; i++) {
                 if (current_index + i < id_vector.size()) {
                     prefetch_vector.push_back(id_vector[current_index + i]);
@@ -230,7 +232,7 @@ class CirrusIterable {
         /**
          * Returns the ObjectID at the current position.
          */
-        ObjectID Dereference() override {
+        ObjectID dereference() override {
             return id_vector[current_index];
         }
 
@@ -238,7 +240,7 @@ class CirrusIterable {
          * Increments the internal state of the policy, moving it to the next
          * ObjectID to be returned.
          */
-        void Increment() override {
+        void increment() override {
             current_index++;
         }
 
@@ -246,14 +248,14 @@ class CirrusIterable {
          * Returns the value of current_id, which is indicative of the state
          * of the policy.
          */
-        uint64_t GetState() override {
+        uint64_t getState() override {
             return current_index;
         }
 
         /**
          * An implementation of the clone method from the template.
          */
-        std::unique_ptr<IteratorPolicy> Clone() override {
+        std::unique_ptr<IteratorPolicy> clone() override {
             return std::make_unique<UnorderedPolicy>(*this);
         }
 
@@ -330,7 +332,7 @@ void CirrusIterable<T>::setMode(CirrusIterable::PrefetchMode mode_,
         policy = &ordered;
         break;
       }
-      case CirrusIterable::PrefetchMode::kUnOrdered: {
+      case CirrusIterable::PrefetchMode::kUnordered: {
         policy = &unordered;
         break;
       }
@@ -367,7 +369,7 @@ CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
                             unsigned int read_ahead, ObjectID first,
                             ObjectID last, bool is_begin, bool is_end,
                             IteratorPolicy* policy_ptr):
-                            cm(cm), policy(policy_ptr->Clone()) {
+                            cm(cm), policy(policy_ptr->clone()) {
     IteratorPolicy::Position position;
     if (is_begin) {
         position = IteratorPolicy::Position::kBegin;
@@ -385,7 +387,7 @@ CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
  */
 template<class T>
 CirrusIterable<T>::Iterator::Iterator(const Iterator& it):
-              cm(it.cm), policy(it.policy->Clone()) {}
+              cm(it.cm), policy(it.policy->clone()) {}
 
 /**
  * Function that returns a cirrus::Iterator at the start of the given range.
@@ -414,14 +416,14 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
-    auto to_prefetch = policy->GetPrefetchList();
+    auto to_prefetch = policy->getPrefetchList();
     // LOG<ERROR>("New call to dereference");
     for (const auto& oid : to_prefetch) {
         // LOG<ERROR>("Prefetching: ", oid);
         cm->prefetch(oid);
     }
 
-    return cm->get(policy->Dereference());
+    return cm->get(policy->dereference());
 }
 
 /**
@@ -432,7 +434,7 @@ T CirrusIterable<T>::Iterator::operator*() {
 template<class T>
 typename CirrusIterable<T>::Iterator&
 CirrusIterable<T>::Iterator::operator++() {
-    policy->Increment();
+    policy->increment();
     return *this;
 }
 
@@ -458,7 +460,7 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::Iterator::operator++(
 template<class T>
 bool CirrusIterable<T>::Iterator::operator!=(
                                const CirrusIterable<T>::Iterator& it) const {
-    return policy->GetState() != it.policy->GetState();
+    return policy->getState() != it.policy->getState();
 }
 
 /**
@@ -468,7 +470,7 @@ bool CirrusIterable<T>::Iterator::operator!=(
 template<class T>
 bool CirrusIterable<T>::Iterator::operator==(
                                  const CirrusIterable<T>::Iterator& it) const {
-    return policy->GetState() == it.policy->GetState();
+    return policy->getState() == it.policy->getState();
 }
 
 }  // namespace cirrus

@@ -27,15 +27,15 @@ class IteratorPolicy {
      * @param it a reference to the iterator that is making the call.
      * @return a std::vector of ObjectIDs that should be prefetched.
      */
-    virtual std::vector<ObjectID> GetPrefetchList() = 0;
+    virtual std::vector<ObjectID> getPrefetchList() = 0;
 
-    virtual ObjectID Dereference() = 0;
+    virtual ObjectID dereference() = 0;
 
-    virtual void Increment() = 0;
+    virtual void increment() = 0;
 
-    virtual uint64_t GetState() = 0;
+    virtual uint64_t getState() = 0;
 
-    virtual std::unique_ptr<IteratorPolicy> Clone() = 0;
+    virtual std::unique_ptr<IteratorPolicy> clone() = 0;
 };
 
 }  // namespace cirrus
