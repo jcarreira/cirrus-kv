@@ -25,11 +25,12 @@ bool use_rdma_client;
  * A simple custom prefetching policy that prefetches in a downwards fashion.
  */
 template<class T>
-class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
+class SimpleCustomPolicy : public cirrus::PrefetchPolicy<T> {
  private:
     ObjectID first;
     ObjectID last;
     uint64_t read_ahead = 1;
+
  public:
     std::vector<ObjectID> get(const ObjectID& id,
         const T& /* obj */) override {
@@ -55,7 +56,7 @@ class SimpleCustomPolicy :public cirrus::PrefetchPolicy<T> {
      * @param first_ first objectID in a continuous range
      * @param last_ last objectID that will be used
      */
-    void SetRange(ObjectID first_, ObjectID last_) {
+    void setRange(ObjectID first_, ObjectID last_) {
         first = first_;
         last = last_;
     }
@@ -162,7 +163,7 @@ void test_custom_prefetch() {
     }
 
     SimpleCustomPolicy<int> prefetch_policy;
-    prefetch_policy.SetRange(0, 3);
+    prefetch_policy.setRange(0, 3);
     cm.setMode(cirrus::CacheManager<int>::kCustom, &prefetch_policy);
     cm.get(0);
     // Sleep for a bit to allow the items to be retrieved
