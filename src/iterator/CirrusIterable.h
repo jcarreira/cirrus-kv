@@ -67,16 +67,35 @@ class CirrusIterable {
          */
         cirrus::CacheManager<T> *cm;
 
+        /**
+         * Pointer to the IteratorPolicy that will be used to track all state.
+         */
         std::unique_ptr<IteratorPolicy> policy;
     };
-
+    /**
+     * An IteratorPolicy that will traverse the specified range in order
+     * from the lowest value to the highest. This range is only traversed once.
+     */
     class OrderedPolicy : public IteratorPolicy {
      public:
+        /**
+         * Default constructor.
+         */
         OrderedPolicy() {}
+        /**
+         * Copy constructor, used by Clone method.
+         */
         OrderedPolicy(const OrderedPolicy& other): first(other.first),
             last(other.last), read_ahead(other.read_ahead),
             current_id(other.current_id) {}
-
+        /**
+         * Used to set the internal state of the policy after creation.
+         * @param first_ the first ObjectID in a continuous range.
+         * @param last_ the last ObjectID in the continuous range.
+         * @param read_ahead_ how many items ahead the iterator shold prefetch.
+         * @param position_ an enum indicating if this instance of the policy
+         * should instantiate itself at the beginning or end of the range.
+         */
         void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
             Position position_) override {
             first = first_;
@@ -102,27 +121,44 @@ class CirrusIterable {
             }
             return prefetch_vector;
         }
-
+        /**
+         * Returns the ObjectID at the current position.
+         */
         ObjectID Dereference() override {
             return current_id;
         }
 
+        /**
+         * Increments the internal state of the policy, moving it to the next
+         * ObjectID to be returned.
+         */
         void Increment() override {
             current_id++;
         }
 
+        /**
+         * Returns the value of current_id, which is indicative of the state
+         * of the policy.
+         */
         uint64_t GetState() override {
             return current_id;
         }
 
+        /**
+         * An implementation of the clone method from the template.
+         */
         std::unique_ptr<IteratorPolicy> Clone() override {
             return std::make_unique<OrderedPolicy>(*this);
         }
 
      private:
+        /** First ObjectID in the continuous range. */
         ObjectID first;
+        /** Last ObjectID in the continuous range. */
         ObjectID last;
+        /** How many items ahead to prefetch. */
         uint64_t read_ahead;
+        /** The ObjectID that will be returned when dereference is called. */
         ObjectID current_id;
     };
     /**
