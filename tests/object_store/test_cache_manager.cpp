@@ -68,11 +68,14 @@ void test_nonexistent_get() {
 void test_array() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+
+    auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
+    auto serializer = cirrus::c_array_serializer_simple<int>(4);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
                       PORT,
                       client.get(),
-                      cirrus::c_array_serializer_simple<int, 4>,
-                      cirrus::c_array_deserializer_simple<int, 4>);
+                      serializer,
+                      deserializer);
 
     auto int_array = std::shared_ptr<int>(new int[4],
         std::default_delete<int[]>());

@@ -103,11 +103,14 @@ void test_iterator_alt() {
 void test_array() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+
+    auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
+    auto serializer = cirrus::c_array_serializer_simple<int>(4);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
                       PORT,
                       client.get(),
-                      cirrus::c_array_serializer_simple<int, 4>,
-                      cirrus::c_array_deserializer_simple<int, 4>);
+                      serializer,
+                      deserializer);
 
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);

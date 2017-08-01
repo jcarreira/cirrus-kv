@@ -25,38 +25,63 @@ struct Dummy {
 };
 
 /*
- * This function copies the c style array underneath the pointer into a new
+ * This class copies the c style array underneath the pointer into a new
  * portion of memory and returns the size of the new portion as well as
  * its location.
  */
-template<typename T, unsigned int NUMSLOTS>
-std::pair<std::unique_ptr<char[]>, unsigned int>
-c_array_serializer_simple(const std::shared_ptr<T>& v) {
-    unsigned int size = NUMSLOTS * sizeof(T);
-    // allocate the array to copy into
-    std::unique_ptr<char[]> ptr(new char[size]);
-    std::memcpy(ptr.get(), v.get(), size);
-    return std::make_pair(std::move(ptr), size);
-}
+template<typename T>
+class c_array_serializer_simple {
+ public:
+    /**
+     * Constructor for the serializer.
+     * @param nslots number of objects of type T in the array to be serialized
+     */
+    explicit c_array_serializer_simple(unsigned int nslots) :
+        num_slots(nslots) {}
+
+    /**
+     * Function that actually performs the serialization.
+     * @param v a std::shared ptr to the first item in the array to be
+     * serialized
+     */
+    std::pair<std::unique_ptr<char[]>, unsigned int>
+    operator()(const std::shared_ptr<T>& v) {
+        unsigned int num_bytes = num_slots * sizeof(T);
+        // allocate the array to copy into
+        std::unique_ptr<char[]> ptr(new char[num_bytes]);
+        return std::make_pair(std::move(ptr), num_bytes);
+    }
+
+ private:
+    unsigned int num_slots;
+};
 
 /*
  * Takes a pointer to raw mem passed in and copies it onto heap before returning
  * a smart pointer to it.
  */
-template<typename T, unsigned int NUMSLOTS>
-std::shared_ptr<T> c_array_deserializer_simple(void* data,
-    unsigned int /* size */) {
+template<typename T>
+class c_array_deserializer_simple {
+ public:
+    explicit c_array_deserializer_simple(unsigned int nslots) :
+        num_slots(nslots) {}
 
-    unsigned int size = sizeof(T) * NUMSLOTS;
+    std::shared_ptr<T>
+    operator()(void* data, unsigned int /* size */) {
+        unsigned int size = sizeof(T) * num_slots;
 
-    // cast the pointer
-    T *ptr = reinterpret_cast<T*>(data);
-    auto ret_ptr = std::shared_ptr<T>(new T[NUMSLOTS],
-        std::default_delete< T[]>());
+        // cast the pointer
+        T *ptr = reinterpret_cast<T*>(data);
+        auto ret_ptr = std::shared_ptr<T>(new T[num_slots],
+                std::default_delete< T[]>());
 
-    std::memcpy(ret_ptr.get(), ptr, size);
-    return ret_ptr;
-}
+        std::memcpy(ret_ptr.get(), ptr, size);
+        return ret_ptr;
+    }
+
+ private:
+     int num_slots;
+};
 
 /* This function simply copies an object into a new portion of memory. */
 template<typename T>
