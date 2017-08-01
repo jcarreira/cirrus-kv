@@ -24,6 +24,40 @@ struct Dummy {
     explicit Dummy(int id = 1492) : id(id) {}
 };
 
+/*
+ * This function copies the c style array underneath the pointer into a new
+ * portion of memory and returns the size of the new portion as well as
+ * its location.
+ */
+template<typename T, unsigned int NUMSLOTS>
+std::pair<std::unique_ptr<char[]>, unsigned int>
+c_array_serializer_simple(const std::shared_ptr<T>& v) {
+    unsigned int size = NUMSLOTS * sizeof(T);
+    // allocate the array to copy into
+    std::unique_ptr<char[]> ptr(new char[size]);
+    std::memcpy(ptr.get(), v.get(), size);
+    return std::make_pair(std::move(ptr), sizeof(T));
+}
+
+/*
+ * Takes a pointer to raw mem passed in and copies it onto heap before returning
+ * a smart pointer to it.
+ */
+template<typename T, unsigned int NUMSLOTS>
+std::shared_ptr<T> c_array_deserializer_simple(void* data,
+    unsigned int /* size */) {
+
+    unsigned int size = sizeof(T) * NUMSLOTS;
+
+    // cast the pointer
+    T *ptr = reinterpret_cast<T*>(data);
+    auto ret_ptr = std::shared_ptr<T>(new T[NUMSLOTS],
+        std::default_delete< T[]>());
+
+    std::memcpy(ret_ptr.get(), ptr, size);
+    return ret_ptr;
+}
+
 /* This function simply copies an object into a new portion of memory. */
 template<typename T>
 std::pair<std::unique_ptr<char[]>, unsigned int>
