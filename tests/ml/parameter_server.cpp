@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "Input.h"
+#include "Utils.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -67,49 +68,6 @@ void sleep_forever() {
     }
 }
 
-//std::shared_ptr<T> c_array_deserializer_simple(void* data,
-//        unsigned int /* size */) {
-//
-//    unsigned int size = sizeof(T) * NUMSLOTS;
-//
-//    // cast the pointer
-//    T *ptr = reinterpret_cast<T*>(data);
-//    auto ret_ptr = std::shared_ptr<T>(new T[NUMSLOTS],
-//            std::default_delete< T[]>());
-//
-//    std::memcpy(ret_ptr.get(), ptr, size);
-//    return ret_ptr;
-//}
-
-//template<typename T, unsigned int NUMSLOTS>
-//std::pair<std::unique_ptr<char[]>, unsigned int>
-//c_array_serializer_simple(const std::shared_ptr<T>& v) {
-//    unsigned int size = NUMSLOTS * sizeof(T);
-//    // allocate the array to copy into
-//    std::unique_ptr<char[]> ptr(new char[size]);
-//    std::memcpy(ptr.get(), v.get(), size);
-//    return std::make_pair(std::move(ptr), size);
-//}
-
-/*
- * Takes a pointer to raw mem passed in and copies it onto heap before returning
- * a smart pointer to it.
- */
-//template<typename T, unsigned int NUMSLOTS>
-//std::shared_ptr<T> c_array_deserializer_simple(void* data,
-//        unsigned int /* size */) {
-//
-//    unsigned int size = sizeof(T) * NUMSLOTS;
-//
-//    // cast the pointer
-//    T *ptr = reinterpret_cast<T*>(data);
-//    auto ret_ptr = std::shared_ptr<T>(new T[NUMSLOTS],
-//            std::default_delete< T[]>());
-//
-//    std::memcpy(ret_ptr.get(), ptr, size);
-//    return ret_ptr;
-//}
-
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.86";
@@ -121,12 +79,25 @@ struct Msg {
     int id;
 };
 
+struct Model {
+    double model[100];
+    int size;
+};
+
 void run_memory_task(const std::string& config_path) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
 }
 
+/**
+  * Initialize arbitrarily sized model
+  */
+void random_init(Model& model) {
+    for (uint64_t j = 0; j < model.size; ++j) {
+        model.model[j] = 0.01 * (get_rand_between_0_1() - 0.5);
+    }
+}
 
 /**
   * This is the task that runs the parameter server
@@ -153,6 +124,9 @@ void run_ps_task(const std::string& config_path) {
             cirrus::deserializer_simple<Msg,
                 sizeof(Msg)>);
 
+    Model model;
+    random_init(model);
+
     for (int i = 0; i < 10; ++i) {
         Msg m;
         m.id = 1337;
@@ -175,15 +149,12 @@ void run_worker_task(const std::string& config_path) {
                 sizeof(Msg)>);
 
     while (1) {
-        try {
-            Msg m = store.get(1);
-            if (m.id == 1337) {
-                std::cout << "worker task received right id" << std::endl;
-                break;
-            }
-        } catch (...) {
-        }
+        // get model from parameter server
+        // get data from iterator
+        // compute gradient from model and data
+        // send gradient to object store
     }
+
 
     sleep(1000);
 }
