@@ -68,5 +68,6 @@ AC_CONFIG_FILES([Makefile
 
 
 AC_CONFIG_SUBDIRS([tests/mpi])
+AC_CONFIG_SUBDIRS([tests/ml])
 
 AC_OUTPUT
