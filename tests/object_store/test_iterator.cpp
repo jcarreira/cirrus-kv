@@ -96,11 +96,56 @@ void test_iterator_alt() {
     }
 }
 
+
+/**
+  * Tests that the cache manager can handle c style arrays.
+  */
+void test_array() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
+                      PORT,
+                      client.get(),
+                      cirrus::c_array_serializer_simple<int, 4>,
+                      cirrus::c_array_deserializer_simple<int, 4>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);
+
+    auto int_array = std::shared_ptr<int>(new int[4],
+        std::default_delete<int[]>());
+
+    // Put items in the store
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < j; j++) {
+            (int_array.get())[j] = (i * 4) + j;
+        }
+        cm.put(i, int_array);
+    }
+
+    // Use iterator to retrieve
+    cirrus::CirrusIterable<std::shared_ptr<int>> iter(&cm, 1, 0, 9);
+
+    int i = 0;
+    for (const auto& ret_array : iter) {
+        for (int j = 0; j < 4; j++) {
+            if ((ret_array.get())[j] != (i * 4) + j) {
+                std::cout << "Expected: " << (i * 4) + j << " but got "
+                    << (ret_array.get())[j]
+                    << std::endl;
+                throw std::runtime_error("Incorrect value returned");
+            }
+        }
+        i++;
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
     test_iterator();
     test_iterator_alt();
+    test_array();
     std::cout << "Test success" << std::endl;
     return 0;
 }

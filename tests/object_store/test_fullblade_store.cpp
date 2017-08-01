@@ -52,8 +52,7 @@ void test_sync() {
 }
 
 /**
-  * Tests that simple synchronous put and get to/from the object store
-  * works properly.
+  * Tests that the store can handle c style arrays.
   */
 void test_sync_array() {
     std::unique_ptr<cirrus::BladeClient> client =
@@ -67,7 +66,7 @@ void test_sync_array() {
     auto int_array = std::shared_ptr<int>(new int[4],
         std::default_delete<int[]>());
 
-    for (int i = 0; i < 4; i ++) {
+    for (int i = 0; i < 4; i++) {
         (int_array.get())[i] = i;
     }
 
@@ -76,9 +75,9 @@ void test_sync_array() {
     std::shared_ptr<int> ret_array = store.get(1);
 
     for (int i = 0; i < 4; i++) {
-        if ((int_array.get())[i] != i) {
+        if ((ret_array.get())[i] != i) {
             std::cout << "Expected: " << i << " but got "
-                << (int_array.get())[i]
+                << (ret_array.get())[i]
                 << std::endl;
             throw std::runtime_error("Incorrect value returned");
         }

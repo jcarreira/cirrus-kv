@@ -63,6 +63,42 @@ void test_nonexistent_get() {
 }
 
 /**
+  * Tests that the cache manager can handle c style arrays.
+  */
+void test_array() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
+                      PORT,
+                      client.get(),
+                      cirrus::c_array_serializer_simple<int, 4>,
+                      cirrus::c_array_deserializer_simple<int, 4>);
+
+    auto int_array = std::shared_ptr<int>(new int[4],
+        std::default_delete<int[]>());
+
+    for (int i = 0; i < 4; i ++) {
+        (int_array.get())[i] = i;
+    }
+
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);
+    cm.put(1, int_array);
+
+    std::shared_ptr<int> ret_array = cm.get(1);
+
+    for (int i = 0; i < 4; i++) {
+        if ((ret_array.get())[i] != i) {
+            std::cout << "Expected: " << i << " but got "
+                << (ret_array.get())[i]
+                << std::endl;
+            throw std::runtime_error("Incorrect value returned");
+        }
+    }
+}
+
+/**
   * This test tests the behavior of the cache manager when the cache is at
   * capacity. Should not exceed capacity as the policy should remove items.
   */
@@ -156,6 +192,7 @@ auto main(int argc, char *argv[]) -> int {
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
+    test_array();
 
     try {
         test_capacity();
