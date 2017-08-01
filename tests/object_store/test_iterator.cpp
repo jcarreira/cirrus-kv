@@ -98,7 +98,7 @@ void test_iterator_alt() {
 
 
 /**
-  * Tests that the cache manager can handle c style arrays.
+  * Tests that the iterator works with c style arrays.
   */
 void test_array() {
     std::unique_ptr<cirrus::BladeClient> client =
