@@ -36,7 +36,7 @@ c_array_serializer_simple(const std::shared_ptr<T>& v) {
     // allocate the array to copy into
     std::unique_ptr<char[]> ptr(new char[size]);
     std::memcpy(ptr.get(), v.get(), size);
-    return std::make_pair(std::move(ptr), sizeof(T));
+    return std::make_pair(std::move(ptr), size);
 }
 
 /*

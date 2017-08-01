@@ -117,7 +117,7 @@ void test_array() {
 
     // Put items in the store
     for (int i = 0; i < 10; i++) {
-        for (int j = 0; j < j; j++) {
+        for (int j = 0; j < 4; j++) {
             (int_array.get())[j] = (i * 4) + j;
         }
         cm.put(i, int_array);
