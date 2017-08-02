@@ -2,12 +2,18 @@
 #define SRC_COMMON_SYNCHRONIZATION_H_
 
 #include <errno.h>
-#include <error.h>
 #include <semaphore.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <atomic>
+#include <iostream>
+#include <string>
 #include <stdexcept>
+#include <algorithm>
+#include <ctime>
+#include <random>
+#include <thread>
 #include "common/Decls.h"
-
 namespace cirrus {
 
 /**
@@ -39,28 +45,54 @@ class Lock {
 class PosixSemaphore : public Lock {
  public:
     explicit PosixSemaphore(int initialCount = 0) : Lock() {
+        #ifdef __APPLE__
+        sem_name = random_string();
+        m_sema = sem_open(sem_name.c_str(), O_CREAT, S_IRWXU, initialCount);
+        if (m_sema == SEM_FAILED) {
+            std::cout << "errno is: " << errno << std::endl;
+            std::cout << "Name is: " << sem_name << std::endl;
+            throw std::runtime_error("Creation of new semaphore failed");
+        }
+        #else
         sem_init(&m_sema, 0, initialCount);
+        #endif  // __APPLE__
     }
 
     virtual ~PosixSemaphore() {
+        #ifdef __APPLE__
+        sem_close(m_sema);
+        sem_unlink(sem_name.c_str());
+        #else
         sem_destroy(&m_sema);
+        #endif  // __APPLE__
     }
 
     /**
       * Waits until entered into semaphore.
       */
     void wait() final {
+        #ifdef __APPLE__
+        int rc = sem_wait(m_sema);
+        while (rc == -1 && errno == EINTR) {
+            rc = sem_wait(m_sema);
+        }
+        #else
         int rc = sem_wait(&m_sema);
         while (rc == -1 && errno == EINTR) {
             rc = sem_wait(&m_sema);
         }
+        #endif  // __APPLE__
     }
 
     /**
       * Posts to one waiter
       */
     void signal() final {
+        #ifdef __APPLE__
+        sem_post(m_sema);
+        #else
         sem_post(&m_sema);
+        #endif  // __APPLE__
     }
 
     /**
@@ -69,7 +101,11 @@ class PosixSemaphore : public Lock {
       */
     void signal(int count) final {
         while (count-- > 0) {
+            #ifdef __APPLE__
+            sem_post(m_sema);
+            #else
             sem_post(&m_sema);
+            #endif  // __APPLE__
         }
     }
 
@@ -78,7 +114,11 @@ class PosixSemaphore : public Lock {
       * @return True if the semaphore had a positive value and was decremented.
       */
     bool trywait() final {
+        #ifdef __APPLE__
+        int ret = sem_trywait(m_sema);
+        #else
         int ret = sem_trywait(&m_sema);
+        #endif  // __APPLE__
         if (ret == -1 && errno != EAGAIN) {
             throw std::runtime_error("trywait error");
         }
@@ -86,7 +126,47 @@ class PosixSemaphore : public Lock {
     }
 
  private:
+    #ifdef __APPLE__
+    /** Underlying semaphore that operations are performed on. */
+    sem_t *m_sema;
+    /** Name of the underlying semaphore. */
+    std::string sem_name;
+    /** Length of randomly names for semaphores. */
+    const int rand_string_length = 16;
+
+    /**
+     * Method to generate random strings for named semaphores.
+     */
+    std::string random_string() {
+        const char charset[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+
+        const size_t max_index = (sizeof(charset) - 1);
+        // Seed RNG
+        const auto time_seed = static_cast<size_t>(std::time(0));
+        const auto clock_seed = static_cast<size_t>(std::clock());
+        const size_t pid_seed =
+            std::hash<std::thread::id>()(std::this_thread::get_id());
+
+        std::seed_seq seed_value { time_seed, clock_seed, pid_seed };
+        std::mt19937 gen;
+        gen.seed(seed_value);
+
+        std::string ret_string;
+        // First character of name must be a slash
+        ret_string.push_back('/');
+
+        for (int i = 1; i < rand_string_length; i++) {
+            char next_char = charset[gen() % max_index];
+            ret_string.push_back(next_char);
+        }
+        return ret_string;
+    }
+    #else
     sem_t m_sema; /**< underlying semaphore that operations are performed on. */
+    #endif  // __APPLE__
 };
 
 /**

@@ -2,7 +2,9 @@
 
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <map>
 #include <vector>
@@ -51,8 +53,51 @@ void TCPServer::init() {
     LOG<INFO>("Created socket in TCPServer");
 
     int opt = 1;
-    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR, &opt,
                    sizeof(opt))) {
+        switch (errno) {
+            case EBADF:
+                LOG<ERROR>("EBADF");
+                break;
+            case ENOTSOCK:
+                LOG<ERROR>("ENOTSOCK");
+                break;
+            case ENOPROTOOPT:
+                LOG<ERROR>("ENOPROTOOPT");
+                break;
+            case EFAULT:
+                LOG<ERROR>("EFAULT");
+                break;
+            case EDOM:
+                LOG<ERROR>("EDOM");
+                break;
+        }
+        throw cirrus::ConnectionException("Error forcing port binding");
+    }
+
+    if (setsockopt(server_sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+        throw cirrus::ConnectionException("Error setting socket options.");
+    }
+
+    if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEPORT, &opt,
+                   sizeof(opt))) {
+        switch (errno) {
+            case EBADF:
+                LOG<ERROR>("EBADF");
+                break;
+            case ENOTSOCK:
+                LOG<ERROR>("ENOTSOCK");
+                break;
+            case ENOPROTOOPT:
+                LOG<ERROR>("ENOPROTOOPT");
+                break;
+            case EFAULT:
+                LOG<ERROR>("EFAULT");
+                break;
+            case EDOM:
+                LOG<ERROR>("EDOM");
+                break;
+        }
         throw cirrus::ConnectionException("Error forcing port binding");
     }
 
@@ -233,14 +278,22 @@ bool TCPServer::process(int sock) {
             {
                 LOG<INFO>("Server processing write request.");
 
+                // first see if the object exists on the server.
+                // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
+
+                auto entry_itr = store.find(oid);
+                if (entry_itr != store.end()) {
+                    curr_size -= entry_itr->second.size();
+                }
 
                 // Throw error if put would exceed size of the store
                 auto data_fb = msg->message_as_Write()->data();
                 if (curr_size + data_fb->size() > pool_size) {
-                    LOG<ERROR>("Put would go over capacity on server. "
-                            "Curr_size, pool_size, incoming size:",
-                            curr_size, pool_size, data_fb->size());
+                    LOG<ERROR>("Put would go over capacity on server. ",
+                                "Current size: ", curr_size,
+                                " Incoming size: ", data_fb->size(),
+                                " Pool size: ", pool_size);
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                     success = false;
@@ -259,7 +312,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -280,12 +333,14 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
-                std::vector<int8_t> data;
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
-                    data = store[oid];
+                    fb_vector = builder.CreateVector(store[oid]);
+                } else {
+                    std::vector<int8_t> data;
+                    fb_vector = builder.CreateVector(data);
                 }
 
-                auto fb_vector = builder.CreateVector(data);
                 LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
@@ -293,7 +348,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -318,7 +373,7 @@ bool TCPServer::process(int sock) {
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
-                                    static_cast<int>(error_code),
+                                    static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_RemoveAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
@@ -339,7 +394,7 @@ bool TCPServer::process(int sock) {
     }
 
     LOG<INFO>("Server sent size.");
-
+    LOG<INFO>("On server error code is: ", static_cast<int64_t>(error_code));
     // Send main message
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {

@@ -1,10 +1,11 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = 	1_1 1_3 throughput 1_2 iterator_benchmark
+bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
+                cache_benchmark 1_2
 
-LIBS         = 	-l:libcityhash.a -lclient \
+LIBS         = 	-lcityhash -lclient \
                	-lauthentication -lutils -lcommon -levictionpolicies \
-				$(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
@@ -51,3 +52,10 @@ iterator_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 			      -I$(top_srcdir)/examples/sparsehash/src/ \
 			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
 iterator_benchmark_LDADD    = $(LINCLUDES) $(LIBS)
+
+cache_benchmark_SOURCES  = cache_benchmark.cpp
+cache_benchmark_LDFLAGS  = -pthread
+cache_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			      -I$(top_srcdir)/examples/sparsehash/src/ \
+			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+cache_benchmark_LDADD    = $(LINCLUDES) $(LIBS)

@@ -4,14 +4,15 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char *IP;
 static const uint32_t SIZE = 1024*1024;  // One MB
 static const uint64_t MILLION = 1000000;
+bool use_rdma_client;
 
 /**
  * This test aims to ensure that when the remote server no longer has room to fulfill
@@ -22,9 +23,10 @@ static const uint64_t MILLION = 1000000;
  * the server must have been running to send the message.
  */
 void test_exhaustion() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT, &client,
+        store(IP, PORT, client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
@@ -41,9 +43,10 @@ void test_exhaustion() {
  * the server is at capacity, an item can be removed to make more room.
  */
 void test_exhaustion_remove() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
-        store(IP, PORT, &client,
+        store(IP, PORT, client.get(),
                 cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -66,7 +69,9 @@ void test_exhaustion_remove() {
     store.put(i, d);
 }
 
-auto main() -> int {
+auto main(int argc, char *argv[]) -> int {
+    use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_exhaustion_remove();
     try {
         test_exhaustion();

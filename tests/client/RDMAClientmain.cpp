@@ -9,14 +9,15 @@
 #include "common/AllocationRecord.h"
 #include "utils/logging.h"
 #include "authentication/AuthenticationToken.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "client/RDMAClient.h"
+#include "tests/object_store/object_store_internal.h"
 // TODO(Tyler): Remove hardcoded IP and PORT
 
 const char PORT[] = "12345";
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-static const char IP[] = "10.10.49.83";
+const char *IP;
 
 
 /**
@@ -96,7 +97,7 @@ void test_performance() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = 1 * GB;
+    uint64_t mem_size = .25 * GB;
 
     char* data = reinterpret_cast<char*>(malloc(mem_size));
     if (!data)
@@ -202,11 +203,13 @@ void test_async_N() {
     //     }
     // }
 }
-auto main() -> int {
-    // test_1_client();
-    // test_2_clients();
-    // test_performance();
-    // test_async();
+
+auto main(int argc, char *argv[]) -> int {
+    IP = cirrus::test_internal::ParseIP(argc, argv);
+    test_1_client();
+    test_2_clients();
+    test_performance();
+    test_async();
     test_async_N<10>();
     return 0;
 }
