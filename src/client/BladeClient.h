@@ -14,7 +14,7 @@ using ObjectID = uint64_t;
   */
 class BladeClient {
  public:
-    virtual ~BladeClient() {}
+    virtual ~BladeClient() = default;
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
 
