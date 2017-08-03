@@ -345,7 +345,7 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client has pointer to vector");
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(
-                                    (txn->mem_for_read_ptr).get()));
+                                    (*(txn->mem_for_read_ptr)).get()));
                     LOG<INFO>("Client copied vector");
                     break;
                 }
