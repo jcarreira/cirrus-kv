@@ -133,6 +133,52 @@ void test_remove() {
     std::cout << "Received following value incorrectly: " << i << std::endl;
 }
 
+/**
+  * This test ensures that it is possible to share one client between two
+  * different stores with different types.
+  */
+void test_shared_client() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store2(IP,
+            PORT,
+            client.get(),
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
+
+    for (int oid = 0; oid <  10; oid++) {
+        store.put(oid, oid);
+    }
+
+    for (int i = 10; i <  20; i++) {
+        struct cirrus::Dummy<SIZE> d(i);
+        store2.put(i, d);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        int retval = store.get(i);
+        if (retval != i) {
+            std::cout << "Expected " << i << " but got " << retval << std::endl;
+            throw std::runtime_error("wrong value returned");
+        }
+        auto retstruct = store2.get(i + 10);
+        if (retstruct.id != i + 10) {
+            std::cout << "Expected " << i + 10 << " but got " << retstruct.id
+                << std::endl;
+            throw std::runtime_error("wrong value returned");
+        }
+    }
+
+    // Should fail
+    store.get(10);
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
@@ -158,7 +204,7 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
-
+    test_shared_client();
     std::cout << "Test Successful." << std::endl;
     return 0;
 }

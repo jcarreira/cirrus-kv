@@ -419,10 +419,9 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
+    LOG<INFO>("Call to derefrence");
     auto to_prefetch = policy->getPrefetchList();
-    // LOG<ERROR>("New call to dereference");
     for (const auto& oid : to_prefetch) {
-        // LOG<ERROR>("Prefetching: ", oid);
         cm->prefetch(oid);
     }
 
