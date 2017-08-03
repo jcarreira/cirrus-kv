@@ -13,10 +13,8 @@ namespace cirrus {
 using ObjectID = uint64_t;
 
 /**
-  * A class that all clients inherit from. Outlines the interface that the
-  * store will use to interface with the network level. Used to monitor
-  * operations that have a true/false result.
-  */
+ * A class that serves as the future used to manage asynchronous operations.
+ */
 class Future {
  public:
     Future(std::shared_ptr<bool> result,
@@ -33,7 +31,6 @@ class Future {
     bool get();
 
     std::pair<std::shared_ptr<char>, unsigned int> getDataPair();
-
 
  private:
     /** Pointer to the result. */

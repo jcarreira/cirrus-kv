@@ -141,12 +141,9 @@ bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
 /**
   * Reads an object corresponding to ObjectID from the remote server.
   * @param id the id of the object the user wishes to read to local memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read to.
-  * @param size the size of the serialized object being read from
-  * remote storage.
-  * @return True if the object was successfully read from the server, false
-  * otherwise.
+  * @return An std pair containing a shared pointer to the buffer that the
+  * serialized object read from the server resides in as well as the size of
+  * the buffer.
   */
 std::pair<std::shared_ptr<char>, unsigned int>
 RDMAClient::read_sync(ObjectID oid) {

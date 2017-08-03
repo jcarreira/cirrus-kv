@@ -130,16 +130,11 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
 }
 
 /**
-  * Asynchronously reads an object corresponding to ObjectID
-  * from the remote server.
-  * @param id the id of the object the user wishes to read to local memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read to.
-  * @param size the size of the serialized object being read from
-  * remote storage.
-  * @return True if the object was successfully read from the server, false
-  * otherwise.
-  */
+ * Asynchronously reads an object corresponding to ObjectID
+ * from the remote server.
+ * @param id the id of the object the user wishes to read to local memory.
+ * @return A cirrus::Future containing information about the operation.
+ */
 cirrus::Future TCPClient::read_async(ObjectID oid) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
@@ -181,12 +176,9 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
 /**
   * Reads an object corresponding to ObjectID from the remote server.
   * @param id the id of the object the user wishes to read to local memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read to.
-  * @param size the size of the serialized object being read from
-  * remote storage.
-  * @return True if the object was successfully read from the server, false
-  * otherwise.
+  * @return An std pair containing a shared pointer to the buffer that the
+  * serialized object read from the server resides in as well as the size of
+  * the buffer.
   */
 std::pair<std::shared_ptr<char>, unsigned int>
 TCPClient::read_sync(ObjectID oid) {
@@ -453,7 +445,7 @@ void TCPClient::process_send() {
   * send queue, adds a transaction to the map, and returns a future.
   * @param builder a shared_ptr to a FlatBufferBuilder, containing the
   * message.
-  * @param An optional argument. Pointer to memory for read operations.
+  * @param txn_id transaction id corresponding to the event being enqueued.
   * @return Returns a Future.
   */
 cirrus::Future TCPClient::enqueue_message(
