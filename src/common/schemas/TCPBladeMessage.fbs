@@ -1,6 +1,6 @@
 namespace cirrus.message.TCPBladeMessage;
 
-union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck }
+union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck, FetchAdd, FetchAddAck, Exchange, ExchangeAck }
 
 table Write{
   oid:ulong;
@@ -29,6 +29,24 @@ table Remove{
 table RemoveAck{
   oid:ulong;
   success:byte;
+}
+
+table FetchAdd{
+    oid:ulong;
+    value:ulong;
+}
+
+table FetchAddAck{
+    value:ulong;
+}
+
+table Exchange{
+    oid:ulong;
+    value:ulong;
+}
+
+table ExchangeAck{
+    value:long;
 }
 
 table TCPBladeMessage {

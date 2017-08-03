@@ -376,6 +376,35 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 break;
             }
+        case message::TCPBladeMessage::Message_FetchAdd:
+            {
+                ObjectID oid = msg->message_as_FetchAdd()->oid();
+                // add the value returned to the store and return the old value
+
+                // check if item exists in the store
+
+                // check that it is four bytes long
+
+                // extract it, convert to
+
+                //
+
+                break;
+            }
+        case message::TCPBladeMessage::Message_Exchange:
+            {
+                ObjectID oid = msg->message_as_Exchange()->oid();
+                // Place the new value into the store and return the old value
+
+                // check if item exists in the store
+
+                // check that it is four bytes long
+
+                // extract it
+
+                // place new value directly in
+                break;
+            }
         default:
             LOG<ERROR>("Unknown message", " type:", msg->message_type());
             throw cirrus::Exception("Unknown message "
