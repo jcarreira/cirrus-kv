@@ -33,20 +33,20 @@ table RemoveAck{
 
 table FetchAdd{
     oid:ulong;
-    value:ulong;
+    data:[byte];
 }
 
 table FetchAddAck{
-    value:ulong;
+    data:[byte];
 }
 
 table Exchange{
     oid:ulong;
-    value:ulong;
+    data:[byte];
 }
 
 table ExchangeAck{
-    value:long;
+    data:[byte];
 }
 
 table TCPBladeMessage {

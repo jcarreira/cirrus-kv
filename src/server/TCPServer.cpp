@@ -15,6 +15,7 @@
 namespace cirrus {
 
 using TxnID = uint64_t;
+using AtomicType = uint32_t;
 
 // size for Flatbuffer's buffer
 static const int initial_buffer_size = 50;
@@ -378,31 +379,141 @@ bool TCPServer::process(int sock) {
             }
         case message::TCPBladeMessage::Message_FetchAdd:
             {
-                ObjectID oid = msg->message_as_FetchAdd()->oid();
-                // add the value returned to the store and return the old value
+                // ObjectID oid = msg->message_as_FetchAdd()->oid();
 
-                // check if item exists in the store
+                /* Service the read request by sending the serialized object
+                 to the client */
+                LOG<INFO>("Processing fetchadd request");
+                ObjectID oid = msg->message_as_Exchange()->oid();
+                LOG<INFO>("Server extracted oid");
 
-                // check that it is four bytes long
+                bool exists = true;
+                auto entry_itr = store.find(oid);
+                LOG<INFO>("Got pair from store");
 
-                // extract it, convert to
+                if (entry_itr == store.end()) {
+                    exists = false;
+                    error_code = cirrus::ErrorCodes::kNoSuchIDException;
+                    LOG<ERROR>("Oid ", oid, " does not exist on server");
+                }
 
-                //
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> ret_vector;
+                if (exists) {
+                    // The new value from the client
+                    auto data_fb = msg->message_as_Exchange()->data();
 
+                    // continue if old and new values are the proper size
+                    if (data_fb->size() == sizeof(AtomicType) &&
+                        store[oid].size() == sizeof(AtomicType)) {
+                        // store previous value
+                        auto storage_vector = store[oid];
+                        ret_vector = builder.CreateVector(storage_vector);
+
+                        // Convert stored and new values to host byte order
+                        std::vector<int8_t> new_data(data_fb->begin(),
+                            data_fb->end());
+
+                        auto old_ptr = reinterpret_cast<AtomicType*>(
+                            storage_vector.data());
+                        auto new_ptr = reinterpret_cast<AtomicType*>(
+                            new_data.data());
+                        AtomicType old_val = ntohl(*old_ptr);
+                        AtomicType new_val = ntohl(*new_ptr);
+
+                        // add the two values
+                        AtomicType added_val = old_val + new_val;
+
+                        // convert back to network order
+                        AtomicType added_val_network = htonl(added_val);
+
+                        // insert the new value
+                        auto atomic_ptr = reinterpret_cast<AtomicType*>(
+                            storage_vector.data());
+                        *atomic_ptr = added_val_network;
+
+                    } else {
+                        // set error status due to incorrect sizes
+                        std::vector<int8_t> data;
+                        ret_vector = builder.CreateVector(data);
+                        error_code = cirrus::ErrorCodes::kException;
+                    }
+                } else {
+                    // Object does not exist, return empty vector
+                    std::vector<int8_t> data;
+                    ret_vector = builder.CreateVector(data);
+                }
+
+                LOG<INFO>("Server building response");
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateFetchAddAck(builder,
+                                            ret_vector);
+                auto ack_msg =
+                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                    txn_id,
+                                    static_cast<int64_t>(error_code),
+                                    message::TCPBladeMessage::Message_ReadAck,
+                                    ack.Union());
+                builder.Finish(ack_msg);
+                LOG<INFO>("Server done building response");
                 break;
             }
         case message::TCPBladeMessage::Message_Exchange:
             {
+                /* Service the read request by sending the serialized object
+                 to the client */
+                LOG<INFO>("Processing exchange request");
                 ObjectID oid = msg->message_as_Exchange()->oid();
-                // Place the new value into the store and return the old value
+                LOG<INFO>("Server extracted oid");
 
-                // check if item exists in the store
+                bool exists = true;
+                auto entry_itr = store.find(oid);
+                LOG<INFO>("Got pair from store");
 
-                // check that it is four bytes long
+                if (entry_itr == store.end()) {
+                    exists = false;
+                    error_code = cirrus::ErrorCodes::kNoSuchIDException;
+                    LOG<ERROR>("Oid ", oid, " does not exist on server");
+                }
 
-                // extract it
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> ret_vector;
+                if (exists) {
+                    // The new value from the client
+                    auto data_fb = msg->message_as_Exchange()->data();
 
-                // place new value directly in
+                    // continue if old and new values are four bytes long
+                    if (data_fb->size() == sizeof(AtomicType) &&
+                        store[oid].size() == sizeof(AtomicType)) {
+                        // store previous value
+                        ret_vector = builder.CreateVector(store[oid]);
+
+                        // insert new value
+                        std::vector<int8_t> new_data(data_fb->begin(),
+                            data_fb->end());
+                        store[oid] = new_data;
+                    } else {
+                        // set error status due to incorrect sizes
+                        std::vector<int8_t> data;
+                        ret_vector = builder.CreateVector(data);
+                        error_code = cirrus::ErrorCodes::kException;
+                    }
+                } else {
+                    // Object does not exist, return empty vector
+                    std::vector<int8_t> data;
+                    ret_vector = builder.CreateVector(data);
+                }
+
+                LOG<INFO>("Server building response");
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateExchangeAck(builder,
+                                            ret_vector);
+                auto ack_msg =
+                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                    txn_id,
+                                    static_cast<int64_t>(error_code),
+                                    message::TCPBladeMessage::Message_ReadAck,
+                                    ack.Union());
+                builder.Finish(ack_msg);
+                LOG<INFO>("Server done building response");
                 break;
             }
         default:
