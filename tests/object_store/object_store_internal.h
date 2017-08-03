@@ -24,6 +24,78 @@ struct Dummy {
     explicit Dummy(int id = 1492) : id(id) {}
 };
 
+/**
+ * This class copies the c style array underneath the pointer into a new
+ * portion of memory and returns the size of the new portion as well as
+ * its location.
+ */
+template<typename T>
+class c_array_serializer_simple {
+ public:
+    /**
+     * Constructor for the serializer.
+     * @param nslots number of objects of type T in the array to be serialized
+     */
+    explicit c_array_serializer_simple(unsigned int nslots) :
+        num_slots(nslots) {}
+
+    /**
+     * Function that actually performs the serialization.
+     * @param v a std::shared ptr to the first item in the array to be
+     * serialized
+     */
+    std::pair<std::unique_ptr<char[]>, unsigned int>
+    operator()(const std::shared_ptr<T>& v) {
+        unsigned int num_bytes = num_slots * sizeof(T);
+        // allocate the array to copy into
+        std::unique_ptr<char[]> ptr(new char[num_bytes]);
+        // copy the data
+        std::memcpy(ptr.get(), v.get(), num_bytes);
+        return std::make_pair(std::move(ptr), num_bytes);
+    }
+
+ private:
+    /** Number of items in the array being serialized. */
+    unsigned int num_slots;
+};
+
+/**
+ * Takes a pointer to raw mem passed in and copies it onto heap before returning
+ * a smart pointer to it.
+ */
+template<typename T>
+class c_array_deserializer_simple {
+ public:
+    /**
+     * Constructor for the deserializer.
+     * @param nslots number of objects of type T in the array to be deserialized
+     */
+    explicit c_array_deserializer_simple(unsigned int nslots) :
+        num_slots(nslots) {}
+
+    /**
+     * Function that actually performs the deserialization.
+     * @param data a pointer to the raw data to deserialize
+     */
+    std::shared_ptr<T>
+    operator()(void* data, unsigned int /* size */) {
+        unsigned int size = sizeof(T) * num_slots;
+
+        // cast the pointer
+        T *ptr = reinterpret_cast<T*>(data);
+        // allocate memory for the data to live in
+        auto ret_ptr = std::shared_ptr<T>(new T[num_slots],
+                std::default_delete< T[]>());
+        // copy the data
+        std::memcpy(ret_ptr.get(), ptr, size);
+        return ret_ptr;
+    }
+
+ private:
+     /** Number of items in the array being deserialized. */
+     int num_slots;
+};
+
 /* This function simply copies an object into a new portion of memory. */
 template<typename T>
 std::pair<std::unique_ptr<char[]>, unsigned int>

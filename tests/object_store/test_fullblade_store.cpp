@@ -52,6 +52,43 @@ void test_sync() {
 }
 
 /**
+  * Tests that the store can handle c style arrays.
+  */
+void test_sync_array() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
+    auto serializer = cirrus::c_array_serializer_simple<int>(4);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
+                      PORT,
+                      client.get(),
+                      serializer,
+                      deserializer);
+
+    auto int_array = std::shared_ptr<int>(new int[4],
+        std::default_delete<int[]>());
+
+    for (int i = 0; i < 4; i++) {
+        (int_array.get())[i] = i;
+    }
+
+    store.put(1, int_array);
+
+    std::shared_ptr<int> ret_array = store.get(1);
+
+    for (int i = 0; i < 4; i++) {
+        if ((ret_array.get())[i] != i) {
+            std::cout << "Expected: " << i << " but got "
+                << (ret_array.get())[i]
+                << std::endl;
+            throw std::runtime_error("Incorrect value returned");
+        }
+    }
+}
+
+
+/**
   * Test a batch of synchronous put and get operations
   * Also record the latencies distributions
   */
@@ -186,6 +223,8 @@ auto main(int argc, char *argv[]) -> int {
     test_sync(10);
     std::cout << "Starting test sync no args." << std::endl;
     test_sync();
+    std::cout << "Starting test of c array." << std::endl;
+    test_sync_array();
     std::cout << "Testing nonexistent get." << std::endl;
     try {
         test_nonexistent_get();
