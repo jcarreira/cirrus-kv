@@ -20,8 +20,8 @@ void test_simple() {
     std::cout << "write sync complete" << std::endl;
 
     int returned;
-    auto ptr = client.read_sync(1);
-    int *int_ptr = reinterpret_cast<int*>(ptr.get());
+    auto ptr_pair = client.read_sync(1);
+    int *int_ptr = reinterpret_cast<int*>(ptr_pair.first.get());
     std::cout << *int_ptr << " returned from server" << std::endl;
 
     if (*int_ptr != message) {

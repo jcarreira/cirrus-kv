@@ -15,9 +15,11 @@ Future::Future(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code,
-               std::shared_ptr<std::shared_ptr<char>> data_ptr):
+               std::shared_ptr<std::shared_ptr<char>> data_ptr,
+               std::shared_ptr<uint64_t> data_size):
     result(result), result_available(result_available),
-    sem(sem), error_code(error_code), data_ptr(data_ptr) {}
+    sem(sem), error_code(error_code), data_ptr(data_ptr),
+    data_size(data_size) {}
 
 /**
   * Waits until the result the future is monitoring is available.
@@ -76,13 +78,16 @@ bool Future::get() {
     return *result;
 }
 
-std::shared_ptr<char> Future::getData() {
+/**
+ * Returns a std::pair with a pointer to buffer and length of buffer.
+ */
+std::pair<std::shared_ptr<char>, unsigned int> Future::getDataPair() {
     // Wait until result is available and throw exception if necessary
     get();
     if (data_ptr.get() == nullptr) {
         throw cirrus::Exception("getData called on a non read future");
     }
-    return *data_ptr;
+    return std::make_pair(*data_ptr, *data_size);
 }
 
 

@@ -2,6 +2,7 @@
 #define SRC_CLIENT_BLADECLIENT_H_
 
 #include <string>
+#include <utility>
 #include "common/Future.h"
 
 namespace cirrus {
@@ -19,7 +20,8 @@ class BladeClient {
 
     virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
 
-    virtual std::shared_ptr<char> read_sync(ObjectID id) = 0;
+    virtual std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+        ObjectID id) = 0;
 
     virtual bool remove(ObjectID id) = 0;
 // TODO(Tyler): add in async

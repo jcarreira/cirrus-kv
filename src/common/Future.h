@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 
 #include "common/Synchronization.h"
 #include "common/Exception.h"
@@ -22,7 +23,8 @@ class Future {
            std::shared_ptr<bool> result_available,
            std::shared_ptr<cirrus::PosixSemaphore> sem,
            std::shared_ptr<cirrus::ErrorCodes> error_code,
-           std::shared_ptr<std::shared_ptr<char>> data_ptr);
+           std::shared_ptr<std::shared_ptr<char>> data_ptr,
+           std::shared_ptr<uint64_t> data_size);
 
     void wait();
 
@@ -30,7 +32,7 @@ class Future {
 
     bool get();
 
-    std::shared_ptr<char> getData();
+    std::pair<std::shared_ptr<char>, unsigned int> getDataPair();
 
 
  private:
@@ -44,6 +46,8 @@ class Future {
     std::shared_ptr<cirrus::ErrorCodes> error_code;
     /** Pointer to a pointer to any mem for a read, if any. */
     std::shared_ptr<std::shared_ptr<char>> data_ptr;
+    /** Size of the memory block for a read. */
+    std::shared_ptr<uint64_t> data_size;
 };
 
 }  // namespace cirrus

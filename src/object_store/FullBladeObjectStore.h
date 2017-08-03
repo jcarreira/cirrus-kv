@@ -52,12 +52,6 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       */
     BladeClient *client;
 
-    /** The size of serialized objects. This is obtained from the return
-      * value of the serializer() function. We assume that all serialized
-      * objects have the same length.
-      */
-    uint64_t serialized_size;
-
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -105,16 +99,15 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
   */
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        // TODO(Tyler): throw error message if get before put
-    }
-
     // Read the object from the remote store
-    std::shared_ptr<char> ptr = client->read_sync(id);
+    std::pair<std::shared_ptr<char>, unsigned int> ptr_pair =
+        client->read_sync(id);
+    auto ptr = ptr_pair.first;
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr.get(), serialized_size);
+
+    uint64_t length = ptr_pair.second;
+    T retval = deserializer(ptr.get(), length);
+
 
     return retval;
 }
@@ -168,11 +161,10 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
-    // serialized_size is saved in the class, it is the size of pushed objects
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
+    uint64_t serialized_size = serializer_out.second;
 
     return client->write_sync(id, serial_ptr.get(), serialized_size);
 }

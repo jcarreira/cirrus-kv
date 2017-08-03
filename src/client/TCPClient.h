@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <queue>
+#include <utility>
 #include <map>
 #include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -26,7 +27,8 @@ class TCPClient : public BladeClient {
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    std::shared_ptr<char> read_sync(ObjectID oid) override;
+    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+        ObjectID oid) override;
 
     virtual cirrus::Future write_async(ObjectID oid, const void* data,
                                        uint64_t size);
@@ -60,6 +62,9 @@ class TCPClient : public BladeClient {
         /** Pointer to shared ptr that points to any mem allocated for reads. */
         std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
 
+        /** Pointer to size of mem for read. */
+        std::shared_ptr<uint64_t> mem_size;
+
         txn_info() {
             result = std::make_shared<bool>();
             result_available = std::make_shared<bool>();
@@ -67,6 +72,7 @@ class TCPClient : public BladeClient {
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
             mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
+            mem_size = std::make_shared<uint64_t>(0);
         }
     };
     /** fd of the socket used to communicate w/ remote store */

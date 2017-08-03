@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <utility>
 #include <algorithm>
 #include <memory>
 #include <atomic>
@@ -187,11 +188,12 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-std::shared_ptr<char> TCPClient::read_sync(ObjectID oid) {
+std::pair<std::shared_ptr<char>, unsigned int>
+TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
     cirrus::Future future = read_async(oid);
     LOG<INFO>("Returned from read_async.");
-    return future.getData();
+    return future.getDataPair();
 }
 
 /**
@@ -338,7 +340,7 @@ void TCPClient::process_received() {
                     *(txn->result) = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
-
+                    *(txn->mem_size) = data_fb_vector->size();
                     *(txn->mem_for_read_ptr) = std::shared_ptr<char>(
                         new char[data_fb_vector->size()],
                         std::default_delete< char[]>());
@@ -470,7 +472,8 @@ cirrus::Future TCPClient::enqueue_message(
 
     // Build the future
     cirrus::Future future(txn->result, txn->result_available,
-                          txn->sem, txn->error_code, txn->mem_for_read_ptr);
+                          txn->sem, txn->error_code, txn->mem_for_read_ptr,
+                          txn->mem_size);
 
     // Obtain lock on send queue
     queue_lock.wait();
