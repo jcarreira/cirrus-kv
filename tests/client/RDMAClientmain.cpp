@@ -24,10 +24,7 @@ const char *IP;
  * Tests that simple get and put work with a string.
  */
 void test_1_client() {
-    char data[1000];
     std::string to_send("CIRRUS_DDC");
-
-    snprintf(data, sizeof(data), "%s", "WRONG");
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
@@ -38,9 +35,9 @@ void test_1_client() {
 
     client1.write_sync(0, to_send.c_str(), to_send.size());
 
-    client1.read_sync(0, data, to_send.size());
+    auto ret_pair = client1.read_sync(0);
 
-    if (strncmp(data, to_send.c_str(), to_send.size()))
+    if (strncmp(ret_pair.first.get(), to_send.c_str(), to_send.size()))
         throw std::runtime_error("Error in test");
 }
 
@@ -49,9 +46,6 @@ void test_1_client() {
  * another.
  */
 void test_2_clients() {
-    char data[1000];
-    snprintf(data, sizeof(data), "%s", "WRONG");
-
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
     cirrus::RDMAClient client1, client2;
@@ -72,19 +66,18 @@ void test_2_clients() {
     std::string message("data2");
     client2.write_sync(0, message.c_str(), message.size());
 
-    cirrus::LOG<cirrus::INFO>("Old data: ", data);
-    client1.read_sync(0, data, oss.str().size());
-    cirrus::LOG<cirrus::INFO>("Received data 1: ", data);
+    auto ret_pair = client1.read_sync(0);
+    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_pair.first.get());
 
-    // Check that client 2 receives the desired string
-    if (strncmp(data, oss.str().c_str(), oss.str().size()))
+    // Check that client 1 receives the desired string
+    if (strncmp(ret_pair.first.get(), oss.str().c_str(), oss.str().size()))
         throw std::runtime_error("Error in test");
 
-    client2.read_sync(0, data, message.size());
-    cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
+    auto ret_pair2 = client2.read_sync(0);
+    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_pair2.first.get());
 
     // Check that client2 receives "data2"
-    if (strncmp(data, message.c_str(), message.size()))
+    if (strncmp(ret_pair2.first.get(), message.c_str(), message.size()))
         throw std::runtime_error("Error in test");
 }
 
@@ -97,7 +90,7 @@ void test_performance() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = .25 * GB;
+    uint64_t mem_size = 150 * MB;
 
     char* data = reinterpret_cast<char*>(malloc(mem_size));
     if (!data)
@@ -113,9 +106,10 @@ void test_performance() {
 
     {
         cirrus::TimerFunction tf("Timing read", true);
-        client.read_sync(0, data, mem_size);
-        std::cout << "data[0]: " << data[0] << std::endl;
-        if (data[0] != 'Y') {
+        auto ret_pair = client.read_sync(0);
+        std::cout << "Length: " << ret_pair.second << std::endl;
+        std::cout << "first byte: " << *(ret_pair.first.get()) << std::endl;
+        if (*(ret_pair.first.get()) != 'Y') {
             throw std::runtime_error("Returned value does not match");
         }
     }

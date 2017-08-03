@@ -148,17 +148,19 @@ bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-bool RDMAClient::read_sync(ObjectID oid, void* data, uint64_t /* size */) {
+std::pair<std::shared_ptr<char>, unsigned int>
+RDMAClient::read_sync(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {
         // Read into the section of memory you just allocated
-        readToLocal(loc, data);
-        return true;
+        auto data = std::shared_ptr<char>(new char[loc.size],
+            std::default_delete< char[]>());
+        readToLocal(loc, data.get());
+        return std::make_pair(data, loc.size);
     } else {
         throw cirrus::NoSuchIDException("Requested ObjectID "
                                         "does not exist remotely.");
     }
-    return false;
 }
 
 /**
