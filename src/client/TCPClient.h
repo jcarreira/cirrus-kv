@@ -22,7 +22,7 @@ using TxnID = uint64_t;
   */
 class TCPClient : public BladeClient {
  public:
-    virtual ~TCPClient();
+    ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
 
@@ -30,9 +30,9 @@ class TCPClient : public BladeClient {
     std::pair<std::shared_ptr<char>, unsigned int> read_sync(
         ObjectID oid) override;
 
-    virtual cirrus::Future write_async(ObjectID oid, const void* data,
+    cirrus::Future write_async(ObjectID oid, const void* data,
                                        uint64_t size);
-    virtual cirrus::Future read_async(ObjectID oid);
+    cirrus::Future read_async(ObjectID oid);
 
     bool remove(ObjectID id) override;
 
