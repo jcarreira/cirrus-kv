@@ -19,7 +19,7 @@ class IteratorPolicy {
         kEnd
     };
 
-    virtual void SetState(ObjectID first, ObjectID last, uint64_t read_ahead,
+    virtual void setState(ObjectID first, ObjectID last, uint64_t read_ahead,
             Position position) = 0;
     /**
      * Called by the Iterator whenever it dereferences an object.

@@ -48,7 +48,7 @@ class ReversePolicy : public cirrus::IteratorPolicy {
      * @param position_ an enum indicating if this instance of the policy
      * should instantiate itself at the beginning or end of the range.
      */
-    void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
+    void setState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
         Position position_) override {
         first = first_;
         last = last_;

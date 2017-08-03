@@ -84,7 +84,7 @@ class CirrusIterable {
         /**
          * Default constructor.
          */
-        OrderedPolicy() {}
+        OrderedPolicy() = default;
         /**
          * Copy constructor, used by clone method.
          */
@@ -99,7 +99,7 @@ class CirrusIterable {
          * @param position_ an enum indicating if this instance of the policy
          * should instantiate itself at the beginning or end of the range.
          */
-        void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
+        void setState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
             Position position_) override {
             first = first_;
             last = last_;
@@ -178,7 +178,7 @@ class CirrusIterable {
         /**
          * Default constructor.
          */
-        UnorderedPolicy() {}
+        UnorderedPolicy() = default;
         /**
          * Copy constructor, used by clone method.
          */
@@ -193,7 +193,7 @@ class CirrusIterable {
          * @param position_ an enum indicating if this instance of the policy
          * should instantiate itself at the beginning or end of the range.
          */
-        void SetState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
+        void setState(ObjectID first_, ObjectID last_, uint64_t read_ahead_,
             Position position_) override {
             read_ahead = read_ahead_;
 
@@ -382,7 +382,7 @@ CirrusIterable<T>::Iterator::Iterator(cirrus::CacheManager<T>* cm,
         throw cirrus::Exception("Iterator constructor called "
                 "with begin and end false.");
     }
-    policy->SetState(first, last, read_ahead, position);
+    policy->setState(first, last, read_ahead, position);
 }
 
 /**
