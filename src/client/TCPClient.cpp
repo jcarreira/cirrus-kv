@@ -139,8 +139,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
-                                     uint64_t /* size */) {
+cirrus::Future TCPClient::read_async(ObjectID oid) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -158,7 +157,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder, txn_id, data);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -188,11 +187,11 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
+std::shared_ptr<char> TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
-    cirrus::Future future = read_async(oid, data, size);
+    cirrus::Future future = read_async(oid);
     LOG<INFO>("Returned from read_async.");
-    return future.get();
+    return future.getData();
 }
 
 /**
@@ -339,9 +338,14 @@ void TCPClient::process_received() {
                     *(txn->result) = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
+
+                    *(txn->mem_for_read_ptr) = std::shared_ptr<char>(
+                        new char[data_fb_vector->size()],
+                        std::default_delete< char[]>());
                     LOG<INFO>("Client has pointer to vector");
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
-                                reinterpret_cast<char*>(txn->mem_for_read));
+                                reinterpret_cast<char*>(
+                                    (txn->mem_for_read_ptr).get()));
                     LOG<INFO>("Client copied vector");
                     break;
                 }
@@ -452,10 +456,8 @@ void TCPClient::process_send() {
   */
 cirrus::Future TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-            const int txn_id, void *ptr) {
+            const int txn_id) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
-
-    txn->mem_for_read = ptr;
 
     // Obtain lock on map
     map_lock.wait();
@@ -468,7 +470,7 @@ cirrus::Future TCPClient::enqueue_message(
 
     // Build the future
     cirrus::Future future(txn->result, txn->result_available,
-                          txn->sem, txn->error_code);
+                          txn->sem, txn->error_code, txn->mem_for_read_ptr);
 
     // Obtain lock on send queue
     queue_lock.wait();

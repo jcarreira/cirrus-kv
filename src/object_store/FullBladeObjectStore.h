@@ -110,18 +110,12 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     if (serialized_size == 0) {
         // TODO(Tyler): throw error message if get before put
     }
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    void* ptr = ::operator new (serialized_size);
 
-    // Read into the section of memory you just allocated
-    client->read_sync(id, ptr, serialized_size);
-
+    // Read the object from the remote store
+    std::shared_ptr<char> ptr = client->read_sync(id);
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr, serialized_size);
+    T retval = deserializer(ptr.get(), serialized_size);
 
-    // Free the memory we stored the serialized object in.
-    ::operator delete (ptr);
     return retval;
 }
 

@@ -21,13 +21,17 @@ class Future {
     Future(std::shared_ptr<bool> result,
            std::shared_ptr<bool> result_available,
            std::shared_ptr<cirrus::PosixSemaphore> sem,
-           std::shared_ptr<cirrus::ErrorCodes> error_code);
+           std::shared_ptr<cirrus::ErrorCodes> error_code,
+           std::shared_ptr<std::shared_ptr<char>> data_ptr);
 
     void wait();
 
     bool try_wait();
 
     bool get();
+
+    std::shared_ptr<char> getData();
+
 
  private:
     /** Pointer to the result. */
@@ -38,6 +42,8 @@ class Future {
     std::shared_ptr<cirrus::PosixSemaphore> sem;
      /** Any errors thrown. */
     std::shared_ptr<cirrus::ErrorCodes> error_code;
+    /** Pointer to a pointer to any mem for a read, if any. */
+    std::shared_ptr<std::shared_ptr<char>> data_ptr;
 };
 
 }  // namespace cirrus

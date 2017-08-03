@@ -14,9 +14,10 @@ using ObjectID = uint64_t;
 Future::Future(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::PosixSemaphore> sem,
-               std::shared_ptr<cirrus::ErrorCodes> error_code):
+               std::shared_ptr<cirrus::ErrorCodes> error_code,
+               std::shared_ptr<std::shared_ptr<char>> data_ptr):
     result(result), result_available(result_available),
-    sem(sem), error_code(error_code) {}
+    sem(sem), error_code(error_code), data_ptr(data_ptr) {}
 
 /**
   * Waits until the result the future is monitoring is available.
@@ -74,5 +75,15 @@ bool Future::get() {
     }
     return *result;
 }
+
+std::shared_ptr<char> Future::getData() {
+    // Wait until result is available and throw exception if necessary
+    get();
+    if (data_ptr.get() == nullptr) {
+        throw cirrus::Exception("getData called on a non read future");
+    }
+    return *data_ptr;
+}
+
 
 }  // namespace cirrus

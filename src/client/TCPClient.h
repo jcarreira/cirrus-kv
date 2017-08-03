@@ -26,11 +26,11 @@ class TCPClient : public BladeClient {
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    std::shared_ptr<char> read_sync(ObjectID oid) override;
 
     virtual cirrus::Future write_async(ObjectID oid, const void* data,
                                        uint64_t size);
-    virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
+    virtual cirrus::Future read_async(ObjectID oid);
 
     bool remove(ObjectID id) override;
 
@@ -38,8 +38,7 @@ class TCPClient : public BladeClient {
     ssize_t send_all(int, const void*, size_t, int);
     cirrus::Future enqueue_message(
                         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-                        const int txn_id,
-                        void *ptr = nullptr);
+                        const int txn_id);
     void process_received();
     void process_send();
 
@@ -58,7 +57,8 @@ class TCPClient : public BladeClient {
         /** Semaphore for the transaction. */
         std::shared_ptr<cirrus::PosixSemaphore> sem;
 
-        void *mem_for_read;  /**< memory that should be read to */
+        /** Pointer to shared ptr that points to any mem allocated for reads. */
+        std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
 
         txn_info() {
             result = std::make_shared<bool>();
@@ -66,6 +66,7 @@ class TCPClient : public BladeClient {
             *result_available = false;
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
+            mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
         }
     };
     /** fd of the socket used to communicate w/ remote store */

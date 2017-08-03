@@ -20,10 +20,11 @@ void test_simple() {
     std::cout << "write sync complete" << std::endl;
 
     int returned;
-    client.read_sync(1, &returned, sizeof(int));
-    std::cout << returned << " returned from server" << std::endl;
+    auto ptr = client.read_sync(1);
+    int *int_ptr = reinterpret_cast<int*>(ptr.get());
+    std::cout << *int_ptr << " returned from server" << std::endl;
 
-    if (returned != message) {
+    if (*int_ptr != message) {
         throw std::runtime_error("Wrong value returned.");
     }
 }
