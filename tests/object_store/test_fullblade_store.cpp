@@ -23,11 +23,10 @@ bool use_rdma_client;
 
 // #define CHECK_RESULTS
 
-/* This function takes an int and makes int number copies of it. */
+/* This function takes an int with value N and makes N copies of it. */
 std::pair<std::unique_ptr<char[]>, unsigned int>
                          serializer_variable_simple(const int& v) {
     std::unique_ptr<char[]> ptr(new char[sizeof(int) * v]);
-    std::memcpy(ptr.get(), &v, sizeof(int) * v);
     int *int_ptr = reinterpret_cast<int*>(ptr.get());
     for (int i = 0; i < v; i++) {
         *(int_ptr + i) = v;
@@ -35,7 +34,7 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
     return std::make_pair(std::move(ptr), sizeof(int) * v);
 }
 
-/* Checks that the int numbers are equal to each other and the size. */
+/* Checks that the N numbers are equal to each other and the number of ints. */
 int deserializer_variable_simple(void* data, unsigned int size) {
     int *ptr = reinterpret_cast<int*>(data);
     int returned_val = *ptr;
@@ -51,9 +50,6 @@ int deserializer_variable_simple(void* data, unsigned int size) {
     std::memcpy(&ret, ptr, sizeof(int));
     return ret;
 }
-
-
-
 
 /**
   * Tests that simple synchronous put and get to/from the object store

@@ -106,8 +106,8 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
     // Create flatbuffer builder
-    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_unique<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
 
     // Create and send write request
@@ -126,7 +126,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder, txn_id);
+    return enqueue_message(std::move(builder), txn_id);
 }
 
 /**
@@ -136,8 +136,8 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
  * @return A cirrus::Future containing information about the operation.
  */
 cirrus::Future TCPClient::read_async(ObjectID oid) {
-    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_unique<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
 
     // Create and send read request
@@ -153,7 +153,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid) {
                                         msg_contents.Union());
     builder->Finish(msg);
 
-    return enqueue_message(builder, txn_id);
+    return enqueue_message(std::move(builder), txn_id);
 }
 
 /**
@@ -196,8 +196,8 @@ TCPClient::read_sync(ObjectID oid) {
   * if the object does not exist remotely or if another error occurred.
   */
 bool TCPClient::remove(ObjectID oid) {
-    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_unique<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
 
     // Create and send removal request
@@ -213,7 +213,7 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(builder, txn_id);
+    cirrus::Future future = enqueue_message(std::move(builder), txn_id);
     return future.get();
 }
 
@@ -414,8 +414,8 @@ void TCPClient::process_send() {
             continue;
         }
         // Take one item out of the send queue
-        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
-            send_queue.front();
+        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
+            std::move(send_queue.front());
         send_queue.pop();
         int message_size = builder->GetSize();
 
@@ -443,13 +443,13 @@ void TCPClient::process_send() {
 /**
   * Given a message and optionally a pointer to memory, adds a message to the
   * send queue, adds a transaction to the map, and returns a future.
-  * @param builder a shared_ptr to a FlatBufferBuilder, containing the
+  * @param builder a unique_ptr to a FlatBufferBuilder, containing the
   * message.
   * @param txn_id transaction id corresponding to the event being enqueued.
   * @return Returns a Future.
   */
 cirrus::Future TCPClient::enqueue_message(
-            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+            std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
             const int txn_id) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
@@ -471,7 +471,7 @@ cirrus::Future TCPClient::enqueue_message(
     queue_lock.wait();
 
     // Add builder to send queue
-    send_queue.push(builder);
+    send_queue.push(std::move(builder));
 
     // Release lock on send queue
     queue_lock.signal();

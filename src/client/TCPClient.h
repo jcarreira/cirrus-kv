@@ -39,7 +39,7 @@ class TCPClient : public BladeClient {
  private:
     ssize_t send_all(int, const void*, size_t, int);
     cirrus::Future enqueue_message(
-                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
                         const int txn_id);
     void process_received();
     void process_send();
@@ -93,7 +93,7 @@ class TCPClient : public BladeClient {
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
+    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;

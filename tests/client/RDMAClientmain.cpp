@@ -92,7 +92,7 @@ void test_performance() {
 
     uint64_t mem_size = 150 * MB;
 
-    char* data = reinterpret_cast<char*>(malloc(mem_size));
+    char* data = new char[mem_size];
     if (!data)
         exit(-1);
 
@@ -114,7 +114,7 @@ void test_performance() {
         }
     }
 
-    free(data);
+    delete[] data;
 }
 
 auto main(int argc, char *argv[]) -> int {
