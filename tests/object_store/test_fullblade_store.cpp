@@ -146,6 +146,9 @@ void test_nonexistent_get() {
         store.put(oid, oid);
     }
 
+    // TODO(Tyler): If a test before this one calls put on oid 10, this will
+    // not fail.
+
     // Should fail
     store.get(10);
 }
@@ -170,7 +173,6 @@ void test_async() {
         std::cout << "Expected 42 but got: " << result << std::endl;
         throw std::runtime_error("Wrong value returned.");
     }
-    std::cout << "Test async successful" << std::endl;
 }
 
 /**
@@ -211,7 +213,6 @@ void test_async_N(int N) {
     }
 }
 
-// TODO(Tyler): Write tests that verify it fails if nonexistent, oom, etc.
 /**
  * This test tests that get_bulk() and put_bulk() return proper values.
  */
@@ -296,7 +297,7 @@ void test_bulk_nonexistent() {
             cirrus::deserializer_simple<int, sizeof(int)>);
     store.put(1, 1);
     std::vector<int> ret_values(10);
-    store.get_bulk(1492, 1591, ret_values.data());
+    store.get_bulk(1492, 1501, ret_values.data());
 }
 
 /**

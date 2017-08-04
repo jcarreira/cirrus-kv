@@ -18,7 +18,7 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 128;
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 const int cache_size = 200;  // Arbitrary
 const int read_ahead = 20;  // Arbitrary
 const int MILLION = 1000000;
@@ -43,7 +43,7 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
 }
 
 /**
- * Compares the time to retrieve N items using the iterator vs 
+ * Compares the time to retrieve N items using the iterator vs
  * fetching each individually.
  * @param num_items the number of items to put on the remote store,
  * which will then be iterated over.

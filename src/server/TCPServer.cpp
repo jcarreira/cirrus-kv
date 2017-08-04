@@ -138,6 +138,10 @@ void TCPServer::loop() {
             // there is at least one pending event, find it.
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
+                // Ignore the fd if we've said we don't care about it
+                if (curr_fd.fd == -1) {
+                    continue;
+                }
                 if (curr_fd.revents != POLLIN) {
                     LOG<INFO>("Non read event on socket: ", curr_fd.fd);
                 } else if (curr_fd.fd == server_sock_) {

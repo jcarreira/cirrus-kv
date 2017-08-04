@@ -64,7 +64,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       */
     uint64_t serialized_size = 0;
 
-    // TODO(Tyler): Change these to be references or pointers?
+    // TODO(Tyler): Change the serializer/deserializer to
+    //  be references/pointers?
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -115,7 +116,6 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     /* This is safe as we will only reach here if a previous put has
        occured, thus setting the value of serialized_size. */
     if (serialized_size == 0) {
-        // TODO(Tyler): throw error message if get before put
         throw cirrus::Exception("At least one put must be performed before "
                 "a get can be performed.");
     }
@@ -144,8 +144,6 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     /* This is safe as we will only reach here if a previous put has
        occured, thus setting the value of serialized_size. */
     if (serialized_size == 0) {
-        // TODO(Tyler): throw error message if get before put
-        // Alternatively, let the server handle it.
         throw cirrus::Exception("At least one put must be performed before "
                 "a get can be performed.");
     }
@@ -153,7 +151,7 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     /* This allocation provides a buffer to read the serialized object
        into. */
     std::shared_ptr<std::vector<char>> ptr =
-        std::make_shared<std::vector<char>>(std::vector<char>(serialized_size));
+        std::make_shared<std::vector<char>>(serialized_size);
 
     // Read into the section of memory you just allocated
     auto client_future = client->read_async(id, ptr->data(), serialized_size);
@@ -289,9 +287,9 @@ void FullBladeObjectStoreTempl<T>::put_bulk(ObjectID start,
 }
 
 /**
-  * Deallocates space occupied by object in remote blade.
+  * Removes an object from the remote store, deallocating any space used for it.
   * @param id the ObjectID of the object to be removed from remote memory.
-  * @return Returns true.
+  * @return Returns true if successful.
   */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
@@ -299,7 +297,7 @@ bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
 }
 
 /**
- * Removes a range of items from the store. 
+ * Removes a range of items from the store.
  * @param first the first in a range of continuous ObjectIDs to be removed
  * @param last the last in a range of continuous ObjectIDs to be removed
  */

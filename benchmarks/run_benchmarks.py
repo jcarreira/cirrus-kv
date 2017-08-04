@@ -6,7 +6,9 @@ import time
 
 # NOTE: all pathnames start from the top directory where make benchmark is run
 
-benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"], ["./benchmarks/iterator_benchmark"], ["./benchmarks/cache_benchmark"], ["./benchmarks/1_2"]]
+benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"],
+    ["./benchmarks/iterator_benchmark"], ["./benchmarks/cache_benchmark"],
+    ["./benchmarks/1_2"]]
 server_name =  ["./src/server/tcpservermain"]
 
 for benchmark in benchmarks:
@@ -23,9 +25,11 @@ for benchmark in benchmarks:
     sys.stdout.write("Benchmark " + benchmark[0] + "...")
     child = subprocess.Popen(benchmark, stdout=subprocess.PIPE)
 
-    # Print the output from the child
-    for line in child.stdout:
-        print(line.decode(), end='')
+    # Uncomment below two lines to print the benchmark's output
+
+    # for line in child.stdout:
+    #     print(line.decode(), end='')
+    
     streamdata = child.communicate()[0]
     rc = child.returncode
     server.kill()

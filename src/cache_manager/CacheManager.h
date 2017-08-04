@@ -225,8 +225,8 @@ T CacheManager<T>::get(ObjectID oid) {
     auto cache_iterator = cache.find(oid);
     if (cache_iterator != cache.end()) {
         LOG<INFO>("Entry exists for oid: ", oid);
-        // entry exists
-        // Call future's get method if necessary
+        // entry exists for the oid
+        // Call future's get method if the object is not cached
         entry = &(cache_iterator->second);
         if (!entry->cached) {
             LOG<INFO>("oid was prefetched");
@@ -314,7 +314,7 @@ void CacheManager<T>::put_bulk(ObjectID start, ObjectID last, T* data) {
 /**
   * A function that fetches an object from the remote server and stores it in
   * the cache, but does not return the object. Should be called in advance of
-  * the object being used in order to reduce latency. If object is already
+  * the object being accessed in order to reduce latency. If object is already
   * in the cache, no call will be made to the remote server.
   * @param oid the ObjectID that the object you wish to retrieve is stored
   * under.

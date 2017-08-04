@@ -5,6 +5,7 @@
 
 #include "common/Synchronization.h"
 #include "common/Exception.h"
+#include "utils/Log.h"
 
 namespace cirrus {
 
@@ -32,7 +33,8 @@ BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
  * Waits until the result the future is monitoring is available.
  */
 void BladeClient::ClientFuture::wait() {
-    if (!*result_available) {
+    while (!*result_available) {
+        LOG<INFO>("Result not available, waiting.");
         sem->wait();
     }
 }
@@ -43,8 +45,7 @@ void BladeClient::ClientFuture::wait() {
  */
 bool BladeClient::ClientFuture::try_wait() {
     if (!*result_available) {
-        bool sem_success = sem->trywait();
-        return sem_success;
+        return sem->trywait();
     } else {
         return true;
     }
@@ -56,7 +57,10 @@ bool BladeClient::ClientFuture::try_wait() {
  * @return Returns the result given by the asynchronous operation.
  */
 bool BladeClient::ClientFuture::get() {
+    LOG<INFO>("Waiting for result.");
     wait();
+    LOG<INFO>("Result is available.");
+    LOG<INFO>("Error code is: ", *error_code);
 
     // Check the error code enum. Throw exception if one happened on server.
     switch (*error_code) {

@@ -195,7 +195,6 @@ void test_linear_prefetch() {
     // Use a threshold of ten because things are slow on the first timed access
     // Typically takes 4-5 µs but sometimes spikes to 15
     // Safe as a store.get takes 200+ µs on RDMA and TCP
-    std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
 
     if (duration_micro.count() > 30) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
@@ -234,7 +233,7 @@ void test_custom_prefetch() {
     auto duration = end - start;
     auto duration_micro =
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
-    if (duration_micro.count() > 250) {
+    if (duration_micro.count() > 150) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
         throw std::runtime_error("Custom get took too long, "
             "likely not prefetched.");
@@ -452,7 +451,7 @@ void test_bulk_nonexistent() {
     cirrus::CacheManager<int> cm(&store, &policy, 10);
     cm.put(1, 1);
     std::vector<int> ret_values(10);
-    cm.get_bulk(1492, 1591, ret_values.data());
+    cm.get_bulk(1492, 1501, ret_values.data());
 }
 
 auto main(int argc, char *argv[]) -> int {

@@ -255,7 +255,7 @@ void TCPClient::process_received() {
 
             if (retval < 0) {
                 char *info = strerror(errno);
-                std::cout << info << std::endl;
+                LOG<ERROR>(info);
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
