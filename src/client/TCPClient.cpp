@@ -226,6 +226,9 @@ bool TCPClient::remove(ObjectID oid) {
 
 /**
   * Performs fetchadd.
+  * @param value an AtomicType in network order. This will be added to the
+  * value stored under oid on the server and then stored there.
+  * @return the previous value stored under oid
   */
 AtomicType TCPClient::fetchAdd(ObjectID oid, AtomicType value) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
@@ -264,7 +267,9 @@ AtomicType TCPClient::fetchAdd(ObjectID oid, AtomicType value) {
 
 /**
   * Performs atomic exchange.
-  * @param value a value of AtomicType that is network order
+  * @param value a value of AtomicType that is network order. It will be
+  * exchanged with the value under oid on the server.
+  * @return the previous value under oid.
   */
 AtomicType TCPClient::exchange(ObjectID oid, AtomicType value) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =

@@ -14,6 +14,7 @@
 namespace cirrus {
 
 using ObjectID = uint64_t;
+using AtomicType = uint32_t;
 using TxnID = uint64_t;
 
 /**
@@ -27,6 +28,9 @@ class TCPClient : public BladeClient {
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    AtomicType fetchAdd(ObjectID oid, AtomicType value);
+    AtomicType exchange(ObjectID oid, AtomicType value);
+
 
     virtual cirrus::Future write_async(ObjectID oid, const void* data,
                                        uint64_t size);
