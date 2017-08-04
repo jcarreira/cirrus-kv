@@ -147,6 +147,7 @@ bool RDMAClient::read_sync(ObjectID oid, void* data, uint64_t /* size */) {
 bool RDMAClient::remove(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {
+        objects_.erase(oid);
         return deallocate(loc.allocRec);
     } else {
         throw cirrus::NoSuchIDException("Error. Trying to remove "

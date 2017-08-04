@@ -133,6 +133,7 @@ void test_async() {
         std::cout << "Expected 42 but got: " << result << std::endl;
         throw std::runtime_error("Wrong value returned.");
     }
+    std::cout << "Test async successful" << std::endl;
 }
 
 /**
@@ -256,7 +257,7 @@ void test_bulk_nonexistent() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
-
+    store.put(1, 1);
     std::vector<int> ret_values(10);
     store.get_bulk(1492, 1591, ret_values.data());
 }

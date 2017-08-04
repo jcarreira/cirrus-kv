@@ -390,7 +390,9 @@ bool TCPServer::process(int sock) {
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
     if (send(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
-        throw cirrus::Exception("Server error sending message back to client");
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
     }
 
     LOG<INFO>("Server sent size.");
@@ -398,7 +400,9 @@ bool TCPServer::process(int sock) {
     // Send main message
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {
-        throw cirrus::Exception("Server error sending message back to client");
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
     }
 
     LOG<INFO>("Server sent ack of size: ", message_size);

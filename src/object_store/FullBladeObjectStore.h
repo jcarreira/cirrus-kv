@@ -62,7 +62,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       * value of the serializer() function. We assume that all serialized
       * objects have the same length.
       */
-    uint64_t serialized_size;
+    uint64_t serialized_size = 0;
 
     // TODO(Tyler): Change these to be references or pointers?
     /**
@@ -116,6 +116,8 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
        occured, thus setting the value of serialized_size. */
     if (serialized_size == 0) {
         // TODO(Tyler): throw error message if get before put
+        throw cirrus::Exception("At least one put must be performed before "
+                "a get can be performed.");
     }
     /* This allocation provides a buffer to read the serialized object
        into. */
@@ -146,6 +148,8 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
     if (serialized_size == 0) {
         // TODO(Tyler): throw error message if get before put
         // Alternatively, let the server handle it.
+        throw cirrus::Exception("At least one put must be performed before "
+                "a get can be performed.");
     }
 
     /* This allocation provides a buffer to read the serialized object

@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -249,6 +250,8 @@ void TCPClient::process_received() {
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
+                char *info = strerror(errno);
+                std::cout << info << std::endl;
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
