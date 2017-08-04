@@ -52,6 +52,43 @@ void test_sync() {
 }
 
 /**
+  * Tests that the store can handle c style arrays.
+  */
+void test_sync_array() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
+    auto serializer = cirrus::c_array_serializer_simple<int>(4);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
+                      PORT,
+                      client.get(),
+                      serializer,
+                      deserializer);
+
+    auto int_array = std::shared_ptr<int>(new int[4],
+        std::default_delete<int[]>());
+
+    for (int i = 0; i < 4; i++) {
+        (int_array.get())[i] = i;
+    }
+
+    store.put(1, int_array);
+
+    std::shared_ptr<int> ret_array = store.get(1);
+
+    for (int i = 0; i < 4; i++) {
+        if ((ret_array.get())[i] != i) {
+            std::cout << "Expected: " << i << " but got "
+                << (ret_array.get())[i]
+                << std::endl;
+            throw std::runtime_error("Incorrect value returned");
+        }
+    }
+}
+
+
+/**
   * Test a batch of synchronous put and get operations
   * Also record the latencies distributions
   */
@@ -256,9 +293,50 @@ void test_bulk_nonexistent() {
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
-
     std::vector<int> ret_values(10);
     store.get_bulk(1492, 1591, ret_values.data());
+}
+
+/**
+  * This test ensures that it is possible to share one client between two
+  * different stores with different types.
+  */
+void test_shared_client() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store2(IP,
+            PORT,
+            client.get(),
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
+
+    for (int oid = 0; oid <  10; oid++) {
+        store.put(oid, oid);
+    }
+
+    for (int i = 10; i <  20; i++) {
+        struct cirrus::Dummy<SIZE> d(i);
+        store2.put(i, d);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        int retval = store.get(i);
+        if (retval != i) {
+            std::cout << "Expected " << i << " but got " << retval << std::endl;
+            throw std::runtime_error("wrong value returned");
+        }
+        auto retstruct = store2.get(i + 10);
+        if (retstruct.id != i + 10) {
+            std::cout << "Expected " << i + 10 << " but got " << retstruct.id
+                << std::endl;
+            throw std::runtime_error("wrong value returned");
+        }
+    }
 }
 
 auto main(int argc, char *argv[]) -> int {
@@ -283,6 +361,9 @@ auto main(int argc, char *argv[]) -> int {
     test_async();
     std::cout << "Test async n." << std::endl;
     test_async_N(10);
+
+    std::cout << "Starting test of c array." << std::endl;
+    test_sync_array();
     std::cout << "Testing nonexistent get." << std::endl;
     try {
         test_nonexistent_get();
@@ -303,7 +384,8 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     test_remove_bulk();
-    std::cout << "Test successful." << std::endl;
+    test_shared_client();
+    std::cout << "Test Successful." << std::endl;
 
     return 0;
 }
