@@ -384,7 +384,7 @@ bool TCPServer::process(int sock) {
                 /* Service the read request by sending the serialized object
                  to the client */
                 LOG<INFO>("Processing fetchadd request");
-                ObjectID oid = msg->message_as_Exchange()->oid();
+                ObjectID oid = msg->message_as_FetchAdd()->oid();
                 LOG<INFO>("Server extracted oid");
 
                 bool exists = true;
@@ -400,37 +400,42 @@ bool TCPServer::process(int sock) {
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> ret_vector;
                 if (exists) {
                     // The new value from the client
-                    auto data_fb = msg->message_as_Exchange()->data();
+                    auto data_fb = msg->message_as_FetchAdd()->data();
 
                     // continue if old and new values are the proper size
                     if (data_fb->size() == sizeof(AtomicType) &&
                         store[oid].size() == sizeof(AtomicType)) {
                         // store previous value
-                        auto storage_vector = store[oid];
-                        ret_vector = builder.CreateVector(storage_vector);
+                        std::vector<int8_t>& storage_vector = store[oid];
+                        ret_vector = builder.CreateVector(store[oid]);
 
                         // Convert stored and new values to host byte order
                         std::vector<int8_t> new_data(data_fb->begin(),
                             data_fb->end());
 
-                        auto old_ptr = reinterpret_cast<AtomicType*>(
+                        auto stored_ptr = reinterpret_cast<AtomicType*>(
                             storage_vector.data());
-                        auto new_ptr = reinterpret_cast<AtomicType*>(
+                        auto new_val_ptr = reinterpret_cast<AtomicType*>(
                             new_data.data());
-                        AtomicType old_val = ntohl(*old_ptr);
-                        AtomicType new_val = ntohl(*new_ptr);
+                        LOG<INFO>("The old stored value was: ", *stored_ptr);
+
+                        AtomicType stored_val = ntohl(*stored_ptr);
+                        LOG<INFO>("Old val is: ", stored_val);
+                        AtomicType new_val = ntohl(*new_val_ptr);
+                        LOG<INFO>("new val is: ", new_val);
 
                         // add the two values
-                        AtomicType added_val = old_val + new_val;
+                        AtomicType added_val = stored_val + new_val;
+                        LOG<INFO>("added val is: ", added_val);
 
                         // convert back to network order
                         AtomicType added_val_network = htonl(added_val);
+                        LOG<INFO>("Added val network is: ", added_val_network);
 
-                        // insert the new value
-                        auto atomic_ptr = reinterpret_cast<AtomicType*>(
-                            storage_vector.data());
-                        *atomic_ptr = added_val_network;
-
+                        // Store the new value
+                        *stored_ptr = added_val_network;
+                        stored_val =  ntohl(*stored_ptr);
+                        LOG<INFO>("Stored value is: ", stored_val);
                     } else {
                         // set error status due to incorrect sizes
                         std::vector<int8_t> data;
@@ -449,10 +454,10 @@ bool TCPServer::process(int sock) {
                                             ret_vector);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                    txn_id,
-                                    static_cast<int64_t>(error_code),
-                                    message::TCPBladeMessage::Message_ReadAck,
-                                    ack.Union());
+                                txn_id,
+                                static_cast<int64_t>(error_code),
+                                message::TCPBladeMessage::Message_FetchAddAck,
+                                ack.Union());
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
                 break;
@@ -486,6 +491,12 @@ bool TCPServer::process(int sock) {
                         // store previous value
                         ret_vector = builder.CreateVector(store[oid]);
 
+                        AtomicType* old_ptr = reinterpret_cast<AtomicType*>(
+                            store[oid].data());
+                        AtomicType old_val_network = *old_ptr;
+                        AtomicType old_val = ntohl(old_val_network);
+                        LOG<INFO>("Value was: ", old_val);
+
                         // insert new value
                         std::vector<int8_t> new_data(data_fb->begin(),
                             data_fb->end());
@@ -508,10 +519,10 @@ bool TCPServer::process(int sock) {
                                             ret_vector);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                    txn_id,
-                                    static_cast<int64_t>(error_code),
-                                    message::TCPBladeMessage::Message_ReadAck,
-                                    ack.Union());
+                            txn_id,
+                            static_cast<int64_t>(error_code),
+                            message::TCPBladeMessage::Message_ExchangeAck,
+                            ack.Union());
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
                 break;

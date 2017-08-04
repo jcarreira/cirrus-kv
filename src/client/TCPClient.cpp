@@ -250,19 +250,18 @@ AtomicType TCPClient::fetchAdd(ObjectID oid, AtomicType value) {
                                     *builder,
                                     txn_id,
                                     0,
-                                    message::TCPBladeMessage::Message_Remove,
+                                    message::TCPBladeMessage::Message_FetchAdd,
                                     msg_contents.Union());
     builder->Finish(msg);
 
     // allocate a buffer for the value to be written back into
-    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+    std::unique_ptr<AtomicType> ptr = std::make_unique<AtomicType>();
 
     // Enqueue message
     cirrus::Future future = enqueue_message(builder, txn_id, ptr.get());
     // Check for exceptions
     future.get();
-    // Cast the value back to AtomicType and return
-    return static_cast<AtomicType>(*(ptr.get()));
+    return *ptr;
 }
 
 /**
@@ -276,7 +275,7 @@ AtomicType TCPClient::exchange(ObjectID oid, AtomicType value) {
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
 
-    // Create and send fetchAdd request
+    // Create and send exchange request
 
     const int8_t *data_cast = reinterpret_cast<const int8_t*>(&value);
     std::vector<int8_t> data_vector(data_cast, data_cast + sizeof(AtomicType));
@@ -291,20 +290,18 @@ AtomicType TCPClient::exchange(ObjectID oid, AtomicType value) {
                                     *builder,
                                     txn_id,
                                     0,
-                                    message::TCPBladeMessage::Message_Remove,
+                                    message::TCPBladeMessage::Message_Exchange,
                                     msg_contents.Union());
     builder->Finish(msg);
 
     // allocate a buffer for the value to be written back into
-    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+    std::unique_ptr<AtomicType> ptr = std::make_unique<AtomicType>();
 
     // Enqueue message
     cirrus::Future future = enqueue_message(builder, txn_id, ptr.get());
     // Check for exceptions
     future.get();
-    // Cast the value back to AtomicType and return
-    AtomicType retval = static_cast<AtomicType>(*(ptr.get()));
-    return retval;
+    return *ptr;
 }
 
 /**
@@ -452,8 +449,11 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_FetchAddAck()->data();
                     LOG<INFO>("Client has pointer to vector");
+
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
+
+
                     LOG<INFO>("Client copied vector");
                     break;
                 }

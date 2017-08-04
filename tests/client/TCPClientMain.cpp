@@ -38,27 +38,46 @@ void test_atomics() {
     cirrus::TCPClient client;
     client.connect(IP, port);
     std::cout << "Connected to server." << std::endl;
-    AtomicType message = 42;
+    AtomicType message = 15;
     std::cout << "message declared." << std::endl;
     client.write_sync(1, &message, sizeof(AtomicType));
     std::cout << "write sync complete" << std::endl;
 
-    AtomicType val_network = htonl(23);
     std::cout << "Exchanging" << std::endl;
-    AtomicType retval_network = client.exchange(1, val_network);
-    AtomicType retval = ntohl(retval_network);
-    if (retval != 42) {
+    AtomicType retval = client.exchange(1, 23);
+    if (retval != message) {
         std::cout << retval << std::endl;
         throw std::runtime_error("Wrong value returned from exchange.");
     }
 
+    AtomicType message2 = 3;
+    AtomicType message2_network = htonl(message2);
+    std::cout << "message 2 network" << message2_network << std::endl;
+    client.write_sync(2, &message2_network, sizeof(AtomicType));
+
     std::cout << "FetchAdd" << std::endl;
-    val_network = htonl(1);
-    retval_network = client.fetchAdd(1, val_network);
-    retval = ntohl(retval_network);
-    if (retval != 24) {
-        std::cout << retval << std::endl;
+    AtomicType val = 1;
+    AtomicType val_network = htonl(val);
+    std::cout << "Val network: " << val_network << std::endl;
+    AtomicType retval_network = client.fetchAdd(2, val_network);
+    std::cout << "retVal network: " << retval_network << std::endl;
+    AtomicType retval2 = ntohl(retval_network);
+    std::cout << "retval: " << retval2 << std::endl;
+    if (retval2 != message2) {
+        std::cout << retval2 << std::endl;
+        std::cout << "Wrong value returned" << std::endl;
         throw std::runtime_error("Wrong value returned from fetchadd.");
+    }
+
+    AtomicType returned_network;
+    client.read_sync(2, &returned_network, sizeof(int));
+    std::cout << returned_network << std::endl;
+    std::cout << ntohl(returned_network)
+        << " returned from server" << std::endl;
+
+    if (ntohl(returned_network) != val + message2) {
+        std::cout << ntohl(returned_network) << std::endl;
+        throw std::runtime_error("Wrong value returned after fetchadd");
     }
 }
 
