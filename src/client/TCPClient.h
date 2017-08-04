@@ -20,7 +20,7 @@ using TxnID = uint64_t;
   */
 class TCPClient : public BladeClient {
  public:
-    virtual ~TCPClient();
+    ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
 
@@ -76,7 +76,7 @@ class TCPClient : public BladeClient {
     /**
       * Map that allows receiver thread to map transactions to their
       * completion information. When a message is added to the send queue,
-      * a struct txn_info is created and added to this map. This struct 
+      * a struct txn_info is created and added to this map. This struct
       * allows the receiver thread to place information regarding completion
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
@@ -106,6 +106,12 @@ class TCPClient : public BladeClient {
      * in the class destructor.
      */
     bool terminate_threads = false;
+
+    /**
+     * Bool that indicates whether the client has already connected to a remote
+     * store.
+     */
+    std::atomic<bool> has_connected = {false};
 };
 
 }  // namespace cirrus

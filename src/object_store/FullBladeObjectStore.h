@@ -121,16 +121,14 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     }
     /* This allocation provides a buffer to read the serialized object
        into. */
-    void* ptr = ::operator new (serialized_size);
+    std::unique_ptr<char[]> ptr(new char[serialized_size]);
 
     // Read into the section of memory you just allocated
-    client->read_sync(id, ptr, serialized_size);
+    client->read_sync(id, ptr.get(), serialized_size);
 
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr, serialized_size);
+    T retval = deserializer(ptr.get(), serialized_size);
 
-    // Free the memory we stored the serialized object in.
-    ::operator delete (ptr);
     return retval;
 }
 

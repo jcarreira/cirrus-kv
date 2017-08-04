@@ -43,6 +43,8 @@ class BladeClient {
         std::shared_ptr<cirrus::ErrorCodes> error_code;
     };
 
+    virtual ~BladeClient() = default;
+
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
 

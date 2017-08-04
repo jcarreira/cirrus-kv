@@ -56,6 +56,10 @@ TCPClient::~TCPClient() {
   */
 void TCPClient::connect(const std::string& address,
                         const std::string& port_string) {
+    if (has_connected.exchange(true)) {
+        LOG<INFO>("Client has previously connnected");
+        return;
+    }
     // Create socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         throw cirrus::ConnectionException("Error when creating socket.");
