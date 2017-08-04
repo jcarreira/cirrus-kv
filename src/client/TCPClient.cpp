@@ -224,6 +224,83 @@ bool TCPClient::remove(ObjectID oid) {
     return future.get();
 }
 
+/**
+  * Performs fetchadd.
+  */
+AtomicType TCPClient::fetchAdd(ObjectID oid, AtomicType value) {
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+                                initial_buffer_size);
+
+    // Create and send fetchAdd request
+
+    const int8_t *data_cast = reinterpret_cast<const int8_t*>(&value);
+    std::vector<int8_t> data_vector(data_cast, data_cast + sizeof(AtomicType));
+    auto data_fb_vector = builder->CreateVector(data_vector);
+
+    auto msg_contents = message::TCPBladeMessage::CreateFetchAdd(*builder, oid,
+        data_fb_vector);
+
+    const int txn_id = curr_txn_id++;
+
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                    *builder,
+                                    txn_id,
+                                    0,
+                                    message::TCPBladeMessage::Message_Remove,
+                                    msg_contents.Union());
+    builder->Finish(msg);
+
+    // allocate a buffer for the value to be written back into
+    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+
+    // Enqueue message
+    cirrus::Future future = enqueue_message(builder, txn_id, ptr.get());
+    // Check for exceptions
+    future.get();
+    // Cast the value back to AtomicType and return
+    return static_cast<AtomicType>(*(ptr.get()));
+}
+
+/**
+  * Performs atomic exchange.
+  * @param value a value of AtomicType that is network order
+  */
+AtomicType TCPClient::exchange(ObjectID oid, AtomicType value) {
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
+                            std::make_shared<flatbuffers::FlatBufferBuilder>(
+                                initial_buffer_size);
+
+    // Create and send fetchAdd request
+
+    const int8_t *data_cast = reinterpret_cast<const int8_t*>(&value);
+    std::vector<int8_t> data_vector(data_cast, data_cast + sizeof(AtomicType));
+    auto data_fb_vector = builder->CreateVector(data_vector);
+
+    auto msg_contents = message::TCPBladeMessage::CreateExchange(*builder, oid,
+        data_fb_vector);
+
+    const int txn_id = curr_txn_id++;
+
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                    *builder,
+                                    txn_id,
+                                    0,
+                                    message::TCPBladeMessage::Message_Remove,
+                                    msg_contents.Union());
+    builder->Finish(msg);
+
+    // allocate a buffer for the value to be written back into
+    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+
+    // Enqueue message
+    cirrus::Future future = enqueue_message(builder, txn_id, ptr.get());
+    // Check for exceptions
+    future.get();
+    // Cast the value back to AtomicType and return
+    AtomicType retval = static_cast<AtomicType>(*(ptr.get()));
+    return retval;
+}
 
 /**
   * Loop run by the thread that processes incoming messages. Contains all
@@ -349,6 +426,30 @@ void TCPClient::process_received() {
                 {
                     // put the result in the struct
                     *(txn->result) = ack->message_as_RemoveAck()->success();
+                    break;
+                }
+            case message::TCPBladeMessage::Message_ExchangeAck:
+                {
+                    LOG<INFO>("Client processing ReadAck");
+                    // copy the data from the ExchangeAck into the given pointer
+                    LOG<INFO>("Client wrote success");
+                    auto data_fb_vector = ack->message_as_ExchangeAck()->data();
+                    LOG<INFO>("Client has pointer to vector");
+                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                                reinterpret_cast<char*>(txn->mem_for_read));
+                    LOG<INFO>("Client copied vector");
+                    break;
+                }
+            case message::TCPBladeMessage::Message_FetchAddAck:
+                {
+                    LOG<INFO>("Client processing FetchAddAck");
+                    // copy the data from the Ack into the given pointer
+                    LOG<INFO>("Client wrote success");
+                    auto data_fb_vector = ack->message_as_FetchAddAck()->data();
+                    LOG<INFO>("Client has pointer to vector");
+                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                                reinterpret_cast<char*>(txn->mem_for_read));
+                    LOG<INFO>("Client copied vector");
                     break;
                 }
             default:
