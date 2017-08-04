@@ -6,7 +6,8 @@ import time
 
 # NOTE: all pathnames start from the top directory where make benchmark is run
 
-benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"], ["./benchmarks/iterator_benchmark"], ["./benchmarks/cache_benchmark"]]
+benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"], ["./benchmarks/iterator_benchmark"],
+              ["./benchmarks/cache_benchmark"], ["./benchmarks/outstanding_requests"]]
 server_name =  ["./src/server/tcpservermain"]
 
 for benchmark in benchmarks:
