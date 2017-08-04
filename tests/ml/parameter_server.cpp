@@ -28,30 +28,30 @@
 template<typename T>
 class c_array_serializer_simple {
 public:
-    c_array_serializer_simple(int nslots) : NUMSLOTS(nslots) {}
+    c_array_serializer_simple(int nslots) : numslots(nslots) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
-        std::unique_ptr<char[]> ptr(new char[NUMSLOTS]);
-        return std::make_pair(std::move(ptr), NUMSLOTS);
+        std::unique_ptr<char[]> ptr(new char[numslots]);
+        return std::make_pair(std::move(ptr), numslots);
     }
 
 private:
-    int NUMSLOTS;
+    int numslots;
 }; 
 
 template<typename T>
 class c_array_deserializer_simple {
 public:
-    c_array_deserializer_simple(int nslots) : NUMSLOTS(nslots) {}
+    c_array_deserializer_simple(int nslots) : numslots(nslots) {}
     
     std::shared_ptr<T>
     operator()(void* data, unsigned int /* size */) {
-        unsigned int size = sizeof(T) * NUMSLOTS;
+        unsigned int size = sizeof(T) * numslots;
 
         // cast the pointer
         T *ptr = reinterpret_cast<T*>(data);
-        auto ret_ptr = std::shared_ptr<T>(new T[NUMSLOTS],
+        auto ret_ptr = std::shared_ptr<T>(new T[numslots],
                 std::default_delete< T[]>());
 
         std::memcpy(ret_ptr.get(), ptr, size);
@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    int NUMSLOTS;
+    int numslots;
 };
 
 void sleep_forever() {
@@ -74,10 +74,6 @@ const char IP[] = "10.10.49.86";
 static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
-
-struct Msg {
-    int id;
-};
 
 struct Model {
     double model[100];
@@ -100,6 +96,13 @@ void random_init(Model& model) {
 }
 
 /**
+  * This task is used to compute the training error in the background
+  */
+void training_error_task(const std::string& config_path) {
+
+}
+
+/**
   * This is the task that runs the parameter server
   * This task is responsible for
   * 1) sending the model to the workers
@@ -117,44 +120,82 @@ void run_ps_task(const std::string& config_path) {
 
     sleep(3);
 
+    // we need n object stores for different types of data:
+    // 1. model
+    // 2. gradient
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<Msg>
-        store(IP, PORT, &client,
-            cirrus::serializer_simple<Msg>,
-            cirrus::deserializer_simple<Msg,
-                sizeof(Msg)>);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<Model>
+        model_store(IP, PORT, &client,
+            cirrus::serializer_model<Model>,
+            cirrus::deserializer_model<Model,
+                sizeof(Model)>);
+    cirrus::ostore::FullBladeObjectStoreTempl<Gradient>
+        gradient_store(IP, PORT, &client,
+            cirrus::serializer_gradient<Gradient>,
+            cirrus::deserializer_gradient<Gradient,
+                sizeof(Gradient)>);
 
     Model model;
     random_init(model);
 
-    for (int i = 0; i < 10; ++i) {
-        Msg m;
-        m.id = 1337;
-        store.put(1, m);
-        std::cout << "Parameter Server task changed" << std::endl;
+    // we keep a count of the gradient for each worker
+    std::vector<int> gradientCounts;
+
+    while (1) {
+        // for every worker, check for a new gradient computed
+        // if there is a new gradient, get it and update the model
+        // once model is updated publish it
+        for (int i = 0; i < nworkers; ++i) {
+
+            // get gradient from store
+            auto gradient = gradient_store.get(gradient_id(i));
+
+            // check if this is a gradient we haven't used before
+            if (gradient.getCount() > gradientCounts[i]) {
+                // if it's new
+                gradientCounts[i] = gradient.getCount();
+
+                // do a gradient step and update model
+                LOG<INFO>("Updating model");
+                update_model(model, gradient);
+
+                LOG<INFO>("Publishing model");
+                // publish the model back to the store so workers can use it
+                publish_model(model);
+            }
+        }
     }
 
     sleep(1000);
 }
 
 void run_worker_task(const std::string& config_path) {
-    
-    sleep(5);
 
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<Msg>
-        store(IP, PORT, &client,
-            cirrus::serializer_simple<Msg>,
-            cirrus::deserializer_simple<Msg,
-                sizeof(Msg)>);
+    cirrus::ostore::FullBladeObjectStoreTempl<Gradient>
+        gradient_store(IP, PORT, &client,
+            cirrus::serializer_simple<Gradient>,
+            cirrus::deserializer_simple<Gradient,
+                sizeof(Gradient)>);
+    cirrus::ostore::FullBladeObjectStoreTempl<Model>
+        model_store(IP, PORT, &client,
+                cirrus::serializer_model<Model>,
+                cirrus::deserializer_model<Model,
+                sizeof(Model)>);
 
     while (1) {
         // get model from parameter server
         // get data from iterator
         // compute gradient from model and data
         // send gradient to object store
-    }
 
+        // maybe we can wait a few iterations to get the model
+        auto model = model.get(model_id);
+
+        auto gradient = compute_gradient(model);
+        gradient_store.put(gradient_id, gradient);
+    }
 
     sleep(1000);
 }
@@ -226,7 +267,6 @@ void run_loading_task(const std::string& config_path) {
 
     sleep_forever();
 }
-
 
 void run_tasks(int rank, const std::string& config_path) {
     if (rank == 0) {
