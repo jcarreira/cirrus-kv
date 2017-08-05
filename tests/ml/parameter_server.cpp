@@ -15,15 +15,29 @@
 
 #include "Input.h"
 #include "Utils.h"
+#include "Model.h"
+#include "LRModel.h"
+#include "ModelGradient.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Time.h"
+#include "utils/Log.h"
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
 
 #define INSTS (1000000) // 1 million
 #define LOADING_DONE (INSTS + 1)
+#define LEARNING_RATE (1e-5)
+
+#define MODEL_GRAD_SIZE 10
+#define GRADIENT_BASE 1000
+#define MODEL_BASE 2000
+#define EPSILON 0.1
+int nworkers = 5;
+
+using cirrus::LOG;
+using cirrus::INFO;
 
 template<typename T>
 class c_array_serializer_simple {
@@ -62,6 +76,76 @@ private:
     int numslots;
 };
 
+
+/**
+  * LRModel serializer / deserializer
+  */
+class lr_model_serializer {
+public:
+    lr_model_serializer(int n) : n(n) {}
+
+    std::pair<std::unique_ptr<char[]>, unsigned int>
+    operator()(const LRModel& v) {
+        auto model_serialized = v.serialize();
+
+        //return std::make_pair(model_serialized.first,
+        //                    static_cast<unsigned int>(model_serialized.second));
+        return model_serialized;
+    }
+
+private:
+    int n;
+}; 
+
+class lr_model_deserializer {
+public:
+    lr_model_deserializer(uint64_t n) : n(n) {}
+    
+    LRModel
+    operator()(void* data, unsigned int /* size */) {
+        LRModel model(n);
+        model.loadSerialized(data);
+        return model;
+    }
+
+private:
+    uint64_t n;
+};
+
+/**
+  * LRGradient serializer / deserializer
+  */
+class lr_gradient_serializer {
+public:
+    lr_gradient_serializer(int n) : n(n) {}
+
+    std::pair<std::unique_ptr<char[]>, unsigned int>
+    operator()(const LRGradient& g) {
+        std::unique_ptr<char[]> mem(new char[g.getSerializedSize()]);
+        g.serialize(mem.get());
+
+        return std::make_pair(std::move(mem), g.getSerializedSize());
+    }
+
+private:
+    int n;
+}; 
+
+class lr_gradient_deserializer {
+public:
+    lr_gradient_deserializer(uint64_t n) : n(n) {}
+    
+    LRGradient
+    operator()(void* data, unsigned int /* size */) {
+        LRGradient gradient(n);
+        gradient.loadSerialized(data);
+        return gradient;
+    }
+
+private:
+    uint64_t n;
+};
+
 void sleep_forever() {
     while (1) {
         sleep(1000);
@@ -75,24 +159,10 @@ static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
 
-struct Model {
-    double model[100];
-    int size;
-};
-
 void run_memory_task(const std::string& config_path) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
-}
-
-/**
-  * Initialize arbitrarily sized model
-  */
-void random_init(Model& model) {
-    for (uint64_t j = 0; j < model.size; ++j) {
-        model.model[j] = 0.01 * (get_rand_between_0_1() - 0.5);
-    }
 }
 
 /**
@@ -125,19 +195,17 @@ void run_ps_task(const std::string& config_path) {
     // 2. gradient
     cirrus::TCPClient client;
 
-    cirrus::ostore::FullBladeObjectStoreTempl<Model>
+    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
-            cirrus::serializer_model<Model>,
-            cirrus::deserializer_model<Model,
-                sizeof(Model)>);
-    cirrus::ostore::FullBladeObjectStoreTempl<Gradient>
+            lr_model_serializer(MODEL_GRAD_SIZE),
+            lr_model_deserializer(MODEL_GRAD_SIZE));
+    cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
         gradient_store(IP, PORT, &client,
-            cirrus::serializer_gradient<Gradient>,
-            cirrus::deserializer_gradient<Gradient,
-                sizeof(Gradient)>);
+            lr_gradient_serializer(MODEL_GRAD_SIZE),
+            lr_gradient_deserializer(MODEL_GRAD_SIZE));
 
-    Model model;
-    random_init(model);
+    LRModel model(MODEL_GRAD_SIZE);
+    model.randomize();
 
     // we keep a count of the gradient for each worker
     std::vector<int> gradientCounts;
@@ -146,23 +214,25 @@ void run_ps_task(const std::string& config_path) {
         // for every worker, check for a new gradient computed
         // if there is a new gradient, get it and update the model
         // once model is updated publish it
-        for (int i = 0; i < nworkers; ++i) {
+        for (int worker = 0; worker < nworkers; ++worker) {
 
+            int gradient_id = GRADIENT_BASE + worker;
             // get gradient from store
-            auto gradient = gradient_store.get(gradient_id(i));
+            auto gradient = gradient_store.get(gradient_id);
 
             // check if this is a gradient we haven't used before
-            if (gradient.getCount() > gradientCounts[i]) {
+            if (gradient.getCount() > gradientCounts[worker]) {
                 // if it's new
-                gradientCounts[i] = gradient.getCount();
+                gradientCounts[worker] = gradient.getCount();
 
                 // do a gradient step and update model
                 LOG<INFO>("Updating model");
-                update_model(model, gradient);
+
+                model.sgd_update(LEARNING_RATE, &gradient);
 
                 LOG<INFO>("Publishing model");
                 // publish the model back to the store so workers can use it
-                publish_model(model);
+                model_store.put(MODEL_BASE, model);
             }
         }
     }
@@ -173,16 +243,14 @@ void run_ps_task(const std::string& config_path) {
 void run_worker_task(const std::string& config_path) {
 
     cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<Gradient>
+    cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
         gradient_store(IP, PORT, &client,
-            cirrus::serializer_simple<Gradient>,
-            cirrus::deserializer_simple<Gradient,
-                sizeof(Gradient)>);
-    cirrus::ostore::FullBladeObjectStoreTempl<Model>
+            lr_gradient_serializer(MODEL_GRAD_SIZE),
+            lr_gradient_deserializer(MODEL_GRAD_SIZE));
+    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
-                cirrus::serializer_model<Model>,
-                cirrus::deserializer_model<Model,
-                sizeof(Model)>);
+                lr_model_serializer(MODEL_GRAD_SIZE),
+                lr_model_deserializer(MODEL_GRAD_SIZE));
 
     while (1) {
         // get model from parameter server
@@ -191,9 +259,10 @@ void run_worker_task(const std::string& config_path) {
         // send gradient to object store
 
         // maybe we can wait a few iterations to get the model
-        auto model = model.get(model_id);
+        auto model = model_store.get(MODEL_BASE);
 
-        auto gradient = compute_gradient(model);
+        // compute mini batch gradient
+        auto gradient = model.minibatch_grad(rank, dataset, labels, EPSILON);
         gradient_store.put(gradient_id, gradient);
     }
 
