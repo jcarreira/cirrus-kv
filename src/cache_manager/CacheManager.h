@@ -6,6 +6,9 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
+
+
+#include "object_store/ObjectStore.h"
 #include "cache_manager/EvictionPolicy.h"
 #include "cache_manager/PrefetchPolicy.h"
 #include "object_store/FullBladeObjectStore.h"
@@ -15,9 +18,9 @@
 namespace cirrus {
 using ObjectID = uint64_t;
 
-  /**
-    * A class that manages the cache and interfaces with the store.
-    */
+/**
+ * A class that manages the cache and interfaces with the store.
+ */
 template<class T>
 class CacheManager {
  public:
@@ -37,6 +40,10 @@ class CacheManager {
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
+    void removeBulk(ObjectID first, ObjectID last);
+    void prefetchBulk(ObjectID first, ObjectID last);
+    void get_bulk(ObjectID start, ObjectID last, T* data);
+    void put_bulk(ObjectID start, ObjectID last, T* data);
     void setMode(PrefetchMode mode,
             cirrus::PrefetchPolicy<T> *policy = nullptr);
     void setMode(PrefetchMode mode, ObjectID first, ObjectID last,
@@ -127,30 +134,35 @@ class CacheManager {
     void evict(ObjectID oid);
 
     /**
-      * A pointer to a store that contains the same type of object as the
-      * cache. This is the store that the cache manager interfaces with in order
-      * to access the remote store.
-      */
-    cirrus::ostore::FullBladeObjectStoreTempl<T> *store;
-
-    /**
-      * Struct that is stored within the cache. Contains a copy of an object
-      * of the type that the cache is storing.
-      */
+     * Struct that is stored within the cache. Contains a copy of an object
+     * of the type that the cache is storing.
+     */
     struct cache_entry {
-      T obj; /**< Object that will be retrieved by a get() operation. */
+        /** Boolean indicating whether this item is in the cache. */
+        bool cached = true;
+        /** Object that will be retrieved by a get() operation. */
+        T obj;
+        /** Future indicating status of operation */
+        typename cirrus::ObjectStore<T>::ObjectStoreGetFuture future;
     };
 
     /**
-      * The map that serves as the actual cache. Maps ObjectIDs to cache
-      * entries.
-      */
+     * A pointer to a store that contains the same type of object as the
+     * cache. This is the store that the cache manager interfaces with in order
+     * to access the remote store.
+     */
+    cirrus::ObjectStore<T> *store;
+
+    /**
+     * The map that serves as the actual cache. Maps ObjectIDs to cache
+     * entries.
+     */
     std::map<ObjectID, struct cache_entry> cache;
 
     /**
-      * The maximum capacity of the cache. Will never be exceeded. Set
-      * at time of instantiation.
-      */
+     * The maximum capacity of the cache. Will never be exceeded. Set
+     * at time of instantiation.
+     */
     uint64_t max_size;
 
     /**
@@ -207,14 +219,27 @@ T CacheManager<T>::get(ObjectID oid) {
     std::vector<ObjectID> to_remove = eviction_policy->get(oid);
     evict_vector(to_remove);
     // check if entry exists for the oid in cache
-    // if entry exists, return if it is there, otherwise wait
-    // return pointer
     struct cache_entry *entry;
-    if (cache.find(oid) != cache.end()) {
-        entry = &(cache.find(oid)->second);
+
+    LOG<INFO>("Cache get called on oid: ", oid);
+    auto cache_iterator = cache.find(oid);
+    if (cache_iterator != cache.end()) {
+        LOG<INFO>("Entry exists for oid: ", oid);
+        // entry exists for the oid
+        // Call future's get method if the object is not cached
+        entry = &(cache_iterator->second);
+        if (!entry->cached) {
+            LOG<INFO>("oid was prefetched");
+            // TODO(Tyler): Should we return the result of the get directly
+            // and avoid a potential extra copy? Tradeoff is copy now vs
+            // copy in the future in case of repeated access.
+            entry->obj = entry->future.get();
+            entry->cached = true;
+        }
     } else {
+        // entry does not exist.
         // set up entry, pull synchronously
-        // Do we save to the cache in this case?
+        // TODO(Tyler): Do we save to the cache in this case?
         if (cache.size() == max_size) {
           throw cirrus::CacheCapacityException("Get operation would put cache "
                                              "over capacity.");
@@ -242,13 +267,54 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
     std::vector<ObjectID> to_remove = eviction_policy->put(oid);
     evict_vector(to_remove);
     // Push the object to the store under the given id
+    // TODO(Tyler): Should we switch this to an async op for greater
+    // performance potentially? what to do with the futures?
     store->put(oid, obj);
+}
+
+/**
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param start the first objectID that should be pulled from the store.
+ * @param the last objectID that should be pulled from the store.
+ * @param data a pointer to a c style array that will be filled from the
+ * remote store.
+ */
+template<class T>
+void CacheManager<T>::get_bulk(ObjectID start, ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for get_bulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    for (int i = 0; i < numObjects; i++) {
+        data[i] = get(start + i);
+    }
+}
+
+/**
+ * Puts many objects to the remote store at once.
+ * @param start the objectID that should be assigned to the first object
+ * @param the objectID that should be assigned to the last object
+ * @param data a pointer the first object in a c style array that will
+ * be put to the remote store.
+ */
+template<class T>
+void CacheManager<T>::put_bulk(ObjectID start, ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for put_bulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    for (int i = 0; i < numObjects; i++) {
+        put(start + i, data[i]);
+    }
 }
 
 /**
   * A function that fetches an object from the remote server and stores it in
   * the cache, but does not return the object. Should be called in advance of
-  * the object being used in order to reduce latency. If object is already
+  * the object being accessed in order to reduce latency. If object is already
   * in the cache, no call will be made to the remote server.
   * @param oid the ObjectID that the object you wish to retrieve is stored
   * under.
@@ -258,9 +324,11 @@ void CacheManager<T>::prefetch(ObjectID oid) {
     std::vector<ObjectID> to_remove = eviction_policy->prefetch(oid);
     evict_vector(to_remove);
     LOG<INFO>("Prefetching oid: ", oid);
+    // Check if it exists locally before calling the store method
     if (cache.find(oid) == cache.end()) {
-      struct cache_entry& entry = cache[oid];
-      entry.obj = store->get(oid);
+        struct cache_entry& entry = cache[oid];
+        entry.cached = false;
+        entry.future = store->get_async(oid);
     }
 }
 
@@ -278,6 +346,36 @@ void CacheManager<T>::remove(ObjectID oid) {
         cache.erase(it);
     }
     eviction_policy->remove(oid);
+}
+
+/**
+ * Prefetches a range of objects.
+ * @param first the first ObjectID to prefetch
+ * @param last the last ObjectID to prefetch
+ */
+template<class T>
+void CacheManager<T>::prefetchBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("Last ObjectID to prefetch must be leq first.");
+    }
+    for (int oid = first; oid <= last; oid++) {
+        prefetch(oid);
+    }
+}
+
+/**
+ * Removes a range of objects from the cache.
+ * @param first the first continuous ObjectID to be removed from the cache
+ * @param last the last ObjectID to be removed
+ */
+template<class T>
+void CacheManager<T>::removeBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("Last ObjectID to remove must be leq first.");
+    }
+    for (int oid = first; oid <= last; oid++) {
+        remove(oid);
+    }
 }
 
 /**
@@ -369,6 +467,8 @@ void CacheManager<T>::setMode(CacheManager::PrefetchMode mode,
       }
     }
 }
+
+
 }  // namespace cirrus
 
 #endif  // SRC_CACHE_MANAGER_CACHEMANAGER_H_

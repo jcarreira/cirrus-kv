@@ -18,12 +18,12 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 128;
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 const int cache_size = 200;  // Arbitrary
 const int MILLION = 1000000;
 
 /**
- * Prints the stats to the given output. 
+ * Prints the stats to the given output.
  * @param out the ostream to write to
  * @param test_name the name of the test that the stats correspond to
  * @param elapsed the number of microseconds elapsed during the test

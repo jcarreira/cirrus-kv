@@ -138,6 +138,10 @@ void TCPServer::loop() {
             // there is at least one pending event, find it.
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
+                // Ignore the fd if we've said we don't care about it
+                if (curr_fd.fd == -1) {
+                    continue;
+                }
                 if (curr_fd.revents != POLLIN) {
                     LOG<INFO>("Non read event on socket: ", curr_fd.fd);
                 } else if (curr_fd.fd == server_sock_) {
@@ -272,6 +276,7 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server checking type of message");
     // Check message type
+    bool success = true;
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
@@ -295,6 +300,7 @@ bool TCPServer::process(int sock) {
                                 " Pool size: ", pool_size);
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
+                    success = false;
                 } else {
                     // Service the write request by
                     //  storing the serialized object
@@ -306,7 +312,7 @@ bool TCPServer::process(int sock) {
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
-                                           true, oid);
+                                           oid, success);
                 auto ack_msg =
                      message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
@@ -323,16 +329,16 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
                 LOG<INFO>("Server extracted oid");
-                bool exists = true;
                 auto entry_itr = store.find(oid);
                 LOG<INFO>("Got pair from store");
+                // If the oid is not on the server, this operation has failed
                 if (entry_itr == store.end()) {
-                    exists = false;
+                    success = false;
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
-                if (exists) {
+                if (success) {
                     fb_vector = builder.CreateVector(store[oid]);
                 } else {
                     std::vector<int8_t> data;
@@ -342,7 +348,7 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
-                                            oid, exists, fb_vector);
+                                            oid, success, fb_vector);
                 auto ack_msg =
                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
                                     txn_id,
@@ -357,8 +363,9 @@ bool TCPServer::process(int sock) {
             {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
-                bool success = false;
+                success = false;
                 auto entry_itr = store.find(oid);
+                // Remove the object if it exists on the server.
                 if (entry_itr != store.end()) {
                     store.erase(entry_itr);
                     curr_size -= entry_itr->second.size();
@@ -387,7 +394,9 @@ bool TCPServer::process(int sock) {
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
     if (send(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
-        throw cirrus::Exception("Server error sending message back to client");
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
     }
 
     LOG<INFO>("Server sent size.");
@@ -395,7 +404,9 @@ bool TCPServer::process(int sock) {
     // Send main message
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {
-        throw cirrus::Exception("Server error sending message back to client");
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
     }
 
     LOG<INFO>("Server sent ack of size: ", message_size);

@@ -10,15 +10,21 @@
 
 namespace cirrus {
 
-class RDMAObjectStore : public ObjectStore {
+template<class T>
+class RDMAObjectStore : public ObjectStore<T> {
  public:
     RDMAObjectStore(const std::string& blade_addr,
         const std::string& port, EvictionPolicy* ev);
     virtual ~RDMAObjectStore() = default;
 
-    Object get(ObjectID);
-    bool put(Object, uint64_t, ObjectID);
-    virtual void printStats();
+    Object get(ObjectID) override;
+    bool put(Object, uint64_t, ObjectID) override;
+    ObjectStoreGetFuture get_async(const ObjectID& id) override;
+    ObjectStorePutFuture put_async(const ObjectID& id, const T& obj) override;
+
+    void get_bulk(ObjectID start, ObjectID last, T* data) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data) override;
+    void printStats() override;
 
  private:
     std::unique_ptr<EvictionPolicy> ep;

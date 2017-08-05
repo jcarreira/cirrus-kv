@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -15,7 +16,6 @@
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 #include "common/Synchronization.h"
 
@@ -97,11 +97,11 @@ void TCPClient::connect(const std::string& address,
   * be read read from.
   * @param size the size of the serialized object being read from
   * local memory.
-  * @return A Future that contains information about the status of the
+  * @return A ClientFuture that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
-                                                    uint64_t size) {
+BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
+                                    uint64_t size) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
     // Create flatbuffer builder
@@ -139,7 +139,7 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
+BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
                                      uint64_t /* size */) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
@@ -173,7 +173,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid, void* data,
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
     LOG<INFO>("Call to write_sync");
-    cirrus::Future future = write_async(oid, data, size);
+    BladeClient::ClientFuture future = write_async(oid, data, size);
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -190,7 +190,7 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   */
 bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
     LOG<INFO>("Call to read_sync.");
-    cirrus::Future future = read_async(oid, data, size);
+    BladeClient::ClientFuture future = read_async(oid, data, size);
     LOG<INFO>("Returned from read_async.");
     return future.get();
 }
@@ -220,7 +220,7 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(builder, txn_id);
+    BladeClient::ClientFuture future = enqueue_message(builder, txn_id);
     return future.get();
 }
 
@@ -254,6 +254,8 @@ void TCPClient::process_received() {
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
+                char *info = strerror(errno);
+                LOG<ERROR>(info);
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
@@ -448,9 +450,9 @@ void TCPClient::process_send() {
   * @param builder a shared_ptr to a FlatBufferBuilder, containing the
   * message.
   * @param An optional argument. Pointer to memory for read operations.
-  * @return Returns a Future.
+  * @return Returns a ClientFuture.
   */
-cirrus::Future TCPClient::enqueue_message(
+BladeClient::ClientFuture TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
             const int txn_id, void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
@@ -467,8 +469,8 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->result_available,
-                          txn->sem, txn->error_code);
+    BladeClient::ClientFuture future(txn->result, txn->result_available,
+                                     txn->sem, txn->error_code);
 
     // Obtain lock on send queue
     queue_lock.wait();

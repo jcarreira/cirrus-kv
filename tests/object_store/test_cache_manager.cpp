@@ -77,8 +77,6 @@ class SimpleCustomPolicy : public cirrus::PrefetchPolicy<T> {
     }
 };
 
-
-
 /**
   * Test simple synchronous put and get to/from the object store.
   * Uses simpler objects than test_fullblade_store.
@@ -168,8 +166,9 @@ void test_array() {
   * linear prefetching mode.
   */
 void test_linear_prefetch() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -193,7 +192,11 @@ void test_linear_prefetch() {
     auto duration = end - start;
     auto duration_micro =
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
-    if (duration_micro.count() > 5) {
+    // Use a threshold of ten because things are slow on the first timed access
+    // Typically takes 4-5 µs but sometimes spikes to 15
+    // Safe as a store.get takes 200+ µs on RDMA and TCP
+
+    if (duration_micro.count() > 30) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
         throw std::runtime_error("Get took too long likely not prefetched.");
     }
@@ -203,8 +206,9 @@ void test_linear_prefetch() {
   * This test tests that custom prefetching policies work properly.
   */
 void test_custom_prefetch() {
-    cirrus::TCPClient client;
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, &client,
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
@@ -229,9 +233,9 @@ void test_custom_prefetch() {
     auto duration = end - start;
     auto duration_micro =
         std::chrono::duration_cast<std::chrono::microseconds>(duration);
-    if (duration_micro.count() > 5) {
+    if (duration_micro.count() > 150) {
         std::cout << "Elapsed is: " << duration_micro.count() << std::endl;
-        throw std::runtime_error("Get took too long, "
+        throw std::runtime_error("Custom get took too long, "
             "likely not prefetched.");
     }
 }
@@ -283,6 +287,82 @@ void test_remove() {
     // Attempt to get item, this should fail
     cm.get(0);
 }
+
+/**
+ * Tests to ensure that when the cache manager's removeBulk method is called
+ * the objects are removed from the store as well.
+ */
+void test_remove_bulk() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    // Remove the items
+    cm.removeBulk(0, 9);
+
+    // Attempt to get all items in the removed range, should fail
+    for (int i = 0; i < 10; i++) {
+        try {
+            cm.get(i);
+            std::cout << "Exception not thrown after attempting to access item "
+                "that should have been removed." << std::endl;
+            throw std::runtime_error("No exception when getting removed id.");
+        } catch (const cirrus::NoSuchIDException& e) {
+        }
+    }
+}
+
+/**
+ * Tests to ensure that when prefetchBulk is called the items are actually
+ * prefetched.
+ */
+void test_prefetch_bulk() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    for (int i = 0; i < 10; i++) {
+        cm.put(i, i);
+    }
+
+    cm.prefetchBulk(0, 9);
+
+    // Sleep for a bit to allow the items to be retrieved
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Fail if any of the gets take more than a few microseconds
+    for (int i = 0; i < 10; i++) {
+        auto start = std::chrono::system_clock::now();
+        cm.get(i);
+        auto end = std::chrono::system_clock::now();
+        auto duration = end - start;
+        auto duration_micro =
+            std::chrono::duration_cast<std::chrono::microseconds>(duration);
+        // First get is normally slow for some reason
+        if (i != 0) {
+            if (duration_micro.count() > 5) {
+                std::cout << "Elapsed is: "
+                    << duration_micro.count() << std::endl;
+                throw std::runtime_error("Prefetch bulk get took too long, "
+                    "likely not prefetched.");
+            }
+        }
+    }
+}
 /**
   * This test tests the behavior of the cache manager when instantiated with
   * a maximum capacity of zero. Should throw cirrus::CacheCapacityException.
@@ -325,6 +405,55 @@ void test_lradded() {
     }
 }
 
+/**
+ * This test tests that get_bulk() and put_bulk() return proper values.
+ */
+void test_bulk() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+
+    std::vector<int> values(10);
+    for (int i = 0; i < 10; i++) {
+        values[i] = i;
+    }
+
+    cm.put_bulk(0, 9, values.data());
+
+    std::vector<int> ret_values(10);
+    cm.get_bulk(0, 9, ret_values.data());
+    for (int i = 0; i < 10; i++) {
+        if (ret_values[i] != values[i]) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned");
+        }
+    }
+}
+
+/**
+ * This test ensures that error messages that would normally be generated
+ * during a get are still received during a get bulk.
+ */
+void test_bulk_nonexistent() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+    cm.put(1, 1);
+    std::vector<int> ret_values(10);
+    cm.get_bulk(1492, 1501, ret_values.data());
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
@@ -348,6 +477,8 @@ auto main(int argc, char *argv[]) -> int {
     } catch (const cirrus::NoSuchIDException& e) {
     }
 
+    test_remove_bulk();
+
     try {
         test_instantiation();
         std::cout << "Exception not thrown when cache"
@@ -364,6 +495,18 @@ auto main(int argc, char *argv[]) -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+
+    test_prefetch_bulk();
+    test_bulk();
+
+    try {
+        test_bulk_nonexistent();
+        std::cout << "No exception thrown when get bulk called on nonexistent "
+            " ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException & e) {
+    }
+
     test_linear_prefetch();
     test_custom_prefetch();
     std::cout << "test successful" << std::endl;
