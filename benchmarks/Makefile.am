@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
-                cache_benchmark 1_2
+                cache_benchmark 1_2 outstanding_requests
 
 LIBS         = 	-lcityhash -lclient \
                	-lauthentication -lutils -lcommon -levictionpolicies \
@@ -59,3 +59,10 @@ cache_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 			   -I$(top_srcdir)/examples/sparsehash/src/ \
 			    -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
 cache_benchmark_LDADD    = $(LINCLUDES) $(LIBS)
+
+outstanding_requests_SOURCES  = outstanding_requests.cpp
+outstanding_requests_LDFLAGS  = -pthread
+outstanding_requests_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			      -I$(top_srcdir)/examples/sparsehash/src/ \
+			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+outstanding_requests_LDADD    = $(LINCLUDES) $(LIBS)

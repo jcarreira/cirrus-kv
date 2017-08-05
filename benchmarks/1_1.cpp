@@ -41,11 +41,9 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
 }
 
 /**
-  * This benchmarks has two aims. The first aim is to find the distribution of
-  * latencies for synchronous puts. To do this it times the time taken for
-  * one million puts spread across 1000 object ids. The second aim is to
-  * measure the throughput in terms of messages sent per second, which it
-  * achieves by measuring the time needed for ten million puts.
+  * This benchmarks has two aims
+  * 1. find the distribution of latencies for synchronous puts
+  * 2. measure the throughput in terms of messages sent / second
   */
 void test_sync() {
     cirrus::TCPClient client;

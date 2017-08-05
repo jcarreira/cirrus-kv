@@ -8,7 +8,8 @@ import time
 
 benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"],
     ["./benchmarks/iterator_benchmark"], ["./benchmarks/cache_benchmark"],
-    ["./benchmarks/1_2"]]
+    ["./benchmarks/1_2"], ["./benchmarks/outstanding_requests"]]
+
 server_name =  ["./src/server/tcpservermain"]
 
 for benchmark in benchmarks:
