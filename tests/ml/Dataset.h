@@ -30,7 +30,7 @@ class Dataset {
       * @param samples Vector of samples
       * @param labels Vector of labels
       * @param n_samples Nunber of samples in the dataset
-      * @param n_labels Number of labels in the dataset
+      * @param n_features Number of features on each sample
       */
     Dataset(const double* samples,
             const double* labels,
@@ -54,8 +54,12 @@ class Dataset {
       * @param sample Sample index
       * @returns Pointer to dataset sample
       */
-    const double* sample(uint64_t sample) {
+    const double* sample(uint64_t sample) const {
         return samples_.row(sample);
+    }
+    
+    const double* label(uint64_t label) const {
+        return labels_.get() + label;
     }
 
  public:

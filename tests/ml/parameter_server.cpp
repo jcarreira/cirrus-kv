@@ -34,10 +34,32 @@
 #define GRADIENT_BASE 1000
 #define MODEL_BASE 2000
 #define EPSILON 0.1
-int nworkers = 5;
+int nworkers = 1;
+
+int features_per_sample = 10; 
+int samples_per_batch =100;
+int batch_size = samples_per_batch * features_per_sample;
 
 using cirrus::LOG;
 using cirrus::INFO;
+
+// This is used for non-array objects
+template<typename T>
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                         serializer_simple(const T& v) {
+    std::unique_ptr<char[]> ptr(new char[sizeof(T)]);
+    std::memcpy(ptr.get(), &v, sizeof(T));
+    return std::make_pair(std::move(ptr), sizeof(T));
+}
+
+/* Takes a pointer to raw mem passed in and returns as object. */
+template<typename T, unsigned int SIZE>
+T deserializer_simple(void* data, unsigned int /* size */) {
+    T *ptr = reinterpret_cast<T*>(data);
+    T ret;
+    std::memcpy(&ret, ptr, SIZE);
+    return ret;
+}
 
 template<typename T>
 class c_array_serializer_simple {
@@ -46,7 +68,13 @@ public:
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
+        T* array = v.get();
+
+        // allocate array
         std::unique_ptr<char[]> ptr(new char[numslots]);
+
+        // copy samples to array
+        memcpy(ptr.get(), array, numslots * sizeof(T));
         return std::make_pair(std::move(ptr), numslots);
     }
 
@@ -243,15 +271,34 @@ void run_ps_task(const std::string& config_path) {
 void run_worker_task(const std::string& config_path) {
 
     cirrus::TCPClient client;
+
+    // used to publish the gradient
     cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
         gradient_store(IP, PORT, &client,
             lr_gradient_serializer(MODEL_GRAD_SIZE),
             lr_gradient_deserializer(MODEL_GRAD_SIZE));
+
+    // this is used to access the most up to date model
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
                 lr_model_serializer(MODEL_GRAD_SIZE),
                 lr_model_deserializer(MODEL_GRAD_SIZE));
 
+    // this is used to access the training data sample
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+        samples_store(IP, PORT, &client,
+                c_array_serializer_simple<double>(batch_size),
+                c_array_deserializer_simple<double>(batch_size));
+    
+    // this is used to access the training labels
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+        labels_store(IP, PORT, &client,
+                c_array_serializer_simple<double>(batch_size),
+                c_array_deserializer_simple<double>(batch_size));
+
+    int samples_id = 0;
+    int labels_id  = 0;
+    int gradient_id = GRADIENT_BASE;
     while (1) {
         // get model from parameter server
         // get data from iterator
@@ -261,9 +308,13 @@ void run_worker_task(const std::string& config_path) {
         // maybe we can wait a few iterations to get the model
         auto model = model_store.get(MODEL_BASE);
 
+        auto samples = samples_store.get(samples_id);
+        auto labels = labels_store.get(labels_id);
+        Dataset dataset(samples.get(), labels.get(), samples_per_batch, features_per_sample);
+
         // compute mini batch gradient
-        auto gradient = model.minibatch_grad(rank, dataset, labels, EPSILON);
-        gradient_store.put(gradient_id, gradient);
+        auto gradient = model.minibatch_grad(0, dataset.samples_, labels.get(), samples_per_batch, EPSILON);
+        gradient_store.put(gradient_id, *dynamic_cast<LRGradient*>(gradient.get()));
     }
 
     sleep(1000);
@@ -279,23 +330,20 @@ void run_loading_task(const std::string& config_path) {
         << std::endl;
 
     Input input;
-    int features_per_sample = 10; 
-    int batch_size = 100; 
+
     auto dataset = input.read_input_csv(
             "/nscratch/joao/criteo_data/day_0_test_1K.csv", " ", 3,
             features_per_sample, true);
 
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        ostore(IP, PORT, &client,
+        samples_store(IP, PORT, &client,
                 c_array_serializer_simple<double>(features_per_sample),
                 c_array_deserializer_simple<double>(features_per_sample));
-
-    cirrus::TCPClient client2;
-    cirrus::ostore::FullBladeObjectStoreTempl<int>
-        inst_store(IP, PORT, &client2,
-            cirrus::serializer_simple<int>,
-            cirrus::deserializer_simple<int, sizeof(int)>);
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+        labels_store(IP, PORT, &client,
+                c_array_serializer_simple<double>(samples_per_batch),
+                c_array_deserializer_simple<double>(samples_per_batch));
 
     std::cout << "Read "
         << dataset.samples()
@@ -310,11 +358,24 @@ void run_loading_task(const std::string& config_path) {
 
     // We put in batches of N samples
     for (int i = 0; i < dataset.samples() / batch_size; ++i) {
+        /**
+          * Build sample object
+          */
         auto sample = std::shared_ptr<double>(
                             new double[batch_size * features_per_sample],
                         std::default_delete<double[]>());
+        // this memcpy can be avoided with some trickery
         std::memcpy(sample.get(), dataset.sample(i * batch_size),
                 sizeof(double) * batch_size * features_per_sample);
+        /**
+          * Build label object
+          */
+        auto label = std::shared_ptr<double>(
+                            new double[batch_size],
+                        std::default_delete<double[]>());
+        // this memcpy can be avoided with some trickery
+        std::memcpy(label.get(), dataset.label(i * batch_size),
+                sizeof(double) * batch_size);
 
         std::cout << "Adding object id: "
             << i
@@ -322,17 +383,15 @@ void run_loading_task(const std::string& config_path) {
             << std::endl;
 
         try {
-            ostore.put(i, sample);
+            samples_store.put(i, sample);
+            labels_store.put(i, label);
         } catch(...) {
             std::cout << "Caught exception" << std::endl;
             exit(-1);
         }
     }
 
-    std::cout << "Setting loading done to 1" << std::endl;
-    int done = 1;
-    inst_store.put(LOADING_DONE, done);
-    std::cout << "Setting loading done to 1 completed" << std::endl;
+    std::cout << "Added all samples" << std::endl;
 
     sleep_forever();
 }

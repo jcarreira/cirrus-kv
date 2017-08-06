@@ -82,7 +82,8 @@ class LRModel : public Model {
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
             int rank, const Matrix& dataset,
-            std::vector<double> labels,
+            double* labels,
+            uint64_t labels_size,
             double epsilon) const override;
     /**
      * Compute the logistic loss of a given dataset on the current model
