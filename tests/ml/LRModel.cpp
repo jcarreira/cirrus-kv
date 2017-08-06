@@ -62,7 +62,8 @@ void LRModel::loadSerialized(const void* data) {
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         int rank, const Matrix& dataset,
-        std::vector<double> labels,
+        double* labels,
+        uint64_t labels_size,
         double epsilon) const {
     auto w = weights;
 
@@ -77,14 +78,14 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
 
     // create vector with labels
-    Eigen::Map<Eigen::VectorXd> lab(labels.data(), labels.size());
+    Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
 
     // apply logistic function to matrix multiplication
     // between dataset and weights
     auto part1_1 = (ds * weights);
     auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
 
-    Eigen::Map<Eigen::VectorXd> lbs(labels.data(), labels.size());
+    Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
 
     // compute difference between labels and logistic probability
     auto part2 = lbs - part1;

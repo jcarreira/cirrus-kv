@@ -89,7 +89,8 @@ class Model {
        */
      virtual std::unique_ptr<ModelGradient> minibatch_grad(
                 int rank, const Matrix& dataset,
-                std::vector<double> labels,
+                double* labels,
+                uint64_t labels_size,
                 double epsilon) const = 0;
 };
 
