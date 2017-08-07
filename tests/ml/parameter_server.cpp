@@ -34,7 +34,7 @@
 #define GRADIENT_BASE 1000
 #define MODEL_BASE 2000
 #define EPSILON 0.1
-int nworkers = 1;
+uint64_t nworkers = 1;
 
 int features_per_sample = 10; 
 int samples_per_batch =100;
@@ -71,11 +71,11 @@ public:
         T* array = v.get();
 
         // allocate array
-        std::unique_ptr<char[]> ptr(new char[numslots]);
+        std::unique_ptr<char[]> ptr(new char[numslots * sizeof(T)]);
 
         // copy samples to array
         memcpy(ptr.get(), array, numslots * sizeof(T));
-        return std::make_pair(std::move(ptr), numslots);
+        return std::make_pair(std::move(ptr), numslots * sizeof(T));
     }
 
 private:
@@ -232,17 +232,18 @@ void run_ps_task(const std::string& config_path) {
             lr_gradient_serializer(MODEL_GRAD_SIZE),
             lr_gradient_deserializer(MODEL_GRAD_SIZE));
 
+    // initialize model
     LRModel model(MODEL_GRAD_SIZE);
     model.randomize();
 
-    // we keep a count of the gradient for each worker
+    // we keep a version number for the gradient produced by each worker
     std::vector<int> gradientCounts;
 
     while (1) {
         // for every worker, check for a new gradient computed
         // if there is a new gradient, get it and update the model
         // once model is updated publish it
-        for (int worker = 0; worker < nworkers; ++worker) {
+        for (uint32_t worker = 0; worker < nworkers; ++worker) {
 
             int gradient_id = GRADIENT_BASE + worker;
             // get gradient from store
@@ -265,7 +266,7 @@ void run_ps_task(const std::string& config_path) {
         }
     }
 
-    sleep(1000);
+    sleep_forever();
 }
 
 void run_worker_task(const std::string& config_path) {
@@ -315,13 +316,17 @@ void run_worker_task(const std::string& config_path) {
         // compute mini batch gradient
         auto gradient = model.minibatch_grad(0, dataset.samples_, labels.get(), samples_per_batch, EPSILON);
         gradient_store.put(gradient_id, *dynamic_cast<LRGradient*>(gradient.get()));
+
+        // move to next batch of samples
+        samples_id++;
+        labels_id++;
     }
 
     sleep(1000);
 }
 
 /**
-  * This task is used to load the object store with the training dataset
+  * Load the object store with the training dataset
   * It reads from the criteo dataset files and writes to the object store
   * It signals when work is done by changing a bit in the object store
   */
@@ -357,33 +362,39 @@ void run_loading_task(const std::string& config_path) {
         << std::endl;
 
     // We put in batches of N samples
-    for (int i = 0; i < dataset.samples() / batch_size; ++i) {
+    for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
+        
+        LOG<INFO>("Building samples batch");
         /**
           * Build sample object
           */
         auto sample = std::shared_ptr<double>(
-                            new double[batch_size * features_per_sample],
+                            new double[samples_per_batch * features_per_sample],
                         std::default_delete<double[]>());
         // this memcpy can be avoided with some trickery
-        std::memcpy(sample.get(), dataset.sample(i * batch_size),
-                sizeof(double) * batch_size * features_per_sample);
+        std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
+                sizeof(double) * batch_size);
+        
+        LOG<INFO>("Building labels batch");
         /**
           * Build label object
           */
         auto label = std::shared_ptr<double>(
-                            new double[batch_size],
+                            new double[samples_per_batch],
                         std::default_delete<double[]>());
         // this memcpy can be avoided with some trickery
-        std::memcpy(label.get(), dataset.label(i * batch_size),
-                sizeof(double) * batch_size);
+        std::memcpy(label.get(), dataset.label(i * samples_per_batch),
+                sizeof(double) * samples_per_batch);
 
-        std::cout << "Adding object id: "
+        std::cout << "Adding sample batch id: "
             << i
-            << " with size: " << sizeof(double) * batch_size * features_per_sample
+            << " samples with size: " << sizeof(double) * batch_size
             << std::endl;
 
         try {
+            std::cout << "Putting sample" << std::endl;
             samples_store.put(i, sample);
+            std::cout << "Putting label" << std::endl;
             labels_store.put(i, label);
         } catch(...) {
             std::cout << "Caught exception" << std::endl;
@@ -401,11 +412,12 @@ void run_tasks(int rank, const std::string& config_path) {
         run_memory_task(config_path);
     } else if (rank == 1) {
         sleep(10000);
-        //run_ps_task(config_path);
+        run_ps_task(config_path);
     } else if (rank == 2) {
         sleep(10000);
         //run_worker_task(config_path);
     } else if (rank == 3) {
+        sleep(5);
         run_loading_task(config_path);
     } else {
         throw std::runtime_error("Wrong number of tasks");
@@ -425,7 +437,7 @@ void init_mpi(int argc, char**argv) {
 }
 
 void print_arguments() {
-    std::cout << "./parameter_server <task number>" << std::endl;
+    std::cout << "./parameter_server task_number" << std::endl;
     std::cout << "Task types: "
         << "0: memory" << std::endl
         << "1: ps" << std::endl
@@ -465,6 +477,7 @@ int main(int argc, char** argv) {
         << std::endl;
 
     std::string config_path = argv[1];
+    // call the right task for this process
     run_tasks(rank, config_path);
 
     MPI_Finalize();
