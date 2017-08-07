@@ -202,6 +202,13 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     return total_sent;
 }
 
+/**
+  * Read header from client's message or return false if client has disconnected
+  * @param buffer Buffer where data is stored
+  * @param sock Socket used for communication
+  * @param bytes_read Keeps track of how many bytes have been read
+  * @param Return false if client disconnected, true otherwise
+  */
 bool TCPServer::read_from_client(
         std::vector<char>& buffer, int sock, int& bytes_read) {
     bool first_loop = true;
@@ -257,7 +264,7 @@ bool TCPServer::process(int sock) {
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
-    TimerFunction resize_time("", false);
+    TimerFunction resize_time;
 #endif
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
@@ -270,7 +277,7 @@ bool TCPServer::process(int sock) {
     bytes_read = 0;
 
 #ifdef PERF_LOG
-    TimerFunction receive_time("", false);
+    TimerFunction receive_time;
 #endif
     // XXX shouldn't this be in a recv_all?
     while (bytes_read < incoming_size) {
@@ -286,11 +293,11 @@ bool TCPServer::process(int sock) {
         LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
     }
 #ifdef PERF_LOG
-    double recv_mbs = bytes_read / (1024.0 * 1024) /
+    double recv_mbps = bytes_read / (1024.0 * 1024) /
         (receive_time.getUsElapsed() / 1000000.0);
     LOG<PERF>("TCPServer::process receive time (us): ",
             receive_time.getUsElapsed(),
-            " bw (MB/s): ", recv_mbs);
+            " bw (MB/s): ", recv_mbps);
 #endif
     LOG<INFO>("Server received full message from client");
 
@@ -310,7 +317,7 @@ bool TCPServer::process(int sock) {
         case message::TCPBladeMessage::Message_Write:
             {
 #ifdef PERF_LOG
-                TimerFunction write_time("", false);
+                TimerFunction write_time;
 #endif
                 LOG<INFO>("Server processing write request.");
 
@@ -353,11 +360,11 @@ bool TCPServer::process(int sock) {
                                     ack.Union());
                 builder.Finish(ack_msg);
 #ifdef PERF_LOG
-                double write_mbs = data_fb->size() / (1024.0 * 1024) /
+                double write_mbps = data_fb->size() / (1024.0 * 1024) /
                     (write_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process write time (us): ",
                         write_time.getUsElapsed(),
-                        " bw (MB/s): ", write_mbs,
+                        " bw (MB/s): ", write_mbps,
                         " size: ", data_fb->size());
 #endif
                 break;
@@ -365,7 +372,7 @@ bool TCPServer::process(int sock) {
         case message::TCPBladeMessage::Message_Read:
             {
 #ifdef PERF_LOG
-                TimerFunction read_time("", false);
+                TimerFunction read_time;
 #endif
                 /* Service the read request by sending the serialized object
                  to the client */
@@ -401,11 +408,11 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
-                double read_mbs = entry_itr->second.size() / (1024.0 * 1024) /
+                double read_mbps = entry_itr->second.size() / (1024.0 * 1024) /
                     (read_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process read time (us): ",
                         read_time.getUsElapsed(),
-                        " bw (MB/s): ", read_mbs,
+                        " bw (MB/s): ", read_mbps,
                         " size: ", entry_itr->second.size());
 #endif
                 break;
@@ -454,7 +461,7 @@ bool TCPServer::process(int sock) {
     LOG<INFO>("On server error code is: ", static_cast<int64_t>(error_code));
     // Send main message
 #ifdef PERF_LOG
-    TimerFunction reply_time("", false);
+    TimerFunction reply_time;
 #endif
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {
@@ -463,11 +470,11 @@ bool TCPServer::process(int sock) {
         return false;
     }
 #ifdef PERF_LOG
-    double reply_mbs = message_size / (1024.0 * 1024) /
+    double reply_mbps = message_size / (1024.0 * 1024) /
         (reply_time.getUsElapsed() / 1000000.0);
     LOG<PERF>("TCPServer::process reply time (us): ",
             reply_time.getUsElapsed(),
-            " bw (MB/s): ", reply_mbs);
+            " bw (MB/s): ", reply_mbps);
 #endif
 
     LOG<INFO>("Server sent ack of size: ", message_size);

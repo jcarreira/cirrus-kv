@@ -106,7 +106,7 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
     TEST_Z(data);
 
 #ifdef PERF_LOG
-    TimerFunction builder_timer("", false);
+    TimerFunction builder_timer;
 #endif
     // Create flatbuffer builder
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
@@ -151,7 +151,7 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
 BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
                                      uint64_t /* size */) {
 #ifdef PERF_LOG
-    TimerFunction builder_timer("", false);
+    TimerFunction builder_timer;
 #endif
 
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
@@ -294,7 +294,7 @@ void TCPClient::process_received() {
                   incoming_size);
 
 #ifdef PERF_LOG
-        TimerFunction receive_msg_time("", false);
+        TimerFunction receive_msg_time;
 #endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
@@ -317,11 +317,11 @@ void TCPClient::process_received() {
                                                         " bytes.");
         }
 #ifdef PERF_LOG
-        double receive_mbs = bytes_read / (1024 * 1024.0) /
+        double receive_mbps = bytes_read / (1024 * 1024.0) /
             (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
         LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
                 receive_msg_time.getUsElapsed(),
-                " bw (MB/s): ", receive_mbs);
+                " bw (MB/s): ", receive_mbps);
 #endif
 
         // Extract the flatbuffer from the receiving buffer
@@ -329,7 +329,7 @@ void TCPClient::process_received() {
         TxnID txn_id = ack->txnid();
 
 #ifdef PERF_LOG
-        TimerFunction map_time("", false);
+        TimerFunction map_time;
 #endif
         // obtain lock on map
         map_lock.wait();
@@ -471,7 +471,7 @@ void TCPClient::process_send() {
         }
 
 #ifdef PERF_LOG
-        TimerFunction send_time("", false);
+        TimerFunction send_time;
 #endif
         LOG<INFO>("Client sending main message");
         // Send main message
@@ -480,11 +480,11 @@ void TCPClient::process_send() {
             throw cirrus::Exception("Client error sending data to server");
         }
 #ifdef PERF_LOG
-        double send_mbs = message_size / (1024 * 1024.0) /
+        double send_mbps = message_size / (1024 * 1024.0) /
             (send_time.getUsElapsed() / 1000.0 / 1000.0);
         LOG<PERF>("TCPClient::process_send send time (us): ",
                 send_time.getUsElapsed(),
-                " bw (MB/s): ", send_mbs);
+                " bw (MB/s): ", send_mbps);
 #endif
         LOG<INFO>("message pair sent by client");
 
@@ -505,7 +505,7 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
             const int txn_id, void *ptr) {
 #ifdef PERF_LOG
-    TimerFunction enqueue_time("", false);
+    TimerFunction enqueue_time;
 #endif
 
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();

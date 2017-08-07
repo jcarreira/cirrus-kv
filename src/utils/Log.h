@@ -13,6 +13,8 @@
 
 namespace cirrus {
 
+enum { INFO_TAG = 1, ERROR_TAG = 2, PERF_TAG = 3};
+
 struct INFO {
     static const int value = 1;
     constexpr static const char* prefix = "[INFO]";
@@ -62,9 +64,9 @@ bool LOG(Params&& ... param) {
         }
     }
 
-    if ( (T::value == 1 && INFO_SWITCH <= 0) ||
-         (T::value == 2 && ERROR_SWITCH <= 0) ||
-         (T::value == 3 && PERF_SWITCH <= 0)) {
+    if ( (T::value == INFO_TAG  && INFO_SWITCH <= 0) ||
+         (T::value == ERROR_TAG && ERROR_SWITCH <= 0) ||
+         (T::value == PERF_TAG  && PERF_SWITCH <= 0)) {
         return true;
     }
 

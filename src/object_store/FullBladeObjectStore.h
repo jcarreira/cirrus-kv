@@ -173,7 +173,7 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 
     // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
 #ifdef PERF_LOG
-    TimerFunction serialize_time("", false);
+    TimerFunction serialize_time;
 #endif
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
@@ -199,7 +199,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
 #ifdef PERF_LOG
-    TimerFunction serialize_time("", false);
+    TimerFunction serialize_time;
 #endif
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
     serialized_size = serializer_out.second;
