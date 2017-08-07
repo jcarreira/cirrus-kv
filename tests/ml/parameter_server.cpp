@@ -25,6 +25,7 @@
 #include "utils/Log.h"
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
+#include "common/Exception.h"
 
 #define INSTS (1000000) // 1 million
 #define LOADING_DONE (INSTS + 1)
@@ -40,8 +41,8 @@ int features_per_sample = 10;
 int samples_per_batch =100;
 int batch_size = samples_per_batch * features_per_sample;
 
-using cirrus::LOG;
-using cirrus::INFO;
+//using cirrus::LOG;
+//using cirrus::INFO;
 
 // This is used for non-array objects
 template<typename T>
@@ -216,11 +217,10 @@ void run_ps_task(const std::string& config_path) {
     // communication PS -> workers
     // object ids 10000 + worker ID
 
-    sleep(3);
-
     // we need n object stores for different types of data:
     // 1. model
     // 2. gradient
+    std::cout << "PS connecting to store" << std::endl;
     cirrus::TCPClient client;
 
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
@@ -232,12 +232,26 @@ void run_ps_task(const std::string& config_path) {
             lr_gradient_serializer(MODEL_GRAD_SIZE),
             lr_gradient_deserializer(MODEL_GRAD_SIZE));
 
+
+    std::cout << "PS task initializing model" << std::endl;
     // initialize model
     LRModel model(MODEL_GRAD_SIZE);
     model.randomize();
+    std::cout << "PSPublishing model" << std::endl;
+    // publish the model back to the store so workers can use it
+    model_store.put(MODEL_BASE, model);
+    
+    std::cout << "PS getting model" << std::endl;
+    auto m = model_store.get(MODEL_BASE);
+    std::cout << "PS model is here" << std::endl;
 
     // we keep a version number for the gradient produced by each worker
     std::vector<int> gradientCounts;
+    for (uint32_t i = 0; i < gradientCounts.size(); ++i) {
+        gradientCounts.push_back(0);
+    }
+
+    bool first_time = true;
 
     while (1) {
         // for every worker, check for a new gradient computed
@@ -246,8 +260,23 @@ void run_ps_task(const std::string& config_path) {
         for (uint32_t worker = 0; worker < nworkers; ++worker) {
 
             int gradient_id = GRADIENT_BASE + worker;
+            std::cout << "PS task checkint gradient id: " << gradient_id << std::endl;
             // get gradient from store
-            auto gradient = gradient_store.get(gradient_id);
+
+            LRGradient gradient(MODEL_GRAD_SIZE);
+            try {
+                gradient = gradient_store.get(gradient_id);
+            } catch(const cirrus::NoSuchIDException& e) {
+                if (!first_time) {
+                    throw std::runtime_error("Error in exception");
+                }
+                // this happens because the worker task
+                // has not uploaded the gradient yet
+                sleep(1);
+                continue;
+            }
+
+            first_time = false;
 
             // check if this is a gradient we haven't used before
             if (gradient.getCount() > gradientCounts[worker]) {
@@ -255,21 +284,21 @@ void run_ps_task(const std::string& config_path) {
                 gradientCounts[worker] = gradient.getCount();
 
                 // do a gradient step and update model
-                LOG<INFO>("Updating model");
+                std::cout << "Updating model" << std::endl;
 
                 model.sgd_update(LEARNING_RATE, &gradient);
 
-                LOG<INFO>("Publishing model");
+                std::cout << "Publishing model" << std::endl;
                 // publish the model back to the store so workers can use it
                 model_store.put(MODEL_BASE, model);
             }
         }
     }
-
-    sleep_forever();
 }
 
 void run_worker_task(const std::string& config_path) {
+
+    std::cout << "Worker task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
 
@@ -297,6 +326,8 @@ void run_worker_task(const std::string& config_path) {
                 c_array_serializer_simple<double>(batch_size),
                 c_array_deserializer_simple<double>(batch_size));
 
+    bool first_time = true;
+
     int samples_id = 0;
     int labels_id  = 0;
     int gradient_id = GRADIENT_BASE;
@@ -307,22 +338,44 @@ void run_worker_task(const std::string& config_path) {
         // send gradient to object store
 
         // maybe we can wait a few iterations to get the model
-        auto model = model_store.get(MODEL_BASE);
+        std::cout << "Worker task getting the model" << std::endl;
+        LRModel model(MODEL_GRAD_SIZE);
+        std::shared_ptr<double> samples;
+        std::shared_ptr<double> labels;;
+        try {
+            model = model_store.get(MODEL_BASE);
 
-        auto samples = samples_store.get(samples_id);
-        auto labels = labels_store.get(labels_id);
-        Dataset dataset(samples.get(), labels.get(), samples_per_batch, features_per_sample);
+            std::cout << "Worker task getting the training data with id: " <<
+                    samples_id << std::endl;
+            samples = samples_store.get(samples_id);
+            labels = labels_store.get(labels_id);
+        } catch(const cirrus::NoSuchIDException& e) {
+            if (!first_time) {
+                throw std::runtime_error("Error in exception");
+            }
+            // this happens because the ps task
+            // has not uploaded the model yet
+            sleep(1);
+            continue;
+        }
+        first_time = false;
 
+        Dataset dataset(samples.get(), labels.get(),
+                samples_per_batch, features_per_sample);
+
+        std::cout << "Worker task computing gradient" << std::endl;
         // compute mini batch gradient
-        auto gradient = model.minibatch_grad(0, dataset.samples_, labels.get(), samples_per_batch, EPSILON);
-        gradient_store.put(gradient_id, *dynamic_cast<LRGradient*>(gradient.get()));
+        auto gradient = model.minibatch_grad(0, dataset.samples_,
+                labels.get(), samples_per_batch, EPSILON);
+        
+        std::cout << "Worker task storing gradient" << std::endl;
+        gradient_store.put(gradient_id,
+                           *dynamic_cast<LRGradient*>(gradient.get()));
 
         // move to next batch of samples
         samples_id++;
         labels_id++;
     }
-
-    sleep(1000);
 }
 
 /**
@@ -364,7 +417,7 @@ void run_loading_task(const std::string& config_path) {
     // We put in batches of N samples
     for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
         
-        LOG<INFO>("Building samples batch");
+        std::cout << "Building samples batch" << std::endl;
         /**
           * Build sample object
           */
@@ -375,7 +428,7 @@ void run_loading_task(const std::string& config_path) {
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
         
-        LOG<INFO>("Building labels batch");
+        std::cout << "Building labels batch" << std::endl;
         /**
           * Build label object
           */
@@ -408,14 +461,17 @@ void run_loading_task(const std::string& config_path) {
 }
 
 void run_tasks(int rank, const std::string& config_path) {
+    std::cout << "Run tasks rank: " << rank << std::endl;
     if (rank == 0) {
         run_memory_task(config_path);
     } else if (rank == 1) {
-        sleep(10000);
+        sleep(8);
         run_ps_task(config_path);
+        sleep_forever();
     } else if (rank == 2) {
-        sleep(10000);
-        //run_worker_task(config_path);
+        sleep(10);
+        run_worker_task(config_path);
+        sleep_forever();
     } else if (rank == 3) {
         sleep(5);
         run_loading_task(config_path);

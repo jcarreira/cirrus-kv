@@ -94,6 +94,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
+    serialized_size(0),
     serializer(serializer), deserializer(deserializer) {
     client->connect(bladeIP, port);
 }
@@ -109,6 +110,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
        occured, thus setting the value of serialized_size. */
     if (serialized_size == 0) {
         // TODO(Tyler): throw error message if get before put
+        throw NoSuchIDException("No such ID");
     }
     /* This allocation provides a buffer to read the serialized object
        into. */
