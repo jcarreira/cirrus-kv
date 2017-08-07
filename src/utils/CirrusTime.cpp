@@ -29,6 +29,10 @@ double TimerFunction::getUsElapsed() const {
     return getNsElapsed() / 1000.0;
 }
 
+double TimerFunction::getSecElapsed() const {
+    return getUsElapsed() / 1000000.0;
+}
+
 std::string getTimeNow() {
     // std::chrono::time_point<std::chrono::high_resolution_clock,
     //    std::chrono::milliseconds> start = std::chrono::system_clock::now();

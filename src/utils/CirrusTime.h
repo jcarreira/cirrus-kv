@@ -22,6 +22,7 @@ class TimerFunction {
 
     uint64_t getNsElapsed() const;
     double getUsElapsed() const;
+    double getSecElapsed() const;
 
     using Time = std::chrono::high_resolution_clock;
     using ns = std::chrono::nanoseconds;
