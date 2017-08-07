@@ -22,7 +22,7 @@
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 static const uint32_t SIZE = 128;
 
 /**
@@ -42,8 +42,8 @@ void test_async(int N) {
     struct cirrus::Dummy<SIZE> d(42);
     cirrus::TimerFunction tfs[N];
 
-    std::function<bool(bool)> futures[N];
-
+    cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture futures[N];
+    std::cout << "Warming up." << std::endl;
     // warm up
     for (int i = 0; i < N; ++i) {
         store.put(i, d);
@@ -57,13 +57,13 @@ void test_async(int N) {
 
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
-        futures[i] = store.put_async(&d, sizeof(cirrus::Dummy<SIZE>), i);
+        futures[i] = store.put_async(i, d);
     }
-
+    std::cout << "N puts started." << std::endl;
     while (total_done != N) {
         for (int i = 0; i < N; ++i) {
             if (!done[i]) {
-                bool ret = futures[i](true);
+                bool ret = futures[i].try_wait();
                 if (ret) {
                     done[i] = true;
                     total_done++;
@@ -93,8 +93,9 @@ void test_async(int N) {
 }
 
 auto main() -> int {
-    // test burst of 1000 async writes
-    test_async(1000);
+    std::cout << "Benchmark 1_2 started." << std::endl;
+    // test burst of 100 async writes
+    test_async(100);
 
     return 0;
 }

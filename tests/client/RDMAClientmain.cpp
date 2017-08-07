@@ -14,11 +14,10 @@
 #include "tests/object_store/object_store_internal.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
-
 const char PORT[] = "12345";
+const char *IP;
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-static const char IP[] = "10.10.49.84";
 
 
 /**
@@ -104,6 +103,7 @@ void test_performance() {
         std::make_unique<cirrus::Dummy<size>>(42);
     std::unique_ptr<cirrus::Dummy<size>> d2 =
         std::make_unique<cirrus::Dummy<size>>(0);
+
     {
         cirrus::TimerFunction tf("Timing write", true);
         client.write_sync(0, *d, serializer);
@@ -119,9 +119,95 @@ void test_performance() {
     }
 }
 
-auto main() -> int {
+/**
+ * Simple test verifying that basic asynchronous put/get works as intended.
+ */
+void test_async() {
+    cirrus::RDMAClient client;
+    cirrus::serializer_simple<int> serializer;
+    client.connect(IP, PORT);
+
+    int message = 42;
+    auto future = client.write_async(1, message, serializer);
+    std::cout << "write sync complete" << std::endl;
+
+    if (!future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    int returned;
+    auto read_future = client.read_async(1, &returned, sizeof(int));
+
+    if (!read_future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    std::cout << returned << " returned from server" << std::endl;
+
+    if (returned != message) {
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+template <int N>
+void test_async_N() {
+    cirrus::RDMAClient client;
+    cirrus::serializer_simple<int> serializer;
+    client.connect(IP, PORT);
+    std::vector<cirrus::BladeClient::ClientFuture> put_futures;
+    std::vector<cirrus::BladeClient::ClientFuture> get_futures;
+
+    int i;
+    for (i = 0; i < N; i++) {
+        int val = i;
+        put_futures.push_back(client.write_async(i, val, serializer));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put.");
+        }
+    }
+    std::cout << "BEGINNING READS" << std::endl;
+    int ret_values[10];
+    for (i = 0; i < N; i++) {
+        int val;
+        client.read_sync(i, &val, sizeof(int));
+        if (val != i) {
+            std::cout << "Expected " << i << "but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned test_async_N");
+        }
+    }
+
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(client.read_async(i, &ret_values[i],
+            sizeof(int)));
+    }
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        bool success = get_futures[i].get();
+        if (!success) {
+            throw std::runtime_error("Error during an async read");
+        }
+        if (ret_values[i] != i) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
+        }
+    }
+}
+
+auto main(int argc, char *argv[]) -> int {
+    IP = cirrus::test_internal::ParseIP(argc, argv);
     test_1_client();
     test_2_clients();
     test_performance();
+    test_async();
+    test_async_N<10>();
     return 0;
 }

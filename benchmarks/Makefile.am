@@ -1,10 +1,11 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = 	throughput 1_1 1_3 iterator_benchmark #TODO(Tyler): add 1_2 as it requires async later
+bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
+                cache_benchmark 1_2 outstanding_requests
 
 LIBS         = 	-lcityhash \
                	-lauthentication -lutils -lcommon -levictionpolicies \
-			    $(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
@@ -21,13 +22,13 @@ LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-I$(top_srcdir)/third_party/flatbuffers/include
 1_1_LDADD    = 	$(LINCLUDES) $(LIBS)
 
-#1_2_SOURCES  = 1_2.cpp
-#1_2_LDFLAGS  = -pthread
-#1_2_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
-#               -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
-#               -I$(top_srcdir)/src
-#		-I$(top_srcdir)/third_party/flatbuffers/include
-#1_2_LDADD    = $(LINCLUDES) $(LIBS)
+1_2_SOURCES  = 1_2.cpp
+1_2_LDFLAGS  = -pthread
+1_2_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
+               -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+               -I$(top_srcdir)/src \
+	       -I$(top_srcdir)/third_party/flatbuffers/include
+1_2_LDADD    = $(LINCLUDES) $(LIBS)
 
 1_3_SOURCES  = 	1_3.cpp
 1_3_LDFLAGS  = 	-pthread
@@ -51,3 +52,17 @@ iterator_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 			      -I$(top_srcdir)/examples/sparsehash/src/ \
 			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
 iterator_benchmark_LDADD    = $(LINCLUDES) $(LIBS)
+
+cache_benchmark_SOURCES  = cache_benchmark.cpp
+cache_benchmark_LDFLAGS  = -pthread
+cache_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			   -I$(top_srcdir)/examples/sparsehash/src/ \
+			    -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+cache_benchmark_LDADD    = $(LINCLUDES) $(LIBS)
+
+outstanding_requests_SOURCES  = outstanding_requests.cpp
+outstanding_requests_LDFLAGS  = -pthread
+outstanding_requests_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+			      -I$(top_srcdir)/examples/sparsehash/src/ \
+			      -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+outstanding_requests_LDADD    = $(LINCLUDES) $(LIBS)
