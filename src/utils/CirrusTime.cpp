@@ -19,10 +19,14 @@ void TimerFunction::reset() {
     t0 = Time::now();
 }
 
-uint64_t TimerFunction::getUsElapsed() const {
+uint64_t TimerFunction::getNsElapsed() const {
     auto t1 = Time::now();
-    us d_us = std::chrono::duration_cast<us>(t1 - t0);
-    return d_us.count();
+    ns d_ns = std::chrono::duration_cast<ns>(t1 - t0);
+    return d_ns.count();
+}
+
+double TimerFunction::getUsElapsed() const {
+    return getNsElapsed() / 1000.0;
 }
 
 std::string getTimeNow() {

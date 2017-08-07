@@ -285,9 +285,11 @@ bool TCPServer::process(int sock) {
         LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
     }
 #ifdef PERF_LOG
+    double recv_mbs = bytes_read / (1024.0 * 1024) /
+        (receive_time.getUsElapsed() / 1000000.0);
     LOG<PERF>("TCPServer::process receive time (us): ",
             receive_time.getUsElapsed(),
-            " bw (MB/s): ", bytes_read / (1024.0 * 1024) / receive_time.getUsElapsed() / (1000000.0));
+            " bw (MB/s): ", recv_mbs);
 #endif
     LOG<INFO>("Server received full message from client");
 
@@ -350,9 +352,12 @@ bool TCPServer::process(int sock) {
                                     ack.Union());
                 builder.Finish(ack_msg);
 #ifdef PERF_LOG
+                double write_mbs = data_fb->size() / (1024.0 * 1024) /
+                    (write_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process write time (us): ",
                         write_time.getUsElapsed(),
-                        " bw (MB/s): ", data_fb->size() / (1024.0 * 1024) / write_time.getUsElapsed() / (1000000.0));
+                        " bw (MB/s): ", write_mbs,
+                        " size: ", data_fb->size());
 #endif
                 break;
             }
@@ -395,9 +400,12 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
+                double read_mbs = entry_itr->second.size() / (1024.0 * 1024) /
+                    (read_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process read time (us): ",
                         read_time.getUsElapsed(),
-                        " bw (MB/s): ", entry_itr->second.size() / (1024.0 * 1024) / read_time.getUsElapsed() / (1000000.0));
+                        " bw (MB/s): ", read_mbs,
+                        " size: ", entry_itr->second.size());
 #endif
                 break;
             }
@@ -454,9 +462,11 @@ bool TCPServer::process(int sock) {
         return false;
     }
 #ifdef PERF_LOG
+    double reply_mbs = message_size / (1024.0 * 1024) /
+        (reply_time.getUsElapsed() / 1000000.0);
     LOG<PERF>("TCPServer::process reply time (us): ",
             reply_time.getUsElapsed(),
-            " bw (MB/s): ", message_size / (1024.0 * 1024) / reply_time.getUsElapsed() / (1000000.0));
+            " bw (MB/s): ", reply_mbs);
 #endif
 
     LOG<INFO>("Server sent ack of size: ", message_size);
