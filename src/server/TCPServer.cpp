@@ -130,6 +130,7 @@ void TCPServer::loop() {
         LOG<INFO>("Server calling poll.");
         int poll_status = poll(fds.data(), num_fds, timeout);
         LOG<INFO>("Poll returned with status: ", poll_status);
+
         if (poll_status == -1) {
             throw cirrus::ConnectionException("Server error calling poll.");
         } else if (poll_status == 0) {
@@ -201,23 +202,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     return total_sent;
 }
 
-/**
-  * Process the message incoming on a particular socket. Reads in the message
-  * from the socket, extracts the flatbuffer, and then acts depending on
-  * the type of the message.
-  * @param sock the file descriptor for the socket with an incoming message.
-  */
-bool TCPServer::process(int sock) {
-    LOG<INFO>("Processing socket: ", sock);
-    std::vector<char> buffer;
-
-    // Read in the incoming message
-
-    // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
-    buffer.reserve(current_buf_size);
-    int bytes_read = 0;
-
+bool TCPServer::read_from_client(std::vector<char>& buffer, int sock, int& bytes_read) {
     bool first_loop = true;
     while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,
@@ -238,6 +223,31 @@ bool TCPServer::process(int sock) {
         bytes_read += retval;
         first_loop = false;
     }
+    return true;
+}
+
+/**
+  * Process the message incoming on a particular socket. Reads in the message
+  * from the socket, extracts the flatbuffer, and then acts depending on
+  * the type of the message.
+  * @param sock the file descriptor for the socket with an incoming message.
+  */
+bool TCPServer::process(int sock) {
+    LOG<INFO>("Processing socket: ", sock);
+    std::vector<char> buffer;
+
+    // Read in the incoming message
+
+    // Reserve the size of a 32 bit int
+    int current_buf_size = sizeof(uint32_t);
+    buffer.reserve(current_buf_size);
+    int bytes_read = 0;
+
+    bool ret = read_from_client(buffer, sock, bytes_read);
+    if (!ret) {
+        return false;
+    }
+
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
@@ -245,12 +255,23 @@ bool TCPServer::process(int sock) {
     int incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
+#ifdef PERF_LOG
+    TimerFunction resize_time("", false);
+#endif
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
     }
+#ifdef PERF_LOG
+    LOG<PERF>("TCPServer::process resize time (us): ",
+            resize_time.getUsElapsed());
+#endif
 
     bytes_read = 0;
 
+#ifdef PERF_LOG
+    TimerFunction receive_time("", false);
+#endif
+    // XXX shouldn't this be in a recv_all?
     while (bytes_read < incoming_size) {
         int retval = read(sock, buffer.data() + bytes_read,
                           incoming_size - bytes_read);
@@ -263,6 +284,11 @@ bool TCPServer::process(int sock) {
         bytes_read += retval;
         LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
     }
+#ifdef PERF_LOG
+    LOG<PERF>("TCPServer::process receive time (us): ",
+            receive_time.getUsElapsed(),
+            " bw (MB/s): ", bytes_read / (1024.0 * 1024) / receive_time.getUsElapsed() / (1000000.0));
+#endif
     LOG<INFO>("Server received full message from client");
 
     // Extract the message from the buffer
@@ -280,6 +306,9 @@ bool TCPServer::process(int sock) {
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
+#ifdef PERF_LOG
+                TimerFunction write_time("", false);
+#endif
                 LOG<INFO>("Server processing write request.");
 
                 // first see if the object exists on the server.
@@ -320,10 +349,18 @@ bool TCPServer::process(int sock) {
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
                 builder.Finish(ack_msg);
+#ifdef PERF_LOG
+                LOG<PERF>("TCPServer::process write time (us): ",
+                        write_time.getUsElapsed(),
+                        " bw (MB/s): ", data_fb->size() / (1024.0 * 1024) / write_time.getUsElapsed() / (1000000.0));
+#endif
                 break;
             }
         case message::TCPBladeMessage::Message_Read:
             {
+#ifdef PERF_LOG
+                TimerFunction read_time("", false);
+#endif
                 /* Service the read request by sending the serialized object
                  to the client */
                 LOG<INFO>("Processing read request");
@@ -339,7 +376,7 @@ bool TCPServer::process(int sock) {
                 }
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
-                    fb_vector = builder.CreateVector(store[oid]);
+                    fb_vector = builder.CreateVector(entry_itr->second);
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
@@ -357,6 +394,11 @@ bool TCPServer::process(int sock) {
                                     ack.Union());
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
+#ifdef PERF_LOG
+                LOG<PERF>("TCPServer::process read time (us): ",
+                        read_time.getUsElapsed(),
+                        " bw (MB/s): ", entry_itr->second.size() / (1024.0 * 1024) / read_time.getUsElapsed() / (1000000.0));
+#endif
                 break;
             }
         case message::TCPBladeMessage::Message_Remove:
@@ -402,12 +444,20 @@ bool TCPServer::process(int sock) {
     LOG<INFO>("Server sent size.");
     LOG<INFO>("On server error code is: ", static_cast<int64_t>(error_code));
     // Send main message
+#ifdef PERF_LOG
+    TimerFunction reply_time("", false);
+#endif
     if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
         != message_size) {
         LOG<ERROR>("Server error sending message back to client. "
             "Possible client died");
         return false;
     }
+#ifdef PERF_LOG
+    LOG<PERF>("TCPServer::process reply time (us): ",
+            reply_time.getUsElapsed(),
+            " bw (MB/s): ", message_size / (1024.0 * 1024) / reply_time.getUsElapsed() / (1000000.0));
+#endif
 
     LOG<INFO>("Server sent ack of size: ", message_size);
     LOG<INFO>("Server done processing message from client");
