@@ -21,6 +21,7 @@ class TimerFunction {
     void reset();
 
     uint64_t getUsElapsed() const;
+    double getSecElapsed() const;
 
     using Time = std::chrono::high_resolution_clock;
     using us = std::chrono::microseconds;

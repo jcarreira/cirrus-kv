@@ -19,9 +19,12 @@ namespace cirrus {
   */
 template<unsigned int SIZE>
 struct Dummy {
+public:
+    explicit Dummy(int id = 1492) : id(id) {}
+
+public:
     char data[SIZE];
     int id;
-    explicit Dummy(int id = 1492) : id(id) {}
 };
 
 /**
