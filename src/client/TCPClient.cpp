@@ -268,6 +268,7 @@ void TCPClient::process_received() {
         LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
         while (bytes_read < sizeof(uint32_t)) {
+            // I believe this needs to stay as a plain syscall as we check errno
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
@@ -277,6 +278,8 @@ void TCPClient::process_received() {
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
+                    LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
+                        retval);
                     throw cirrus::Exception("Issue in reading socket. "
                                             "Full size not read");
                 }
@@ -431,22 +434,17 @@ ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
  * @return the number of bytes sent.
  */
 ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
-    uint64_t to_read = len;
     uint64_t bytes_read = 0;
 
-    while (bytes_read < to_read) {
-        int64_t newly_read = read(sock,
-            reinterpret_cast<char*>(data) + bytes_read,
+    while (bytes_read < len) {
+        int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
             len - bytes_read);
 
-        if (newly_read < 0) {
+        if (retval < 0) {
             throw cirrus::Exception("Error reading from server");
         }
 
-        bytes_read += newly_read;
-
-        // Increment the pointer to the buffer by the amount just read
-        data = static_cast<char*>(data) + newly_read;
+        bytes_read += retval;
     }
 
     return bytes_read;

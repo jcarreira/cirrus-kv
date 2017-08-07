@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <string.h>
 #include <map>
 #include <vector>
 #include "utils/logging.h"
@@ -203,6 +204,32 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
 }
 
 /**
+ * Guarantees that an entire message is read.
+ * @param sock the fd of the socket to read on.
+ * @param data a pointer to the buffer to read into.
+ * @param len the number of bytes to read.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPServer::read_all(int sock, void* data, size_t len) {
+    uint64_t bytes_read = 0;
+
+    while (bytes_read < len) {
+        int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
+            len - bytes_read);
+
+        if (retval == -1) {
+            char *error = strerror(errno);
+            LOG<ERROR>(error);
+            throw cirrus::Exception("Error reading from client");
+        }
+
+        bytes_read += retval;
+    }
+
+    return bytes_read;
+}
+
+/**
   * Read header from client's message or return false if client has disconnected
   * @param buffer Buffer where data is stored
   * @param sock Socket used for communication
@@ -262,42 +289,37 @@ bool TCPServer::process(int sock) {
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
-    #ifdef PERF_LOG
-        TimerFunction resize_time;
-    #endif
+#ifdef PERF_LOG
+    TimerFunction resize_time;
+#endif
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
     }
-    #ifdef PERF_LOG
-        LOG<PERF>("TCPServer::process resize time (us): ",
-                resize_time.getUsElapsed());
-    #endif
+#ifdef PERF_LOG
+    LOG<PERF>("TCPServer::process resize time (us): ",
+            resize_time.getUsElapsed());
+#endif
 
-    bytes_read = 0;
 
-    #ifdef PERF_LOG
-        TimerFunction receive_time;
-    #endif
+#ifdef PERF_LOG
+    TimerFunction receive_time;
+#endif
     // XXX shouldn't this be in a recv_all?
-    while (bytes_read < incoming_size) {
-        int retval = read(sock, buffer.data() + bytes_read,
-                          incoming_size - bytes_read);
 
-        if (retval < 0) {
-            throw cirrus::Exception("Serverside error while "
-                                    "reading full message.");
-        }
+    uint64_t retval = read_all(sock, buffer.data(), incoming_size);
 
-        bytes_read += retval;
-        LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
+    if (retval != incoming_size) {
+        LOG<ERROR>("Expected :", incoming_size, " but got ", retval);
+        throw cirrus::Exception("Wrong number of bytes read");
     }
-    #ifdef PERF_LOG
-        double recv_mbps = bytes_read / (1024.0 * 1024) /
-            (receive_time.getUsElapsed() / 1000000.0);
-        LOG<PERF>("TCPServer::process receive time (us): ",
-                receive_time.getUsElapsed(),
-                " bw (MB/s): ", recv_mbps);
-    #endif
+
+#ifdef PERF_LOG
+    double recv_mbps = bytes_read / (1024.0 * 1024) /
+        (receive_time.getUsElapsed() / 1000000.0);
+    LOG<PERF>("TCPServer::process receive time (us): ",
+            receive_time.getUsElapsed(),
+            " bw (MB/s): ", recv_mbps);
+#endif
     LOG<INFO>("Server received full message from client");
 
     // Extract the message from the buffer
@@ -315,9 +337,9 @@ bool TCPServer::process(int sock) {
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
-                #ifdef PERF_LOG
-                    TimerFunction write_time;
-                #endif
+#ifdef PERF_LOG
+                TimerFunction write_time;
+#endif
                 LOG<INFO>("Server processing write request.");
 
                 // first see if the object exists on the server.
