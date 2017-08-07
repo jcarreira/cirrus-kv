@@ -186,7 +186,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     int64_t sent = 0;
 
     while (to_send != total_sent) {
-        sent = send(sock, data, len, 0);
+        sent = send(sock, data, len - total_sent, 0);
 
         if (sent == -1) {
             throw cirrus::Exception("Server error sending data to client");
@@ -202,6 +202,35 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
 }
 
 /**
+ * Guarantees that an entire message is read.
+ * @param sock the fd of the socket to read on.
+ * @param data a pointer to the buffer to read into.
+ * @param len the number of bytes to read.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPServer::read_all(int sock, void* data, size_t len) {
+    uint64_t to_read = len;
+    uint64_t bytes_read = 0;
+
+    while (bytes_read < to_read) {
+        int64_t newly_read = read(sock,
+            reinterpret_cast<char*>(data) + bytes_read,
+            len - bytes_read);
+
+        if (newly_read < 0) {
+            throw cirrus::Exception("Server error reading data from client");
+        }
+
+        bytes_read += newly_read;
+
+        // Increment the pointer to data we're sending by the amount just sent
+        data = static_cast<char*>(data) + newly_read;
+    }
+
+    return bytes_read;
+}
+
+/**
   * Process the message incoming on a particular socket. Reads in the message
   * from the socket, extracts the flatbuffer, and then acts depending on
   * the type of the message.
@@ -214,55 +243,32 @@ bool TCPServer::process(int sock) {
     // Read in the incoming message
 
     // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
+    uint64_t current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0;
+    int64_t retval;
 
-    bool first_loop = true;
-    while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
-        int retval = read(sock, buffer.data() + bytes_read,
-                          sizeof(uint32_t) - bytes_read);
+    retval = read_all(sock, buffer.data(), sizeof(uint32_t));
 
-        if (first_loop && retval == 0) {
-            // Socket is closed by client if 0 bytes are available
-            close(sock);
-            LOG<INFO>("Closing socket: ", sock);
-            return false;
-        }
-
-        if (retval < 0) {
-            throw cirrus::Exception("Server issue in reading "
-                                    "socket during size read.");
-        }
-
-        bytes_read += retval;
-        first_loop = false;
+    if (retval == 0) {
+        // Socket is closed by client if 0 bytes are available
+        close(sock);
+        LOG<INFO>("Closing socket: ", sock);
+        return false;
     }
+
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                             buffer.data());
-    int incoming_size = ntohl(*incoming_size_ptr);
+    uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
     if (incoming_size > current_buf_size) {
         buffer.resize(incoming_size);
     }
 
-    bytes_read = 0;
+    read_all(sock, buffer.data(), incoming_size);
 
-    while (bytes_read < incoming_size) {
-        int retval = read(sock, buffer.data() + bytes_read,
-                          incoming_size - bytes_read);
-
-        if (retval < 0) {
-            throw cirrus::Exception("Serverside error while "
-                                    "reading full message.");
-        }
-
-        bytes_read += retval;
-        LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
-    }
     LOG<INFO>("Server received full message from client");
 
     // Extract the message from the buffer
@@ -303,7 +309,7 @@ bool TCPServer::process(int sock) {
                     success = false;
                 } else {
                     // Service the write request by
-                    //  storing the serialized object
+                    // storing the serialized object
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id
                     curr_size += data_fb->size();
@@ -393,7 +399,7 @@ bool TCPServer::process(int sock) {
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
-    if (send(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
+    if (send_all(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
         LOG<ERROR>("Server error sending message back to client. "
             "Possible client died");
         return false;

@@ -26,6 +26,8 @@ class TCPServer : public Server {
  private:
     bool process(int sock);
 
+    ssize_t read_all(int sock, void* data, size_t len);
+
     ssize_t send_all(int, const void*, size_t, int);
 
     /** The port that the server is listening on. */
