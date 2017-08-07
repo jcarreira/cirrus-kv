@@ -191,7 +191,9 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
         sent = send(sock, data, len - total_sent, 0);
 
         if (sent == -1) {
-            throw cirrus::Exception("Server error sending data to client");
+            LOG<ERROR>("Server error sending data to client, "
+                "possible client died");
+            return -1;
         }
 
         total_sent += sent;
