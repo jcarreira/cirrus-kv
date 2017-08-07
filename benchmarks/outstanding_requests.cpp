@@ -36,10 +36,11 @@ void test_outstanding_requests(int outstanding_target) {
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
-    
+
     // we have space for outstanding_target futures
     bool send[outstanding_target] = {0};
-    typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture futures[outstanding_target];
+    typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture
+        futures[outstanding_target];
     struct cirrus::Dummy<SIZE> d(42);
 
     uint64_t count_completed = 0;
@@ -59,7 +60,8 @@ void test_outstanding_requests(int outstanding_target) {
             }
 
             if (loop % MILLION == 0) {
-                double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
+                double size_completed_MB = 1.0 * count_completed * SIZE
+                                         / 1024 / 1024;
                 double secs_elapsed = timer.getUsElapsed() / MILLION;
                 double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
                 std::cout << " Estimated Bandwidth: " << bw_MB

@@ -28,6 +28,8 @@ class TCPServer : public Server {
 
     ssize_t send_all(int, const void*, size_t, int);
 
+    bool read_from_client(std::vector<char>&, int, int&);
+
     /** The port that the server is listening on. */
     int port_;
     /** The number of pending connection requests allowed at once. */

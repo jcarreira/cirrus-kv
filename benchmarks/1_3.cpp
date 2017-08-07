@@ -27,7 +27,7 @@ static const uint64_t N_MSG = 100;
 
 uint64_t total_puts = 0;
 uint64_t total_time = 0;
-    
+
 std::atomic<int> count;
 
 void print_results(std::ostream& out) {
