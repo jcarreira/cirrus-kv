@@ -202,7 +202,8 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     return total_sent;
 }
 
-bool TCPServer::read_from_client(std::vector<char>& buffer, int sock, int& bytes_read) {
+bool TCPServer::read_from_client(
+        std::vector<char>& buffer, int sock, int& bytes_read) {
     bool first_loop = true;
     while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,

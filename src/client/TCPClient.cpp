@@ -254,7 +254,7 @@ void TCPClient::process_received() {
     // Reserve the size of a 32 bit int
     int current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0; // XXX shouldn't this be an unsigned int?
+    int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
 
     /**
       * Message format
@@ -317,9 +317,11 @@ void TCPClient::process_received() {
                                                         " bytes.");
         }
 #ifdef PERF_LOG
+        double receive_mbs = bytes_read / (1024 * 1024.0) /
+            (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
         LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
                 receive_msg_time.getUsElapsed(),
-                " bw (MB/s): ", bytes_read / (1024*1024.0) / (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0));
+                " bw (MB/s): ", receive_mbs);
 #endif
 
         // Extract the flatbuffer from the receiving buffer
@@ -376,7 +378,7 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     LOG<INFO>("Client has pointer to vector");
-                    // XXX we should get rid of this 
+                    // XXX we should get rid of this
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
                     LOG<INFO>("Client copied vector");
@@ -478,9 +480,11 @@ void TCPClient::process_send() {
             throw cirrus::Exception("Client error sending data to server");
         }
 #ifdef PERF_LOG
+        double send_mbs = message_size / (1024 * 1024.0) /
+            (send_time.getUsElapsed() / 1000.0 / 1000.0);
         LOG<PERF>("TCPClient::process_send send time (us): ",
                 send_time.getUsElapsed(),
-                " bw (MB/s): ", message_size / (1024*1024.0) / (send_time.getUsElapsed() / 1000.0 / 1000.0));
+                " bw (MB/s): ", send_mbs);
 #endif
         LOG<INFO>("message pair sent by client");
 
