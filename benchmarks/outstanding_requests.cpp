@@ -13,18 +13,17 @@ const char IP[] = "127.0.0.1";
 
 #define KB (1024)
 #define MB (KB * KB)
-// number of secs each benchmrak is going to run for
+// number of secs each benchmark is going to run for
 #define SECS_BENCHMARK 5
 
 struct BenchmarkStruct {
-public:
+ public:
     explicit BenchmarkStruct(int size) : size(size) {
         std::unique_ptr<char[]> ptr(new char[size]);
         data = std::move(ptr);
-        //data = std::make_shared<char[]>(new char[size]);
     }
 
-public:
+ public:
     std::unique_ptr<char[]> data;
     uint64_t size;
 };
@@ -38,8 +37,8 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 
 BenchmarkStruct deserializer(void* data, unsigned int size) {
     char *ptr = reinterpret_cast<char*>(data);
-    
-    BenchmarkStruct ret(size); // not sure if this size arg is valid here
+
+    BenchmarkStruct ret(size);  // not sure if this size arg is valid here
     std::memcpy(ret.data.get(), ptr, size);
     ret.size = size;
     return ret;
@@ -60,10 +59,11 @@ void test_outstanding_requests(int outstanding_target) {
         store(IP, PORT, &client,
             serializer,
             deserializer);
-    
+
     // we have space for outstanding_target futures
     bool send[outstanding_target] = {0};
-    typename cirrus::ObjectStore<BenchmarkStruct>::ObjectStorePutFuture futures[outstanding_target];
+    typename cirrus::ObjectStore<BenchmarkStruct>::ObjectStorePutFuture
+        futures[outstanding_target];
 
     struct BenchmarkStruct d(SIZE);
 
@@ -87,16 +87,15 @@ void test_outstanding_requests(int outstanding_target) {
                 if (timer.getSecElapsed() > SECS_BENCHMARK) {
                     goto end_benchmark;
                 }
-
             }
         }
     }
-                
+
 end_benchmark:
     double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
     double secs_elapsed = timer.getSecElapsed();
     double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
-    std::cout 
+    std::cout
         << "Size (B): "
         << std::left << std::setw(20) << std::setfill(' ')
         << SIZE
