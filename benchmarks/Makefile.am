@@ -1,3 +1,5 @@
+include $(top_srcdir)/common.mk
+
 AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \

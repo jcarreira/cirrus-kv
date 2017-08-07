@@ -58,7 +58,8 @@ class CacheManager {
         /**
          * Return an empty vector to indicate no prefetching.
          */
-        std::vector<ObjectID> get(const ObjectID& id, const T& obj) override {
+        std::vector<ObjectID> get(const ObjectID& /* id */,
+                const T& /* obj */) override {
             return std::vector<ObjectID>();
         }
     };
@@ -85,7 +86,7 @@ class CacheManager {
             }
             std::vector<ObjectID> to_return;
             to_return.reserve(read_ahead);
-            for (int i = 1; i <= read_ahead; i++) {
+            for (uint64_t i = 1; i <= read_ahead; i++) {
                 // Math to make sure that prefetching loops back around
                 // Formula is:
                 // val = ((oid + i) - first) % (last - first + 1)) + first
@@ -197,8 +198,9 @@ CacheManager<T>::CacheManager(
                            cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                            cirrus::EvictionPolicy *eviction_policy,
                            uint64_t cache_size) :
-                           store(store), eviction_policy(eviction_policy),
-                           max_size(cache_size) {
+                           store(store),
+                           max_size(cache_size),
+                           eviction_policy(eviction_policy) {
     if (cache_size < 1) {
         throw cirrus::CacheCapacityException(
               "Cache capacity must be at least one.");

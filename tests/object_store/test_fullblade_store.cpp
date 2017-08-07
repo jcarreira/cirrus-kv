@@ -113,7 +113,7 @@ void test_sync(int N) {
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
-        cirrus::TimerFunction tf("", false);
+        cirrus::TimerFunction tf;
         store.put(1, d);
 #ifdef CHECK_RESULTS
         struct cirrus::Dummy<SIZE> d2 = store.get(1);

@@ -19,9 +19,12 @@ namespace cirrus {
   */
 template<unsigned int SIZE>
 struct Dummy {
+ public:
+    explicit Dummy(int id = 1492) : id(id) {}
+
+ public:
     char data[SIZE];
     int id;
-    explicit Dummy(int id = 1492) : id(id) {}
 };
 
 /**
@@ -148,7 +151,7 @@ std::unique_ptr<BladeClient> GetClient(bool use_rdma_client) {
  * @return boolean indicating true if RDMA should be used.
  */
 bool ParseMode(int argc, char *argv[]) {
-    bool use_rdma_client;
+    bool use_rdma_client = false;
     if (argc >= 2) {
         if (strcmp(argv[1], "--tcp") == 0) {
             use_rdma_client = false;

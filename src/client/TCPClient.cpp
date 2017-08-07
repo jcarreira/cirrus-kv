@@ -103,7 +103,11 @@ void TCPClient::connect(const std::string& address,
 BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
                                     uint64_t size) {
     // Make sure that the pointer is not null
-    TEST_NZ(data == nullptr);
+    TEST_Z(data);
+
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
     // Create flatbuffer builder
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
@@ -125,6 +129,11 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
                                         msg_contents.Union());
     builder->Finish(msg);
 
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::write_async time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
+
     return enqueue_message(builder, txn_id);
 }
 
@@ -141,6 +150,10 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
   */
 BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
                                      uint64_t /* size */) {
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
+
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -157,6 +170,11 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
                                         message::TCPBladeMessage::Message_Read,
                                         msg_contents.Union());
     builder->Finish(msg);
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::read_async time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
 
     return enqueue_message(builder, txn_id, data);
 }
@@ -275,6 +293,9 @@ void TCPClient::process_received() {
         LOG<INFO>("Size of incoming message received from server: ",
                   incoming_size);
 
+#ifdef PERF_LOG
+        TimerFunction receive_msg_time;
+#endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
             buffer.resize(incoming_size);
@@ -284,6 +305,13 @@ void TCPClient::process_received() {
         if (retval != incoming_size) {
             throw cirrus::Exception("Error reading full message from server.");
         }
+#ifdef PERF_LOG
+        double receive_mbps = bytes_read / (1024 * 1024.0) /
+            (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
+        LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
+                receive_msg_time.getUsElapsed(),
+                " bw (MB/s): ", receive_mbps);
+#endif
 
         LOG<INFO>("Received full message from server");
 
@@ -291,6 +319,9 @@ void TCPClient::process_received() {
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
         TxnID txn_id = ack->txnid();
 
+#ifdef PERF_LOG
+        TimerFunction map_time;
+#endif
         // obtain lock on map
         map_lock.wait();
 
@@ -312,6 +343,11 @@ void TCPClient::process_received() {
 
         // release lock
         map_lock.signal();
+#ifdef PERF_LOG
+        LOG<PERF>("TCPClient::process_received map time (us): ",
+                map_time.getUsElapsed());
+#endif
+
         // Save the error code so that the future can read it
         *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
         LOG<INFO>("Error code read is: ", *(txn->error_code));
@@ -333,6 +369,7 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     LOG<INFO>("Client has pointer to vector");
+                    // XXX we should get rid of this
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(txn->mem_for_read));
                     LOG<INFO>("Client copied vector");
@@ -445,18 +482,30 @@ void TCPClient::process_send() {
 
         LOG<INFO>("Client sending size: ", message_size);
         // Convert size to network order and send
+
+        // XXX shouldn't this be a send_all?
         uint32_t network_order_size = htonl(message_size);
         if (send_all(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {
             throw cirrus::Exception("Client error sending data to server");
         }
 
+#ifdef PERF_LOG
+        TimerFunction send_time;
+#endif
         LOG<INFO>("Client sending main message");
         // Send main message
         if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
                 != message_size) {
             throw cirrus::Exception("Client error sending data to server");
         }
+#ifdef PERF_LOG
+        double send_mbps = message_size / (1024 * 1024.0) /
+            (send_time.getUsElapsed() / 1000.0 / 1000.0);
+        LOG<PERF>("TCPClient::process_send send time (us): ",
+                send_time.getUsElapsed(),
+                " bw (MB/s): ", send_mbps);
+#endif
         LOG<INFO>("message pair sent by client");
 
         // Release the lock so that the other thread may add to the send queue
@@ -475,6 +524,10 @@ void TCPClient::process_send() {
 BladeClient::ClientFuture TCPClient::enqueue_message(
             std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
             const int txn_id, void *ptr) {
+#ifdef PERF_LOG
+    TimerFunction enqueue_time;
+#endif
+
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn->mem_for_read = ptr;
@@ -502,6 +555,11 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     queue_lock.signal();
     // Alert that the queue has been updated
     queue_semaphore.signal();
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::enqueue_message enqueue time (us): ",
+            enqueue_time.getUsElapsed());
+#endif
     return future;
 }
 

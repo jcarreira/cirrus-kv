@@ -172,10 +172,17 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // serialized_size is saved in the class, it is the size of pushed objects
 
     // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
+#ifdef PERF_LOG
+    TimerFunction serialize_time;
+#endif
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
     serialized_size = serializer_out.second;
+#ifdef PERF_LOG
+    LOG<PERF>("FullBladeObjectStoreTempl::put serialize time (ns): ",
+            serialize_time.getNsElapsed());
+#endif
 
     return client->write_sync(id, serial_ptr.get(), serialized_size);
 }
@@ -191,8 +198,15 @@ typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
+#ifdef PERF_LOG
+    TimerFunction serialize_time;
+#endif
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
     serialized_size = serializer_out.second;
+#ifdef PERF_LOG
+    LOG<PERF>("FullBladeObjectStoreTempl::put_async serialize time (ns): ",
+            serialize_time.getNsElapsed());
+#endif
 
     auto client_future = client->write_async(id,
                                            serial_ptr.get(),
@@ -306,7 +320,7 @@ void FullBladeObjectStoreTempl<T>::removeBulk(ObjectID first, ObjectID last) {
     if (first > last) {
         throw cirrus::Exception("First ObjectID to remove must be leq last.");
     }
-    for (int oid = first; oid <= last; oid++) {
+    for (ObjectID oid = first; oid <= last; oid++) {
         client->remove(oid);
     }
 }
