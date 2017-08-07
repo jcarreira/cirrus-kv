@@ -18,6 +18,7 @@
 #include "Model.h"
 #include "LRModel.h"
 #include "ModelGradient.h"
+#include "Configuration.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -28,12 +29,10 @@
 
 #define INSTS (1000000) // 1 million
 #define LOADING_DONE (INSTS + 1)
-#define LEARNING_RATE (1e-5)
 
 #define MODEL_GRAD_SIZE 10
 #define GRADIENT_BASE 1000
 #define MODEL_BASE 2000
-#define EPSILON 0.1
 uint64_t nworkers = 1;
 
 int features_per_sample = 10; 
@@ -62,9 +61,9 @@ T deserializer_simple(void* data, unsigned int /* size */) {
 }
 
 template<typename T>
-class c_array_serializer_simple {
+class c_array_serializer{
 public:
-    c_array_serializer_simple(int nslots) : numslots(nslots) {}
+    c_array_serializer(int nslots) : numslots(nslots) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
@@ -83,9 +82,9 @@ private:
 }; 
 
 template<typename T>
-class c_array_deserializer_simple {
+class c_array_deserializer{
 public:
-    c_array_deserializer_simple(int nslots) : numslots(nslots) {}
+    c_array_deserializer(int nslots) : numslots(nslots) {}
     
     std::shared_ptr<T>
     operator()(void* data, unsigned int /* size */) {
@@ -182,12 +181,12 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.86";
+const char IP[] = "10.10.49.87";
 static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
 
-void run_memory_task(const std::string& config_path) {
+void run_memory_task(const Configuration& config) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
@@ -196,7 +195,7 @@ void run_memory_task(const std::string& config_path) {
 /**
   * This task is used to compute the training error in the background
   */
-void training_error_task(const std::string& config_path) {
+void training_error_task(const Configuration& config) {
 
 }
 
@@ -207,7 +206,7 @@ void training_error_task(const std::string& config_path) {
   * 2) receiving the gradient updates from the workers
   *
   */
-void run_ps_task(const std::string& config_path) {
+void run_ps_task(const Configuration& config) {
     // should read from the config file how many workers there are
 
     // communication workers -> PS to communicate gradients
@@ -233,8 +232,18 @@ void run_ps_task(const std::string& config_path) {
             lr_gradient_deserializer(MODEL_GRAD_SIZE));
 
     // initialize model
+
     LRModel model(MODEL_GRAD_SIZE);
     model.randomize();
+    std::cout << "PS publishing model at id: "
+        << MODEL_BASE
+        << std::endl;
+    // publish the model back to the store so workers can use it
+    model_store.put(MODEL_BASE, model);
+    
+    std::cout << "PS getting model" << std::endl;
+    auto m = model_store.get(MODEL_BASE);
+    std::cout << "PS model is here" << std::endl;
 
     // we keep a version number for the gradient produced by each worker
     std::vector<int> gradientCounts;
@@ -257,7 +266,7 @@ void run_ps_task(const std::string& config_path) {
                 // do a gradient step and update model
                 LOG<INFO>("Updating model");
 
-                model.sgd_update(LEARNING_RATE, &gradient);
+                model.sgd_update(config.get_learning_rate(), &gradient);
 
                 LOG<INFO>("Publishing model");
                 // publish the model back to the store so workers can use it
@@ -269,7 +278,7 @@ void run_ps_task(const std::string& config_path) {
     sleep_forever();
 }
 
-void run_worker_task(const std::string& config_path) {
+void run_worker_task(const Configuration& config) {
 
     cirrus::TCPClient client;
 
@@ -288,14 +297,14 @@ void run_worker_task(const std::string& config_path) {
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
-                c_array_serializer_simple<double>(batch_size),
-                c_array_deserializer_simple<double>(batch_size));
+                c_array_serializer<double>(batch_size),
+                c_array_deserializer<double>(batch_size));
     
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
-                c_array_serializer_simple<double>(batch_size),
-                c_array_deserializer_simple<double>(batch_size));
+                c_array_serializer<double>(batch_size),
+                c_array_deserializer<double>(batch_size));
 
     int samples_id = 0;
     int labels_id  = 0;
@@ -307,15 +316,44 @@ void run_worker_task(const std::string& config_path) {
         // send gradient to object store
 
         // maybe we can wait a few iterations to get the model
-        auto model = model_store.get(MODEL_BASE);
+        LRModel model(MODEL_GRAD_SIZE);
+        std::shared_ptr<double> samples;
+        std::shared_ptr<double> labels;;
+        try {
+            std::cout << "Worker task getting the model at id: "
+                << MODEL_BASE
+                << std::endl;
+            model = model_store.get(MODEL_BASE);
+
+            std::cout << "Worker task getting the training data with id: " <<
+                    samples_id << std::endl;
+            samples = samples_store.get(samples_id);
+            labels = labels_store.get(labels_id);
+        } catch(const cirrus::NoSuchIDException& e) {
+            if (!first_time) {
+                throw std::runtime_error("Error in exception");
+            }
+            // this happens because the ps task
+            // has not uploaded the model yet
+            std::cout << "Model could not be found at id: "
+                    << MODEL_BASE
+                    << std::endl;
+            sleep(1);
+            continue;
+        }
+        first_time = false;
 
         auto samples = samples_store.get(samples_id);
         auto labels = labels_store.get(labels_id);
         Dataset dataset(samples.get(), labels.get(), samples_per_batch, features_per_sample);
 
         // compute mini batch gradient
-        auto gradient = model.minibatch_grad(0, dataset.samples_, labels.get(), samples_per_batch, EPSILON);
-        gradient_store.put(gradient_id, *dynamic_cast<LRGradient*>(gradient.get()));
+        auto gradient = model.minibatch_grad(0, dataset.samples_,
+                labels.get(), samples_per_batch, config.get_epsilon());
+        
+        std::cout << "Worker task storing gradient" << std::endl;
+        gradient_store.put(gradient_id,
+                           *dynamic_cast<LRGradient*>(gradient.get()));
 
         // move to next batch of samples
         samples_id++;
@@ -330,25 +368,26 @@ void run_worker_task(const std::string& config_path) {
   * It reads from the criteo dataset files and writes to the object store
   * It signals when work is done by changing a bit in the object store
   */
-void run_loading_task(const std::string& config_path) {
+void run_loading_task(const Configuration& config) {
     std::cout << "Read criteo input..."
         << std::endl;
 
     Input input;
 
     auto dataset = input.read_input_csv(
-            "/nscratch/joao/criteo_data/day_0_test_1K.csv", " ", 3,
-            features_per_sample, true);
+            config.get_input_path(),
+            " ", 3,
+            config.get_limit_cols(), true);
 
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
-                c_array_serializer_simple<double>(features_per_sample),
-                c_array_deserializer_simple<double>(features_per_sample));
+                c_array_serializer<double>(samples_per_batch * features_per_sample),
+                c_array_deserializer<double>(samples_per_batch * features_per_sample));
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
-                c_array_serializer_simple<double>(samples_per_batch),
-                c_array_deserializer_simple<double>(samples_per_batch));
+                c_array_serializer<double>(samples_per_batch),
+                c_array_deserializer<double>(samples_per_batch));
 
     std::cout << "Read "
         << dataset.samples()
@@ -403,22 +442,25 @@ void run_loading_task(const std::string& config_path) {
     }
 
     std::cout << "Added all samples" << std::endl;
-
-    sleep_forever();
 }
 
-void run_tasks(int rank, const std::string& config_path) {
+void run_tasks(int rank, const Configuration& config) {
+    std::cout << "Run tasks rank: " << rank << std::endl;
     if (rank == 0) {
-        run_memory_task(config_path);
+        //run_memory_task(config_path);
+        sleep_forever();
     } else if (rank == 1) {
-        sleep(10000);
-        run_ps_task(config_path);
+        sleep(8);
+        run_ps_task(config);
+        sleep_forever();
     } else if (rank == 2) {
-        sleep(10000);
-        //run_worker_task(config_path);
+        sleep(10);
+        run_worker_task(config);
+        sleep_forever();
     } else if (rank == 3) {
         sleep(5);
-        run_loading_task(config_path);
+        run_loading_task(config);
+        sleep_forever();
     } else {
         throw std::runtime_error("Wrong number of tasks");
     }
@@ -437,13 +479,19 @@ void init_mpi(int argc, char**argv) {
 }
 
 void print_arguments() {
-    std::cout << "./parameter_server task_number" << std::endl;
-    std::cout << "Task types: "
-        << "0: memory" << std::endl
-        << "1: ps" << std::endl
-        << "2: worker" << std::endl
-        << "3: loading" << std::endl
-        << std::endl;
+    std::cout << "./parameter_server config_file" << std::endl;
+    //std::cout << "Task types: "
+    //    << "0: memory" << std::endl
+    //    << "1: ps" << std::endl
+    //    << "2: worker" << std::endl
+    //    << "3: loading" << std::endl
+    //    << std::endl;
+}
+
+Configuration load_configuration(const std::string& config_path) {
+    Configuration config;
+    config.read(config_path);
+    return config;
 }
 
 /**
@@ -476,9 +524,9 @@ int main(int argc, char** argv) {
         << " with rank: " << rank
         << std::endl;
 
-    std::string config_path = argv[1];
+    auto config = load_configuration(argv[1]);
     // call the right task for this process
-    run_tasks(rank, config_path);
+    run_tasks(rank, config);
 
     MPI_Finalize();
     std::cout << "Test successful" << std::endl;
