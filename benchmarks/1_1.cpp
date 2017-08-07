@@ -57,7 +57,7 @@ void test_sync() {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (int i = 0; i < N_ITER; ++i) {
+    for (uint64_t i = 0; i < N_ITER; ++i) {
         store.put(i, d);
     }
 

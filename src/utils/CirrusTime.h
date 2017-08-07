@@ -20,10 +20,12 @@ class TimerFunction {
 
     void reset();
 
-    uint64_t getUsElapsed() const;
+    uint64_t getNsElapsed() const;
+    double getUsElapsed() const;
     double getSecElapsed() const;
 
     using Time = std::chrono::high_resolution_clock;
+    using ns = std::chrono::nanoseconds;
     using us = std::chrono::microseconds;
     using ms = std::chrono::milliseconds;
 

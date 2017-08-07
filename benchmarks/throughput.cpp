@@ -38,7 +38,7 @@ std::array<char, SIZE> array_deserializer_simple(void* data,
   * objects is recorded, and statistics are computed.
   */
 template <uint64_t SIZE>
-void test_throughput(int numRuns) {
+void test_throughput(uint64_t numRuns) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client, array_serializer_simple<SIZE>,
@@ -79,7 +79,7 @@ void test_throughput(int numRuns) {
   * objects is recorded, and statistics are computed.
   */
 template <uint64_t SIZE>
-void test_throughput_get(int numRuns) {
+void test_throughput_get(uint64_t numRuns) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client, array_serializer_simple<SIZE>,
