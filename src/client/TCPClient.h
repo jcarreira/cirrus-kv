@@ -49,7 +49,7 @@ class TCPClient : public BladeClient {
         /** Error code if any were thrown on the server. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
         /** Semaphore for the transaction. */
-        std::shared_ptr<cirrus::PosixSemaphore> sem;
+        std::shared_ptr<cirrus::SpinLock> sem;
 
         /** Pointer to shared ptr that points to any mem allocated for reads. */
         std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
@@ -61,7 +61,7 @@ class TCPClient : public BladeClient {
             result = std::make_shared<bool>();
             result_available = std::make_shared<bool>();
             *result_available = false;
-            sem = std::make_shared<cirrus::PosixSemaphore>();
+            sem = std::make_shared<cirrus::SpinLock>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
             mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
             mem_size = std::make_shared<uint64_t>(0);
@@ -100,7 +100,7 @@ class TCPClient : public BladeClient {
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
     /** Semaphore for the send_queue. */
-    cirrus::PosixSemaphore queue_semaphore;
+    cirrus::SpinLock queue_semaphore;
     /** Thread that runs the receiving loop. */
     std::thread* receiver_thread;
     /** Thread that runs the sending loop. */
