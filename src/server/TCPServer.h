@@ -30,6 +30,8 @@ class TCPServer : public Server {
 
     bool read_from_client(std::vector<char>&, int, int&);
 
+    bool testRemove(struct pollfd x);
+
     /** The port that the server is listening on. */
     int port_;
     /** The number of pending connection requests allowed at once. */
@@ -46,8 +48,7 @@ class TCPServer : public Server {
     uint64_t curr_size = 0;
 
     /** Max number of sockets open at once. */
-    // TODO(TYLER): Enforce this limit, or remove it and allow scaling
-    uint64_t num_fds = 100;
+    const uint64_t max_fds = 100;
 
     /**
      * Index that the next socket accepted should have in the
@@ -63,7 +64,7 @@ class TCPServer : public Server {
      * Vector that serves as a wrapper for a c style array containing
      * struct pollfd objects. Used for calls to poll().
      */
-    std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
+    std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
 };
 
 }  // namespace cirrus
