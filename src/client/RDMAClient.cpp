@@ -79,9 +79,8 @@ BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
                                      "does not exist remotely.");
     }
     // Read into the section of memory you just allocated
-    auto data = std::shared_ptr<char>(new char[loc.size],
-        std::default_delete< char[]>());
-    return readToLocalAsync(loc, (*data).get());
+    void *data = new char[loc.size];
+    return readToLocalAsync(loc, data);
 }
 
 /**
@@ -127,10 +126,9 @@ RDMAClient::read_sync(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {
         // Read into the section of memory you just allocated
-        auto data = std::shared_ptr<char>(new char[loc.size],
-            std::default_delete< char[]>());
-        readToLocal(loc, (*data).get());
-        return std::make_pair(data, loc.size);
+        void *data = new char[loc.size];
+        auto future = readToLocalAsync(loc, data);
+        return future.getDataPair();
     } else {
         throw cirrus::NoSuchIDException("Requested ObjectID "
                                         "does not exist remotely.");
@@ -939,9 +937,11 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     }
-
+    std::shared_ptr<std::shared_ptr> dummy_ptr;
+    std::shared_ptr<uint64_t> dummy_size_ptr;
     return ClientFuture(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code);
+                        op_info->op_sem, op_info->error_code,
+                        dummy_ptr, dummy_size_ptr);
 }
 
 /**
@@ -1041,8 +1041,13 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
                 [mem]() -> void { delete mem; });
     }
 
+    std::shared_ptr<std::shared_ptr<char>> buffer_ptr =
+        std::make_shared<std::shared_ptr<char>>(data,
+            std::default_delete< char[]>());
+
     return ClientFuture(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code);
+                        op_info->op_sem, op_info->error_code,
+                        buffer_ptr, std::make_shared<uint64_t>(length);
 }
 
 }  // namespace cirrus
