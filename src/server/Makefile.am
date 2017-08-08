@@ -10,7 +10,7 @@ DEFAULT_LIB = -L. -lserver \
 noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = tcpservermain
 
-libserver_a_SOURCES = TCPServer.cpp
+libserver_a_SOURCES = TCPServer.cpp MemoryBackend.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include \
                        -I$(top_srcdir)/src
 
