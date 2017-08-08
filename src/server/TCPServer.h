@@ -62,7 +62,10 @@ class TCPServer : public Server {
     int timeout = 60 * 1000 * 3;
     /**
      * Vector that serves as a wrapper for a c style array containing
-     * struct pollfd objects. Used for calls to poll().
+     * struct pollfd objects. Used for calls to poll(). New structs are
+     * always inserted to the end of a continus range, indicated by curr_index.
+     * When the vector reaches capacity, unused structs are removed and the
+     * remaining items shifted.
      */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
 };

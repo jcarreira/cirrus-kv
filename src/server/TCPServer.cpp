@@ -120,7 +120,15 @@ void TCPServer::init() {
     fds.at(curr_index++).events = POLLIN;
 }
 
+/**
+ * Function passed into std::remove_if
+ * @param x a struct pollfd being examined
+ * @return True if the struct should be removed. This is true if the fd is -1,
+ * meaning that it is being ignored.
+ */
 bool TCPServer::testRemove(struct pollfd x) {
+    // If this pollfd will be removed, the index of the next location to insert
+    // should be reduced by one correspondingly.
     if (x.fd == -1) {
         curr_index -= 1;
     }
