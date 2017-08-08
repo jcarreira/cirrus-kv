@@ -298,6 +298,82 @@ void run_ps_task(const Configuration& config) {
     }
 }
 
+void run_compute_error_task(const Configuration& config) {
+
+    std::cout << "Compute error task connecting to store" << std::endl;
+
+    cirrus::TCPClient client;
+
+    // this is used to access the most up to date model
+    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
+        model_store(IP, PORT, &client,
+                lr_model_serializer(MODEL_GRAD_SIZE),
+                lr_model_deserializer(MODEL_GRAD_SIZE));
+
+    // this is used to access the training data sample
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+        samples_store(IP, PORT, &client,
+                c_array_serializer<double>(batch_size),
+                c_array_deserializer<double>(batch_size));
+    
+    // this is used to access the training labels
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+        labels_store(IP, PORT, &client,
+                c_array_serializer<double>(batch_size),
+                c_array_deserializer<double>(batch_size));
+
+    bool first_time = true;
+    while (1) {
+        sleep(2);
+
+        double loss = 0;
+        try {
+            // first we get the model
+            std::cout << "Worker task getting the model at id: "
+                << MODEL_BASE
+                << std::endl;
+            LRModel model(MODEL_GRAD_SIZE);
+            model = model_store.get(MODEL_BASE);
+
+            // then we compute the error
+            loss = 0;
+            uint64_t count = 0;
+            //uint64_t n_iter = dataset.samples() / samples_per_batch;
+
+            // we don't really know how many minibatches there are
+            // we keep reading until a get() fails
+            for (int i = 0; 1; ++i) {
+                std::shared_ptr<double> samples;
+                std::shared_ptr<double> labels;;
+
+                try {
+                    samples = samples_store.get(i);
+                    labels = labels_store.get(i);
+                } catch(const cirrus::NoSuchIDException& e) {
+                    if (i == 0) goto continue_point; // no loss to be computed
+                    else goto compute_loss; // we looked at all minibatches
+                }
+        
+                Dataset dataset(samples.get(), labels.get(),
+                        samples_per_batch, features_per_sample);
+                loss += model.calc_loss(dataset);
+                count++;
+            }
+
+compute_loss:
+            loss = loss / count; // compute average loss over all minibatches
+
+        } catch(const cirrus::NoSuchIDException& e) {
+            std::cout << "run_compute_error_task unknown id" << std::endl;
+        }
+
+        std::cout << "Learning loss: " << loss << std::endl;
+
+continue_point:
+        first_time = first_time;
+    }
+}
+
 void run_worker_task(const Configuration& config) {
 
     std::cout << "Worker task connecting to store" << std::endl;
@@ -482,6 +558,10 @@ void run_tasks(int rank, const Configuration& config) {
     } else if (rank == 3) {
         sleep(5);
         run_loading_task(config);
+        sleep_forever();
+    } else if (rank == 4) {
+        sleep(5);
+        run_compute_error_task(config);
         sleep_forever();
     } else {
         throw std::runtime_error("Wrong number of tasks");
