@@ -380,7 +380,6 @@ void TCPClient::process_received() {
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
-
                     break;
                 }
             case message::TCPBladeMessage::Message_RemoveAck:
