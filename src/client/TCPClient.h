@@ -7,6 +7,7 @@
 #include <utility>
 #include <map>
 #include <atomic>
+#include <vector>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
@@ -66,6 +67,31 @@ class TCPClient : public BladeClient {
             mem_for_read_ptr = std::make_shared<std::shared_ptr<const char>>();
             mem_size = std::make_shared<uint64_t>(0);
         }
+    };
+
+    /**
+     * Custom deleter to allow for the deletion of a shared ptr to a char to delete
+     * the vector that contains the char.
+     */
+    class read_op_deleter {
+     public:
+        /**
+         * Constructor for the deleter.
+         * @param buf pointer to the vector that contains the character
+         */
+        explicit read_op_deleter(
+            std::shared_ptr<std::vector<char>> buf) :
+            buffer(buf) {}
+
+        /**
+         * Function that actually performs the deletion. Does not need to do
+         * anything as going out of scope should eliminate the pointer to the vector
+         */
+        void operator()(const char * /* ptr */) {}
+
+     private:
+         /** Pointer to the vector that contains the data. */
+         std::shared_ptr<std::vector<char>> buffer;
     };
 
     ssize_t send_all(int, const void*, size_t, int);

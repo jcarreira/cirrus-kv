@@ -236,33 +236,6 @@ bool TCPClient::remove(ObjectID oid) {
 }
 
 /**
- * Custom deleter to allow for the deletion of a shared ptr to a char to delete
- * the vector that contains the char.
- */
-class read_op_deleter {
- public:
-    /**
-     * Constructor for the deleter.
-     * @param buf pointer to the vector that contains the character
-     */
-    explicit read_op_deleter(
-        std::shared_ptr<std::vector<char>> buf) :
-        buffer(buf) {}
-
-    /**
-     * Function that actually performs the deletion. Does not need to do
-     * anything as going out of scope should eliminate the pointer to the vector
-     */
-    void operator()(const char * /*ptr */) {}
-
- private:
-     /** Pointer to the vector that contains the data. */
-     std::shared_ptr<std::vector<char>> buffer;
-};
-
-
-
-/**
   * Loop run by the thread that processes incoming messages. Contains all
   * logic for acting upon the incoming messages, which includes copying
   * serialized objects and notifying futures.
