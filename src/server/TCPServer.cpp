@@ -27,11 +27,31 @@ static const int initial_buffer_size = 50;
   * server.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
+TCPServer::TCPServer(int port, uint64_t pool_size_, unsigned int num_threads,
+    unsigned int queue_len) {
     port_ = port;
     queue_len_ = queue_len;
     pool_size = pool_size_;
     server_sock_ = 0;
+
+    for (unsigned int i = 0; i < num_threads; i++) {
+        threads_vector.push_back(
+            new std::thread(&TCPServer::wait_to_process, this));
+    }
+}
+
+void TCPServer::wait_to_process() {
+    while (1) {
+        queue_lock.wait();
+        if (!queue.empty()) {
+            int to_process = process_queue.front();
+            process_queue.pop();
+            queue_lock.signal();
+            process(to_process);
+        } else {
+            queue_lock.signal();
+        }
+    }
 }
 
 /**
@@ -310,6 +330,7 @@ bool TCPServer::process(int sock) {
     // Initialize the error code
     cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
 
+    store_lock.wait();
     LOG<INFO>("Server checking type of message");
     // Check message type
     bool success = true;
@@ -448,6 +469,7 @@ bool TCPServer::process(int sock) {
             break;
     }
 
+    store_lock.signal();
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);

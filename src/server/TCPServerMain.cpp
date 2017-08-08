@@ -4,7 +4,8 @@
 #include "utils/logging.h"
 
 const int port = 12345;
-const int queue_len = 10;
+const unsigned int queue_len = 10;
+const unsigned int num_threads = 1;
 static const uint64_t GB = (1024*1024*1024);
 
 /**
@@ -30,7 +31,7 @@ auto main(int argc, char *argv[]) -> int {
     }
     // Instantiate the server
     cirrus::LOG<cirrus::INFO>("Starting TCPServer in port: ", port);
-    cirrus::TCPServer server(port, pool_size, queue_len);
+    cirrus::TCPServer server(port, pool_size, num_threads, queue_len);
     // Initialize the server
     server.init();
     // Loop the server and listen for clients. Act on requests

@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <vector>
 #include <map>
+#include <queue>
 #include "server/Server.h"
 
 namespace cirrus {
@@ -16,7 +17,9 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, int queue_len = 100);
+    explicit TCPServer(int port, uint64_t pool_size_,
+        unsigned int num_threads = 1,
+        unsigned int queue_len = 100);
     ~TCPServer() = default;
 
     virtual void init();
@@ -39,6 +42,12 @@ class TCPServer : public Server {
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 
+
+    cirrus::SpinLock store_lock;
+    cirrus::SpinLock queue_lock;
+    std::queue<int> process_queue;
+    std::vector<std::thread*> threads;
+
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;
 
@@ -56,7 +65,7 @@ class TCPServer : public Server {
     uint64_t curr_index = 0;
     /**
      * How long the client will wait during a call to poll() before
-     * timing out.
+     * timing out (in ms).
      */
     int timeout = 60 * 1000 * 3;
     /**
