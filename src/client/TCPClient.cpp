@@ -197,7 +197,7 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * serialized object read from the server resides in as well as the size of
   * the buffer.
   */
-std::pair<std::shared_ptr<char>, unsigned int>
+std::pair<std::shared_ptr<const char>, unsigned int>
 TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
     BladeClient::ClientFuture future = read_async(oid);
@@ -371,14 +371,17 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client wrote success");
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     *(txn->mem_size) = data_fb_vector->size();
-                    *(txn->mem_for_read_ptr) = std::shared_ptr<char>(
+
+                    // pointer will be data_fb_vector->Data();
+                    *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
                         new char[data_fb_vector->size()],
                         std::default_delete< char[]>());
                     LOG<INFO>("Client has pointer to vector");
                     // XXX we should get rid of this
-                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
-                                reinterpret_cast<char*>(
-                                    (*(txn->mem_for_read_ptr)).get()));
+                    // This copy will not work as long as the ptr is to a const
+                    // std::copy(data_fb_vector->begin(), data_fb_vector->end(),
+                    //             reinterpret_cast<const char*>(
+                    //                 (*(txn->mem_for_read_ptr)).get()));
                     LOG<INFO>("Client copied vector");
                     break;
                 }

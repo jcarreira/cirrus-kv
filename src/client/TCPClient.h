@@ -26,7 +26,7 @@ class TCPClient : public BladeClient {
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
 
     ClientFuture write_async(ObjectID oid, const void* data,
@@ -52,7 +52,7 @@ class TCPClient : public BladeClient {
         std::shared_ptr<cirrus::PosixSemaphore> sem;
 
         /** Pointer to shared ptr that points to any mem allocated for reads. */
-        std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
+        std::shared_ptr<std::shared_ptr<const char>> mem_for_read_ptr;
 
         /** Pointer to size of mem for read. */
         std::shared_ptr<uint64_t> mem_size;
@@ -63,7 +63,7 @@ class TCPClient : public BladeClient {
             *result_available = false;
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
-            mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
+            mem_for_read_ptr = std::make_shared<std::shared_ptr<const char>>();
             mem_size = std::make_shared<uint64_t>(0);
         }
     };

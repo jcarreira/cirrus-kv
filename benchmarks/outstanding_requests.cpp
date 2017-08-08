@@ -35,8 +35,8 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
     return std::make_pair(std::move(ptr), s.size);
 }
 
-BenchmarkStruct deserializer(void* data, unsigned int size) {
-    char *ptr = reinterpret_cast<char*>(data);
+BenchmarkStruct deserializer(const void* data, unsigned int size) {
+    const char *ptr = reinterpret_cast<const char*>(data);
 
     BenchmarkStruct ret(size);  // not sure if this size arg is valid here
     std::memcpy(ret.data.get(), ptr, size);

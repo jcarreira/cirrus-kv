@@ -121,7 +121,7 @@ bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * serialized object read from the server resides in as well as the size of
   * the buffer.
   */
-std::pair<std::shared_ptr<char>, unsigned int>
+std::pair<std::shared_ptr<const char>, unsigned int>
 RDMAClient::read_sync(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {

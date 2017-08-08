@@ -30,7 +30,7 @@ BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code,
-               std::shared_ptr<std::shared_ptr<char>> data_ptr,
+               std::shared_ptr<std::shared_ptr<const char>> data_ptr,
                std::shared_ptr<uint64_t> data_size):
     result(result), result_available(result_available),
     sem(sem), error_code(error_code), data_ptr(data_ptr),
@@ -97,7 +97,7 @@ bool BladeClient::ClientFuture::get() {
  * into and length of buffer. Will throw an exception if called on a Future
  * that was not used for a read.
  */
-std::pair<std::shared_ptr<char>, unsigned int>
+std::pair<std::shared_ptr<const char>, unsigned int>
 BladeClient::ClientFuture::getDataPair() {
     // Wait until result is available and throw exception if necessary
     get();
