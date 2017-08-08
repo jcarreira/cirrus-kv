@@ -23,6 +23,34 @@ bool use_rdma_client;
 
 // #define CHECK_RESULTS
 
+/* This function takes an int with value N and makes N copies of it. */
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                         serializer_variable_simple(const int& v) {
+    std::unique_ptr<char[]> ptr(new char[sizeof(int) * v]);
+    int *int_ptr = reinterpret_cast<int*>(ptr.get());
+    for (int i = 0; i < v; i++) {
+        *(int_ptr + i) = v;
+    }
+    return std::make_pair(std::move(ptr), sizeof(int) * v);
+}
+
+/* Checks that the N numbers are equal to each other and the number of ints. */
+int deserializer_variable_simple(void* data, unsigned int size) {
+    int *ptr = reinterpret_cast<int*>(data);
+    int returned_val = *ptr;
+    if (returned_val != size / sizeof(int)) {
+        throw std::runtime_error("Size not equal to the int val");
+    }
+    for (int i = 0; i < returned_val; i++) {
+        if (*(ptr + i) != size / sizeof(int)) {
+            throw std::runtime_error("Incorrect value returned");
+        }
+    }
+    int ret;
+    std::memcpy(&ret, ptr, sizeof(int));
+    return ret;
+}
+
 /**
   * Tests that simple synchronous put and get to/from the object store
   * works properly.
@@ -285,6 +313,24 @@ void test_remove() {
     std::cout << "Received following value incorrectly: " << i << std::endl;
 }
 
+ /**
+  * This test tests the ability to store and retrieve variable sized items.
+  */
+void test_variable_sizes() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            serializer_variable_simple,
+            deserializer_variable_simple);
+
+    for (int i = 1; i < 4; i++) {
+        store.put(i, i);
+    }
+    for (int i = 1; i < 4; i++) {
+        store.get(i);
+    }
+}
+
 /**
  * This test ensures that error messages that would normally be generated
  * during a get are still received during a get bulk.
@@ -388,6 +434,7 @@ auto main(int argc, char *argv[]) -> int {
 
     test_remove_bulk();
     test_shared_client();
+    test_variable_sizes();
     std::cout << "Test Successful." << std::endl;
 
     return 0;
