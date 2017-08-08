@@ -32,6 +32,7 @@ TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
     queue_len_ = queue_len;
     pool_size = pool_size_;
     server_sock_ = 0;
+    mem.init(); // initialize memory backend
 }
 
 /**
@@ -325,9 +326,9 @@ bool TCPServer::process(int sock) {
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
 
-                auto entry_itr = store.find(oid);
-                if (entry_itr != store.end()) {
-                    curr_size -= entry_itr->second.size();
+                // update current used size
+                if (mem.exists(oid)) {
+                    curr_size -= mem.size(oid);
                 }
 
                 // Throw error if put would exceed size of the store
@@ -346,7 +347,7 @@ bool TCPServer::process(int sock) {
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id
                     curr_size += data_fb->size();
-                    store[oid] = data;
+                    mem.put(oid, data);
                 }
 
                 // Create and send ack
@@ -379,17 +380,18 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
                 LOG<INFO>("Server extracted oid");
-                auto entry_itr = store.find(oid);
                 LOG<INFO>("Got pair from store");
                 // If the oid is not on the server, this operation has failed
-                if (entry_itr == store.end()) {
+                
+                if (!mem.exists(oid)) {
                     success = false;
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
-                    fb_vector = builder.CreateVector(entry_itr->second);
+                    fb_vector = builder.CreateVector(mem.get(oid));
+                    //fb_vector = builder.CreateVector(entry_itr->second);
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
@@ -408,12 +410,12 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
-                double read_mbps = entry_itr->second.size() / (1024.0 * 1024) /
+                double read_mbps = mem.size(oid) / (1024.0 * 1024) /
                     (read_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process read time (us): ",
                         read_time.getUsElapsed(),
                         " bw (MB/s): ", read_mbps,
-                        " size: ", entry_itr->second.size());
+                        " size: ", mem.size(oid));//entry_itr->second.size());
 #endif
                 break;
             }
@@ -422,11 +424,11 @@ bool TCPServer::process(int sock) {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
                 success = false;
-                auto entry_itr = store.find(oid);
+                //auto entry_itr = store.find(oid);
                 // Remove the object if it exists on the server.
-                if (entry_itr != store.end()) {
-                    store.erase(entry_itr);
-                    curr_size -= entry_itr->second.size();
+                if (mem.exists(oid)) {//entry_itr != store.end()) {
+                    curr_size -= mem.size(oid);
+                    mem.delet(oid);
                     success = true;
                 }
                 // Create and send ack

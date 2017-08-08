@@ -19,7 +19,7 @@ bin_PROGRAMS += bladepoolmain bladeallocmain allocmain controllermain objectstor
 libserver_a_SOURCES += RDMAServer.cpp BladePoolServer.cpp \
                       ConnectionContext.cpp \
                       ResourceAllocator.cpp BladeAllocServer.cpp \
-                      BladeObjectStore.cpp
+                      BladeObjectStore.cpp MemoryBackend.cpp NVStorageBackend.cpp
 endif
 
 bladepoolmain_DEPENDENCIES = libserver.a

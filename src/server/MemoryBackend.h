@@ -1,4 +1,4 @@
-#include "BackendMap.h"
+#include "StorageBackend.h"
 #include <map>
 
 namespace cirrus {
@@ -7,13 +7,14 @@ namespace cirrus {
   * This is key-value store backed by memory
   * It used a std::map key-value store to store data
   */
-class MemoryBackend : public BackendMap {
+class MemoryBackend : public StorageBackend {
  public:
      MemoryBackend() = default;
 
-     bool put(uint64_t oid, const std::vector<int8_t>& data) override;
+     void init();
+     bool put(uint64_t oid, const MemData& data) override;
      bool exists(uint64_t oid) const override;
-     bool get(uint64_t oid, void* data) override;
+     const StorageBackend::MemData& get(uint64_t oid) override;
      bool delet(uint64_t oid) override;
      uint64_t size(uint64_t oid) const override;
 

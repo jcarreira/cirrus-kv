@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include "server/Server.h"
+#include "server/MemoryBackend.h"
 
 namespace cirrus {
 
@@ -64,6 +65,11 @@ class TCPServer : public Server {
      * struct pollfd objects. Used for calls to poll().
      */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
+
+    /**
+      * Memory interface
+      */
+    MemoryBackend mem;
 };
 
 }  // namespace cirrus

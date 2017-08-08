@@ -9,8 +9,9 @@ namespace cirrus {
 /**
   * Base class for datastructures that store key-value data
   */
-class BackendMap {
+class StorageBackend {
  public:
+    using MemData = std::vector<int8_t>;
 
     /**
       * Initialize backend
@@ -38,7 +39,7 @@ class BackendMap {
       * @param data Memory to copy the object to
       * @return bool Indicates success (true) or failure (false)
       */
-    virtual bool get(uint64_t oid, void* data) = 0;
+    virtual const MemData& get(uint64_t oid) = 0;
     
     /**
       * Delete object
