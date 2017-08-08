@@ -267,7 +267,7 @@ bool TCPServer::process(int sock) {
     TimerFunction resize_time;
 #endif
     if (incoming_size > current_buf_size) {
-        buffer.resize(incoming_size);
+        buffer.reserve(incoming_size);
     }
 #ifdef PERF_LOG
     LOG<PERF>("TCPServer::process resize time (us): ",

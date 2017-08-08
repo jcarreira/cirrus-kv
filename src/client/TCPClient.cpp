@@ -294,7 +294,7 @@ void TCPClient::process_received() {
 #endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
-            buffer->resize(incoming_size);
+            buffer->reserve(incoming_size);
         }
 
         // Reset the counter to read in the flatbuffer
