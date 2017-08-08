@@ -235,6 +235,32 @@ bool TCPClient::remove(ObjectID oid) {
     return future.get();
 }
 
+/**
+ * Custom deleter to allow for the deletion of a shared ptr to a char to delete
+ * the vector that contains the char.
+ */
+class read_op_deleter {
+ public:
+    /**
+     * Constructor for the deleter.
+     * @param buf pointer to the vector that contains the character
+     */
+    explicit read_op_deleter(
+        std::shared_ptr<std::vector<char>> buf) :
+        buffer(buf) {}
+
+    /**
+     * Function that actually performs the deletion. Does not need to do
+     * anything as going out of scope should eliminate the pointer to the vector
+     */
+    void operator()(const char * /*ptr */) {}
+
+ private:
+     /** Pointer to the vector that contains the data. */
+     std::shared_ptr<std::vector<char>> buffer;
+};
+
+
 
 /**
   * Loop run by the thread that processes incoming messages. Contains all
@@ -242,13 +268,6 @@ bool TCPClient::remove(ObjectID oid) {
   * serialized objects and notifying futures.
   */
 void TCPClient::process_received() {
-    // All elements stored on heap according to stack overflow, so it can grow
-    std::vector<char> buffer;
-    // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
-    buffer.reserve(current_buf_size);
-    int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
-
     /**
       * Message format
       * |---------------------------------------------------
@@ -257,11 +276,22 @@ void TCPClient::process_received() {
       */
 
     while (1) {
+        // All elements stored on heap according to stack overflow,
+        // so it can grow
+        // Must be shared as it will be used in the custom deleter of another
+        // shared_ptr.
+        std::shared_ptr<std::vector<char>> buffer =
+            std::make_shared<std::vector<char>>();
+        // Reserve the size of a 32 bit int
+        int current_buf_size = sizeof(uint32_t);
+        buffer->reserve(current_buf_size);
+        int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
+
         // Read in the size of the next message from the network
         LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
         while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
-            int retval = read(sock, buffer.data() + bytes_read,
+            int retval = read(sock, buffer->data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
@@ -280,7 +310,7 @@ void TCPClient::process_received() {
         }
         // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                                buffer.data());
+                                                                buffer->data());
         int incoming_size = ntohl(*incoming_size_ptr);
 
         LOG<INFO>("Size of incoming message received from server: ",
@@ -291,14 +321,14 @@ void TCPClient::process_received() {
 #endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
-            buffer.resize(incoming_size);
+            buffer->resize(incoming_size);
         }
 
         // Reset the counter to read in the flatbuffer
         bytes_read = 0;
 
         while (bytes_read < incoming_size) {
-            int retval = read(sock, buffer.data() + bytes_read,
+            int retval = read(sock, buffer->data() + bytes_read,
                               incoming_size - bytes_read);
 
             if (retval < 0) {
@@ -318,7 +348,7 @@ void TCPClient::process_received() {
 #endif
 
         // Extract the flatbuffer from the receiving buffer
-        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
+        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer->data());
         TxnID txn_id = ack->txnid();
 
 #ifdef PERF_LOG
@@ -374,15 +404,10 @@ void TCPClient::process_received() {
 
                     // pointer will be data_fb_vector->Data();
                     *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
-                        new char[data_fb_vector->size()],
-                        std::default_delete< char[]>());
+                        reinterpret_cast<const char*>(data_fb_vector->Data()),
+                        read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
-                    // XXX we should get rid of this
-                    // This copy will not work as long as the ptr is to a const
-                    // std::copy(data_fb_vector->begin(), data_fb_vector->end(),
-                    //             reinterpret_cast<const char*>(
-                    //                 (*(txn->mem_for_read_ptr)).get()));
-                    LOG<INFO>("Client copied vector");
+
                     break;
                 }
             case message::TCPBladeMessage::Message_RemoveAck:
