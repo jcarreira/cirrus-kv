@@ -937,7 +937,7 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     }
-    std::shared_ptr<std::shared_ptr> dummy_ptr;
+    std::shared_ptr<std::shared_ptr<char>> dummy_ptr;
     std::shared_ptr<uint64_t> dummy_size_ptr;
     return ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
@@ -1042,12 +1042,12 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
     }
 
     std::shared_ptr<std::shared_ptr<char>> buffer_ptr =
-        std::make_shared<std::shared_ptr<char>>(data,
+        std::make_shared<std::shared_ptr<char>>(reinterpret_cast<char*>(data),
             std::default_delete< char[]>());
 
     return ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
-                        buffer_ptr, std::make_shared<uint64_t>(length);
+                        buffer_ptr, std::make_shared<uint64_t>(length));
 }
 
 }  // namespace cirrus

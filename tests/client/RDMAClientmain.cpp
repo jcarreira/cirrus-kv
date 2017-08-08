@@ -126,22 +126,23 @@ void test_async() {
 
     int message = 42;
     auto future = client.write_async(1, &message, sizeof(int));
-    std::cout << "write sync complete" << std::endl;
+    std::cout << "write async complete" << std::endl;
 
     if (!future.get()) {
         throw std::runtime_error("Error during async write.");
     }
 
-    int returned;
-    auto read_future = client.read_async(1, &returned, sizeof(int));
+    auto read_future = client.read_async(1);
 
     if (!read_future.get()) {
         throw std::runtime_error("Error during async write.");
     }
+    auto ret_pair = read_future.getDataPair();
 
-    std::cout << returned << " returned from server" << std::endl;
+    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    std::cout << ret_val << " returned from server" << std::endl;
 
-    if (returned != message) {
+    if (ret_val != message) {
         throw std::runtime_error("Wrong value returned.");
     }
 }
@@ -172,8 +173,9 @@ void test_async_N() {
     std::cout << "BEGINNING READS" << std::endl;
     int ret_values[10];
     for (i = 0; i < N; i++) {
-        int val;
-        client.read_sync(i, &val, sizeof(int));
+        auto pair = client.read_sync(i);
+        int val = *(reinterpret_cast<int*>(pair.first.get()));
+
         if (val != i) {
             std::cout << "Expected " << i << "but got " << val << std::endl;
             throw std::runtime_error("Wrong value returned test_async_N");
@@ -181,8 +183,7 @@ void test_async_N() {
     }
 
     for (i = 0; i < N; i++) {
-        get_futures.push_back(client.read_async(i, &ret_values[i],
-            sizeof(int)));
+        get_futures.push_back(client.read_async(i));
     }
     // check the value of each get
     for (i = 0; i < N; i++) {
@@ -190,8 +191,11 @@ void test_async_N() {
         if (!success) {
             throw std::runtime_error("Error during an async read");
         }
-        if (ret_values[i] != i) {
-            std::cout << "Expected " << i << " but got " << ret_values[i]
+        int ret_value = *(reinterpret_cast<int*>(
+            get_futures[i].getDataPair().first.get()));
+
+        if (ret_value != i) {
+            std::cout << "Expected " << i << " but got " << ret_value
                 << std::endl;
             throw std::runtime_error("Wrong value returned in test_async_N");
         }

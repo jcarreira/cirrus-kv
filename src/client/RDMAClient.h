@@ -52,7 +52,7 @@ class RDMAClient : public BladeClient {
     ClientFuture write_async(ObjectID oid, const void* data,
         uint64_t size) override;
 
-    ClientFuture read_async(ObjectID oid, void* data, uint64_t size) override;
+    ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
 
