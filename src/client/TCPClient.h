@@ -9,7 +9,6 @@
 #include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -30,20 +29,13 @@ class TCPClient : public BladeClient {
     std::pair<std::shared_ptr<char>, unsigned int> read_sync(
         ObjectID oid) override;
 
-    cirrus::Future write_async(ObjectID oid, const void* data,
-                                       uint64_t size);
-    cirrus::Future read_async(ObjectID oid);
+    ClientFuture write_async(ObjectID oid, const void* data,
+                                       uint64_t size) override;
+    ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
 
  private:
-    ssize_t send_all(int, const void*, size_t, int);
-    cirrus::Future enqueue_message(
-                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
-                        const int txn_id);
-    void process_received();
-    void process_send();
-
     /**
       * A struct shared between futures and the receiver_thread. Used to
       * notify client of operation completeion, as well as to complete
@@ -75,6 +67,14 @@ class TCPClient : public BladeClient {
             mem_size = std::make_shared<uint64_t>(0);
         }
     };
+
+    ssize_t send_all(int, const void*, size_t, int);
+    ClientFuture enqueue_message(
+                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        const int txn_id);
+    void process_received();
+    void process_send();
+
     /** fd of the socket used to communicate w/ remote store */
     int sock = 0;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */

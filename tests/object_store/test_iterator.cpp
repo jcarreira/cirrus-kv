@@ -201,10 +201,11 @@ void test_iterator_alt() {
  * This test ensures that random prefetching works as expected.
  */
 void test_random_prefetching() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
-            &client,
+            client.get(),
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
@@ -264,10 +265,11 @@ void test_random_prefetching() {
  * This test ensures that custom iterators work as expected.
  */
 void test_custom_iteration() {
-    cirrus::TCPClient client;
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
-            &client,
+            client.get(),
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
@@ -384,11 +386,13 @@ auto main(int argc, char *argv[]) -> int {
     std::cout << "Test starting" << std::endl;
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
+    std::cout << "Test Started." << std::endl;
     test_iterator();
+    std::cout << "Starting iterator alt test." << std::endl;
     test_iterator_alt();
     test_array();
     test_random_prefetching();
     test_custom_iteration();
-    std::cout << "Test success" << std::endl;
+    std::cout << "Test successful" << std::endl;
     return 0;
 }

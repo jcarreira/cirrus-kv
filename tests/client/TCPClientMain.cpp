@@ -10,10 +10,11 @@ const char *IP;
 /**
  * Simple test verifying that basic put/get works as intended.
  */
-void test_simple() {
+void test_sync() {
     cirrus::TCPClient client;
     client.connect(IP, port);
     std::cout << "Connected to server." << std::endl;
+
     int message = 42;
     std::cout << "message declared." << std::endl;
     client.write_sync(1, &message, sizeof(int));
@@ -29,9 +30,43 @@ void test_simple() {
     }
 }
 
+/**
+ * Simple test verifying that basic asynchronous put/get works as intended.
+ */
+void test_async() {
+    cirrus::TCPClient client;
+    client.connect(IP, port);
+
+    int message = 42;
+    auto future = client.write_async(1, &message, sizeof(int));
+    std::cout << "write sync complete" << std::endl;
+
+    if (!future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    auto read_future = client.read_async(1);
+
+    if (!read_future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    auto ret_ptr = read_future.getDataPair().first;
+
+    int returned = *(reinterpret_cast<int*>(ret_ptr.get()));
+
+    std::cout << returned << " returned from server" << std::endl;
+
+    if (returned != message) {
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Test Starting." << std::endl;
-    test_simple();
+    test_sync();
+    test_async();
     std::cout << "Test successful." << std::endl;
+    return 0;
 }

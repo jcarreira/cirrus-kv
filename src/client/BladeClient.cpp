@@ -1,28 +1,34 @@
+#include "client/BladeClient.h"
+
 #include <string>
 #include <memory>
+
 #include "common/Synchronization.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 #include "utils/Log.h"
+
 namespace cirrus {
 
 using ObjectID = uint64_t;
 
 /**
-  * Constructor for Future.
-  * @param result A shared pointer to the boolean success of the operation
-  * @param result_available a shared pointer to a boolean indicating whether
-  * the result is available yet.
-  * @param sem a shared_ptr to a cirrus::PosixSemaphore, used to wait for the
-  * result.
-  * @param data_ptr a shared_ptr to a shared_ptr that points to the buffer
-  * used to receive an object from the remote store, if any.
-  * @param data_size the length of the buffer used to receive data from the
-  * store.
-  */
-Future::Future(std::shared_ptr<bool> result,
+ * Constructor for ClientFuture.
+ * @param result a std::shared_ptr that points to a boolean indicating
+ * whether the operation was successful.
+ * @param result_available a shared pointer to a boolean indicating whether
+ * the result is available yet.
+ * @param sem a shared_ptr to a cirrus::Lock, used to wait for the
+ * result.
+ * @param error_code a std::shared_ptr to a cirrus::ErrorCodes that indicates
+ * either success on the server or any errors that occured during the operation.
+ * @param data_ptr a shared_ptr to a shared_ptr that points to the buffer
+ * used to receive an object from the remote store, if any.
+ * @param data_size the length of the buffer used to receive data from the
+ * store.
+ */
+BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
-               std::shared_ptr<cirrus::PosixSemaphore> sem,
+               std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code,
                std::shared_ptr<std::shared_ptr<char>> data_ptr,
                std::shared_ptr<uint64_t> data_size):
@@ -31,10 +37,9 @@ Future::Future(std::shared_ptr<bool> result,
     data_size(data_size) {}
 
 /**
-  * Waits until the result the future is monitoring is available.
-  */
-void Future::wait() {
-    // Wait on the semaphore as long as the result is not available
+ * Waits until the result the future is monitoring is available.
+ */
+void BladeClient::ClientFuture::wait() {
     while (!*result_available) {
         LOG<INFO>("Result not available, waiting.");
         sem->wait();
@@ -42,10 +47,10 @@ void Future::wait() {
 }
 
 /**
-  * Checks the status of the result.
-  * @return Returns true if the result is available, false otherwise.
-  */
-bool Future::try_wait() {
+ * Checks the status of the result.
+ * @return Returns true if the result is available, false otherwise.
+ */
+bool BladeClient::ClientFuture::try_wait() {
     if (!*result_available) {
         return sem->trywait();
     } else {
@@ -54,16 +59,16 @@ bool Future::try_wait() {
 }
 
 /**
-  * Returns the result of the asynchronous operation. If result is not
-  * yet available, waits until it is ready.
-  * @return Returns the result given by the asynchronous operation.
-  */
-bool Future::get() {
-    // Wait until result is available
+ * Returns the result of the asynchronous operation. If result is not
+ * yet available, waits until it is ready.
+ * @return Returns the result given by the asynchronous operation.
+ */
+bool BladeClient::ClientFuture::get() {
     LOG<INFO>("Waiting for result.");
     wait();
     LOG<INFO>("Result is available.");
     LOG<INFO>("Error code is: ", *error_code);
+
     // Check the error code enum. Throw exception if one happened on server.
     switch (*error_code) {
       case cirrus::ErrorCodes::kOk: {
@@ -92,7 +97,8 @@ bool Future::get() {
  * into and length of buffer. Will throw an exception if called on a Future
  * that was not used for a read.
  */
-std::pair<std::shared_ptr<char>, unsigned int> Future::getDataPair() {
+std::pair<std::shared_ptr<char>, unsigned int>
+BladeClient::ClientFuture::getDataPair() {
     // Wait until result is available and throw exception if necessary
     get();
     if (data_ptr.get() == nullptr) {

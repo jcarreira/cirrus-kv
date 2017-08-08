@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -16,7 +17,6 @@
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 #include "common/Synchronization.h"
 
@@ -98,13 +98,17 @@ void TCPClient::connect(const std::string& address,
   * be read read from.
   * @param size the size of the serialized object being read from
   * local memory.
-  * @return A Future that contains information about the status of the
+  * @return A ClientFuture that contains information about the status of the
   * operation.
   */
-cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
-                                                    uint64_t size) {
+BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
+                                    uint64_t size) {
     // Make sure that the pointer is not null
-    TEST_NZ(data == nullptr);
+    TEST_Z(data);
+
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
     // Create flatbuffer builder
     std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_unique<flatbuffers::FlatBufferBuilder>(
@@ -126,6 +130,12 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
                                         msg_contents.Union());
     builder->Finish(msg);
 
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::write_async time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
+
     return enqueue_message(std::move(builder), txn_id);
 }
 
@@ -133,9 +143,12 @@ cirrus::Future TCPClient::write_async(ObjectID oid, const void* data,
  * Asynchronously reads an object corresponding to ObjectID
  * from the remote server.
  * @param id the id of the object the user wishes to read to local memory.
- * @return A cirrus::Future containing information about the operation.
+ * @return A ClientFuture containing information about the operation.
  */
-cirrus::Future TCPClient::read_async(ObjectID oid) {
+BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
     std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_unique<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -153,6 +166,10 @@ cirrus::Future TCPClient::read_async(ObjectID oid) {
                                         msg_contents.Union());
     builder->Finish(msg);
 
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::read_async time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
     return enqueue_message(std::move(builder), txn_id);
 }
 
@@ -168,7 +185,7 @@ cirrus::Future TCPClient::read_async(ObjectID oid) {
   */
 bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
     LOG<INFO>("Call to write_sync");
-    cirrus::Future future = write_async(oid, data, size);
+    BladeClient::ClientFuture future = write_async(oid, data, size);
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -183,7 +200,7 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
 std::pair<std::shared_ptr<char>, unsigned int>
 TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
-    cirrus::Future future = read_async(oid);
+    BladeClient::ClientFuture future = read_async(oid);
     LOG<INFO>("Returned from read_async.");
     return future.getDataPair();
 }
@@ -213,7 +230,8 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    cirrus::Future future = enqueue_message(std::move(builder), txn_id);
+    BladeClient::ClientFuture future = enqueue_message(std::move(builder),
+        txn_id);
     return future.get();
 }
 
@@ -229,7 +247,7 @@ void TCPClient::process_received() {
     // Reserve the size of a 32 bit int
     int current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0;
+    int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
 
     /**
       * Message format
@@ -247,6 +265,8 @@ void TCPClient::process_received() {
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
+                char *info = strerror(errno);
+                LOG<ERROR>(info);
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
@@ -266,6 +286,9 @@ void TCPClient::process_received() {
         LOG<INFO>("Size of incoming message received from server: ",
                   incoming_size);
 
+#ifdef PERF_LOG
+        TimerFunction receive_msg_time;
+#endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
             buffer.resize(incoming_size);
@@ -286,11 +309,21 @@ void TCPClient::process_received() {
             LOG<INFO>("Client has read ", bytes_read, " of ", incoming_size,
                                                         " bytes.");
         }
+#ifdef PERF_LOG
+        double receive_mbps = bytes_read / (1024 * 1024.0) /
+            (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
+        LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
+                receive_msg_time.getUsElapsed(),
+                " bw (MB/s): ", receive_mbps);
+#endif
 
         // Extract the flatbuffer from the receiving buffer
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
         TxnID txn_id = ack->txnid();
 
+#ifdef PERF_LOG
+        TimerFunction map_time;
+#endif
         // obtain lock on map
         map_lock.wait();
 
@@ -312,6 +345,11 @@ void TCPClient::process_received() {
 
         // release lock
         map_lock.signal();
+#ifdef PERF_LOG
+        LOG<PERF>("TCPClient::process_received map time (us): ",
+                map_time.getUsElapsed());
+#endif
+
         // Save the error code so that the future can read it
         *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
         LOG<INFO>("Error code read is: ", *(txn->error_code));
@@ -337,6 +375,7 @@ void TCPClient::process_received() {
                         new char[data_fb_vector->size()],
                         std::default_delete< char[]>());
                     LOG<INFO>("Client has pointer to vector");
+                    // XXX we should get rid of this
                     std::copy(data_fb_vector->begin(), data_fb_vector->end(),
                                 reinterpret_cast<char*>(
                                     (*(txn->mem_for_read_ptr)).get()));
@@ -421,18 +460,30 @@ void TCPClient::process_send() {
 
         LOG<INFO>("Client sending size: ", message_size);
         // Convert size to network order and send
+
+        // XXX shouldn't this be a send_all?
         uint32_t network_order_size = htonl(message_size);
         if (send(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {
             throw cirrus::Exception("Client error sending data to server");
         }
 
+#ifdef PERF_LOG
+        TimerFunction send_time;
+#endif
         LOG<INFO>("Client sending main message");
         // Send main message
         if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
                 != message_size) {
             throw cirrus::Exception("Client error sending data to server");
         }
+#ifdef PERF_LOG
+        double send_mbps = message_size / (1024 * 1024.0) /
+            (send_time.getUsElapsed() / 1000.0 / 1000.0);
+        LOG<PERF>("TCPClient::process_send send time (us): ",
+                send_time.getUsElapsed(),
+                " bw (MB/s): ", send_mbps);
+#endif
         LOG<INFO>("message pair sent by client");
 
         // Release the lock so that the other thread may add to the send queue
@@ -448,9 +499,12 @@ void TCPClient::process_send() {
   * @param txn_id transaction id corresponding to the event being enqueued.
   * @return Returns a Future.
   */
-cirrus::Future TCPClient::enqueue_message(
+BladeClient::ClientFuture TCPClient::enqueue_message(
             std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
             const int txn_id) {
+#ifdef PERF_LOG
+    TimerFunction enqueue_time;
+#endif
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     // Obtain lock on map
@@ -463,7 +517,7 @@ cirrus::Future TCPClient::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    cirrus::Future future(txn->result, txn->result_available,
+    BladeClient::ClientFuture future(txn->result, txn->result_available,
                           txn->sem, txn->error_code, txn->mem_for_read_ptr,
                           txn->mem_size);
 
@@ -477,6 +531,11 @@ cirrus::Future TCPClient::enqueue_message(
     queue_lock.signal();
     // Alert that the queue has been updated
     queue_semaphore.signal();
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::enqueue_message enqueue time (us): ",
+            enqueue_time.getUsElapsed());
+#endif
     return future;
 }
 

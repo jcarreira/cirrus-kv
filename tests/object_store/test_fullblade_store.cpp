@@ -141,7 +141,7 @@ void test_sync(int N) {
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
-        cirrus::TimerFunction tf("", false);
+        cirrus::TimerFunction tf;
         store.put(1, d);
 #ifdef CHECK_RESULTS
         struct cirrus::Dummy<SIZE> d2 = store.get(1);
@@ -174,21 +174,136 @@ void test_nonexistent_get() {
         store.put(oid, oid);
     }
 
+    // TODO(Tyler): If a test before this one calls put on oid 10, this will
+    // not fail.
+
     // Should fail
     store.get(10);
 }
 
 /**
-  * This test tests the remove method. It ensures that you cannot "get"
-  * an item if it has been removed from the store.
-  */
+ * Tests a simple asynchronous put and get.
+ */
+void test_async() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    auto returned_future = store.put_async(0, 42);
+    if (!returned_future.get()) {
+        throw std::runtime_error("Error occured during async put.");
+    }
+
+    auto get_future = store.get_async(0);
+    int result = get_future.get();
+    if (result != 42) {
+        std::cout << "Expected 42 but got: " << result << std::endl;
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+void test_async_N(int N) {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    std::vector<cirrus::ObjectStore<int>::ObjectStorePutFuture> put_futures;
+    std::vector<cirrus::ObjectStore<int>::ObjectStoreGetFuture> get_futures;
+
+    int i;
+    for (i = 0; i < N; i++) {
+        put_futures.push_back(store.put_async(i, i));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put.");
+        }
+    }
+
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(store.get_async(i));
+    }
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        int val = get_futures[i].get();
+        if (val != i) {
+            std::cout << "Expected " << i << " but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
+        }
+    }
+}
+
+/**
+ * This test tests that get_bulk() and put_bulk() return proper values.
+ */
+void test_bulk() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    std::vector<int> values(10);
+    for (int i = 0; i < 10; i++) {
+        values[i] = i;
+    }
+
+    store.put_bulk(0, 9, values.data());
+
+    std::vector<int> ret_values(10);
+    store.get_bulk(0, 9, ret_values.data());
+    for (int i = 0; i < 10; i++) {
+        if (ret_values[i] != values[i]) {
+            std::cout << "Expected " << i << " but got " << ret_values[i]
+                << std::endl;
+            throw std::runtime_error("Wrong value returned");
+        }
+    }
+}
+
+/**
+ * Tests that remove_bulk correctly removes items from the store.
+ */
+void test_remove_bulk() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+     for (int i = 0; i < 10; i++) {
+        store.put(i, i);
+     }
+
+    store.removeBulk(0, 9);
+    // Attempt to get all items in the removed range, should fail
+    for (int i = 0; i < 10; i++) {
+        try {
+            store.get(i);
+            std::cout << "Exception not thrown after attempting to access item "
+                "that should have been removed." << std::endl;
+            throw std::runtime_error("No exception when getting removed id.");
+        } catch (const cirrus::NoSuchIDException& e) {
+        }
+    }
+}
+
+/**
+ * This test tests the remove method. It ensures that you cannot "get"
+ * an item if it has been removed from the store.
+ */
 void test_remove() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
-
     store.put(0, 42);
 
     store.remove(0);
@@ -198,7 +313,7 @@ void test_remove() {
     std::cout << "Received following value incorrectly: " << i << std::endl;
 }
 
-/**
+ /**
   * This test tests the ability to store and retrieve variable sized items.
   */
 void test_variable_sizes() {
@@ -217,13 +332,27 @@ void test_variable_sizes() {
 }
 
 /**
+ * This test ensures that error messages that would normally be generated
+ * during a get are still received during a get bulk.
+ */
+void test_bulk_nonexistent() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+    store.put(1, 1);
+    std::vector<int> ret_values(10);
+    store.get_bulk(1492, 1501, ret_values.data());
+}
+
+/**
   * This test ensures that it is possible to share one client between two
   * different stores with different types.
   */
 void test_shared_client() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
-
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             cirrus::serializer_simple<int>,
             cirrus::deserializer_simple<int, sizeof(int)>);
@@ -257,18 +386,31 @@ void test_shared_client() {
             throw std::runtime_error("wrong value returned");
         }
     }
-
-    // Should fail
-    store.get(10);
 }
 
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Starting test." << std::endl;
+    std::cout << "Starting synchronous tests." << std::endl;
     test_sync(10);
     std::cout << "Starting test sync no args." << std::endl;
     test_sync();
+    test_bulk();
+
+    try {
+        test_bulk_nonexistent();
+        std::cout << "Exception not thrown when get bulk"
+                     " called on nonexistent ID." << std::endl;
+        return -1;
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    std::cout << "Starting asynchronous tests." << std::endl;
+    test_async();
+    std::cout << "Test async n." << std::endl;
+    test_async_N(10);
+
     std::cout << "Starting test of c array." << std::endl;
     test_sync_array();
     std::cout << "Testing nonexistent get." << std::endl;
@@ -289,8 +431,11 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
+
+    test_remove_bulk();
     test_shared_client();
     test_variable_sizes();
     std::cout << "Test Successful." << std::endl;
+
     return 0;
 }

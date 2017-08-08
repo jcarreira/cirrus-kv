@@ -9,7 +9,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "utils/CirrusTime.h"
-#include "client/TCPClient.h"
+#include "client/BladeClient.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
