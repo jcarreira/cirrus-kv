@@ -3,21 +3,29 @@
 
 #include <iostream>
 #include <utility>
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/StringUtils.h"
 #include "common/Synchronization.h"
 
-#define DEFAULT_THRESHOLD 10
+#define INIT_SWITCH (-1)
+// by default logging is off
+#define DEFAULT_SWITCH (0)
 
 namespace cirrus {
 
+enum { INFO_TAG = 1, ERROR_TAG = 2, PERF_TAG = 3};
+
 struct INFO {
-    static const int value = 5;
+    static const int value = 1;
     constexpr static const char* prefix = "[INFO]";
 };
 struct ERROR {
-    static const int value = 10;
+    static const int value = 2;
     constexpr static const char* prefix = "[ERROR]";
+};
+struct PERF {
+    static const int value = 3;
+    constexpr static const char* prefix = "[PERF]";
 };
 
 #if __GNUC__ >= 7
@@ -34,23 +42,33 @@ template<typename T,
 template<typename T, typename ... Params>
 #endif
 bool LOG(Params&& ... param) {
-    static int THRESHOLD = -1;
-    if (THRESHOLD == -1) {
+    static int INFO_SWITCH  = INIT_SWITCH;
+    static int ERROR_SWITCH = INIT_SWITCH;
+    static int PERF_SWITCH  = INIT_SWITCH;
+    if (INFO_SWITCH == INIT_SWITCH) {
+        INFO_SWITCH  = DEFAULT_SWITCH;
+        ERROR_SWITCH = DEFAULT_SWITCH;
+        PERF_SWITCH  = DEFAULT_SWITCH;
         if (const char* env = std::getenv("CIRRUS_LOG")) {
             int v = string_to<int>(env);
             if (v) {
-                THRESHOLD = v;
-            } else {
-                THRESHOLD = DEFAULT_THRESHOLD;
+                INFO_SWITCH = v;
+                ERROR_SWITCH = v;
             }
-        } else {
-            // if env not defined we default to not show logs
-            THRESHOLD = DEFAULT_THRESHOLD;
+        }
+        if (const char* env = std::getenv("CIRRUS_PERF")) {
+            int v = string_to<int>(env);
+            if (v) {
+                PERF_SWITCH = v;
+            }
         }
     }
 
-    if (T::value < THRESHOLD)
+    if ( (T::value == INFO_TAG  && INFO_SWITCH <= 0) ||
+         (T::value == ERROR_TAG && ERROR_SWITCH <= 0) ||
+         (T::value == PERF_TAG  && PERF_SWITCH <= 0)) {
         return true;
+    }
 
     std::cout << T::prefix
         << " -";

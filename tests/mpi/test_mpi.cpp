@@ -21,7 +21,7 @@
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
-#include "utils/Time.h"
+#include "utils/CirrusTime.h"
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
 
@@ -105,7 +105,7 @@ void test_sync(int N) {
 
     // real benchmark
     for (int i = 0; i < N; ++i) {
-        cirrus::TimerFunction tf("", false);
+        cirrus::TimerFunction tf;
         store.put(1, d);
 #ifdef CHECK_RESULTS
         struct cirrus::Dummy<SIZE> d2 = store.get(1);

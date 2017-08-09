@@ -8,7 +8,6 @@
 #include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -21,29 +20,20 @@ using TxnID = uint64_t;
   */
 class TCPClient : public BladeClient {
  public:
-    virtual ~TCPClient();
-
+    ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
 
-    virtual cirrus::Future write_async(ObjectID oid, const void* data,
+    ClientFuture write_async(ObjectID oid, const void* data,
                                        uint64_t size);
-    virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
+    ClientFuture read_async(ObjectID oid, void* data, uint64_t size);
 
     bool remove(ObjectID id) override;
 
  private:
-    ssize_t send_all(int, const void*, size_t, int);
-    cirrus::Future enqueue_message(
-                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-                        const int txn_id,
-                        void *ptr = nullptr);
-    void process_received();
-    void process_send();
-
     /**
       * A struct shared between futures and the receiver_thread. Used to
       * notify client of operation completeion, as well as to complete
@@ -52,6 +42,8 @@ class TCPClient : public BladeClient {
     struct txn_info {
         /** result of the transaction */
         std::shared_ptr<bool> result;
+        /** Boolean indicating whether transaction is complete */
+        std::shared_ptr<bool> result_available;
         /** Error code if any were thrown on the server. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
         /** Semaphore for the transaction. */
@@ -61,10 +53,21 @@ class TCPClient : public BladeClient {
 
         txn_info() {
             result = std::make_shared<bool>();
+            result_available = std::make_shared<bool>();
+            *result_available = false;
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
         }
     };
+
+    ssize_t send_all(int, const void*, size_t, int);
+    ClientFuture enqueue_message(
+                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        const int txn_id,
+                        void *ptr = nullptr);
+    void process_received();
+    void process_send();
+
     /** fd of the socket used to communicate w/ remote store */
     int sock = 0;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
@@ -73,7 +76,7 @@ class TCPClient : public BladeClient {
     /**
       * Map that allows receiver thread to map transactions to their
       * completion information. When a message is added to the send queue,
-      * a struct txn_info is created and added to this map. This struct 
+      * a struct txn_info is created and added to this map. This struct
       * allows the receiver thread to place information regarding completion
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
@@ -103,6 +106,12 @@ class TCPClient : public BladeClient {
      * in the class destructor.
      */
     bool terminate_threads = false;
+
+    /**
+     * Bool that indicates whether the client has already connected to a remote
+     * store.
+     */
+    std::atomic<bool> has_connected = {false};
 };
 
 }  // namespace cirrus

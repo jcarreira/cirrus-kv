@@ -24,20 +24,16 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AX_CXX_COMPILE_STDCXX_14
 
-CXXFLAGS="-O3 -fPIC -std=c++1z -Werror"
+CXXFLAGS="-O3 -g -fPIC -std=c++1z -Werror"
 
-# Checks for libraries.
-#AC_CHECK_LIB([ibverbs], [ibv_create_qp])
-#AC_CHECK_LIB([rdmacm], [rdma_get_cm_event])
-
-# check presence
-#AC_CHECK_LIB([ibverbs], [main])
-#AC_CHECK_LIB([rdmacm], [main])
-
+# Check for libraries
 AC_LIB_HAVE_LINKFLAGS(rdmacm)
 AC_LIB_HAVE_LINKFLAGS(ibverbs)
+AC_LIB_HAVE_LINKFLAGS(mpi)
 
 AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
+AM_CONDITIONAL([USE_MPI], [test "x${HAVE_LIBMPI}" = "xyes"])
+
 # Checks for header files.
 AC_CHECK_HEADERS([ arpa/inet.h netdb.h string.h stdint.h\
         stdlib.h sys/types.h sys/socket.h sys/epoll.h\

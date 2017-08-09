@@ -2,9 +2,10 @@ AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
 		test_mult_clients test_cache_manager test_iterator
 
-LIBS         =  -l:libcityhash.a -lclient \
-		-lauthentication -lutils -lcommon -levictionpolicies\
+LIBS         =  -lcityhash -lclient \
+		-lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
+
 LINCLUDES    =  -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \

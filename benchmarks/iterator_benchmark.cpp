@@ -18,24 +18,32 @@
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const unsigned int SIZE = 128;
-const char IP[] = "10.10.49.83";
+const char IP[] = "127.0.0.1";
 const int cache_size = 200;  // Arbitrary
 const int read_ahead = 20;  // Arbitrary
 const int MILLION = 1000000;
 
+/**
+ * Prints the stats from a test to the given ostream.
+ * @param out the ostream to write the results to
+ * @param iterator_elapsed time elapsed during the iterator phase of the test
+ * @param regular_elapsed time elapsed during the regular phase of the test
+ * @parm msgs_sent the number of messages sent during the test
+ */
 void print_stats(std::ostream& out, uint64_t iterator_elapsed,
-        uint64_t regular_elapsed, uint64_t msg_sent) {
+        uint64_t regular_elapsed, uint64_t msgs_sent) {
     out << "Iterator Throughput Benchmark" << std::endl;
     out << "Iterator elapsed us: " << iterator_elapsed * MILLION << std::endl;
     out << "Regular elapsed us: " << regular_elapsed * MILLION << std::endl;
-    out << "iterator reads/s: " << (msg_sent * 1.0 / iterator_elapsed * MILLION)
+    out << "iterator reads/s: "
+        << (msgs_sent * 1.0 / iterator_elapsed * MILLION)
         << std::endl;
-    out << "Regular reads/s: " << (msg_sent * 1.0 / regular_elapsed * MILLION)
+    out << "Regular reads/s: " << (msgs_sent * 1.0 / regular_elapsed * MILLION)
         << std::endl;
 }
 
 /**
- * Compares the time to retrieve N items using the iterator vs 
+ * Compares the time to retrieve N items using the iterator vs
  * fetching each individually.
  * @param num_items the number of items to put on the remote store,
  * which will then be iterated over.
@@ -64,7 +72,8 @@ void test_iterator(int num_items) {
 
     cirrus::TimerFunction iterator_start;
     for (auto it = iter.begin(); it != iter.end(); it++) {
-        cirrus::Dummy<SIZE> val = *it;
+        __attribute__((unused)) cirrus::Dummy<SIZE> val;
+        val = *it;
     }
     uint64_t iterator_end = iterator_start.getUsElapsed();
 
@@ -74,7 +83,8 @@ void test_iterator(int num_items) {
     // Time without the iterator
     cirrus::TimerFunction regular_start;
     for (int i = 0; i < num_items; i++) {
-        cirrus::Dummy<SIZE> val = cm.get(i);
+        __attribute__((unused)) cirrus::Dummy<SIZE> val;
+        val = cm.get(i);
     }
     uint64_t regular_end = regular_start.getUsElapsed();
 
