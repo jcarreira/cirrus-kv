@@ -58,14 +58,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       */
     BladeClient *client;
 
-    /** The size of serialized objects. This is obtained from the return
-      * value of the serializer() function. We assume that all serialized
-      * objects have the same length.
-      */
-    uint64_t serialized_size = 0;
-
-    // TODO(Tyler): Change the serializer/deserializer to
-    //  be references/pointers?
+// TODO(Tyler): Change the serializer/deserializer to
+//  be references/pointers?
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -114,21 +108,14 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
   */
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        throw cirrus::Exception("At least one put must be performed before "
-                "a get can be performed.");
-    }
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    std::unique_ptr<char[]> ptr(new char[serialized_size]);
-
-    // Read into the section of memory you just allocated
-    client->read_sync(id, ptr.get(), serialized_size);
-
+    // Read the object from the remote store
+    std::pair<std::shared_ptr<char>, unsigned int> ptr_pair =
+        client->read_sync(id);
+    auto ptr = ptr_pair.first;
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr.get(), serialized_size);
+
+    uint64_t length = ptr_pair.second;
+    T retval = deserializer(ptr.get(), length);
 
     return retval;
 }
@@ -142,23 +129,12 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 template<class T>
 typename ObjectStore<T>::ObjectStoreGetFuture
 FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        throw cirrus::Exception("At least one put must be performed before "
-                "a get can be performed.");
-    }
-
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    std::shared_ptr<std::vector<char>> ptr =
-        std::make_shared<std::vector<char>>(serialized_size);
-
     // Read into the section of memory you just allocated
-    auto client_future = client->read_async(id, ptr->data(), serialized_size);
+    auto client_future = client->read_async(id);
 
-    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr,
-            serialized_size, deserializer);
+    // TODO(Tyler): fix the object store get future
+    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future,
+        deserializer);
 }
 
 /**
@@ -170,7 +146,6 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
-    // serialized_size is saved in the class, it is the size of pushed objects
 
     // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
 #ifdef PERF_LOG
@@ -179,7 +154,7 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
+    uint64_t serialized_size = serializer_out.second;
 #ifdef PERF_LOG
     LOG<PERF>("FullBladeObjectStoreTempl::put serialize time (ns): ",
             serialize_time.getNsElapsed());
@@ -203,7 +178,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
     TimerFunction serialize_time;
 #endif
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
+    uint64_t serialized_size = serializer_out.second;
 #ifdef PERF_LOG
     LOG<PERF>("FullBladeObjectStoreTempl::put_async serialize time (ns): ",
             serialize_time.getNsElapsed());
