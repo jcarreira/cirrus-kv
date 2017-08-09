@@ -96,7 +96,6 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         unsigned int>(const T&)> serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
-    serialized_size(0),
     serializer(serializer), deserializer(deserializer) {
     client->connect(bladeIP, port);
 }
