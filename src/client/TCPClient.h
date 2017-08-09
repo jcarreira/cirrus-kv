@@ -70,14 +70,14 @@ class TCPClient : public BladeClient {
     };
 
     /**
-     * Custom deleter to allow for the deletion of a shared ptr to a char to delete
-     * the vector that contains the char.
+     * Custom deleter to allow for the deletion of a shared ptr to a
+     * char to delete the vector that contains the char.
      */
     class read_op_deleter {
      public:
         /**
          * Constructor for the deleter.
-         * @param buf pointer to the vector that contains the character
+         * @param buf pointer to the vector that contains the character.
          */
         explicit read_op_deleter(
             std::shared_ptr<std::vector<char>> buf) :
@@ -85,7 +85,9 @@ class TCPClient : public BladeClient {
 
         /**
          * Function that actually performs the deletion. Does not need to do
-         * anything as going out of scope should eliminate the pointer to the vector
+         * anything as going out of scope should eliminate the pointer to the
+         * vector and delete the vector itself. ptr is a pointer to a character
+         * that lives somewhere inside of the std::vector buf.
          */
         void operator()(const char * /* ptr */) {}
 

@@ -294,6 +294,10 @@ void TCPClient::process_received() {
 #endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
+            // We use reserve() in place of resize() as it does not initialize
+            // the memory that it allocates. This is safe, but
+            // buffer.capacity() must be used to find the length of the buffer
+            // rather than buffer.size()
             buffer->reserve(incoming_size);
         }
 
@@ -372,10 +376,22 @@ void TCPClient::process_received() {
                     // copy the data from the ReadAck into the given pointer
                     *(txn->result) = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
+                    // fb here stands for flatbuffer. This is the
+                    // flatbuffer vector representation of the data.
+                    // This operation returns a pointer to the vector
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     *(txn->mem_size) = data_fb_vector->size();
 
-                    // pointer will be data_fb_vector->Data();
+                    // data_fb_vector->Data() returns a pointer to the raw data.
+                    // This data lives inside of the std::vector buffer,
+                    // which was created with a call to std::make_shared.
+
+                    // Here we pass an std::shared_ptr pointer to the raw memory
+                    // to the future (via the txn info struct)
+                    // while tying the lifetime of the buffer to
+                    // the lifetime of the pointer. This ensures that when no
+                    // references to the data exist, the buffer containing
+                    // the data is deleted.
                     *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
