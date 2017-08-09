@@ -16,7 +16,7 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, int queue_len = 100);
+    explicit TCPServer(int port, uint64_t pool_size_);
     ~TCPServer() = default;
 
     virtual void init();
@@ -32,8 +32,6 @@ class TCPServer : public Server {
 
     /** The port that the server is listening on. */
     int port_;
-    /** The number of pending connection requests allowed at once. */
-    int queue_len_;
     /** The fd for the socket the server listens for incoming requests on. */
     int server_sock_;
     /** The map the server uses to map ObjectIDs to byte vectors. */

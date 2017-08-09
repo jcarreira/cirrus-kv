@@ -27,9 +27,8 @@ static const int initial_buffer_size = 50;
   * server.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
+TCPServer::TCPServer(int port, uint64_t pool_size_) {
     port_ = port;
-    queue_len_ = queue_len;
     pool_size = pool_size_;
     server_sock_ = 0;
 }
@@ -108,7 +107,8 @@ void TCPServer::init() {
                + to_string(port_));
     }
 
-    if (listen(server_sock_, queue_len_) == -1) {
+    // SOMAXCONN is the "max reasonable backlog size" defined in socket.h
+    if (listen(server_sock_, SOMAXCONN) == -1) {
         throw cirrus::ConnectionException("Error listening on port "
             + to_string(port_));
     }
