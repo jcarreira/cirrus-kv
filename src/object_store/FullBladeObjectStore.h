@@ -4,9 +4,11 @@
 #include <string>
 #include <iostream>
 #include <utility>
+#include <type_traits>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
+#include "client/TCPClient.h"
 #include "utils/utils.h"
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
@@ -38,6 +40,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
     bool remove(ObjectID) override;
+
+    AtomicType exchange(ObjectID oid, AtomicType value);
+    AtomicType fetchAdd(ObjectID oid, AtomicType value);
 
     // std::function<bool(bool)> get_async(ObjectID, T*) const;
     // std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
@@ -123,6 +128,62 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // Free the memory we stored the serialized object in.
     ::operator delete (ptr);
     return retval;
+}
+
+/**
+  * Performs atomic exchange. This operation is only supported in TCP mode.
+  * @param value a value of AtomicType. It will be
+  * exchanged with the value under oid on the server.
+  * @return the previous value under oid.
+  */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::exchange(ObjectID oid,
+    AtomicType value) {
+    if (std::is_same<T, AtomicType>::value) {
+        TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
+        if (tcp_client_ptr == nullptr) {
+            throw cirrus::Exception("This operation only supported "
+                "in TCP mode");
+        }
+
+        std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                            serializer(value);
+        std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+        AtomicType returned_serialized = tcp_client_ptr->exchange(oid,
+            *(reinterpret_cast<AtomicType*>(serial_ptr.get())));
+        return deserializer(&returned_serialized, sizeof(AtomicType));
+    } else {
+        throw cirrus::Exception("This is only supported when working with the "
+            "atomic type.");
+    }
+}
+
+/**
+  * Performs fetchadd. This operation is only supported in TCP mode.
+  * @param value a value of AtomicType. It will be
+  * added to the value on the server.
+  * @return the previous value under oid.
+  */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::fetchAdd(ObjectID oid,
+    AtomicType value) {
+    if (std::is_same<T, AtomicType>::value) {
+        TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
+        if (tcp_client_ptr == nullptr) {
+            throw cirrus::Exception("This operation only supported "
+                "in TCP mode");
+        }
+
+        std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                            serializer(value);
+        std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+        AtomicType returned_serialized = tcp_client_ptr->fetchAdd(oid,
+            *(reinterpret_cast<AtomicType*>(serial_ptr.get())));
+        return deserializer(&returned_serialized, sizeof(AtomicType));
+    } else {
+        throw cirrus::Exception("This is only supported when working with the "
+            "atomic type.");
+    }
 }
 
 

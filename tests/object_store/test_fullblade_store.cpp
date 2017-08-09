@@ -21,6 +21,8 @@ const char *IP;
 static const uint32_t SIZE = 1;
 bool use_rdma_client;
 
+using AtomicType = uint32_t;
+
 // #define CHECK_RESULTS
 
 /**
@@ -179,6 +181,49 @@ void test_shared_client() {
     store.get(10);
 }
 
+/**
+ * Simple test verifying that basic atomics work.
+ */
+void test_atomics() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<AtomicType> store(IP, PORT,
+            client.get(),
+            cirrus::serializeAtomicType,
+            cirrus::deserializeAtomicType);
+
+    AtomicType message = 15;
+    store.put(1, message);
+
+    std::cout << "Exchanging" << std::endl;
+    AtomicType retval = store.exchange(1, 23);
+    if (retval != message) {
+        std::cout << retval << std::endl;
+        throw std::runtime_error("Wrong value returned from exchange.");
+    }
+
+    AtomicType message2 = 3;
+    store.put(2, message2);
+
+    std::cout << "FetchAdd" << std::endl;
+    AtomicType val = 1;
+    retval = store.fetchAdd(2, val);
+    if (retval != message2) {
+        std::cout << retval << std::endl;
+        std::cout << "Wrong value returned" << std::endl;
+        throw std::runtime_error("Wrong value returned from fetchadd.");
+    }
+
+    AtomicType returned_network;
+    retval = store.get(2);
+
+    if (retval != val + message2) {
+        std::cout << retval << " but expected " << val + message2 << std::endl;
+        throw std::runtime_error("Wrong value returned after fetchadd");
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
@@ -196,7 +241,9 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     std::cout << "Test remove starting." << std::endl;
-
+    if (!use_rdma_client) {
+        test_atomics();
+    }
     try {
         test_remove();
         std::cout << "Exception not thrown when get"
