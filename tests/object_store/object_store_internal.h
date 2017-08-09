@@ -2,7 +2,6 @@
 #define TESTS_OBJECT_STORE_OBJECT_STORE_INTERNAL_H_
 
 #include <string.h>
-#include <arpa/inet.h>
 #include <utility>
 #include <memory>
 #include <string>

@@ -1,6 +1,7 @@
 #ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 #define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
 #include <utility>

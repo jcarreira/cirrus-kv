@@ -182,7 +182,8 @@ void test_shared_client() {
 }
 
 /**
- * Simple test verifying that basic atomics work.
+ * Test verifying that atomics work as expected. Checks returned value, and
+ * then checks the value left on the server.
  */
 void test_atomics() {
     std::unique_ptr<cirrus::BladeClient> client =
