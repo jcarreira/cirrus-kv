@@ -272,7 +272,7 @@ auto main(int argc, char *argv[]) -> int {
     if (!use_rdma_client) {
         test_atomics();
     }
-    
+
     try {
         test_remove();
         std::cout << "Exception not thrown when get"
