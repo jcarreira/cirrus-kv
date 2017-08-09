@@ -4,11 +4,11 @@
 #include <string>
 #include <thread>
 #include <queue>
+#include <utility>
 #include <map>
 #include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
-#include "common/Future.h"
 #include "common/Exception.h"
 
 namespace cirrus {
@@ -22,31 +22,24 @@ using TxnID = uint64_t;
   */
 class TCPClient : public BladeClient {
  public:
-    virtual ~TCPClient();
+    ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+        ObjectID oid) override;
     AtomicType fetchAdd(ObjectID oid, AtomicType value);
     AtomicType exchange(ObjectID oid, AtomicType value);
 
 
-    virtual cirrus::Future write_async(ObjectID oid, const void* data,
-                                       uint64_t size);
-    virtual cirrus::Future read_async(ObjectID oid, void* data, uint64_t size);
+    ClientFuture write_async(ObjectID oid, const void* data,
+                                       uint64_t size) override;
+    ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
 
  private:
-    ssize_t send_all(int, const void*, size_t, int);
-    cirrus::Future enqueue_message(
-                        std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
-                        const int txn_id,
-                        void *ptr = nullptr);
-    void process_received();
-    void process_send();
-
     /**
       * A struct shared between futures and the receiver_thread. Used to
       * notify client of operation completeion, as well as to complete
@@ -62,7 +55,11 @@ class TCPClient : public BladeClient {
         /** Semaphore for the transaction. */
         std::shared_ptr<cirrus::PosixSemaphore> sem;
 
-        void *mem_for_read;  /**< memory that should be read to */
+        /** Pointer to shared ptr that points to any mem allocated for reads. */
+        std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
+
+        /** Pointer to size of mem for read. */
+        std::shared_ptr<uint64_t> mem_size;
 
         txn_info() {
             result = std::make_shared<bool>();
@@ -70,8 +67,18 @@ class TCPClient : public BladeClient {
             *result_available = false;
             sem = std::make_shared<cirrus::PosixSemaphore>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
+            mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
+            mem_size = std::make_shared<uint64_t>(0);
         }
     };
+
+    ssize_t send_all(int, const void*, size_t, int);
+    ClientFuture enqueue_message(
+                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        const int txn_id);
+    void process_received();
+    void process_send();
+
     /** fd of the socket used to communicate w/ remote store */
     int sock = 0;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
@@ -90,7 +97,7 @@ class TCPClient : public BladeClient {
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    std::queue<std::shared_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
+    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;

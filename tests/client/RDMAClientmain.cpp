@@ -24,10 +24,7 @@ const char *IP;
  * Tests that simple get and put work with a string.
  */
 void test_1_client() {
-    char data[1000];
     std::string to_send("CIRRUS_DDC");
-
-    snprintf(data, sizeof(data), "%s", "WRONG");
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
@@ -38,9 +35,9 @@ void test_1_client() {
 
     client1.write_sync(0, to_send.c_str(), to_send.size());
 
-    client1.read_sync(0, data, to_send.size());
+    auto ret_pair = client1.read_sync(0);
 
-    if (strncmp(data, to_send.c_str(), to_send.size()))
+    if (strncmp(ret_pair.first.get(), to_send.c_str(), to_send.size()))
         throw std::runtime_error("Error in test");
 }
 
@@ -49,9 +46,6 @@ void test_1_client() {
  * another.
  */
 void test_2_clients() {
-    char data[1000];
-    snprintf(data, sizeof(data), "%s", "WRONG");
-
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
     cirrus::RDMAClient client1, client2;
@@ -72,19 +66,18 @@ void test_2_clients() {
     std::string message("data2");
     client2.write_sync(0, message.c_str(), message.size());
 
-    cirrus::LOG<cirrus::INFO>("Old data: ", data);
-    client1.read_sync(0, data, oss.str().size());
-    cirrus::LOG<cirrus::INFO>("Received data 1: ", data);
+    auto ret_pair = client1.read_sync(0);
+    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_pair.first.get());
 
-    // Check that client 2 receives the desired string
-    if (strncmp(data, oss.str().c_str(), oss.str().size()))
+    // Check that client 1 receives the desired string
+    if (strncmp(ret_pair.first.get(), oss.str().c_str(), oss.str().size()))
         throw std::runtime_error("Error in test");
 
-    client2.read_sync(0, data, message.size());
-    cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
+    auto ret_pair2 = client2.read_sync(0);
+    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_pair2.first.get());
 
     // Check that client2 receives "data2"
-    if (strncmp(data, message.c_str(), message.size()))
+    if (strncmp(ret_pair2.first.get(), message.c_str(), message.size()))
         throw std::runtime_error("Error in test");
 }
 
@@ -97,9 +90,9 @@ void test_performance() {
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = .25 * GB;
+    uint64_t mem_size = 150 * MB;
 
-    char* data = reinterpret_cast<char*>(malloc(mem_size));
+    char* data = new char[mem_size];
     if (!data)
         exit(-1);
 
@@ -113,14 +106,100 @@ void test_performance() {
 
     {
         cirrus::TimerFunction tf("Timing read", true);
-        client.read_sync(0, data, mem_size);
-        std::cout << "data[0]: " << data[0] << std::endl;
-        if (data[0] != 'Y') {
+        auto ret_pair = client.read_sync(0);
+        std::cout << "Length: " << ret_pair.second << std::endl;
+        std::cout << "first byte: " << *(ret_pair.first.get()) << std::endl;
+        if (*(ret_pair.first.get()) != 'Y') {
             throw std::runtime_error("Returned value does not match");
         }
     }
 
-    free(data);
+    delete[] data;
+}
+
+/**
+ * Simple test verifying that basic asynchronous put/get works as intended.
+ */
+void test_async() {
+    cirrus::RDMAClient client;
+    client.connect(IP, PORT);
+
+    int message = 42;
+    auto future = client.write_async(1, &message, sizeof(int));
+    std::cout << "write async complete" << std::endl;
+
+    if (!future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+
+    auto read_future = client.read_async(1);
+
+    if (!read_future.get()) {
+        throw std::runtime_error("Error during async write.");
+    }
+    auto ret_pair = read_future.getDataPair();
+
+    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    std::cout << ret_val << " returned from server" << std::endl;
+
+    if (ret_val != message) {
+        throw std::runtime_error("Wrong value returned.");
+    }
+}
+
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+template <int N>
+void test_async_N() {
+    cirrus::RDMAClient client;
+    client.connect(IP, PORT);
+    std::vector<cirrus::BladeClient::ClientFuture> put_futures;
+    std::vector<cirrus::BladeClient::ClientFuture> get_futures;
+
+    int i;
+    for (i = 0; i < N; i++) {
+        int val = i;
+        put_futures.push_back(client.write_async(i, &val, sizeof(int)));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put.");
+        }
+    }
+    std::cout << "BEGINNING READS" << std::endl;
+    int ret_values[10];
+    for (i = 0; i < N; i++) {
+        auto pair = client.read_sync(i);
+        int val = *(reinterpret_cast<int*>(pair.first.get()));
+
+        if (val != i) {
+            std::cout << "Expected " << i << "but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned test_async_N");
+        }
+    }
+
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(client.read_async(i));
+    }
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        bool success = get_futures[i].get();
+        if (!success) {
+            throw std::runtime_error("Error during an async read");
+        }
+        int ret_value = *(reinterpret_cast<int*>(
+            get_futures[i].getDataPair().first.get()));
+
+        if (ret_value != i) {
+            std::cout << "Expected " << i << " but got " << ret_value
+                << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
+        }
+    }
 }
 
 auto main(int argc, char *argv[]) -> int {
@@ -128,5 +207,7 @@ auto main(int argc, char *argv[]) -> int {
     test_1_client();
     test_2_clients();
     test_performance();
+    test_async();
+    test_async_N<10>();
     return 0;
 }

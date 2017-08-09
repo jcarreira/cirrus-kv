@@ -6,6 +6,8 @@
 #include <iostream>
 #include <utility>
 #include <type_traits>
+#include <memory>
+#include <vector>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -14,7 +16,6 @@
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
-#include "common/Future.h"
 
 #include "third_party/libcuckoo/src/cuckoohash_map.hh"
 #include "third_party/libcuckoo/src/city_hasher.hh"
@@ -45,16 +46,21 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     bool put(const ObjectID& id, const T& obj) override;
     bool remove(ObjectID) override;
 
+    typename ObjectStore<T>::ObjectStoreGetFuture get_async(
+            const ObjectID& id) override;
+    typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
+            const T& obj) override;
+
     AtomicType exchange(ObjectID oid, AtomicType value);
     AtomicType fetchAdd(ObjectID oid, AtomicType value);
     AtomicType increment(ObjectID oid);
     AtomicType decrement(ObjectID oid);
 
-    // std::function<bool(bool)> get_async(ObjectID, T*) const;
-    // std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
+    void removeBulk(ObjectID first, ObjectID last) override;
+    void get_bulk(ObjectID start, ObjectID last, T* data) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data) override;
 
     void printStats() const noexcept override;
-
 
  private:
     /**
@@ -91,18 +97,13 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     BladeClient *client;
 
     /**
-     * The size of serialized objects. This is obtained from the return
-     * value of the serializer() function. We assume that all serialized
-     * objects have the same length.
-     */
-    uint64_t serialized_size;
-
-    /**
      * Boolean indicating whether atomic operations will be allowed. It is set
      * to false if a custom serializer or deserializer is provided.
      */
     bool allow_atomic_ops;
 
+    // TODO(Tyler): Change the serializer/deserializer to
+    //  be references/pointers?
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -172,23 +173,15 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
   */
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        // TODO(Tyler): throw error message if get before put
-    }
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    void* ptr = ::operator new (serialized_size);
-
-    // Read into the section of memory you just allocated
-    client->read_sync(id, ptr, serialized_size);
-
+    // Read the object from the remote store
+    std::pair<std::shared_ptr<char>, unsigned int> ptr_pair =
+        client->read_sync(id);
+    auto ptr = ptr_pair.first;
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr, serialized_size);
 
-    // Free the memory we stored the serialized object in.
-    ::operator delete (ptr);
+    uint64_t length = ptr_pair.second;
+    T retval = deserializer(ptr.get(), length);
+
     return retval;
 }
 
@@ -278,41 +271,18 @@ AtomicType FullBladeObjectStoreTempl<T>::decrement(ObjectID oid) {
 /**
   * Asynchronously copies object from remote blade to local DRAM.
   * @param id the ObjectID of the object being retrieved.
-  * @param ptr a pointer to the location where the object should be copied.
-  * @return Returns an std::function<bool(bool)>, which in this case will be
-  * a future that allows the user to see the status of the get. If called with
-  * false as the argument, the function will wait until the operation is
-  * complete. If true is passed as the argument, it will return immediately
-  * with the status of the get. If object does not exist, will return
-  * null pointer.
-  * @see FutureBladeOp
-  * @see readToLocalAsync()
+  * @return Returns an ObjectStoreGetFuture;
   */
-// template<class T>
-// std::function<bool(bool)>
-// FullBladeObjectStoreTempl<T>::get_async(ObjectID id, T* ptr) const {
-//
-//     // Build future. Returns the object
-//     /* This is safe as we will only reach here if a previous put has
-//        occured, thus setting the value of serialized_size. */
-//     if (serialized_size == 0) {
-//         // TODO(Tyler): throw error message if get before put
-//     }
-//     /* This allocation provides a buffer to read the serialized object
-//        into. */
-//     void* ptr = ::operator new (serialized_size);
-//
-//     // Read into the section of memory you just allocated
-//     auto future = client->read_async(id, ptr, serialized_size);
-//
-//     // Future will have to deserialize this
-//     // Deserialize the memory at ptr and return an object
-//     T retval = deserializer(ptr, serialized_size);
-//
-//     // Free the memory we stored the serialized object in.
-//     ::operator delete (ptr);
-//     return retval;
-// }
+template<class T>
+typename ObjectStore<T>::ObjectStoreGetFuture
+FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
+    // Read into the section of memory you just allocated
+    auto client_future = client->read_async(id);
+
+    // TODO(Tyler): fix the object store get future
+    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future,
+        deserializer);
+}
 
 /**
   * A function that puts a given object at a specified object id.
@@ -323,11 +293,19 @@ AtomicType FullBladeObjectStoreTempl<T>::decrement(ObjectID oid) {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
-    // serialized_size is saved in the class, it is the size of pushed objects
+
+    // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
+#ifdef PERF_LOG
+    TimerFunction serialize_time;
+#endif
     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
                                                         serializer(obj);
     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
+    uint64_t serialized_size = serializer_out.second;
+#ifdef PERF_LOG
+    LOG<PERF>("FullBladeObjectStoreTempl::put serialize time (ns): ",
+            serialize_time.getNsElapsed());
+#endif
 
     return client->write_sync(id, serial_ptr.get(), serialized_size);
 }
@@ -336,40 +314,138 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
   * Asynchronously copies object from local dram to remote blade.
   * @param id the ObjectID that obj should be stored under.
   * @param obj the object to store on the remote blade.
-  * @param size the size of the obj being transferred
-  * @param mem a pointer to an RDMAMem
-  * @return Returns an std::function<bool(bool)>, which in this case will be
-  * a future that allows the user to see the status of the put. If called with
-  * false as the argument, the function will wait until the operation is
-  * complete. If true is passed as the argument, it will return immediately
-  * with the status of the put.
-  * @see FutureBladeOp
-  * @see writeRemoteAsync()
+  * @return Returns an ObjectStorePutFuture.
   */
-// template<class T>
-// std::function<bool(bool)>
-// FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-//
-//     std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-//                                                         serializer(obj);
-//     std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-//     serialized_size = serializer_out.second;
-//
-//     auto future = client->write_async (id,
-//                       serial_ptr.get(), serialized_size);
-//     // TODO(Tyler): Build future to return to higher levels.
-//     //  Get will return bool
-//     return fun;
-// }
+template<class T>
+typename ObjectStore<T>::ObjectStorePutFuture
+FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
+    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                        serializer(obj);
+#ifdef PERF_LOG
+    TimerFunction serialize_time;
+#endif
+    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+    uint64_t serialized_size = serializer_out.second;
+#ifdef PERF_LOG
+    LOG<PERF>("FullBladeObjectStoreTempl::put_async serialize time (ns): ",
+            serialize_time.getNsElapsed());
+#endif
+
+    auto client_future = client->write_async(id,
+                                           serial_ptr.get(),
+                                           serialized_size);
+
+    // Constructor takes a pointer to a client future
+    return typename ObjectStore<T>::ObjectStorePutFuture(client_future);
+}
 
 /**
-  * Deallocates space occupied by object in remote blade.
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param start the first objectID that should be pulled from the store.
+ * @param the last objectID that should be pulled from the store.
+ * @param data a pointer to a c style array that will be filled from the
+ * remote store.
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
+    ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for getBulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    std::vector<typename cirrus::ObjectStore<T>::ObjectStoreGetFuture> futures(
+        numObjects);
+    // Start each get asynchronously
+    for (int i = 0; i < numObjects; i++) {
+        futures[i] = get_async(start + i);
+    }
+    std::vector<bool> done(numObjects, false);
+    int total_done = 0;
+
+    // Wait for each item to complete
+    while (total_done != numObjects) {
+        for (int i = 0; i < numObjects; i++) {
+            // Check status if not already completed
+            if (!done[i]) {
+                bool ret = futures[i].try_wait();
+                // Copy object and mark true if it completed.
+                if (ret) {
+                    done[i] = true;
+                    data[i] = futures[i].get();
+                    total_done++;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Puts many objects to the remote store at once.
+ * @param start the objectID that should be assigned to the first object
+ * @param the objectID that should be assigned to the last object
+ * @param data a pointer the first object in a c style array that will
+ * be put to the remote store.
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::put_bulk(ObjectID start,
+    ObjectID last, T* data) {
+    if (last < start) {
+        throw cirrus::Exception("Last objectID for putBulk must be greater "
+            "than start objectID.");
+    }
+    const int numObjects = last - start + 1;
+    std::vector<typename ObjectStore<T>::ObjectStorePutFuture> futures(
+        numObjects);
+    // Start each put asynchronously
+    for (int i = 0; i < numObjects; i++) {
+        futures[i] = put_async(start + i, data[i]);
+    }
+    std::vector<bool> done(numObjects, false);
+    int total_done = 0;
+
+    // Wait for each item to complete
+    while (total_done != numObjects) {
+        for (int i = 0; i < numObjects; i++) {
+            // Check status if not already completed
+            if (!done[i]) {
+                bool ret = futures[i].try_wait();
+                // Copy object and mark true if it completed.
+                if (ret) {
+                    done[i] = true;
+                    // Check to see if exception was thrown.
+                    futures[i].get();
+                    total_done++;
+                }
+            }
+        }
+    }
+}
+
+/**
+  * Removes an object from the remote store, deallocating any space used for it.
   * @param id the ObjectID of the object to be removed from remote memory.
-  * @return Returns true.
+  * @return Returns true if successful.
   */
 template<class T>
 bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
     return client->remove(id);
+}
+
+/**
+ * Removes a range of items from the store.
+ * @param first the first in a range of continuous ObjectIDs to be removed
+ * @param last the last in a range of continuous ObjectIDs to be removed
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::removeBulk(ObjectID first, ObjectID last) {
+    if (first > last) {
+        throw cirrus::Exception("First ObjectID to remove must be leq last.");
+    }
+    for (ObjectID oid = first; oid <= last; oid++) {
+        client->remove(oid);
+    }
 }
 
 template<class T>

@@ -30,12 +30,20 @@ uint64_t total_time = 0;
 
 std::atomic<int> count;
 
+void print_results(std::ostream& out) {
+    out << "Total time: " << total_time << std::endl;
+    out << "Average (us) per msg: "
+        << total_time / N_THREADS / N_MSG << std::endl;
+    out << "MSG/s: "
+        << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
+}
+
 /**
-  * This benchmark tests the performance of the system when multiple clients
-  * are connected to the same store. To do so, it creates ten new threads,
+  * Test the performance of the system when multiple clients
+  * are connected to the same store.
+  * Create ten new threads,
   * each of which connects to the store and sends N_MSG puts spread across
-  * 100 different object ids. The time taken for these puts is then recorded
-  * and statistics computed.
+  * 100 different object ids
   */
 void test_multiple_clients() {
     std::thread* threads[N_THREADS];
@@ -71,21 +79,11 @@ void test_multiple_clients() {
     for (int i = 0; i < N_THREADS; ++i)
         threads[i]->join();
 
-    std::cout << "Total time: " << total_time << std::endl;
-    std::cout << "Average (us) per msg: "
-        << total_time / N_THREADS / N_MSG << std::endl;
-    std::cout << "MSG/s: "
-        << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
+    print_results(std::cout);
 
     std::ofstream outfile;
     outfile.open("1_3.log");
-
-    outfile << "Total time: " << total_time << std::endl;
-    outfile << "Average (us) per msg: "
-        << total_time / N_THREADS / N_MSG << std::endl;
-    outfile << "MSG/s: "
-        << N_MSG * N_THREADS / (total_time * 1.0 / MILLION) << std::endl;
-    outfile.close();
+    print_results(outfile);
 }
 
 auto main() -> int {

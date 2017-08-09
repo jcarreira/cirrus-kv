@@ -46,13 +46,14 @@ class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    std::pair<std::shared_ptr<char>, unsigned int> read_sync(ObjectID oid)
+        override;
 
-    // TODO(Tyler): Add async
-    // cirrus::Future write_async(ObjectID oid, const void* data,
-    //                            uint64_t size) override;
-    // cirrus::Future read_async(ObjectID oid,
-    //     void* data, uint64_t size) override;
+    ClientFuture write_async(ObjectID oid, const void* data,
+        uint64_t size) override;
+
+    ClientFuture read_async(ObjectID oid) override;
+
     bool remove(ObjectID id) override;
 
  private:
@@ -61,7 +62,6 @@ class RDMAClient : public BladeClient {
      * during call to connect.
      */
     unsigned int seed;
-    class FutureBladeOp;
     struct RDMAMem;
 
     /**
@@ -85,21 +85,51 @@ class RDMAClient : public BladeClient {
      * for async ops this is passed up.
      */
     struct RDMAOpInfo {
-        RDMAOpInfo(struct rdma_cm_id* id_, Lock* s = nullptr,
+        RDMAOpInfo(struct rdma_cm_id* id_,
                 std::function<void(void)> fn = []() -> void {}) :
-            id(id_), op_sem(s), apply_fn(fn) {
+            id(id_), apply_fn(fn) {
                 if (fn == nullptr)
                     throw std::runtime_error("BUG");
+                result = std::make_shared<bool>();
+                result_available = std::make_shared<bool>(false);
+                op_sem = std::make_shared<cirrus::PosixSemaphore>();
+                error_code = std::make_shared<cirrus::ErrorCodes>();
             }
 
+        RDMAOpInfo(struct rdma_cm_id* id_,
+                   std::shared_ptr<cirrus::Lock> op_sem,
+                std::function<void(void)> fn = []() -> void {}) :
+            id(id_), op_sem(op_sem), apply_fn(fn) {
+                if (fn == nullptr)
+                    throw std::runtime_error("BUG");
+                result = std::make_shared<bool>();
+                result_available = std::make_shared<bool>();
+                *result_available = false;
+                error_code = std::make_shared<cirrus::ErrorCodes>();
+            }
+
+        /**
+         * Apply the given function on completion. Mark the operation as
+         * completed.
+         */
         void apply() {
             LOG<INFO>("Applying fn");
             apply_fn();
             LOG<INFO>("Applied fn");
+            *result_available = true;
+            *result = true;
         }
 
         struct rdma_cm_id* id;
-        Lock* op_sem;
+        /** Pointer to the semaphore for the operation. */
+        std::shared_ptr<cirrus::Lock> op_sem;
+        /** Pointer to the boolean success of the operation. */
+        std::shared_ptr<bool> result;
+        /** Pointer to operation completion. */
+        std::shared_ptr<bool> result_available;
+        /** Pointer to error code. Will always be okay. */
+        std::shared_ptr<cirrus::ErrorCodes> error_code;
+        /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };
 
@@ -113,7 +143,7 @@ class RDMAClient : public BladeClient {
             recv_msg_mr(0), qp(nullptr),
             peer_addr(0), peer_rkey(0),
             setup_done(false) {
-            recv_sem = new SpinLock();
+            recv_sem = std::make_shared<cirrus::SpinLock>();
             recv_sem->wait();  // lock
             memset(&gen_ctx_, 0, sizeof(gen_ctx_));
         }
@@ -124,7 +154,6 @@ class RDMAClient : public BladeClient {
                 ibv_dereg_mr(recv_msg_mr);
             }
 
-            delete recv_sem;
             // XXX release send_msg and recv_msg
         }
 
@@ -139,9 +168,8 @@ class RDMAClient : public BladeClient {
         uint64_t peer_addr;
         uint32_t peer_rkey;
 
-        // these are used for SEND and RECV
-        Lock* send_sem;
-        Lock* recv_sem;
+        // This is used for recv
+        std::shared_ptr<cirrus::Lock> recv_sem;
 
         GeneralContext gen_ctx_;
         bool setup_done = false;
@@ -219,12 +247,12 @@ class RDMAClient : public BladeClient {
 
     bool readToLocal(BladeLocation loc, void*);
 
-    std::shared_ptr<FutureBladeOp> readToLocalAsync(BladeLocation loc,
+    ClientFuture readToLocalAsync(BladeLocation loc,
             void* ptr);
 
     bool writeRemote(const void* data, BladeLocation loc,
         RDMAMem* mem = nullptr);
-    std::shared_ptr<FutureBladeOp> writeRemoteAsync(const void *data,
+    ClientFuture writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocationRecord& allocRec);
@@ -235,31 +263,11 @@ class RDMAClient : public BladeClient {
       */
     cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
 
-    /**
-      * Information about an async op.
-      * A class that contains information about an operation being performed
-      * asynchronously.
-      */
-    class FutureBladeOp {
-     public:
-        explicit FutureBladeOp(RDMAOpInfo* info) :
-            op_info(info) {}
-
-        virtual ~FutureBladeOp() = default;
-
-        void wait();
-        bool try_wait();
-
-     private:
-        /** op_info for this FutureBladeOp. */
-        RDMAOpInfo* op_info;
-    };
-
     AllocationRecord allocate(uint64_t size);
     bool deallocate(const AllocationRecord& ar);
 
     // writes
-    std::shared_ptr<FutureBladeOp> rdma_write_async(
+    ClientFuture rdma_write_async(
             const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length,
             const void* data,
@@ -269,21 +277,13 @@ class RDMAClient : public BladeClient {
 
     // XXX We may not need a shared ptr here
     // reads
-    std::shared_ptr<FutureBladeOp> rdma_read_async(
+    ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset, uint64_t length, void *data,
         RDMAMem* mem = nullptr);
 
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
-
-    // fetch and add atomic
-    std::shared_ptr<FutureBladeOp> fetchadd_async(
-            const AllocationRecord& alloc_rec,
-            uint64_t offset,
-            uint64_t value);
-    bool fetchadd_sync(const AllocationRecord& alloc_rec, uint64_t offset,
-            uint64_t value);
 
     void alloc_rdma_memory(ConnectionContext *ctx);
 
@@ -294,7 +294,7 @@ class RDMAClient : public BladeClient {
     void build_context(struct ibv_context *verbs, ConnectionContext*);
 
     // Message (Send/Recv)
-    bool send_message(rdma_cm_id*, uint64_t size, Lock* lock = nullptr);
+    RDMAOpInfo* send_message(rdma_cm_id*, uint64_t size);
     bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
@@ -312,11 +312,6 @@ class RDMAClient : public BladeClient {
             const RDMAMem& mem);
 
     void connect_rdma_cm(const std::string& host, const std::string& port);
-
-    void fetchadd_rdma_sync(struct rdma_cm_id *id,
-        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
-    RDMAOpInfo* fetchadd_rdma_async(struct rdma_cm_id *id,
-        uint64_t remote_addr, uint64_t peer_rkey, uint64_t value);
 
     // event poll loop
     void *poll_cq(ConnectionContext*);
