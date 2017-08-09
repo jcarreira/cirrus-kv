@@ -38,11 +38,11 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 int deserializer_variable_simple(void* data, unsigned int size) {
     int *ptr = reinterpret_cast<int*>(data);
     int returned_val = *ptr;
-    if (returned_val != size / sizeof(int)) {
+    if (returned_val != static_cast<int>(size / sizeof(int))) {
         throw std::runtime_error("Size not equal to the int val");
     }
     for (int i = 0; i < returned_val; i++) {
-        if (*(ptr + i) != size / sizeof(int)) {
+        if (*(ptr + i) != static_cast<int>(size / sizeof(int))) {
             throw std::runtime_error("Incorrect value returned");
         }
     }
