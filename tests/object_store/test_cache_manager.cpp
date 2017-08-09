@@ -51,7 +51,7 @@ class SimpleCustomPolicy : public cirrus::PrefetchPolicy<T> {
         // val = ((oid + i) - first) % (last - first + 1)) + first
         std::vector<ObjectID> to_return;
         to_return.reserve(read_ahead);
-        for (int i = 1; i <= read_ahead; i++) {
+        for (unsigned int i = 1; i <= read_ahead; i++) {
             ObjectID tentative_fetch = id - i;
             ObjectID shifted = tentative_fetch - first;
             ObjectID modded = shifted % (last - first + 1);
@@ -385,15 +385,14 @@ void test_instantiation() {
  */
 void test_lradded() {
     cirrus::LRAddedEvictionPolicy policy(10);
-    int i;
-    for (i = 0; i < 10; i++) {
+    for (unsigned int i = 0; i < 10; i++) {
         auto ret_vec = policy.get(i);
         if (ret_vec.size() != 0) {
             std::cout << i << "id where error occured" << std::endl;
             throw std::runtime_error("Item evicted when cache not full");
          }
     }
-    for (i = 10; i < 20; i++) {
+    for (unsigned int i = 10; i < 20; i++) {
         auto ret_vec = policy.get(i);
         if (ret_vec.size() != 1) {
             throw std::runtime_error("More or less than one item returned "
