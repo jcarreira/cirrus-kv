@@ -213,12 +213,40 @@ void test_atomics() {
         throw std::runtime_error("Wrong value returned from fetchadd.");
     }
 
-    AtomicType returned_network;
     retval = store.get(2);
 
     if (retval != val + message2) {
         std::cout << retval << " but expected " << val + message2 << std::endl;
         throw std::runtime_error("Wrong value returned after fetchadd");
+    }
+
+    store.put(1, 1);
+    retval = store.increment(1);
+
+    if (retval != 1) {
+        std::cout << retval << " but expected " << 1 << std::endl;
+        throw std::runtime_error("Wrong value returned from increment");
+    }
+
+    retval = store.get(1);
+
+    if (retval != 2) {
+        std::cout << retval << " but expected " << 2 << std::endl;
+        throw std::runtime_error("Wrong value returned after increment");
+    }
+
+    retval = store.decrement(1);
+
+    if (retval != 2) {
+        std::cout << retval << " but expected " << 2 << std::endl;
+        throw std::runtime_error("Wrong value returned from decrement");
+    }
+
+    retval = store.get(1);
+
+    if (retval != 1) {
+        std::cout << retval << " but expected " << 1 << std::endl;
+        throw std::runtime_error("Wrong value returned after decrement");
     }
 }
 
@@ -239,9 +267,12 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     std::cout << "Test remove starting." << std::endl;
+
+    // These tests are only supported on TCP, do not run on RDMA
     if (!use_rdma_client) {
         test_atomics();
     }
+    
     try {
         test_remove();
         std::cout << "Exception not thrown when get"

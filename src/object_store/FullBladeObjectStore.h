@@ -46,6 +46,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 
     AtomicType exchange(ObjectID oid, AtomicType value);
     AtomicType fetchAdd(ObjectID oid, AtomicType value);
+    AtomicType increment(ObjectID oid);
+    AtomicType decrement(ObjectID oid);
 
     // std::function<bool(bool)> get_async(ObjectID, T*) const;
     // std::function<bool(bool)> put_async(Object, uint64_t, ObjectID);
@@ -55,16 +57,50 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 
  private:
     /**
+     * This function serializes objects of type AtomicType.
+     * @param v the object to be serialized.
+     * @return an std::pair containing a pointer to the serialized object
+     * as well as the length of the serialized object.
+     */
+    static std::pair<std::unique_ptr<char[]>, unsigned int>
+    serializeAtomicType(const AtomicType& v) {
+        std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+        // Convert to network byte order.
+        *(reinterpret_cast<AtomicType*>(ptr.get())) = htonl(v);
+        return std::make_pair(std::move(ptr), sizeof(AtomicType));
+    }
+
+    /**
+     * Deserializes objects of type AtomicType.
+     * @param data a pointer to the start of the serialized object.
+     * @return a deserialized object of type AtomicType
+     */
+    static AtomicType deserializeAtomicType(const void* data,
+        unsigned int /* size */) {
+        const AtomicType *ptr = reinterpret_cast<const AtomicType*>(data);
+        // Convert to host byte order
+        AtomicType ret = ntohl(*ptr);
+        return ret;
+    }
+
+    /**
       * The client that the store uses to achieve all interaction with the
       * remote store.
       */
     BladeClient *client;
 
-    /** The size of serialized objects. This is obtained from the return
-      * value of the serializer() function. We assume that all serialized
-      * objects have the same length.
-      */
+    /**
+     * The size of serialized objects. This is obtained from the return
+     * value of the serializer() function. We assume that all serialized
+     * objects have the same length.
+     */
     uint64_t serialized_size;
+
+    /**
+     * Boolean indicating whether atomic operations will be allowed. It is set
+     * to false if a custom serializer or deserializer is provided.
+     */
+    bool allow_atomic_ops;
 
     /**
       * A function that takes an object and serializes it. Returns a pointer
@@ -81,23 +117,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     std::function<T(void*, unsigned int)> deserializer;
 };
 
-/* This function serializes objects of type AtomicType. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializeAtomicType(const AtomicType& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
-    *(reinterpret_cast<AtomicType*>(ptr.get())) = htonl(v);
-    return std::make_pair(std::move(ptr), sizeof(AtomicType));
-}
-
-/* Deserializes objects of type AtomicType. */
-AtomicType deserializeAtomicType(void* data, unsigned int /* size */) {
-    AtomicType *ptr = reinterpret_cast<AtomicType*>(data);
-    AtomicType ret = ntohl(*ptr);
-    return ret;
-}
-
 /**
-  * Constructor for new object stores.
+  * Constructor for new object stores. Should only be used if type is not
+  * AtomicType as AtomicType requires a specific serializer and deserializer.
   * @param bladeIP the ip of the remote server.
   * @param port the port to use to communicate with the remote server
   * @param serializer A function that takes an object and serializes it.
@@ -118,11 +140,12 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
+    allow_atomic_ops = false;
     client->connect(bladeIP, port);
 }
 
 /**
-  * Constructor for new object stores. Used when type is AtomicType.
+  * Constructor for new object stores when type is AtomicType.
   * @param bladeIP the ip of the remote server.
   * @param port the port to use to communicate with the remote server
   */
@@ -133,6 +156,11 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         BladeClient* client) :
     ObjectStore<T>(), client(client),
     serializer(serializeAtomicType), deserializer(deserializeAtomicType) {
+    if (!std::is_same<T, AtomicType>::value) {
+        throw cirrus::Exception("The three argument constructor only works for "
+            "AtomicType stores");
+    }
+    allow_atomic_ops = true;
     client->connect(bladeIP, port);
 }
 
@@ -164,15 +192,17 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 }
 
 /**
-  * Performs atomic exchange. This operation is only supported in TCP mode.
-  * @param value a value of AtomicType. It will be
-  * exchanged with the value under oid on the server.
-  * @return the previous value under oid.
-  */
+ * Performs an atomic exchange. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to exchange is stored under.
+ * @param value a value of AtomicType. It will be
+ * exchanged with the value stored under oid on the server.
+ * @return the previous value stored under oid.
+ */
 template<class T>
 AtomicType FullBladeObjectStoreTempl<T>::exchange(ObjectID oid,
     AtomicType value) {
-    if (std::is_same<T, AtomicType>::value) {
+    if (std::is_same<T, AtomicType>::value && allow_atomic_ops) {
         TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
         if (tcp_client_ptr == nullptr) {
             throw cirrus::Exception("This operation only supported "
@@ -187,20 +217,22 @@ AtomicType FullBladeObjectStoreTempl<T>::exchange(ObjectID oid,
         return deserializer(&returned_serialized, sizeof(AtomicType));
     } else {
         throw cirrus::Exception("This is only supported when working with the "
-            "atomic type.");
+            "atomic type without a custom serializer/deserializer.");
     }
 }
 
 /**
-  * Performs fetchadd. This operation is only supported in TCP mode.
-  * @param value a value of AtomicType. It will be
-  * added to the value on the server.
-  * @return the previous value under oid.
-  */
+ * Performs an atomic fetchadd. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to modify is stored under.
+ * @param value a value of AtomicType. It will be added to the value on the
+ * server.
+ * @return the previous value stored under oid.
+ */
 template<class T>
 AtomicType FullBladeObjectStoreTempl<T>::fetchAdd(ObjectID oid,
     AtomicType value) {
-    if (std::is_same<T, AtomicType>::value) {
+    if (std::is_same<T, AtomicType>::value && allow_atomic_ops) {
         TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
         if (tcp_client_ptr == nullptr) {
             throw cirrus::Exception("This operation only supported "
@@ -215,8 +247,30 @@ AtomicType FullBladeObjectStoreTempl<T>::fetchAdd(ObjectID oid,
         return deserializer(&returned_serialized, sizeof(AtomicType));
     } else {
         throw cirrus::Exception("This is only supported when working with the "
-            "atomic type.");
+            "atomic type without a custom serializer/deserializer.");
     }
+}
+
+/**
+ * Performs an atomic fetchadd. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to increment is stored under.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::increment(ObjectID oid) {
+    return fetchAdd(oid, 1);
+}
+
+/**
+ * Performs an atomic fdecrement. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to decrement is stored under.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::decrement(ObjectID oid) {
+    return fetchAdd(oid, -1);
 }
 
 
