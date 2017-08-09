@@ -125,12 +125,65 @@ void test_atomics() {
     }
 }
 
+/**
+ * This test ensures that errors are thrown by the server in all situations
+ * where they should be.
+ */
+void test_atomics_sanity() {
+    cirrus::TCPClient client;
+    client.connect(IP, port);
+    std::cout << "Connected to server." << std::endl;
+
+    // Ensure 8 byte item exists under oid 1
+    uint64_t message = 15;
+    std::cout << "message declared." << std::endl;
+    client.write_sync(1, &message, sizeof(uint64_t));
+    std::cout << "write sync complete" << std::endl;
+
+    std::cout << "Exchanging" << std::endl;
+
+    try {
+        AtomicType retval = client.exchange(1, 23);
+        std::cout << "Exception not thrown when attempting exchange "
+            "on object of incorrect type." << std::endl;
+        throw std::runtime_error("No exception when object of wrong type.");
+    } catch (const cirrus::Exception& e) {
+    }
+
+    try {
+        AtomicType retval = client.exchange(1500, 23);
+        std::cout << "Exception not thrown when attempting exchange "
+            "on nonexistent object." << std::endl;
+        throw std::runtime_error("No exception when "
+            "exchanging nonexistent id.");
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    try {
+        AtomicType retval = client.fetchAdd(1, 23);
+        std::cout << "Exception not thrown when attempting fetchadd "
+            "on object of incorrect type." << std::endl;
+        throw std::runtime_error("No exception when object of wrong type.");
+    } catch (const cirrus::Exception& e) {
+    }
+
+    try {
+        AtomicType retval = client.fetchAdd(1500, 23);
+        std::cout << "Exception not thrown when attempting fetchAdd "
+            "on nonexistent object." << std::endl;
+        throw std::runtime_error("No exception when "
+            "calling fetchAdd on nonexistent id.");
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Test Starting." << std::endl;
-    test_atomics();
     test_sync();
     test_async();
+    test_atomics();
+    test_atomics_sanity();
     std::cout << "Test successful." << std::endl;
     return 0;
 }
