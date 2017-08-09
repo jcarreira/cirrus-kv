@@ -27,21 +27,6 @@ struct Dummy {
     explicit Dummy(int id = 1492) : id(id) {}
 };
 
-/* This function serializes objects of type AtomicType. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializeAtomicType(const AtomicType& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
-    *(reinterpret_cast<AtomicType*>(ptr.get())) = htonl(v);
-    return std::make_pair(std::move(ptr), sizeof(AtomicType));
-}
-
-/* Deserializes objects of type AtomicType. */
-AtomicType deserializeAtomicType(void* data, unsigned int /* size */) {
-    AtomicType *ptr = reinterpret_cast<AtomicType*>(data);
-    AtomicType ret = ntohl(*ptr);
-    return ret;
-}
-
 /* This function simply copies an object into a new portion of memory. */
 template<typename T>
 std::pair<std::unique_ptr<char[]>, unsigned int>

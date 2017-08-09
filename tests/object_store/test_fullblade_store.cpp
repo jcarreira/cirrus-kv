@@ -189,9 +189,7 @@ void test_atomics() {
         cirrus::test_internal::GetClient(use_rdma_client);
 
     cirrus::ostore::FullBladeObjectStoreTempl<AtomicType> store(IP, PORT,
-            client.get(),
-            cirrus::serializeAtomicType,
-            cirrus::deserializeAtomicType);
+            client.get());
 
     AtomicType message = 15;
     store.put(1, message);

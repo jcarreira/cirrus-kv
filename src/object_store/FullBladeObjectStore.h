@@ -36,6 +36,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
                               unsigned int>(const T&)> serializer,
                               std::function<T(void*, unsigned int)>
                               deserializer);
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
+                              const std::string& port,
+                              BladeClient *client);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
@@ -78,6 +81,21 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     std::function<T(void*, unsigned int)> deserializer;
 };
 
+/* This function serializes objects of type AtomicType. */
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                         serializeAtomicType(const AtomicType& v) {
+    std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+    *(reinterpret_cast<AtomicType*>(ptr.get())) = htonl(v);
+    return std::make_pair(std::move(ptr), sizeof(AtomicType));
+}
+
+/* Deserializes objects of type AtomicType. */
+AtomicType deserializeAtomicType(void* data, unsigned int /* size */) {
+    AtomicType *ptr = reinterpret_cast<AtomicType*>(data);
+    AtomicType ret = ntohl(*ptr);
+    return ret;
+}
+
 /**
   * Constructor for new object stores.
   * @param bladeIP the ip of the remote server.
@@ -100,6 +118,21 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
+    client->connect(bladeIP, port);
+}
+
+/**
+  * Constructor for new object stores. Used when type is AtomicType.
+  * @param bladeIP the ip of the remote server.
+  * @param port the port to use to communicate with the remote server
+  */
+template<class T>
+FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
+        const std::string& bladeIP,
+        const std::string& port,
+        BladeClient* client) :
+    ObjectStore<T>(), client(client),
+    serializer(serializeAtomicType), deserializer(deserializeAtomicType) {
     client->connect(bladeIP, port);
 }
 
