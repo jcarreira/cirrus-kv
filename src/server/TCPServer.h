@@ -16,7 +16,8 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, int queue_len = 100);
+    explicit TCPServer(int port, uint64_t pool_size_, uint64_t max_fds = 100,
+        int queue_len = 100);
     ~TCPServer() = default;
 
     virtual void init();
@@ -37,7 +38,7 @@ class TCPServer : public Server {
     /** The number of pending connection requests allowed at once. */
     int queue_len_;
     /** The fd for the socket the server listens for incoming requests on. */
-    int server_sock_;
+    int server_sock_ = 0;
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 
@@ -48,7 +49,7 @@ class TCPServer : public Server {
     uint64_t curr_size = 0;
 
     /** Max number of sockets open at once. */
-    const uint64_t max_fds = 100;
+    const uint64_t max_fds;
 
     /**
      * Index that the next socket accepted should have in the

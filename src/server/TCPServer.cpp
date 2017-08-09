@@ -27,14 +27,18 @@ static const int initial_buffer_size = 50;
   * @param port the port the server will listen on
   * @param queue_len the length of the queue to make connections with the
   * server.
+  * @param max_fds_ the maximum number of clients that can be connected to the
+  * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
-    port_ = port;
-    queue_len_ = queue_len;
-    pool_size = pool_size_;
-    server_sock_ = 0;
-}
+TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_,
+    int queue_len) : port_(port), queue_len_(queue_len), pool_size(pool_size_),
+    max_fds(max_fds_ + 1) {
+        if (max_fds_ + 1 == 0) {
+            throw cirrus::Exception("Max_fds value too high, "
+                "overflow occurred.");
+        }
+    }
 
 /**
   * Initializer for the server. Sets up the socket it uses to listen for
