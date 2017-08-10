@@ -5,7 +5,7 @@
 
 const int port = 12345;
 const int max_fds = 100;
-const unsigned int num_threads = 1;
+const unsigned int num_threads = 4;
 static const uint64_t GB = (1024*1024*1024);
 
 /**

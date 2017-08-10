@@ -209,7 +209,7 @@ void TCPServer::loop() {
                 struct pollfd& curr_fd = fds.at(i);
                 // Ignore the fd if we've said we don't care about it
                 if (curr_fd.fd < 0) {
-                    LOG<INFO>("Ignoring fd: ", cur_fd.fd);
+                    LOG<INFO>("Ignoring fd: ", curr_fd.fd);
                     continue;
                 }
                 if (curr_fd.revents != POLLIN) {
