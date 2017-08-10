@@ -31,8 +31,10 @@ static const int initial_buffer_size = 50;
   * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
-    port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
+TCPServer::TCPServer(int port, uint64_t pool_size_,
+    uint64_t num_threads, uint64_t max_fds_) :
+    port_(port), num_threads(num_threads),
+    pool_size(pool_size_), max_fds(max_fds_ + 1) {
         if (max_fds_ + 1 == 0) {
             throw cirrus::Exception("Max_fds value too high, "
                 "overflow occurred.");
@@ -40,19 +42,39 @@ TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
 
         for (unsigned int i = 0; i < num_threads; i++) {
             threads_vector.push_back(
-                new std::thread(&TCPServer::wait_to_process, this));
+                std::move(std::make_unique<std::thread>(
+                    &TCPServer::wait_to_process,
+                    this)));
         }
     }
 
 void TCPServer::wait_to_process() {
     while (1) {
+        queue_semaphore.wait();
         queue_lock.wait();
-        if (!queue.empty()) {
-            int to_process = process_queue.front();
+        if (!process_queue.empty()) {
+            waiting_threads--;
+            std::reference_wrapper<struct pollfd> to_process_ref =
+                process_queue.front();
             process_queue.pop();
+            // Set the fd to be ignored on future calls to poll
+            struct pollfd& to_process_struct = to_process_ref.get();
+            int to_process_fd = to_process_struct.fd;
+            to_process_struct.fd *= -1;
+
             queue_lock.signal();
-            process(to_process);
+            if (process(to_process_fd)) {
+                to_process_struct.fd *= -1;
+            } else {
+                LOG<INFO>("Processing failed on socket: ",
+                    to_process_struct.fd);
+                // do not make future alerts on this fd
+                to_process_struct.fd = -1;
+            }
+            to_process_struct.revents = 0;
+            waiting_threads++;
         } else {
+            LOG<INFO>("Spurious wakeup");
             queue_lock.signal();
         }
     }
@@ -212,23 +234,31 @@ void TCPServer::loop() {
                         fds.at(curr_index).events = POLLIN;
                         curr_index++;
                     }
+                    curr_fd.revents = 0;  // Reset the event flags
                 } else {
-                    if (!process(curr_fd.fd)) {
-                        LOG<INFO>("Processing failed on socket: ", curr_fd.fd);
-                        // do not make future alerts on this fd
-                        curr_fd.fd = -1;
-                    }
+                    queue_lock.wait();
+                    process_queue.push(
+                        std::reference_wrapper<struct pollfd>(curr_fd));
+                    queue_lock.signal();
+                    queue_semaphore.signal();
                 }
-                curr_fd.revents = 0;  // Reset the event flags
             }
         }
         // If at max capacity, try to make room
+        // lock all threads out of the processing queue
+        queue_lock.wait();
+
+        // wait till no threads are processing
+        while (waiting_threads != num_threads) {
+        }
         if (curr_index == max_fds) {
             // Try to purge unused fds, those with fd == -1
             std::remove_if(fds.begin(), fds.end(),
                 std::bind(&TCPServer::testRemove, this,
                     std::placeholders::_1));
         }
+        // let the threads run again
+        queue_lock.signal();
     }
 }
 

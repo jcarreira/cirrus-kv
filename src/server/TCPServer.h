@@ -4,8 +4,11 @@
 #include <poll.h>
 #include <vector>
 #include <map>
+#include <atomic>
 #include <queue>
+#include <functional>
 #include "server/Server.h"
+#include "common/Synchronization.h"
 
 namespace cirrus {
 
@@ -18,12 +21,12 @@ using ObjectID = uint64_t;
 class TCPServer : public Server {
  public:
     TCPServer(int port, uint64_t pool_size_,
-        unsigned int num_threads = 1, uint64_t max_fds = 100);
+        uint64_t num_threads = 1, uint64_t max_fds = 100);
     ~TCPServer() = default;
 
-    virtual void init();
+    void init();
 
-    virtual void loop();
+    void loop();
 
  private:
     bool process(int sock);
@@ -33,6 +36,8 @@ class TCPServer : public Server {
     bool read_from_client(std::vector<char>&, int, int&);
 
     bool testRemove(struct pollfd x);
+
+    void wait_to_process();
 
     /** The port that the server is listening on. */
     int port_;
@@ -44,8 +49,12 @@ class TCPServer : public Server {
 
     cirrus::SpinLock store_lock;
     cirrus::SpinLock queue_lock;
-    std::queue<int> process_queue;
-    std::vector<std::thread*> threads;
+    cirrus::PosixSemaphore queue_semaphore;
+    std::queue<std::reference_wrapper<struct pollfd>> process_queue;
+    std::vector<std::unique_ptr<std::thread>> threads_vector;
+
+    std::atomic<std::uint64_t> waiting_threads = {0};
+    uint64_t num_threads;
 
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;
