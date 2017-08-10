@@ -57,6 +57,10 @@ TCPClient::~TCPClient() {
   */
 void TCPClient::connect(const std::string& address,
                         const std::string& port_string) {
+    // Ignore any sigpipes received, they will show as an error during
+    // the read/write regardless, and ignoring will allow them to be better
+    // handled/ for more information about the error to be known.
+    signal(SIGPIPE, SIG_IGN);
     if (has_connected.exchange(true)) {
         LOG<INFO>("Client has previously connnected");
         return;
@@ -74,7 +78,10 @@ void TCPClient::connect(const std::string& address,
 
     // Set the type of address being used, assuming ip v4
     serv_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr);
+    if (inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr) != 1) {
+        throw cirrus::ConnectionException("Address family invalid or invalid "
+            "IP address passed in");
+    }
     // Convert port from string to int
     int port = stoi(port_string, nullptr);
 
@@ -271,7 +278,7 @@ void TCPClient::process_received() {
                     return;
                 } else {
                     throw cirrus::Exception("Issue in reading socket. "
-                                            "Full size not read");
+                        "Full size not read. Socket may have been closed.");
                 }
             }
 

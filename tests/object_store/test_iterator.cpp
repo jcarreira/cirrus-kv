@@ -229,7 +229,7 @@ void test_random_prefetching() {
     auto end = std::chrono::system_clock::now();
     auto duration = end - start;
 
-    for (const auto& data : iter) {
+    for (const auto& data __attribute__((unused)) : iter) {
         end = std::chrono::system_clock::now();
         if (j != 0) {
             // Time how long this last loop took

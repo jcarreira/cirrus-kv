@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <map>
 #include <vector>
+#include <algorithm>
+#include <iostream>
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -25,20 +27,22 @@ static const int initial_buffer_size = 50;
   * @param port the port the server will listen on
   * @param queue_len the length of the queue to make connections with the
   * server.
+  * @param max_fds_ the maximum number of clients that can be connected to the
+  * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, unsigned int num_threads,
-    unsigned int queue_len) {
-    port_ = port;
-    queue_len_ = queue_len;
-    pool_size = pool_size_;
-    server_sock_ = 0;
+TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
+    port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
+        if (max_fds_ + 1 == 0) {
+            throw cirrus::Exception("Max_fds value too high, "
+                "overflow occurred.");
+        }
 
-    for (unsigned int i = 0; i < num_threads; i++) {
-        threads_vector.push_back(
-            new std::thread(&TCPServer::wait_to_process, this));
+        for (unsigned int i = 0; i < num_threads; i++) {
+            threads_vector.push_back(
+                new std::thread(&TCPServer::wait_to_process, this));
+        }
     }
-}
 
 void TCPServer::wait_to_process() {
     while (1) {
@@ -128,7 +132,8 @@ void TCPServer::init() {
                + to_string(port_));
     }
 
-    if (listen(server_sock_, queue_len_) == -1) {
+    // SOMAXCONN is the "max reasonable backlog size" defined in socket.h
+    if (listen(server_sock_, SOMAXCONN) == -1) {
         throw cirrus::ConnectionException("Error listening on port "
             + to_string(port_));
     }
@@ -139,6 +144,20 @@ void TCPServer::init() {
 }
 
 /**
+ * Function passed into std::remove_if
+ * @param x a struct pollfd being examined
+ * @return True if the struct should be removed. This is true if the fd is -1,
+ * meaning that it is being ignored.
+ */
+bool TCPServer::testRemove(struct pollfd x) {
+    // If this pollfd will be removed, the index of the next location to insert
+    // should be reduced by one correspondingly.
+    if (x.fd == -1) {
+        curr_index -= 1;
+    }
+    return x.fd == -1;
+}
+/**
   * Server processing loop. When called, server loops infinitely, accepting
   * new connections and acting on messages received.
   */
@@ -148,7 +167,7 @@ void TCPServer::loop() {
 
     while (1) {
         LOG<INFO>("Server calling poll.");
-        int poll_status = poll(fds.data(), num_fds, timeout);
+        int poll_status = poll(fds.data(), curr_index, timeout);
         LOG<INFO>("Poll returned with status: ", poll_status);
 
         if (poll_status == -1) {
@@ -164,9 +183,17 @@ void TCPServer::loop() {
                     continue;
                 }
                 if (curr_fd.revents != POLLIN) {
-                    LOG<INFO>("Non read event on socket: ", curr_fd.fd);
+                    LOG<ERROR>("Non read event on socket: ", curr_fd.fd);
+                    if (curr_fd.revents & POLLHUP) {
+                        LOG<INFO>("Connection was closed by client");
+                        LOG<INFO>("Closing socket: ", curr_fd.fd);
+                        close(curr_fd.fd);
+                        curr_fd.fd = -1;
+                    }
+
                 } else if (curr_fd.fd == server_sock_) {
                     LOG<INFO>("New connection incoming");
+
                     // New data on main socket, accept and connect
                     // TODO(Tyler): loop this to accept multiple at once?
                     // TODO(Tyler): Switch to non blocking sockets?
@@ -176,18 +203,31 @@ void TCPServer::loop() {
                     if (newsock < 0) {
                         throw std::runtime_error("Error accepting socket");
                     }
-                    LOG<INFO>("Created new socket: ", newsock);
-                    fds.at(curr_index).fd = newsock;
-                    fds.at(curr_index).events = POLLIN;
-                    curr_index++;
+                    // If at capacity, reject connection
+                    if (curr_index == max_fds) {
+                        close(newsock);
+                    } else {
+                        LOG<INFO>("Created new socket: ", newsock);
+                        fds.at(curr_index).fd = newsock;
+                        fds.at(curr_index).events = POLLIN;
+                        curr_index++;
+                    }
                 } else {
                     if (!process(curr_fd.fd)) {
+                        LOG<INFO>("Processing failed on socket: ", curr_fd.fd);
                         // do not make future alerts on this fd
                         curr_fd.fd = -1;
                     }
                 }
                 curr_fd.revents = 0;  // Reset the event flags
             }
+        }
+        // If at max capacity, try to make room
+        if (curr_index == max_fds) {
+            // Try to purge unused fds, those with fd == -1
+            std::remove_if(fds.begin(), fds.end(),
+                std::bind(&TCPServer::testRemove, this,
+                    std::placeholders::_1));
         }
     }
 }
