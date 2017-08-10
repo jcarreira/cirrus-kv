@@ -18,8 +18,8 @@ class ObjectStore {
      */
     class ObjectStorePutFuture {
      public:
-        explicit ObjectStorePutFuture(cirrus::BladeClient::ClientFuture
-                                          client_future);
+        explicit ObjectStorePutFuture(
+            typename cirrus::BladeClient<T>::ClientFuture client_future);
         ObjectStorePutFuture() {}
         void wait();
 
@@ -31,7 +31,7 @@ class ObjectStore {
          * A pointer to a BladeClient::ClientFuture that will be used for
          * all calls to wait and get.
          */
-        cirrus::BladeClient::ClientFuture client_future;
+        typename cirrus::BladeClient<T>::ClientFuture client_future;
     };
 
     /**
@@ -39,10 +39,11 @@ class ObjectStore {
      */
     class ObjectStoreGetFuture {
      public:
-        ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
-                            std::shared_ptr<std::vector<char>> mem,
-                            uint64_t serialized_size,
-                            std::function<T(void*, unsigned int)> deserializer);
+        ObjectStoreGetFuture(
+            typename cirrus::BladeClient<T>::ClientFuture client_future,
+            std::shared_ptr<std::vector<char>> mem,
+            uint64_t serialized_size,
+            std::function<T(void*, unsigned int)> deserializer);
         ObjectStoreGetFuture() {}
         void wait();
 
@@ -55,7 +56,7 @@ class ObjectStore {
          * A pointer to a BladeClient::ClientFuture that will be used for
          * all calls to wait and get.
          */
-        cirrus::BladeClient::ClientFuture client_future;
+        typename cirrus::BladeClient<T>::ClientFuture client_future;
 
         /**
          * A pointer to the memory that the BladeClient will write the
@@ -105,7 +106,7 @@ class ObjectStore {
  */
 template<class T>
 ObjectStore<T>::ObjectStorePutFuture::ObjectStorePutFuture(
-    cirrus::BladeClient::ClientFuture client_future) :
+    typename cirrus::BladeClient<T>::ClientFuture client_future) :
         client_future(client_future) {}
 
 /**
@@ -149,7 +150,7 @@ bool ObjectStore<T>::ObjectStorePutFuture::get() {
  */
 template<class T>
 ObjectStore<T>::ObjectStoreGetFuture::ObjectStoreGetFuture(
-    cirrus::BladeClient::ClientFuture client_future,
+    typename cirrus::BladeClient<T>::ClientFuture client_future,
     std::shared_ptr<std::vector<char>> mem,
     uint64_t serialized_size,
     std::function<T(void*, unsigned int)> deserializer) :

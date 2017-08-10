@@ -83,7 +83,7 @@ class SimpleCustomPolicy : public cirrus::PrefetchPolicy<T> {
   */
 void test_cache_manager_simple() {
     std::unique_ptr<cirrus::BladeClient<int>> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
 
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -110,7 +110,7 @@ void test_cache_manager_simple() {
   */
 void test_nonexistent_get() {
     std::unique_ptr<cirrus::BladeClient<int>> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             serializer,
@@ -130,8 +130,8 @@ void test_nonexistent_get() {
   * Tests that the cache manager can handle c style arrays.
   */
 void test_array() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<std::shared_ptr<int>>> client =
+        cirrus::test_internal::GetClient<std::shared_ptr<int>>(use_rdma_client);
 
     auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
     auto serializer = cirrus::c_array_serializer_simple<int>(4);
@@ -169,10 +169,11 @@ void test_array() {
   * linear prefetching mode.
   */
 void test_linear_prefetch() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -209,10 +210,11 @@ void test_linear_prefetch() {
   * This test tests that custom prefetching policies work properly.
   */
 void test_custom_prefetch() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -249,7 +251,7 @@ void test_custom_prefetch() {
   */
 void test_capacity() {
     std::unique_ptr<cirrus::BladeClient<int>> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             serializer,
@@ -275,7 +277,7 @@ void test_capacity() {
  */
 void test_remove() {
     std::unique_ptr<cirrus::BladeClient<int>> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             serializer,
@@ -298,10 +300,11 @@ void test_remove() {
  * the objects are removed from the store as well.
  */
 void test_remove_bulk() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -331,10 +334,11 @@ void test_remove_bulk() {
  * prefetched.
  */
 void test_prefetch_bulk() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -374,7 +378,7 @@ void test_prefetch_bulk() {
   */
 void test_instantiation() {
     std::unique_ptr<cirrus::BladeClient<int>> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
             serializer,
@@ -415,10 +419,11 @@ void test_lradded() {
  * This test tests that get_bulk() and put_bulk() return proper values.
  */
 void test_bulk() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);
@@ -447,10 +452,11 @@ void test_bulk() {
  * during a get are still received during a get bulk.
  */
 void test_bulk_nonexistent() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(10);

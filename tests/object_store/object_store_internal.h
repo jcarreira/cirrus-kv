@@ -44,6 +44,11 @@ uint64_t serializer_simple<T>::size(const T& object) const {
     return sizeof(object);
 }
 
+template<typename T>
+void serializer_simple<T>::serialize(const T& object, void* mem) const {
+    std::memcpy(mem, &object, sizeof(object));
+}
+
 
 /**
  * This class copies the c style array underneath the pointer into a new
@@ -118,12 +123,6 @@ class c_array_deserializer_simple {
      int num_slots;
 };
 
-
-template<typename T>
-void serializer_simple<T>::serialize(const T& object, void *mem) const {
-    std::memcpy(mem, &object, sizeof(object));
-}
-
 /* Takes a pointer to raw mem passed in and returns as object. */
 template<typename T, unsigned int SIZE>
 T deserializer_simple(void* data, unsigned int /* size */) {
@@ -141,14 +140,15 @@ namespace test_internal {
  * RDMAClient.
  * @return a std::unique_ptr for either an RDMAClient or a TCPClient.
  */
-std::unique_ptr<BladeClient> GetClient(bool use_rdma_client) {
-    std::unique_ptr<BladeClient> retClient;
+template <typename T>
+std::unique_ptr<BladeClient<T>> GetClient(bool use_rdma_client) {
+    std::unique_ptr<BladeClient<T>> retClient;
 
     if (!use_rdma_client) {
-        retClient = std::make_unique<TCPClient>();
+        retClient = std::make_unique<TCPClient<T>>();
     #ifdef HAVE_LIBRDMACM
     } else if (use_rdma_client) {
-        retClient = std::make_unique<RDMAClient>();
+        retClient = std::make_unique<RDMAClient<T>>();
     }
     #else
     }

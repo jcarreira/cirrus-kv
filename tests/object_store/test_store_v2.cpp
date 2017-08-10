@@ -19,8 +19,8 @@ bool use_rdma_client;
   * Uses simpler objects than test_fullblade_store.
   */
 void test_store_simple() {
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<int>> client =
+        cirrus::test_internal::GetClient<int>(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
 
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,

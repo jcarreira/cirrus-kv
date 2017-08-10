@@ -8,7 +8,6 @@ LIBS         = 	-lcityhash \
 		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
-		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
 		-L$(top_srcdir)/src/cache_manager \

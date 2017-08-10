@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = client object_store
+SUBDIRS = object_store client
 
 if USE_MPI
 SUBDIRS += mpi

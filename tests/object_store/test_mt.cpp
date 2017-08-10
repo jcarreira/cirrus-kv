@@ -19,13 +19,6 @@ const char PORT[] = "12345";
 const char *IP;
 static const uint32_t SIZE = 1024;
 bool use_rdma_client;
-cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
-cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
-cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
-                    &client,
-                    serializer,
-                    cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                        sizeof(cirrus::Dummy<SIZE>)>);
 
 /**
   * Tests that behavior is as expected when multiple threads make get and put
@@ -35,12 +28,13 @@ cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP, PORT,
 void test_mt() {
     cirrus::TimerFunction tf("connect time", true);
 
-    std::unique_ptr<cirrus::BladeClient> client =
-        cirrus::test_internal::GetClient(use_rdma_client);
+    std::unique_ptr<cirrus::BladeClient<cirrus::Dummy<SIZE>>> client =
+        cirrus::test_internal::GetClient<cirrus::Dummy<SIZE>>(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                         PORT,
                         client.get(),
-                        cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                        serializer,
                         cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                             sizeof(cirrus::Dummy<SIZE>)>);
 

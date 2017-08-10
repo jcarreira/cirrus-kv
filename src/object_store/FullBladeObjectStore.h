@@ -178,14 +178,11 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    serialized_size = serializer_out.second;
+    serialized_size = serializer.size(obj);
 
     auto client_future = client->write_async(id,
-                                           serial_ptr.get(),
-                                           serialized_size);
+                                           obj,
+                                           serializer);
 
     // Constructor takes a pointer to a client future
     return typename ObjectStore<T>::ObjectStorePutFuture(client_future);

@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
-		test_mult_clients test_cache_manager test_iterator
+bin_PROGRAMS =  exhaustion test_store_v2 test_mt test_mult_clients \
+		test_cache_manager #test_iterator #test_fullblade_store
 
 
 LIBS         =  -lcityhash \
