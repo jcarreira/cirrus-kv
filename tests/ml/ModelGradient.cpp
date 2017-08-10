@@ -1,8 +1,10 @@
 #include <ModelGradient.h>
 #include <iostream>
+#include "utils/Log.h"
 
 LRGradient::LRGradient(int d) {
     weights.resize(d);
+    count = 0;
 }
 
 LRGradient::LRGradient(const std::vector<double>& data) :
@@ -10,21 +12,26 @@ LRGradient::LRGradient(const std::vector<double>& data) :
 }
 
 void LRGradient::loadSerialized(const void* mem) {
+    cirrus::LOG<cirrus::INFO>("LRGradient::loadSerialized size: ", weights.size());
+    count = *(uint32_t*)mem;
+    mem = (void*) (((char*)mem) + sizeof(uint32_t));
     const double* data = reinterpret_cast<const double*>(mem);
     std::copy(data, data + weights.size(), weights.end());
 }
 
 void LRGradient::serialize(void* mem) const {
+    *(int*)mem = count;
+    mem = (void*) (((char*)mem) + sizeof(uint32_t));
     double* data = reinterpret_cast<double*>(mem);
     std::copy(weights.begin(), weights.end(), data);
 }
 
 uint64_t LRGradient::getSerializedSize() const {
-    return weights.size() * sizeof(double);
+    return weights.size() * sizeof(double) + sizeof(uint32_t);
 }
 
 void LRGradient::print() const {
-    std::cout << "LRGradient: ";
+    std::cout << "Printing LRGradient. count: " << count << std::endl;
     for (const auto &v : weights) {
         std::cout << v << " ";
     }

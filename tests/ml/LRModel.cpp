@@ -2,6 +2,7 @@
 #include <Utils.h>
 #include <MlUtils.h>
 #include <Eigen/Dense>
+#include "utils/Log.h"
 
 LRModel::LRModel(uint64_t d) :
     d(d) {
@@ -25,6 +26,9 @@ std::pair<std::unique_ptr<char[]>, uint64_t>
 LRModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
     res.first.reset(new char[sizeof(double) * d]);
+
+    // XXX debugging: remove this
+    memset(res.first.get(), 0, sizeof(double) * d);
     res.second = sizeof(double) * d;
 
     std::copy(weights.data(), weights.data() + d, res.first.get());
@@ -56,6 +60,7 @@ uint64_t LRModel::getSerializedSize() const {
 }
 
 void LRModel::loadSerialized(const void* data) {
+    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", d);
     const double* v = reinterpret_cast<const double*>(data);
     std::copy(v, v + d, weights.begin());
 }

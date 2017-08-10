@@ -33,6 +33,10 @@ class ModelGradient {
        * Print gradient
        */
      virtual void print() const = 0;
+
+     virtual uint64_t setCount(uint64_t c) {
+         count = c;
+     }
      
      /**
        * Get version of gradient
@@ -41,7 +45,7 @@ class ModelGradient {
          return count;
      }
 
- private:
+ protected:
 
      uint64_t count;
 };
