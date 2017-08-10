@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = parameter_server
+bin_PROGRAMS = parameter_server two_clients_test
 
 TOP_DIR = $(top_srcdir)/../../
 
@@ -23,3 +23,11 @@ parameter_server_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/
                 	    -I$(TOP_DIR)/third_party/flatbuffers/include \
                 	    -I$(TOP_DIR)/third_party/eigen_source
 parameter_server_LDADD    = $(LINCLUDES) $(LIBS)
+
+two_clients_test_SOURCES  = two_clients_test.cpp
+two_clients_test_LDFLAGS  = -pthread
+two_clients_test_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+                	    -I$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+                            -I$(TOP_DIR)/src \
+                	    -I$(TOP_DIR)/third_party/flatbuffers/include
+two_clients_test_LDADD    = $(LINCLUDES) $(LIBS)
