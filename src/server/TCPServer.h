@@ -6,6 +6,7 @@
 #include <map>
 #include <atomic>
 #include <queue>
+#include <thread>
 #include <functional>
 #include "server/Server.h"
 #include "common/Synchronization.h"

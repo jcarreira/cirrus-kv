@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string>
+#include <iostream>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -72,7 +73,9 @@ void test_exhaustion_remove() {
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
+    std::cout << "Test exhaustion remove" << std::endl;
     test_exhaustion_remove();
+    std::cout << "Test exhaustion" << std::endl;
     try {
         test_exhaustion();
     } catch (const cirrus::ServerMemoryErrorException& e) {

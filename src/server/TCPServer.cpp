@@ -8,8 +8,10 @@
 #include <unistd.h>
 #include <map>
 #include <vector>
+#include <thread>
 #include <algorithm>
 #include <iostream>
+#include <functional>
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -50,28 +52,33 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
 
 void TCPServer::wait_to_process() {
     while (1) {
+        LOG<INFO>("Thread ", std::this_thread::get_id, " waiting on semaphore");
         queue_semaphore.wait();
+        LOG<INFO>("Thread ", std::this_thread::get_id, " waiting on lock");
         queue_lock.wait();
         if (!process_queue.empty()) {
+            LOG<INFO>("New item exists to process");
             waiting_threads--;
             std::reference_wrapper<struct pollfd> to_process_ref =
                 process_queue.front();
             process_queue.pop();
             // Set the fd to be ignored on future calls to poll
             struct pollfd& to_process_struct = to_process_ref.get();
-            int to_process_fd = to_process_struct.fd;
-            to_process_struct.fd *= -1;
+            int to_process_fd = to_process_struct.fd * -1;
+            LOG<INFO>("About to process socket: ", to_process_fd);
+            to_process_struct.revents = 0;
 
             queue_lock.signal();
             if (process(to_process_fd)) {
+                // make positive once more
                 to_process_struct.fd *= -1;
+                LOG<INFO>("Processing successful");
             } else {
                 LOG<INFO>("Processing failed on socket: ",
                     to_process_struct.fd);
                 // do not make future alerts on this fd
                 to_process_struct.fd = -1;
             }
-            to_process_struct.revents = 0;
             waiting_threads++;
         } else {
             LOG<INFO>("Spurious wakeup");
@@ -189,7 +196,7 @@ void TCPServer::loop() {
 
     while (1) {
         LOG<INFO>("Server calling poll.");
-        int poll_status = poll(fds.data(), curr_index, timeout);
+        int poll_status = poll(fds.data(), curr_index, 0);
         LOG<INFO>("Poll returned with status: ", poll_status);
 
         if (poll_status == -1) {
@@ -201,7 +208,8 @@ void TCPServer::loop() {
             for (uint64_t i = 0; i < curr_index; i++) {
                 struct pollfd& curr_fd = fds.at(i);
                 // Ignore the fd if we've said we don't care about it
-                if (curr_fd.fd == -1) {
+                if (curr_fd.fd < 0) {
+                    LOG<INFO>("Ignoring fd: ", cur_fd.fd);
                     continue;
                 }
                 if (curr_fd.revents != POLLIN) {
@@ -236,29 +244,36 @@ void TCPServer::loop() {
                     }
                     curr_fd.revents = 0;  // Reset the event flags
                 } else {
+                    LOG<INFO>("New message to process on socket: ", curr_fd.fd);
+                    // Toggle it to be ignored on future calls to poll
+                    curr_fd.fd *= -1;
                     queue_lock.wait();
                     process_queue.push(
                         std::reference_wrapper<struct pollfd>(curr_fd));
                     queue_lock.signal();
                     queue_semaphore.signal();
+                    LOG<INFO>("Socket ", curr_fd.fd, " added to queue.");
                 }
             }
         }
         // If at max capacity, try to make room
-        // lock all threads out of the processing queue
-        queue_lock.wait();
-
-        // wait till no threads are processing
-        while (waiting_threads != num_threads) {
-        }
         if (curr_index == max_fds) {
+            LOG<INFO>("At capacity, attempting to clear");
+            // lock all threads out of the processing queue
+            queue_lock.wait();
+
+            // wait till no threads are processing
+            while (waiting_threads != num_threads) {
+            }
+
             // Try to purge unused fds, those with fd == -1
             std::remove_if(fds.begin(), fds.end(),
                 std::bind(&TCPServer::testRemove, this,
                     std::placeholders::_1));
+            // let the threads run again
+            queue_lock.signal();
+            LOG<INFO>("Finished clearing old structs");
         }
-        // let the threads run again
-        queue_lock.signal();
     }
 }
 
