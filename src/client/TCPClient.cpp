@@ -74,7 +74,10 @@ void TCPClient::connect(const std::string& address,
 
     // Set the type of address being used, assuming ip v4
     serv_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr);
+    if (inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr) != 1) {
+        throw cirrus::ConnectionException("Address family invalid or invalid "
+            "IP address passed in");
+    }
     // Convert port from string to int
     int port = stoi(port_string, nullptr);
 
@@ -271,7 +274,7 @@ void TCPClient::process_received() {
                     return;
                 } else {
                     throw cirrus::Exception("Issue in reading socket. "
-                                            "Full size not read");
+                        "Full size not read. Socket may have been closed.");
                 }
             }
 

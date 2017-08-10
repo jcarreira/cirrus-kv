@@ -16,7 +16,8 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, int queue_len = 100);
+    explicit TCPServer(int port, uint64_t pool_size_, uint64_t max_fds = 100,
+        int queue_len = 100);
     ~TCPServer() = default;
 
     virtual void init();
@@ -30,12 +31,14 @@ class TCPServer : public Server {
 
     bool read_from_client(std::vector<char>&, int, int&);
 
+    bool testRemove(struct pollfd x);
+
     /** The port that the server is listening on. */
     int port_;
     /** The number of pending connection requests allowed at once. */
     int queue_len_;
     /** The fd for the socket the server listens for incoming requests on. */
-    int server_sock_;
+    int server_sock_ = 0;
     /** The map the server uses to map ObjectIDs to byte vectors. */
     std::map<uint64_t, std::vector<int8_t>> store;
 
@@ -46,8 +49,7 @@ class TCPServer : public Server {
     uint64_t curr_size = 0;
 
     /** Max number of sockets open at once. */
-    // TODO(TYLER): Enforce this limit, or remove it and allow scaling
-    uint64_t num_fds = 100;
+    const uint64_t max_fds;
 
     /**
      * Index that the next socket accepted should have in the
@@ -61,9 +63,12 @@ class TCPServer : public Server {
     int timeout = 60 * 1000 * 3;
     /**
      * Vector that serves as a wrapper for a c style array containing
-     * struct pollfd objects. Used for calls to poll().
+     * struct pollfd objects. Used for calls to poll(). New structs are
+     * always inserted to the end of a continus range, indicated by curr_index.
+     * When the vector reaches capacity, unused structs are removed and the
+     * remaining items shifted.
      */
-    std::vector<struct pollfd> fds = std::vector<struct pollfd>(num_fds);
+    std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
 };
 
 }  // namespace cirrus

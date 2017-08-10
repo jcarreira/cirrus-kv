@@ -1,3 +1,5 @@
+include $(top_srcdir)/common.mk
+
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
 		test_mult_clients test_cache_manager test_iterator

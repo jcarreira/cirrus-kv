@@ -360,7 +360,7 @@ void CacheManager<T>::prefetchBulk(ObjectID first, ObjectID last) {
     if (first > last) {
         throw cirrus::Exception("Last ObjectID to prefetch must be leq first.");
     }
-    for (int oid = first; oid <= last; oid++) {
+    for (unsigned int oid = first; oid <= last; oid++) {
         prefetch(oid);
     }
 }
@@ -375,7 +375,7 @@ void CacheManager<T>::removeBulk(ObjectID first, ObjectID last) {
     if (first > last) {
         throw cirrus::Exception("Last ObjectID to remove must be leq first.");
     }
-    for (int oid = first; oid <= last; oid++) {
+    for (unsigned int oid = first; oid <= last; oid++) {
         remove(oid);
     }
 }
