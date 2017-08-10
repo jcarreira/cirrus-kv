@@ -306,14 +306,8 @@ bool TCPServer::process(int sock) {
 #ifdef PERF_LOG
     TimerFunction receive_time;
 #endif
-    // XXX shouldn't this be in a recv_all?
 
-    uint64_t retval = read_all(sock, buffer.data(), incoming_size);
-
-    if (retval != incoming_size) {
-        LOG<ERROR>("Expected :", incoming_size, " but got ", retval);
-        throw cirrus::Exception("Wrong number of bytes read");
-    }
+    read_all(sock, buffer.data(), incoming_size);
 
 #ifdef PERF_LOG
     double recv_mbps = bytes_read / (1024.0 * 1024) /

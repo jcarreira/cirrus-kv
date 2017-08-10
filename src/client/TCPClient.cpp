@@ -268,7 +268,6 @@ void TCPClient::process_received() {
         LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
         while (bytes_read < sizeof(uint32_t)) {
-            // I believe this needs to stay as a plain syscall as we check errno
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
@@ -304,10 +303,8 @@ void TCPClient::process_received() {
             buffer.resize(incoming_size);
         }
 
-        ssize_t retval = read_all(sock, buffer.data(), incoming_size);
-        if (retval != incoming_size) {
-            throw cirrus::Exception("Error reading full message from server.");
-        }
+        read_all(sock, buffer.data(), incoming_size);
+
 #ifdef PERF_LOG
         double receive_mbps = bytes_read / (1024 * 1024.0) /
             (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
