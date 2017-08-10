@@ -31,9 +31,8 @@ static const int initial_buffer_size = 50;
   * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_,
-    int queue_len) : port_(port), queue_len_(queue_len), pool_size(pool_size_),
-    max_fds(max_fds_ + 1) {
+TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
+    port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
         if (max_fds_ + 1 == 0) {
             throw cirrus::Exception("Max_fds value too high, "
                 "overflow occurred.");
@@ -114,7 +113,8 @@ void TCPServer::init() {
                + to_string(port_));
     }
 
-    if (listen(server_sock_, queue_len_) == -1) {
+    // SOMAXCONN is the "max reasonable backlog size" defined in socket.h
+    if (listen(server_sock_, SOMAXCONN) == -1) {
         throw cirrus::ConnectionException("Error listening on port "
             + to_string(port_));
     }

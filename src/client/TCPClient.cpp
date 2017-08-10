@@ -57,6 +57,10 @@ TCPClient::~TCPClient() {
   */
 void TCPClient::connect(const std::string& address,
                         const std::string& port_string) {
+    // Ignore any sigpipes received, they will show as an error during
+    // the read/write regardless, and ignoring will allow them to be better
+    // handled/ for more information about the error to be known.
+    signal(SIGPIPE, SIG_IGN);
     if (has_connected.exchange(true)) {
         LOG<INFO>("Client has previously connnected");
         return;
