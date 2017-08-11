@@ -70,8 +70,8 @@ void TCPServer::wait_to_process() {
             std::reference_wrapper<struct pollfd> to_process_ref_wrapper =
                 process_queue.front();
             process_queue.pop();
-            // Set the fd to be ignored on future calls to poll
             struct pollfd& to_process = to_process_ref_wrapper.get();
+            // was negated by the main loop, so it must be made positive again
             int to_process_fd = to_process.fd * -1;
             LOG<INFO>("About to process socket: ", to_process_fd);
             to_process.revents = 0;
