@@ -22,6 +22,7 @@
 #define MODEL_GRAD_SIZE 10
 #define GRADIENT_BASE 1000
 #define MODEL_BASE 2000
+#define LABEL_BASE 3000
 uint64_t nworkers = 1;
 
 int features_per_sample = 10; 
@@ -37,12 +38,14 @@ public:
     operator()(const std::shared_ptr<T>& v) {
         T* array = v.get();
 
+        uint64_t array_size = numslots * sizeof(T);
         // allocate array
-        std::unique_ptr<char[]> ptr(new char[numslots * sizeof(T)]);
+        std::unique_ptr<char[]> ptr(new char[array_size]);
 
         // copy samples to array
-        memcpy(ptr.get(), array, numslots * sizeof(T));
-        return std::make_pair(std::move(ptr), numslots * sizeof(T));
+        memcpy(ptr.get(), array, array_size);
+        std::cout << "Serialized array with size: " << array_size << std::endl;
+        return std::make_pair(std::move(ptr), array_size);
     }
 
 private:
@@ -55,7 +58,7 @@ public:
     c_array_deserializer(int nslots) : numslots(nslots) {}
     
     std::shared_ptr<T>
-    operator()(void* data, unsigned int /* size */) {
+    operator()(void* data, unsigned int input_size) {
         unsigned int size = sizeof(T) * numslots;
 
         // cast the pointer
@@ -71,6 +74,7 @@ public:
             << ptr
             << " to addr: " << ((void*)alloc)
             << " with size: " << size
+            << " informed with size: " << input_size
             << std::endl;
         std::memcpy(alloc, ptr, size);
         return std::shared_ptr<T>(reinterpret_cast<T*>(alloc),
@@ -134,7 +138,6 @@ void run_loading_task(const Configuration& config) {
         << "Done reading criteo..."
         << std::endl;
 
-
     std::cout << "[LOADER] "
         << "Read "
         << dataset.samples()
@@ -184,7 +187,7 @@ void run_loading_task(const Configuration& config) {
             samples_store.put(i, sample);
             std::cout << "[LOADER] "
                 << "Putting label" << std::endl;
-            labels_store.put(i, label);
+            labels_store.put(LABEL_BASE + i, label);
         } catch(...) {
             std::cout << "[LOADER] "
                 << "Caught exception" << std::endl;

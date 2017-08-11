@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = parameter_server two_clients_test
+bin_PROGRAMS = parameter_server two_clients_test bug_regression
 
 TOP_DIR = $(top_srcdir)/../../
 
@@ -31,3 +31,14 @@ two_clients_test_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/
                             -I$(TOP_DIR)/src \
                 	    -I$(TOP_DIR)/third_party/flatbuffers/include
 two_clients_test_LDADD    = $(LINCLUDES) $(LIBS)
+
+bug_regression_SOURCES  = bug_regression.cpp Input.cpp Utils.cpp \
+                          Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
+                          ModelGradient.cpp MlUtils.cpp Configuration.cpp
+bug_regression_LDFLAGS  = -pthread
+bug_regression_CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+                 	  -I$(TOP_DIR)/third_party/libcuckoo/cityhash-1.1.1/src/ -O3 \
+                          -I$(TOP_DIR)/src \
+                 	  -I$(TOP_DIR)/third_party/flatbuffers/include \
+                 	  -I$(TOP_DIR)/third_party/eigen_source
+bug_regression_LDADD    = $(LINCLUDES) $(LIBS)
