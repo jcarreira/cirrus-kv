@@ -437,8 +437,6 @@ bool TCPServer::process(int sock) {
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
 
-                auto entry_itr = store.find(oid);
-
                 // This is to make sure the the capacity is strictly enforced
 
                 bool memory_exception = false;
@@ -481,6 +479,8 @@ bool TCPServer::process(int sock) {
                             };
 
                         store.erase_fn(oid, erase_function);
+                    } else {
+                        curr_size += data_fb->size();
                     }
                 }
 
@@ -577,7 +577,6 @@ bool TCPServer::process(int sock) {
                         this->curr_size -= vec.size();
                         return true;
                     };
-
                 success = store.erase_fn(oid, erase_function);
 
                 // Create and send ack
