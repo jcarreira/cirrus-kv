@@ -226,7 +226,7 @@ BladeClient::ClientFuture RDMAClient::writeRemoteAsync(
 bool RDMAClient::insertObjectLocation(ObjectID id,
                                       uint64_t size,
                                       const AllocationRecord& allocRec) {
-    objects_[id] = BladeLocation(size, allocRec);
+    objects_.insert_or_assign(id, BladeLocation(size, allocRec));
     return true;
 }
 
