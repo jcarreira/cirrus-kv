@@ -55,5 +55,5 @@ objectstoremain_LDADD    = $(DEFAULT_LIB)
 tcpservermain_DEPENDENCIES = libserver.a
 tcpservermain_SOURCES  = TCPServerMain.cpp
 tcpservermain_LDFLAGS  = -pthread
-tcpservermain_CPPFLAGS = -ggdb -I$(top_srcdir)/src
+tcpservermain_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src
 tcpservermain_LDADD    = $(DEFAULT_LIB)

@@ -15,6 +15,7 @@
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
+#include "third_party/libcuckoo/libcuckoo/cuckoohash_map.hh"
 
 namespace cirrus {
 
@@ -50,34 +51,41 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
         }
     }
 
+/**
+ * Function that is run by the processing threads. The threads wait in a
+ * loop until a socket has new data to process, at which point the thread
+ * processes it.
+ */
 void TCPServer::wait_to_process() {
     while (1) {
         LOG<INFO>("Thread ", std::this_thread::get_id, " waiting on semaphore");
+        // Wait for new items to be added to the queue
         queue_semaphore.wait();
         LOG<INFO>("Thread ", std::this_thread::get_id, " waiting on lock");
         queue_lock.wait();
+        // Ensure that items are actually in the queue
         if (!process_queue.empty()) {
             LOG<INFO>("New item exists to process");
             waiting_threads--;
-            std::reference_wrapper<struct pollfd> to_process_ref =
+            std::reference_wrapper<struct pollfd> to_process_ref_wrapper =
                 process_queue.front();
             process_queue.pop();
             // Set the fd to be ignored on future calls to poll
-            struct pollfd& to_process_struct = to_process_ref.get();
-            int to_process_fd = to_process_struct.fd * -1;
+            struct pollfd& to_process = to_process_ref_wrapper.get();
+            int to_process_fd = to_process.fd * -1;
             LOG<INFO>("About to process socket: ", to_process_fd);
-            to_process_struct.revents = 0;
+            to_process.revents = 0;
 
             queue_lock.signal();
             if (process(to_process_fd)) {
                 // make positive once more
-                to_process_struct.fd *= -1;
+                to_process.fd *= -1;
                 LOG<INFO>("Processing successful");
             } else {
                 LOG<INFO>("Processing failed on socket: ",
-                    to_process_struct.fd);
+                    to_process.fd);
                 // do not make future alerts on this fd
-                to_process_struct.fd = -1;
+                to_process.fd = -1;
             }
             waiting_threads++;
         } else {
@@ -415,7 +423,6 @@ bool TCPServer::process(int sock) {
     // Initialize the error code
     cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
 
-    store_lock.wait();
     LOG<INFO>("Server checking type of message");
     // Check message type
     bool success = true;
@@ -426,19 +433,59 @@ bool TCPServer::process(int sock) {
                 TimerFunction write_time;
 #endif
                 LOG<INFO>("Server processing write request.");
-
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
 
                 auto entry_itr = store.find(oid);
-                if (entry_itr != store.end()) {
-                    curr_size -= entry_itr->second.size();
+
+                // This is to make sure the the capacity is strictly enforced
+
+                bool memory_exception = false;
+                auto data_fb = msg->message_as_Write()->data();
+
+                // replace the preexisting vector with a new one, and
+                // adjust size accordingly
+                auto write_function = [this, &data_fb, &memory_exception]
+                    (std::vector<int8_t>& vec) -> void {
+                        int prev_size = vec.size();
+                        int new_size = data_fb->size();
+                        int change = new_size - prev_size;
+
+                        if (this->curr_size + change > this->pool_size) {
+                            memory_exception = true;
+                            return;
+                        }
+
+                        curr_size += change;
+                        vec = std::vector<int8_t>(data_fb->begin(),
+                            data_fb->end());
+                        return;
+                    };
+
+                write_lock.wait();
+
+                bool no_key_conflict = store.upsert(oid, write_function,
+                    data_fb->begin(), data_fb->end());
+
+                if (no_key_conflict) {
+                    if (curr_size + data_fb->size() > pool_size) {
+                        // Remove the item we just inserted if it went over
+                        // capacity
+                        memory_exception = true;
+
+                        auto erase_function = [this]
+                            (std::vector<int8_t>& vec) -> bool {
+                                this->curr_size -= vec.size();
+                                return true;
+                            };
+
+                        store.erase_fn(oid, erase_function);
+                    }
                 }
 
                 // Throw error if put would exceed size of the store
-                auto data_fb = msg->message_as_Write()->data();
-                if (curr_size + data_fb->size() > pool_size) {
+                if (memory_exception) {
                     LOG<ERROR>("Put would go over capacity on server. ",
                                 "Current size: ", curr_size,
                                 " Incoming size: ", data_fb->size(),
@@ -446,14 +493,9 @@ bool TCPServer::process(int sock) {
                     error_code =
                         cirrus::ErrorCodes::kServerMemoryErrorException;
                     success = false;
-                } else {
-                    // Service the write request by
-                    //  storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
-                    // Create entry in store mapping the data to the id
-                    curr_size += data_fb->size();
-                    store[oid] = data;
                 }
+
+                write_lock.signal();
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
@@ -485,22 +527,25 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
                 LOG<INFO>("Server extracted oid");
-                auto entry_itr = store.find(oid);
-                LOG<INFO>("Got pair from store");
-                // If the oid is not on the server, this operation has failed
-                if (entry_itr == store.end()) {
-                    success = false;
+
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
+
+                // Constructs a flatbuffer if possible
+                auto read_function = [&fb_vector, &builder]
+                    (const std::vector<int8_t>& vec) -> void {
+                        fb_vector = builder.CreateVector(vec);
+                        return;
+                    };
+                success = store.find_fn(oid, read_function);
+
+                // If operations has failed, item is not on the server
+                if (!success) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
-                }
-                flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
-                if (success) {
-                    fb_vector = builder.CreateVector(entry_itr->second);
-                } else {
+                    // create a blank vector
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
                 }
-
                 LOG<INFO>("Server building response");
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateReadAck(builder,
@@ -527,16 +572,16 @@ bool TCPServer::process(int sock) {
             {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
-                success = false;
-                auto entry_itr = store.find(oid);
-                // Remove the object if it exists on the server.
-                if (entry_itr != store.end()) {
-                    store.erase(entry_itr);
-                    curr_size -= entry_itr->second.size();
-                    success = true;
-                }
+                auto erase_function = [this]
+                    (std::vector<int8_t>& vec) -> bool {
+                        this->curr_size -= vec.size();
+                        return true;
+                    };
+
+                success = store.erase_fn(oid, erase_function);
+
                 // Create and send ack
-                auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                auto ack = message::TCPBladeMessage::CreateRemoveAck(builder,
                                          oid, success);
                 auto ack_msg =
                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
@@ -554,7 +599,6 @@ bool TCPServer::process(int sock) {
             break;
     }
 
-    store_lock.signal();
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);

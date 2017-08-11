@@ -10,6 +10,7 @@
 #include <functional>
 #include "server/Server.h"
 #include "common/Synchronization.h"
+#include "third_party/libcuckoo/libcuckoo/cuckoohash_map.hh"
 
 namespace cirrus {
 
@@ -44,24 +45,35 @@ class TCPServer : public Server {
     int port_;
     /** The fd for the socket the server listens for incoming requests on. */
     int server_sock_ = 0;
-    /** The map the server uses to map ObjectIDs to byte vectors. */
-    std::map<uint64_t, std::vector<int8_t>> store;
+
+    /** Map between objectid and data. Used to store all data. */
+    cuckoohash_map<ObjectID, std::vector<int8_t>> store;
 
 
-    cirrus::SpinLock store_lock;
+    /**
+     * Lock on writes, likely temporary. This is to ensure that
+     * the size limit cannot be exceed ever.
+     */
+    cirrus::SpinLock write_lock;
+    /** Lock on the process_queue. */
     cirrus::SpinLock queue_lock;
+    /** Semaphore to notify processing threads of new data. */
     cirrus::PosixSemaphore queue_semaphore;
+    /** Queue of references to pollfds to process. */
     std::queue<std::reference_wrapper<struct pollfd>> process_queue;
+    /** Vector of threads. May be useful later. */
     std::vector<std::unique_ptr<std::thread>> threads_vector;
 
+    /** Number of threads that are currently waiting to process. */
     std::atomic<std::uint64_t> waiting_threads = {0};
+    /** Number of processing threads. */
     uint64_t num_threads;
 
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;
 
     /** Number of bytes currently in the pool. */
-    uint64_t curr_size = 0;
+    std::atomic<std::uint64_t> curr_size = {0};
 
     /** Max number of sockets open at once. */
     const uint64_t max_fds;
