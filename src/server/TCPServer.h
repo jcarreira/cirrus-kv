@@ -41,6 +41,8 @@ class TCPServer : public Server {
 
     void wait_to_process();
 
+    bool remove(ObjectID oid);
+
     /** The port that the server is listening on. */
     int port_;
     /** The fd for the socket the server listens for incoming requests on. */

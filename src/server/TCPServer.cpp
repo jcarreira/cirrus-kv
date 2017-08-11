@@ -437,8 +437,6 @@ bool TCPServer::process(int sock) {
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
 
-                // This is to make sure the the capacity is strictly enforced
-
                 bool memory_exception = false;
                 auto data_fb = msg->message_as_Write()->data();
 
@@ -450,7 +448,7 @@ bool TCPServer::process(int sock) {
                         int new_size = data_fb->size();
                         int change = new_size - prev_size;
 
-                        if (this->curr_size + change > this->pool_size) {
+                        if (curr_size + change > pool_size) {
                             memory_exception = true;
                             return;
                         }
@@ -461,8 +459,11 @@ bool TCPServer::process(int sock) {
                         return;
                     };
 
+                // This is to make sure the the capacity is strictly enforced
                 write_lock.wait();
 
+                // True if the item we've added did not replace a preexisting
+                // item
                 bool no_key_conflict = store.upsert(oid, write_function,
                     data_fb->begin(), data_fb->end());
 
@@ -472,14 +473,9 @@ bool TCPServer::process(int sock) {
                         // capacity
                         memory_exception = true;
 
-                        auto erase_function = [this]
-                            (std::vector<int8_t>& vec) -> bool {
-                                this->curr_size -= vec.size();
-                                return true;
-                            };
-
-                        store.erase_fn(oid, erase_function);
+                        remove(oid);
                     } else {
+                        // otherwise increment the size to reflect the addition
                         curr_size += data_fb->size();
                     }
                 }
@@ -530,15 +526,18 @@ bool TCPServer::process(int sock) {
 
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
 
-                // Constructs a flatbuffer if possible
-                auto read_function = [&fb_vector, &builder]
+                // used for performance logging
+                uint64_t data_length = 0;
+                // Constructs a flatbuffer vector if item exists
+                auto read_function = [&fb_vector, &builder, &data_length]
                     (const std::vector<int8_t>& vec) -> void {
                         fb_vector = builder.CreateVector(vec);
+                        data_length = vec.size();
                         return;
                     };
                 success = store.find_fn(oid, read_function);
 
-                // If operations has failed, item is not on the server
+                // If find_fn returns false, item is not on the server
                 if (!success) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
@@ -559,12 +558,12 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
-                double read_mbps = entry_itr->second.size() / (1024.0 * 1024) /
+                double read_mbps = data_length / (1024.0 * 1024) /
                     (read_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process read time (us): ",
                         read_time.getUsElapsed(),
                         " bw (MB/s): ", read_mbps,
-                        " size: ", entry_itr->second.size());
+                        " size: ", data_length);
 #endif
                 break;
             }
@@ -572,12 +571,7 @@ bool TCPServer::process(int sock) {
             {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
-                auto erase_function = [this]
-                    (std::vector<int8_t>& vec) -> bool {
-                        this->curr_size -= vec.size();
-                        return true;
-                    };
-                success = store.erase_fn(oid, erase_function);
+                success = remove(oid);
 
                 // Create and send ack
                 auto ack = message::TCPBladeMessage::CreateRemoveAck(builder,
@@ -630,6 +624,20 @@ bool TCPServer::process(int sock) {
     LOG<INFO>("Server sent ack of size: ", message_size);
     LOG<INFO>("Server done processing message from client");
     return true;
+}
+
+/**
+ * Removes an object from the store.
+ * @param oid the ObjectID corresponding to the object to be removed.
+ * @return True if the object was successfully removed, false otherwise.
+ */
+bool TCPServer::remove(ObjectID oid) {
+    auto erase_function = [this]
+        (std::vector<int8_t>& vec) -> bool {
+            curr_size -= vec.size();
+            return true;
+        };
+    return store.erase_fn(oid, erase_function);
 }
 
 }  // namespace cirrus
