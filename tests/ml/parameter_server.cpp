@@ -32,34 +32,18 @@
 #define LOADING_DONE (INSTS + 1)
 
 #define MODEL_GRAD_SIZE 10
-#define GRADIENT_BASE 1000
-#define MODEL_BASE 2000
+
+#define BILLION (1000000000ULL)
+
+#define SAMPLE_BASE 0
+#define MODEL_BASE (BILLION)
+#define GRADIENT_BASE (2 * BILLION)
+#define LABEL_BASE (3 * BILLION)
 uint64_t nworkers = 1;
 
 int features_per_sample = 10; 
 int samples_per_batch =100;
 int batch_size = samples_per_batch * features_per_sample;
-
-//using cirrus::LOG;
-//using cirrus::INFO;
-
-// This is used for non-array objects
-//template<typename T>
-//std::pair<std::unique_ptr<char[]>, unsigned int>
-//                         serializer_simple(const T& v) {
-//    std::unique_ptr<char[]> ptr(new char[sizeof(T)]);
-//    std::memcpy(ptr.get(), &v, sizeof(T));
-//    return std::make_pair(std::move(ptr), sizeof(T));
-//}
-//
-///* Takes a pointer to raw mem passed in and returns as object. */
-//template<typename T, unsigned int SIZE>
-//T deserializer_simple(void* data, unsigned int /* size */) {
-//    T *ptr = reinterpret_cast<T*>(data);
-//    T ret;
-//    std::memcpy(&ret, ptr, SIZE);
-//    return ret;
-//}
 
 template<typename T>
 class c_array_serializer{
@@ -88,11 +72,21 @@ public:
     c_array_deserializer(int nslots) : numslots(nslots) {}
     
     std::shared_ptr<T>
-    operator()(void* data, unsigned int /* size */) {
+    operator()(void* data, unsigned int des_size) {
         unsigned int size = sizeof(T) * numslots;
 
+        if (des_size != size) {
+            std::cout << "Error in deserializing."
+               << " Expecting size: " << size
+               << " got des_size: " << des_size
+               << std::endl;
+            throw std::runtime_error(
+                    "Wrong deserializer size at c_array_deserializer");
+        }
+
         // cast the pointer
-        T *ptr = reinterpret_cast<T*>(data);
+        T* ptr = reinterpret_cast<T*>(data);
+
         auto ret_ptr = std::shared_ptr<T>(new T[numslots],
                 std::default_delete< T[]>());
 
@@ -114,13 +108,13 @@ public:
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRModel& v) {
-        std::cout << "lr_model_serializer n: " << n << std::endl;
+        std::cout << "[SER]"
+            << " lr_model_serializer n: " << n << std::endl;
         auto model_serialized = v.serialize();
-        std::cout << "lr_model_serializer serialized size: "
+        std::cout << "[SER]"
+            << " lr_model_serializer serialized size: "
             << model_serialized.second << std::endl;
 
-        //return std::make_pair(model_serialized.first,
-        //                    static_cast<unsigned int>(model_serialized.second));
         return model_serialized;
     }
 
@@ -133,8 +127,12 @@ public:
     lr_model_deserializer(uint64_t n) : n(n) {}
     
     LRModel
-    operator()(void* data, unsigned int /* size */) {
+    operator()(void* data, unsigned int des_size) {
         LRModel model(n);
+        if (des_size != model.getSerializedSize()) {
+            throw std::runtime_error(
+                    "Wrong deserializer size at lr_model_deserializer");
+        }
         model.loadSerialized(data);
         return model;
     }
@@ -152,7 +150,8 @@ public:
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRGradient& g) {
-        std::cout << "LRGradient serializer writing size: "
+        std::cout << "[SER]"
+            << " LRGradient serializer writing size: "
             << g.getSerializedSize()
             << std::endl;
         std::unique_ptr<char[]> mem(new char[g.getSerializedSize()]);
@@ -170,12 +169,18 @@ public:
     lr_gradient_deserializer(uint64_t n) : n(n) {}
     
     LRGradient
-    operator()(void* data, unsigned int size) {
-        std::cout << "LRGradient deserializing n: "
+    operator()(void* data, unsigned int des_size) {
+        std::cout << "[SER]"
+            << " LRGradient deserializing n: "
             << n
-            << " size: " << size
+            << " size: " << des_size
             << std::endl;
         LRGradient gradient(n);
+        if (des_size != gradient.getSerializedSize()) {
+            throw std::runtime_error(
+                    "Wrong deserializer size at lr_gradient_deserializer");
+        }
+
         gradient.loadSerialized(data);
         return gradient;
     }
@@ -283,7 +288,7 @@ void run_ps_task(const Configuration& config) {
             // get gradient from store
             LRGradient gradient(MODEL_GRAD_SIZE);
             try {
-                gradient = gradient_store.get(gradient_id);
+                gradient = gradient_store.get(GRADIENT_BASE + gradient_id);
             } catch(const cirrus::NoSuchIDException& e) {
                 if (!first_time) {
                     throw std::runtime_error("PS task not able to get a gradient");
@@ -347,8 +352,8 @@ void run_compute_error_task(const Configuration& config) {
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
-                c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size));
+                c_array_serializer<double>(samples_per_batch),
+                c_array_deserializer<double>(samples_per_batch));
 
     bool first_time = true;
     while (1) {
@@ -375,8 +380,8 @@ void run_compute_error_task(const Configuration& config) {
                 std::shared_ptr<double> labels;;
 
                 try {
-                    samples = samples_store.get(i);
-                    labels = labels_store.get(i);
+                    samples = samples_store.get(SAMPLE_BASE + i);
+                    labels = labels_store.get(LABEL_BASE + i);
                 } catch(const cirrus::NoSuchIDException& e) {
                     if (i == 0) goto continue_point; // no loss to be computed
                     else goto compute_loss; // we looked at all minibatches
@@ -430,8 +435,8 @@ void run_worker_task(const Configuration& config) {
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
-                c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size));
+                c_array_serializer<double>(samples_per_batch),
+                c_array_deserializer<double>(samples_per_batch));
 
     bool first_time = true;
 
@@ -460,17 +465,18 @@ void run_worker_task(const Configuration& config) {
                 << "Worker task getting the training data with id: "
                 << samples_id << std::endl;
 
-            samples = samples_store.get(samples_id);
+            samples = samples_store.get(SAMPLE_BASE + samples_id);
             std::cout << "[WORKER] "
                 << "Worker task received training data with id: "
                 << samples_id << std::endl;
-            labels = labels_store.get(labels_id);
+            labels = labels_store.get(LABEL_BASE + labels_id);
             std::cout << "[WORKER] "
                 << "Worker task received label data with id: "
                 << samples_id << std::endl;
         } catch(const cirrus::NoSuchIDException& e) {
             if (!first_time) {
-                throw std::runtime_error("Error in exception");
+                throw std::runtime_error(
+                        "Couldn't get object from run_worker_task");
             }
             // this happens because the ps task
             // has not uploaded the model yet
@@ -499,7 +505,7 @@ void run_worker_task(const Configuration& config) {
             << std::endl;
 
         try {
-            gradient_store.put(gradient_id,
+            gradient_store.put(GRADIENT_BASE + gradient_id,
                     *dynamic_cast<LRGradient*>(gradient.get()));
         } catch(...) {
             std::cout << "[WORKER] "
@@ -586,10 +592,10 @@ void run_loading_task(const Configuration& config) {
                 << i
                 << " samples with size: " << sizeof(double) * batch_size
                 << std::endl;
-            samples_store.put(i, sample);
+            samples_store.put(SAMPLE_BASE + i, sample);
             std::cout << "[LOADER] "
                 << "Putting label" << std::endl;
-            labels_store.put(i, label);
+            labels_store.put(LABEL_BASE + i, label);
         } catch(...) {
             std::cout << "[LOADER] "
                 << "Caught exception" << std::endl;
@@ -622,7 +628,7 @@ void run_tasks(int rank, const Configuration& config) {
         sleep_forever();
     } else if (rank == 2) {
         sleep(10);
-        //run_worker_task(config);
+        run_worker_task(config);
         sleep_forever();
     } else if (rank == 3) {
         sleep(3);
