@@ -11,7 +11,8 @@ noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = tcpservermain
 
 libserver_a_SOURCES = TCPServer.cpp
-libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include \
+libserver_a_CPPFLAGS = -ggdb -isystem $(top_srcdir)/third_party/libcuckoo/ \
+                       -I$(top_srcdir) -I$(top_srcdir)/third_party/flatbuffers/include \
                        -I$(top_srcdir)/src
 
 if USE_RDMA
@@ -55,5 +56,6 @@ objectstoremain_LDADD    = $(DEFAULT_LIB)
 tcpservermain_DEPENDENCIES = libserver.a
 tcpservermain_SOURCES  = TCPServerMain.cpp
 tcpservermain_LDFLAGS  = -pthread
-tcpservermain_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src
+tcpservermain_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
+                         -isystem $(top_srcdir)/third_party/libcuckoo/
 tcpservermain_LDADD    = $(DEFAULT_LIB)

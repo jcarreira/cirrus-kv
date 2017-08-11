@@ -10,7 +10,7 @@
 #include <functional>
 #include "server/Server.h"
 #include "common/Synchronization.h"
-#include "third_party/libcuckoo/libcuckoo/cuckoohash_map.hh"
+#include "libcuckoo/cuckoohash_map.hh"
 
 namespace cirrus {
 
