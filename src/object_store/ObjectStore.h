@@ -19,7 +19,7 @@ class ObjectStore {
     class ObjectStorePutFuture {
      public:
         explicit ObjectStorePutFuture(
-            typename cirrus::BladeClient<T>::ClientFuture client_future);
+            cirrus::BladeClient::ClientFuture client_future);
         ObjectStorePutFuture() {}
         void wait();
 
@@ -31,7 +31,7 @@ class ObjectStore {
          * A pointer to a BladeClient::ClientFuture that will be used for
          * all calls to wait and get.
          */
-        typename cirrus::BladeClient<T>::ClientFuture client_future;
+        cirrus::BladeClient::ClientFuture client_future;
     };
 
     /**
@@ -40,7 +40,7 @@ class ObjectStore {
     class ObjectStoreGetFuture {
      public:
         ObjectStoreGetFuture(
-            typename cirrus::BladeClient<T>::ClientFuture client_future,
+            cirrus::BladeClient::ClientFuture client_future,
             std::shared_ptr<std::vector<char>> mem,
             uint64_t serialized_size,
             std::function<T(void*, unsigned int)> deserializer);
@@ -56,7 +56,7 @@ class ObjectStore {
          * A pointer to a BladeClient::ClientFuture that will be used for
          * all calls to wait and get.
          */
-        typename cirrus::BladeClient<T>::ClientFuture client_future;
+        cirrus::BladeClient::ClientFuture client_future;
 
         /**
          * A pointer to the memory that the BladeClient will write the
@@ -106,7 +106,7 @@ class ObjectStore {
  */
 template<class T>
 ObjectStore<T>::ObjectStorePutFuture::ObjectStorePutFuture(
-    typename cirrus::BladeClient<T>::ClientFuture client_future) :
+    cirrus::BladeClient::ClientFuture client_future) :
         client_future(client_future) {}
 
 /**
@@ -150,7 +150,7 @@ bool ObjectStore<T>::ObjectStorePutFuture::get() {
  */
 template<class T>
 ObjectStore<T>::ObjectStoreGetFuture::ObjectStoreGetFuture(
-    typename cirrus::BladeClient<T>::ClientFuture client_future,
+    cirrus::BladeClient::ClientFuture client_future,
     std::shared_ptr<std::vector<char>> mem,
     uint64_t serialized_size,
     std::function<T(void*, unsigned int)> deserializer) :

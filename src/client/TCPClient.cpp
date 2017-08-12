@@ -100,8 +100,7 @@ void TCPClient::connect(const std::string& address,
   * @return A ClientFuture that contains information about the status of the
   * operation.
   */
-BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
-                                    uint64_t size) {
+BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, WriteUnit& w) {
     // Make sure that the pointer is not null
     TEST_NZ(data == nullptr);
     // Create flatbuffer builder
@@ -171,9 +170,9 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid, void* data,
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+bool TCPClient::write_sync(ObjectID oid, WriteUnit& w) {
     LOG<INFO>("Call to write_sync");
-    BladeClient::ClientFuture future = write_async(oid, data, size);
+    BladeClient::ClientFuture future = write_async(oid, w);
     LOG<INFO>("returned from write async");
     return future.get();
 }

@@ -15,9 +15,6 @@
 #include "common/Exception.h"
 #include "common/Serializer.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"
-#include "third_party/libcuckoo/src/city_hasher.hh"
-
 namespace cirrus {
 namespace ostore {
 
@@ -31,7 +28,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
  public:
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
-                              BladeClient<T> *client,
+                              BladeClient *client,
                               const Serializer<T>& serializer,
                               std::function<T(void*, unsigned int)>
                               deserializer);
@@ -56,7 +53,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       * The client that the store uses to achieve all interaction with the
       * remote store.
       */
-    BladeClient<T> *client;
+    BladeClient *client;
 
     /** The size of serialized objects. This is obtained from the return
       * value of the serializer() function. We assume that all serialized
@@ -94,7 +91,7 @@ template<class T>
 FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
-        BladeClient<T>* client,
+        BladeClient* client,
         const Serializer<T>& serializer,
         std::function<T(void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
@@ -166,7 +163,8 @@ template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
     serialized_size = serializer.size(obj);
-    return client->write_sync(id, obj, serializer);
+    WriteUnitTemplate<T> w(serializer, obj);
+    return client->write_sync(id, w);
 }
 
 /**
@@ -179,10 +177,8 @@ template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
     serialized_size = serializer.size(obj);
-
-    auto client_future = client->write_async(id,
-                                           obj,
-                                           serializer);
+    WriteUnitTemplate<T> w(serializer, obj);
+    auto client_future = client->write_async(id, w);
 
     // Constructor takes a pointer to a client future
     return typename ObjectStore<T>::ObjectStorePutFuture(client_future);

@@ -33,21 +33,19 @@ static const int initial_buffer_size = 50;
 /**
   * A TCP based client that inherits from BladeClient.
   */
-template<class T>
-class TCPClient : public BladeClient<T> {
+class TCPClient : public BladeClient {
  public:
     ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
 
-    bool write_sync(ObjectID id,  const T& obj,
-        const Serializer<T>& serializer) override;
+    bool write_sync(ObjectID id, const WriteUnit& w) override;
     bool read_sync(ObjectID oid, void* data, uint64_t size) override;
 
-    typename cirrus::BladeClient<T>::ClientFuture write_async(ObjectID oid,
-                            const T& obj,
-                            const Serializer<T>& serializer) override;
-    typename cirrus::BladeClient<T>::ClientFuture read_async(ObjectID oid,
+
+    cirrus::BladeClient::ClientFuture write_async(ObjectID oid,
+                            const WriteUnit& w) override;
+    cirrus::BladeClient::ClientFuture read_async(ObjectID oid,
                             void* data, uint64_t size) override;
 
     bool remove(ObjectID id) override;
@@ -80,7 +78,7 @@ class TCPClient : public BladeClient<T> {
     };
 
     ssize_t send_all(int, const void*, size_t, int);
-    typename cirrus::BladeClient<T>::ClientFuture enqueue_message(
+    cirrus::BladeClient::ClientFuture enqueue_message(
                         std::shared_ptr<flatbuffers::FlatBufferBuilder> builder,
                         const int txn_id,
                         void *ptr = nullptr);
@@ -148,8 +146,7 @@ class TCPClient : public BladeClient<T> {
  * Destructor method for the TCPClient. Terminates the receiver and sender
  * threads so that the program will exit gracefully.
  */
-template<class T>
-TCPClient<T>::~TCPClient() {
+TCPClient::~TCPClient() {
     terminate_threads = true;
 
     // We need to destroy threads if they are active
@@ -176,8 +173,7 @@ TCPClient<T>::~TCPClient() {
   * @param address the ipv4 address of the server, represented as a string
   * @param port_string the port to connect to, represented as a string
   */
-template<class T>
-void TCPClient<T>::connect(const std::string& address,
+void TCPClient::connect(const std::string& address,
                         const std::string& port_string) {
     // Create socket
     LOG<INFO>("Creating socket");
@@ -222,17 +218,16 @@ void TCPClient<T>::connect(const std::string& address,
   * @return A Future that contains information about the status of the
   * operation.
   */
-template<class T>
-typename cirrus::BladeClient<T>::ClientFuture
-TCPClient<T>::write_async(ObjectID oid, const T& obj,
-    const Serializer<T>& serializer) {
+cirrus::BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
+    const WriteUnit& w) {
     // Create flatbuffer builder if none to reuse;
 
     // Add the builder to the queue if it is of the right type (a write)
     // And if not over capacity
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder;
-    // Size of serialized object
-    uint64_t size = serializer.size(obj);
+    // Size of serialized object, ASSUMED TO BE CONSTANT
+    // TODO(Tyler): Change this! Allow variable sizes!
+    uint64_t size = w.size();
     reuse_lock.wait();
     if (!reuse_queue.empty()) {
         builder = reuse_queue.front();
@@ -248,7 +243,7 @@ TCPClient<T>::write_async(ObjectID oid, const T& obj,
     // Pointer to the vector inside of the flatbuffer to write to
     int8_t *mem;
     auto data_fb_vector = builder->CreateUninitializedVector(size, &mem);
-    serializer.serialize(obj, mem);
+    w.serialize(mem);
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
@@ -276,10 +271,8 @@ TCPClient<T>::write_async(ObjectID oid, const T& obj,
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-template<class T>
-typename cirrus::BladeClient<T>::ClientFuture
-TCPClient<T>::read_async(ObjectID oid, void* data,
-                                     uint64_t /* size */) {
+cirrus::BladeClient::ClientFuture TCPClient::read_async(ObjectID oid,
+    void* data, uint64_t /* size */) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -310,11 +303,9 @@ TCPClient<T>::read_async(ObjectID oid, void* data,
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-template<class T>
-bool TCPClient<T>::write_sync(ObjectID id,  const T& obj,
-    const Serializer<T>& serializer) {
+bool TCPClient::write_sync(ObjectID id, const WriteUnit& w) {
     LOG<INFO>("Call to write_sync");
-    auto future = write_async(id, obj, serializer);
+    auto future = write_async(id, w);
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -329,8 +320,7 @@ bool TCPClient<T>::write_sync(ObjectID id,  const T& obj,
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
-template<class T>
-bool TCPClient<T>::read_sync(ObjectID oid, void* data, uint64_t size) {
+bool TCPClient::read_sync(ObjectID oid, void* data, uint64_t size) {
     LOG<INFO>("Call to read_sync.");
     auto future = read_async(oid, data, size);
     LOG<INFO>("Returned from read_async.");
@@ -344,8 +334,7 @@ bool TCPClient<T>::read_sync(ObjectID oid, void* data, uint64_t size) {
   * @return True if the object was successfully removed from the server, false
   * if the object does not exist remotely or if another error occurred.
   */
-template<class T>
-bool TCPClient<T>::remove(ObjectID oid) {
+bool TCPClient::remove(ObjectID oid) {
     std::shared_ptr<flatbuffers::FlatBufferBuilder> builder =
                             std::make_shared<flatbuffers::FlatBufferBuilder>(
                                 initial_buffer_size);
@@ -372,8 +361,7 @@ bool TCPClient<T>::remove(ObjectID oid) {
   * logic for acting upon the incoming messages, which includes copying
   * serialized objects and notifying futures.
   */
-template<class T>
-void TCPClient<T>::process_received() {
+void TCPClient::process_received() {
     // All elements stored on heap according to stack overflow, so it can grow
     std::vector<char> buffer;
     // Reserve the size of a 32 bit int
@@ -513,8 +501,7 @@ void TCPClient<T>::process_received() {
  * @param flags for the send call.
  * @return the number of bytes sent.
  */
-template<class T>
-ssize_t TCPClient<T>::send_all(int sock, const void* data, size_t len,
+ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
     int /* flags */) {
     uint64_t to_send = len;
     uint64_t total_sent = 0;
@@ -541,8 +528,7 @@ ssize_t TCPClient<T>::send_all(int sock, const void* data, size_t len,
   * FlatBufferBuilders off of the queue and then sends the messages they
   * contain. Does not wait for response.
   */
-template<class T>
-void TCPClient<T>::process_send() {
+void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
         queue_semaphore.wait();
@@ -610,11 +596,9 @@ void TCPClient<T>::process_send() {
   * @param An optional argument. Pointer to memory for read operations.
   * @return Returns a Future.
   */
-template<class T>
-typename cirrus::BladeClient<T>::ClientFuture
-TCPClient<T>::enqueue_message(
-            std::shared_ptr<flatbuffers::FlatBufferBuilder> builder, int txn_id,
-            void *ptr) {
+cirrus::BladeClient::ClientFuture TCPClient::enqueue_message(
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> builder, int txn_id,
+    void *ptr) {
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn->mem_for_read = ptr;
@@ -629,7 +613,7 @@ TCPClient<T>::enqueue_message(
     map_lock.signal();
 
     // Build the future
-    typename cirrus::BladeClient<T>::ClientFuture future(txn->result,
+    cirrus::BladeClient::ClientFuture future(txn->result,
         txn->result_available,
         txn->sem, txn->error_code);
 

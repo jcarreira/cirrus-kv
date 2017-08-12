@@ -49,7 +49,7 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
  * which will then be iterated over.
  */
 void test_iterator(int num_items) {
-    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,

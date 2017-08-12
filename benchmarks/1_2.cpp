@@ -30,7 +30,7 @@ static const uint32_t SIZE = 128;
   * N asynchronous puts.
   */
 void test_async(int N) {
-    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,

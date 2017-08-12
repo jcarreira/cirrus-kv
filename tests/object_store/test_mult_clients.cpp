@@ -41,8 +41,8 @@ void test_multiple_clients() {
     int stop = 10;
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([dis, gen, start, stop]() {
-            std::unique_ptr<cirrus::BladeClient<cirrus::Dummy<SIZE>>> client =
-                cirrus::test_internal::GetClient<cirrus::Dummy<SIZE>>(
+            std::unique_ptr<cirrus::BladeClient> client =
+                cirrus::test_internal::GetClient(
                     use_rdma_client);
             cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>

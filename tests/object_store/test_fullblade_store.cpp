@@ -28,7 +28,7 @@ bool use_rdma_client;
   * works properly.
   */
 void test_sync() {
-    std::unique_ptr<cirrus::BladeClient<cirrus::Dummy<SIZE>>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
@@ -60,7 +60,8 @@ void test_sync_array() {
         cirrus::test_internal::GetClient(use_rdma_client);
 
     auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
-    auto serializer = cirrus::c_array_serializer_simple<int>(4);
+    auto serializer =
+        cirrus::c_int_array_serializer_simple<std::shared_ptr<int>>(4);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
                       PORT,
                       client.get(),
@@ -94,7 +95,7 @@ void test_sync_array() {
   * Also record the latencies distributions
   */
 void test_sync(int N) {
-    std::unique_ptr<cirrus::BladeClient<cirrus::Dummy<SIZE>>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
@@ -138,7 +139,7 @@ void test_sync(int N) {
   * get an ID that has never been put. Should throw a cirrus::NoSuchIDException.
   */
 void test_nonexistent_get() {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
 
@@ -161,7 +162,7 @@ void test_nonexistent_get() {
  * Tests a simple asynchronous put and get.
  */
 void test_async() {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -186,7 +187,7 @@ void test_async() {
  * @param N the number of puts and gets to perform.
  */
 void test_async_N(int N) {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -223,7 +224,7 @@ void test_async_N(int N) {
  * This test tests that get_bulk() and put_bulk() return proper values.
  */
 void test_bulk() {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -251,7 +252,7 @@ void test_bulk() {
  * Tests that remove_bulk correctly removes items from the store.
  */
 void test_remove_bulk() {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -279,7 +280,7 @@ void test_remove_bulk() {
  * an item if it has been removed from the store.
  */
 void test_remove() {
-    std::unique_ptr<cirrus::BladeClient<int>> client =
+    std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
@@ -301,8 +302,11 @@ void test_remove() {
 void test_bulk_nonexistent() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::serializer_simple<int> serializer;
+
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     store.put(1, 1);
     std::vector<int> ret_values(10);
@@ -314,42 +318,52 @@ void test_bulk_nonexistent() {
   * different stores with different types.
   */
 void test_shared_client() {
-    // TODO(Tyler): Resolve this test vs the templated client
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer_int;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer_int,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer_dummy;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store2(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer_dummy,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
     for (int oid = 0; oid <  10; oid++) {
         store.put(oid, oid);
     }
+    std::cout << "first ten puts successful" << std::endl;
 
     for (int i = 10; i <  20; i++) {
         struct cirrus::Dummy<SIZE> d(i);
         store2.put(i, d);
     }
 
+    std::cout << "dummy puts successful" << std::endl;
+
+
     for (int i = 0; i < 10; i++) {
+        std::cout << "start" << std::endl;
         int retval = store.get(i);
         if (retval != i) {
             std::cout << "Expected " << i << " but got " << retval << std::endl;
             throw std::runtime_error("wrong value returned");
         }
+        std::cout << i << std::endl;
         auto retstruct = store2.get(i + 10);
         if (retstruct.id != i + 10) {
             std::cout << "Expected " << i + 10 << " but got " << retstruct.id
                 << std::endl;
             throw std::runtime_error("wrong value returned");
         }
+        std::cout << "end" << std::endl;
     }
+    std::cout << "done with the test" << std::endl;
+    return;
 }
 
 auto main(int argc, char *argv[]) -> int {
@@ -395,8 +409,9 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
-
+    std::cout << "test remove bulk" << std::endl;
     test_remove_bulk();
+    std::cout << "test shared client" << std::endl;
     test_shared_client();
     std::cout << "Test Successful." << std::endl;
 

@@ -20,7 +20,33 @@ class Serializer {
      * @param object the object to be serialized.
      * @param mem the memory the object should be serialized into.
      */
-    virtual void serialize(const T& object, void* mem) const = 0;
+    virtual void serialize(const T& object, void *mem) const = 0;
+};
+
+class WriteUnit {
+ public:
+    virtual uint64_t size() const = 0;
+    virtual void serialize(void *mem) const = 0;
+};
+
+template<class T>
+class WriteUnitTemplate : public WriteUnit {
+ public:
+    WriteUnitTemplate(const cirrus::Serializer<T>& serializer, const T& obj) :
+        serializer(serializer), obj(obj) {}
+
+    void serialize(void *mem) const override {
+        serializer.serialize(obj, mem);
+        return;
+    }
+
+    uint64_t size() const override {
+        return serializer.size(obj);
+    }
+
+ private:
+    const cirrus::Serializer<T>& serializer;
+    const T& obj;
 };
 
 }  // namespace cirrus

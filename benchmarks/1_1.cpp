@@ -46,7 +46,7 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
   * 2. measure the throughput in terms of messages sent / second
   */
 void test_sync() {
-    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,

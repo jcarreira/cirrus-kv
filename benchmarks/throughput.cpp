@@ -21,7 +21,7 @@ static const uint64_t MILLION = 1000000;
   */
 template <uint64_t SIZE>
 void test_throughput(int numRuns) {
-    cirrus::TCPClient<std::array<char, SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client,
@@ -65,7 +65,7 @@ void test_throughput(int numRuns) {
   */
 template <uint64_t SIZE>
 void test_throughput_get(int numRuns) {
-    cirrus::TCPClient<std::array<char, SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
         store(IP, PORT, &client,

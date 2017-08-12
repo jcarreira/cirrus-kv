@@ -18,7 +18,6 @@ using ObjectID = uint64_t;
   * A class that all clients inherit from. Outlines the interface that the
   * store will use to interface with the network level.
   */
-template<class T>
 class BladeClient {
  public:
     class ClientFuture {
@@ -51,17 +50,14 @@ class BladeClient {
 
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
-
-    virtual bool write_sync(ObjectID id,  const T& obj,
-        const Serializer<T>& serializer) = 0;
+    virtual bool write_sync(ObjectID id,  const WriteUnit& w) = 0;
 
     virtual bool read_sync(ObjectID id, void* data, uint64_t size) = 0;
 
     virtual bool remove(ObjectID id) = 0;
 
     virtual BladeClient::ClientFuture write_async(ObjectID oid,
-        const T& obj,
-        const Serializer<T>& serializer) = 0;
+        const WriteUnit& w) = 0;
 
     virtual BladeClient::ClientFuture read_async(ObjectID oid, void* data,
         uint64_t size) = 0;
@@ -78,8 +74,7 @@ class BladeClient {
  * @param error_code a std::shared_ptr to a cirrus::ErrorCodes that indicates
  * either success on the server or any errors that occured during the operation.
  */
-template<class T>
-BladeClient<T>::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
+BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code):
@@ -89,8 +84,7 @@ BladeClient<T>::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
 /**
  * Waits until the result the future is monitoring is available.
  */
-template<class T>
-void BladeClient<T>::ClientFuture::wait() {
+void BladeClient::ClientFuture::wait() {
     while (!*result_available) {
         LOG<INFO>("Result not available, waiting.");
         sem->wait();
@@ -101,8 +95,7 @@ void BladeClient<T>::ClientFuture::wait() {
  * Checks the status of the result.
  * @return Returns true if the result is available, false otherwise.
  */
-template<class T>
-bool BladeClient<T>::ClientFuture::try_wait() {
+bool BladeClient::ClientFuture::try_wait() {
     if (!*result_available) {
         return sem->trywait();
     } else {
@@ -115,8 +108,7 @@ bool BladeClient<T>::ClientFuture::try_wait() {
  * yet available, waits until it is ready.
  * @return Returns the result given by the asynchronous operation.
  */
-template<class T>
-bool BladeClient<T>::ClientFuture::get() {
+bool BladeClient::ClientFuture::get() {
     LOG<INFO>("Waiting for result.");
     wait();
     LOG<INFO>("Result is available.");

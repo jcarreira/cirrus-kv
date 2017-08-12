@@ -53,20 +53,20 @@ void serializer_simple<T>::serialize(const T& object, void* mem) const {
 /**
  * This class copies the c style array underneath the pointer into a new
  * portion of memory and returns the size of the new portion as well as
- * its location.
+ * its location. T will be an std::shared_ptr<int>
  */
 template<typename T>
-class c_array_serializer_simple : public cirrus::Serializer<T>{
+class c_int_array_serializer_simple : public cirrus::Serializer<T>{
  public:
     /**
      * Constructor for the serializer.
      * @param nslots number of objects of type T in the array to be serialized
      */
-    explicit c_array_serializer_simple(unsigned int nslots) :
+    explicit c_int_array_serializer_simple(unsigned int nslots) :
         num_slots(nslots) {}
 
     uint64_t size(const T& /* object */) const override {
-        return num_slots * sizeof(T);
+        return num_slots * sizeof(int);
     }
 
     /**
@@ -74,10 +74,11 @@ class c_array_serializer_simple : public cirrus::Serializer<T>{
      * @param v a std::shared ptr to the first item in the array to be
      * serialized
      */
-    void serialize(const T& object, void *mem) const override {
-        unsigned int num_bytes = num_slots * sizeof(T);
+    void serialize(const T& ptr, void *mem) const override {
+        int* address = ptr.get();
+        unsigned int num_bytes = num_slots * sizeof(int);
         // copy the data
-        std::memcpy(mem, &object, num_bytes);
+        std::memcpy(mem, address, num_bytes);
         return;
     }
 
@@ -140,15 +141,14 @@ namespace test_internal {
  * RDMAClient.
  * @return a std::unique_ptr for either an RDMAClient or a TCPClient.
  */
-template <typename T>
-std::unique_ptr<BladeClient<T>> GetClient(bool use_rdma_client) {
-    std::unique_ptr<BladeClient<T>> retClient;
+std::unique_ptr<BladeClient> GetClient(bool use_rdma_client) {
+    std::unique_ptr<BladeClient> retClient;
 
     if (!use_rdma_client) {
-        retClient = std::make_unique<TCPClient<T>>();
+        retClient = std::make_unique<TCPClient>();
     #ifdef HAVE_LIBRDMACM
     } else if (use_rdma_client) {
-        retClient = std::make_unique<RDMAClient<T>>();
+        retClient = std::make_unique<RDMAClient>();
     }
     #else
     }
