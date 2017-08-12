@@ -23,11 +23,11 @@ void test_sync() {
     client.write_sync(1, w);
     std::cout << "write sync complete" << std::endl;
 
-    int returned;
-    client.read_sync(1, &returned, sizeof(int));
-    std::cout << returned << " returned from server" << std::endl;
+    auto ptr_pair = client.read_sync(1);
+    int *int_ptr = reinterpret_cast<int*>(ptr_pair.first.get());
+    std::cout << *int_ptr << " returned from server" << std::endl;
 
-    if (returned != message) {
+    if (*int_ptr != message) {
         throw std::runtime_error("Wrong value returned.");
     }
 }
@@ -49,12 +49,15 @@ void test_async() {
         throw std::runtime_error("Error during async write.");
     }
 
-    int returned;
-    auto read_future = client.read_async(1, &returned, sizeof(int));
+    auto read_future = client.read_async(1);
 
     if (!read_future.get()) {
         throw std::runtime_error("Error during async write.");
     }
+
+    auto ret_ptr = read_future.getDataPair().first;
+
+    int returned = *(reinterpret_cast<int*>(ret_ptr.get()));
 
     std::cout << returned << " returned from server" << std::endl;
 

@@ -1,3 +1,5 @@
+include $(top_srcdir)/common.mk
+
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = tcpclientmain
 

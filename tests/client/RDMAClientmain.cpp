@@ -36,8 +36,8 @@ void test_1_client() {
 
     client1.write_sync(0, to_send, serializer);
 
-    int ret_val;
-    client1.read_sync(0, &ret_val, sizeof(to_send));
+    auto ret_pair = client1.read_sync(0, &ret_val, sizeof(to_send));
+    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
 
     if (ret_val != to_send)
         throw std::runtime_error("Incorrect value returned");
@@ -48,8 +48,6 @@ void test_1_client() {
  * another.
  */
 void test_2_clients() {
-    int data = 0;
-
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
     cirrus::RDMAClient<int> client1, client2;
@@ -66,24 +64,27 @@ void test_2_clients() {
         random = rand_r(&seed);
         cirrus::LOG<cirrus::INFO>("Writing ", random);
         cirrus::TimerFunction tf("client1.write");
-        client1.write_sync(0, random, serializer);
+        WriteUnitTemplate<int> w(serializer, random);
+        client1.write_sync(0, w);
     }
     int data2 = 1442;
     client2.write_sync(0, data2, serializer);
 
-    cirrus::LOG<cirrus::INFO>("Old data: ", data);
-    client1.read_sync(0, &data, sizeof(random));
-    cirrus::LOG<cirrus::INFO>("Received data 1: ", data);
+    auto ret_pair = client1.read_sync(0);
+    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
+
+    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
 
     // Check that client 1 receives the desired random value
-    if (data != random)
+    if (ret_val != random)
         throw std::runtime_error("Error in test");
 
-    client2.read_sync(0, &data, sizeof(data2));
-    cirrus::LOG<cirrus::INFO>("Received data 2: ", data);
+    ret_pair = client2.read_sync(0);
+    ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_val);
 
     // Check that client2 receives "data2"
-    if (data != data2)
+    if (ret_val != data2)
         throw std::runtime_error("Error in test");
 }
 
@@ -101,17 +102,22 @@ void test_performance() {
 
     std::unique_ptr<cirrus::Dummy<size>> d =
         std::make_unique<cirrus::Dummy<size>>(42);
-    std::unique_ptr<cirrus::Dummy<size>> d2 =
-        std::make_unique<cirrus::Dummy<size>>(0);
 
     {
         cirrus::TimerFunction tf("Timing write", true);
-        client.write_sync(0, *d, serializer);
+        WriteUnitTemplate<cirrus::Dummy<size>> w(serializer, *d);
+        client.write_sync(0, w);
     }
 
     {
         cirrus::TimerFunction tf("Timing read", true);
-        client.read_sync(0, d2.get(), sizeof(*d));
+        auto ret_pair = client.read_sync(0);
+
+        std::cout << "Length: " << ret_pair.second << std::endl;
+
+        auto d2 =
+            *(reinterpret_cast<cirrus::Dummy<SIZE>*(ret_pair.first.get()));
+
         std::cout << "Returned id: " << d2->id << std::endl;
         if (d2->id != 42) {
             throw std::runtime_error("Returned value does not match");
@@ -128,23 +134,25 @@ void test_async() {
     client.connect(IP, PORT);
 
     int message = 42;
-    auto future = client.write_async(1, message, serializer);
-    std::cout << "write sync complete" << std::endl;
+    WriteUnitTemplate<int> w(serializer, message);
+    auto future = client.write_async(1, w);
+    std::cout << "write async complete" << std::endl;
 
     if (!future.get()) {
         throw std::runtime_error("Error during async write.");
     }
 
-    int returned;
-    auto read_future = client.read_async(1, &returned, sizeof(int));
+    auto read_future = client.read_async(1);
 
     if (!read_future.get()) {
         throw std::runtime_error("Error during async write.");
     }
+    auto ret_pair = read_future.getDataPair();
 
-    std::cout << returned << " returned from server" << std::endl;
+    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    std::cout << ret_val << " returned from server" << std::endl;
 
-    if (returned != message) {
+    if (ret_val != message) {
         throw std::runtime_error("Wrong value returned.");
     }
 }
@@ -174,10 +182,10 @@ void test_async_N() {
         }
     }
     std::cout << "BEGINNING READS" << std::endl;
-    int ret_values[10];
     for (i = 0; i < N; i++) {
-        int val;
-        client.read_sync(i, &val, sizeof(int));
+        auto pair = client.read_sync(i);
+        int val = *(reinterpret_cast<int*>(pair.first.get()));
+
         if (val != i) {
             std::cout << "Expected " << i << "but got " << val << std::endl;
             throw std::runtime_error("Wrong value returned test_async_N");
@@ -185,8 +193,7 @@ void test_async_N() {
     }
 
     for (i = 0; i < N; i++) {
-        get_futures.push_back(client.read_async(i, &ret_values[i],
-            sizeof(int)));
+        get_futures.push_back(client.read_async(i));
     }
     // check the value of each get
     for (i = 0; i < N; i++) {
@@ -194,8 +201,11 @@ void test_async_N() {
         if (!success) {
             throw std::runtime_error("Error during an async read");
         }
-        if (ret_values[i] != i) {
-            std::cout << "Expected " << i << " but got " << ret_values[i]
+        int ret_value = *(reinterpret_cast<int*>(
+            get_futures[i].getDataPair().first.get()));
+
+        if (ret_value != i) {
+            std::cout << "Expected " << i << " but got " << ret_value
                 << std::endl;
             throw std::runtime_error("Wrong value returned in test_async_N");
         }

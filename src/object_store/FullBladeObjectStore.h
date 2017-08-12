@@ -55,14 +55,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       */
     BladeClient *client;
 
-    /** The size of serialized objects. This is obtained from the return
-      * value of the serializer() function. We assume that all serialized
-      * objects have the same length.
-      */
-    uint64_t serialized_size = 0;
-
-    // TODO(Tyler): Change the serializer/deserializer to
-    //  be references/pointers?
+// TODO(Tyler): Change the serializer/deserializer to
+//  be references/pointers?
     /**
       * A cirrus::Serializer used for all write operations.
       */
@@ -106,21 +100,14 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
   */
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        throw cirrus::Exception("At least one put must be performed before "
-                "a get can be performed.");
-    }
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    std::unique_ptr<char[]> ptr(new char[serialized_size]);
-
-    // Read into the section of memory you just allocated
-    client->read_sync(id, ptr.get(), serialized_size);
-
+    // Read the object from the remote store
+    std::pair<std::shared_ptr<char>, unsigned int> ptr_pair =
+        client->read_sync(id);
+    auto ptr = ptr_pair.first;
     // Deserialize the memory at ptr and return an object
-    T retval = deserializer(ptr.get(), serialized_size);
+
+    uint64_t length = ptr_pair.second;
+    T retval = deserializer(ptr.get(), length);
 
     return retval;
 }
@@ -134,23 +121,12 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
 template<class T>
 typename ObjectStore<T>::ObjectStoreGetFuture
 FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
-    /* This is safe as we will only reach here if a previous put has
-       occured, thus setting the value of serialized_size. */
-    if (serialized_size == 0) {
-        throw cirrus::Exception("At least one put must be performed before "
-                "a get can be performed.");
-    }
-
-    /* This allocation provides a buffer to read the serialized object
-       into. */
-    std::shared_ptr<std::vector<char>> ptr =
-        std::make_shared<std::vector<char>>(serialized_size);
-
     // Read into the section of memory you just allocated
-    auto client_future = client->read_async(id, ptr->data(), serialized_size);
+    auto client_future = client->read_async(id);
 
-    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future, ptr,
-            serialized_size, deserializer);
+    // TODO(Tyler): fix the object store get future
+    return typename ObjectStore<T>::ObjectStoreGetFuture(client_future,
+        deserializer);
 }
 
 /**
@@ -162,7 +138,7 @@ FullBladeObjectStoreTempl<T>::get_async(const ObjectID& id) {
 template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
-    serialized_size = serializer.size(obj);
+
     WriteUnitTemplate<T> w(serializer, obj);
     return client->write_sync(id, w);
 }
@@ -176,7 +152,7 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-    serialized_size = serializer.size(obj);
+
     WriteUnitTemplate<T> w(serializer, obj);
     auto client_future = client->write_async(id, w);
 
@@ -288,7 +264,7 @@ void FullBladeObjectStoreTempl<T>::removeBulk(ObjectID first, ObjectID last) {
     if (first > last) {
         throw cirrus::Exception("First ObjectID to remove must be leq last.");
     }
-    for (int oid = first; oid <= last; oid++) {
+    for (ObjectID oid = first; oid <= last; oid++) {
         client->remove(oid);
     }
 }

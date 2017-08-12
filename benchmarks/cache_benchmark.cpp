@@ -64,7 +64,8 @@ void test_cache(std::ofstream& outfile, int num_items) {
 
     cirrus::TimerFunction start;
     for (int i = 0; i < num_items; i++) {
-        cirrus::Dummy<SIZE> val = cm.get(i);
+        __attribute__((unused)) cirrus::Dummy<SIZE> val;
+        val = cm.get(i);
     }
     uint64_t end = start.getUsElapsed();
 
@@ -92,7 +93,8 @@ void test_store(std::ofstream& outfile, int num_items) {
     // Time with just the store
     cirrus::TimerFunction start;
     for (int i = 0; i < num_items; i++) {
-        cirrus::Dummy<SIZE> val = store.get(i);
+        __attribute__((unused)) cirrus::Dummy<SIZE> val;
+        val = store.get(i);
     }
     uint64_t end = start.getUsElapsed();
 

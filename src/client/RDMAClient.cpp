@@ -72,14 +72,14 @@ BladeClient::ClientFuture RDMAClient::write_async(ObjectID id,
   * otherwise.
   */
 
-BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid, void* data,
-                                     uint64_t /* size */) {
+BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
     BladeLocation loc;
     if (!objects_.find(oid, loc)) {
         throw cirrus::NoSuchIDException("Requested ObjectID "
                                      "does not exist remotely.");
     }
     // Read into the section of memory you just allocated
+    void *data = new char[loc.size];
     return readToLocalAsync(loc, data);
 }
 
@@ -117,24 +117,22 @@ bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
 /**
   * Reads an object corresponding to ObjectID from the remote server.
   * @param id the id of the object the user wishes to read to local memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read to.
-  * @param size the size of the serialized object being read from
-  * remote storage.
-  * @return True if the object was successfully read from the server, false
-  * otherwise.
+  * @return An std pair containing a shared pointer to the buffer that the
+  * serialized object read from the server resides in as well as the size of
+  * the buffer.
   */
-bool RDMAClient::read_sync(ObjectID oid, void* data, uint64_t /* size */) {
+std::pair<std::shared_ptr<char>, unsigned int>
+RDMAClient::read_sync(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {
         // Read into the section of memory you just allocated
-        readToLocal(loc, data);
-        return true;
+        void *data = new char[loc.size];
+        auto future = readToLocalAsync(loc, data);
+        return future.getDataPair();
     } else {
         throw cirrus::NoSuchIDException("Requested ObjectID "
                                         "does not exist remotely.");
     }
-    return false;
 }
 
 /**
@@ -939,9 +937,11 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     }
-
+    std::shared_ptr<std::shared_ptr<char>> dummy_ptr;
+    std::shared_ptr<uint64_t> dummy_size_ptr;
     return ClientFuture(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code);
+                        op_info->op_sem, op_info->error_code,
+                        dummy_ptr, dummy_size_ptr);
 }
 
 /**
@@ -1041,8 +1041,13 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
                 [mem]() -> void { delete mem; });
     }
 
+    std::shared_ptr<std::shared_ptr<char>> buffer_ptr =
+        std::make_shared<std::shared_ptr<char>>(reinterpret_cast<char*>(data),
+            std::default_delete< char[]>());
+
     return ClientFuture(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code);
+                        op_info->op_sem, op_info->error_code,
+                        buffer_ptr, std::make_shared<uint64_t>(length));
 }
 
 }  // namespace cirrus

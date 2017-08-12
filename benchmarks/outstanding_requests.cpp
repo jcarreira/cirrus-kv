@@ -1,16 +1,7 @@
 #include <stdlib.h>
-#include <fstream>
-#include <iterator>
-#include <algorithm>
-#include <cstdint>
 #include <iostream>
-#include <map>
 #include <string>
-#include <cctype>
-#include <chrono>
-#include <thread>
-#include <memory>
-#include <random>
+#include <iomanip>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -19,6 +10,39 @@
 static const uint64_t MILLION = 1000000;
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
+
+#define KB (1024)
+#define MB (KB * KB)
+// number of secs each benchmark is going to run for
+#define SECS_BENCHMARK 5
+
+struct BenchmarkStruct {
+ public:
+    explicit BenchmarkStruct(int size) : size(size) {
+        std::unique_ptr<char[]> ptr(new char[size]);
+        data = std::move(ptr);
+    }
+
+ public:
+    std::unique_ptr<char[]> data;
+    uint64_t size;
+};
+
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                         serializer(const BenchmarkStruct& s) {
+    std::unique_ptr<char[]> ptr(new char[s.size]);
+    std::memcpy(ptr.get(), s.data.get(), s.size);
+    return std::make_pair(std::move(ptr), s.size);
+}
+
+BenchmarkStruct deserializer(void* data, unsigned int size) {
+    char *ptr = reinterpret_cast<char*>(data);
+
+    BenchmarkStruct ret(size);  // not sure if this size arg is valid here
+    std::memcpy(ret.data.get(), ptr, size);
+    ret.size = size;
+    return ret;
+}
 
 
 /**
@@ -31,18 +55,17 @@ const char IP[] = "127.0.0.1";
 template<int SIZE>
 void test_outstanding_requests(int outstanding_target) {
     cirrus::TCPClient client;
-    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+    cirrus::ostore::FullBladeObjectStoreTempl<BenchmarkStruct>
         store(IP, PORT, &client,
             serializer,
-            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
-                sizeof(cirrus::Dummy<SIZE>)>);
+            deserializer);
 
     // we have space for outstanding_target futures
     bool send[outstanding_target] = {0};
-    typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture
+    typename cirrus::ObjectStore<BenchmarkStruct>::ObjectStorePutFuture
         futures[outstanding_target];
-    struct cirrus::Dummy<SIZE> d(42);
+
+    struct BenchmarkStruct d(SIZE);
 
     uint64_t count_completed = 0;
     cirrus::TimerFunction timer("", false);
@@ -61,20 +84,41 @@ void test_outstanding_requests(int outstanding_target) {
             }
 
             if (loop % MILLION == 0) {
-                double size_completed_MB = 1.0
-                    * count_completed * SIZE / 1024 / 1024;
-                double secs_elapsed = timer.getUsElapsed() / MILLION;
-                double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
-                std::cout << " Estimated Bandwidth: " << bw_MB
-                    << std::endl;
+                if (timer.getSecElapsed() > SECS_BENCHMARK) {
+                    goto end_benchmark;
+                }
             }
         }
     }
+
+end_benchmark:
+    double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
+    double secs_elapsed = timer.getSecElapsed();
+    double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
+    std::cout
+        << "Size (B): "
+        << std::left << std::setw(20) << std::setfill(' ')
+        << SIZE
+        << " # outstanding: "
+        << std::left << std::setw(20) << std::setfill(' ')
+        << outstanding_target
+        << " Bandwidth (MB/s): "
+        << std::left << std::setw(20) << std::setfill(' ')
+        << bw_MB
+        << std::endl;
 }
 
 auto main() -> int {
-    // have 10 requests of 10 bytes outstanding
-    test_outstanding_requests<4 * 1024>(30);
+    std::vector<uint64_t> outstanding_req = {1, 2, 5, 10, 20, 30};
+
+    for (const auto& outs : outstanding_req) {
+        test_outstanding_requests<1>(outs);
+        test_outstanding_requests<1 * KB>(outs);
+        test_outstanding_requests<4 * KB>(outs);
+        test_outstanding_requests<1 * MB>(outs);
+        test_outstanding_requests<10 * MB>(outs);
+        test_outstanding_requests<100 * MB>(outs);
+    }
 
     return 0;
 }
