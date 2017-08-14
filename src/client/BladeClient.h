@@ -5,7 +5,6 @@
 #include <memory>
 #include <utility>
 
-#include "common/Future.h"
 #include "common/Serializer.h"
 #include "common/Synchronization.h"
 #include "common/Exception.h"
@@ -84,9 +83,12 @@ class BladeClient {
 BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::Lock> sem,
-               std::shared_ptr<cirrus::ErrorCodes> error_code):
+               std::shared_ptr<cirrus::ErrorCodes> error_code,
+               std::shared_ptr<std::shared_ptr<char>> data_ptr,
+               std::shared_ptr<uint64_t> data_size):
     result(result), result_available(result_available),
-    sem(sem), error_code(error_code) {}
+    sem(sem), error_code(error_code), data_ptr(data_ptr),
+    data_size(data_size) {}
 
 /**
  * Waits until the result the future is monitoring is available.

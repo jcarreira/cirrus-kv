@@ -59,40 +59,40 @@ class PosixSemaphore : public Lock {
     }
 
     virtual ~PosixSemaphore() {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         sem_close(m_sema);
         sem_unlink(sem_name.c_str());
-        #else
+#else
         sem_destroy(&m_sema);
-        #endif  // __APPLE__
+#endif  // __APPLE__
     }
 
     /**
       * Waits until entered into semaphore.
       */
     void wait() final {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         int rc = sem_wait(m_sema);
         while (rc == -1 && errno == EINTR) {
             rc = sem_wait(m_sema);
         }
-        #else
+#else
         int rc = sem_wait(&m_sema);
         while (rc == -1 && errno == EINTR) {
             rc = sem_wait(&m_sema);
         }
-        #endif  // __APPLE__
+#endif  // __APPLE__
     }
 
     /**
       * Posts to one waiter
       */
     void signal() final {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         sem_post(m_sema);
-        #else
+#else
         sem_post(&m_sema);
-        #endif  // __APPLE__
+#endif  // __APPLE__
     }
 
     /**
@@ -101,11 +101,11 @@ class PosixSemaphore : public Lock {
       */
     void signal(int count) final {
         while (count-- > 0) {
-            #ifdef __APPLE__
+#ifdef __APPLE__
             sem_post(m_sema);
-            #else
+#else
             sem_post(&m_sema);
-            #endif  // __APPLE__
+#endif  // __APPLE__
         }
     }
 
@@ -114,11 +114,11 @@ class PosixSemaphore : public Lock {
       * @return True if the semaphore had a positive value and was decremented.
       */
     bool trywait() final {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         int ret = sem_trywait(m_sema);
-        #else
+#else
         int ret = sem_trywait(&m_sema);
-        #endif  // __APPLE__
+#endif  // __APPLE__
         if (ret == -1 && errno != EAGAIN) {
             throw std::runtime_error("trywait error");
         }
@@ -126,7 +126,7 @@ class PosixSemaphore : public Lock {
     }
 
  private:
-    #ifdef __APPLE__
+#ifdef __APPLE__
     /** Underlying semaphore that operations are performed on. */
     sem_t *m_sema;
     /** Name of the underlying semaphore. */
@@ -177,9 +177,9 @@ class PosixSemaphore : public Lock {
         }
         return ret_string;
     }
-    #else
+#else
     sem_t m_sema; /**< underlying semaphore that operations are performed on. */
-    #endif  // __APPLE__
+#endif  // __APPLE__
 };
 
 /**
