@@ -75,7 +75,7 @@ void test_2_clients() {
 
     auto ret_pair = client1.read_sync(0);
     int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
-    
+
     cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
 
     // Check that client 1 receives the desired random value
