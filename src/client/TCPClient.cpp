@@ -249,8 +249,6 @@ void TCPClient::process_received() {
       */
 
     while (1) {
-        // All elements stored on heap according to stack overflow,
-        // so it can grow
         // Must be shared as it will be used in the custom deleter of another
         // shared_ptr.
         std::shared_ptr<std::vector<char>> buffer =
