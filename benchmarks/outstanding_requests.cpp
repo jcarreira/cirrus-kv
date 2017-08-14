@@ -28,12 +28,17 @@ struct BenchmarkStruct {
     uint64_t size;
 };
 
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer(const BenchmarkStruct& s) {
-    std::unique_ptr<char[]> ptr(new char[s.size]);
-    std::memcpy(ptr.get(), s.data.get(), s.size);
-    return std::make_pair(std::move(ptr), s.size);
-}
+class BenchmarkStructSerializer : public cirrus::Serializer<BenchmarkStruct> {
+ public:
+    uint64_t size(const BenchmarkStruct& s) const override {
+        return s.size;
+    }
+
+    void serialize(const BenchmarkStruct& s, void *mem) const override {
+        std::memcpy(mem, s.data.get(), s.size);
+        return;
+    }
+};
 
 BenchmarkStruct deserializer(void* data, unsigned int size) {
     char *ptr = reinterpret_cast<char*>(data);
@@ -55,6 +60,7 @@ BenchmarkStruct deserializer(void* data, unsigned int size) {
 template<int SIZE>
 void test_outstanding_requests(int outstanding_target) {
     cirrus::TCPClient client;
+    BenchmarkStructSerializer serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<BenchmarkStruct>
         store(IP, PORT, &client,
             serializer,

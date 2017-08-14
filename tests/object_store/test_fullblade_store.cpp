@@ -10,6 +10,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
 #include "utils/CirrusTime.h"
 #include "utils/Stats.h"
 #include "client/BladeClient.h"
@@ -24,15 +25,20 @@ bool use_rdma_client;
 // #define CHECK_RESULTS
 
 /* This function takes an int with value N and makes N copies of it. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer_variable_simple(const int& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(int) * v]);
-    int *int_ptr = reinterpret_cast<int*>(ptr.get());
-    for (int i = 0; i < v; i++) {
-        *(int_ptr + i) = v;
+class SerializerVariableSimple : public cirrus::Serializer<int> {
+ public:
+    uint64_t size(const int& object) const override {
+        return object * sizeof(int);
     }
-    return std::make_pair(std::move(ptr), sizeof(int) * v);
-}
+
+    void serialize(const int& val, void *mem) const override {
+        int *int_ptr = reinterpret_cast<int*>(mem);
+        for (int i = 0; i < val; i++) {
+            *(int_ptr + i) = val;
+        }
+        return;
+    }
+};
 
 /* Checks that the N numbers are equal to each other and the number of ints. */
 int deserializer_variable_simple(void* data, unsigned int size) {
@@ -329,8 +335,9 @@ void test_remove() {
 void test_variable_sizes() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    SerializerVariableSimple serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            serializer_variable_simple,
+            serializer,
             deserializer_variable_simple);
 
     for (int i = 1; i < 4; i++) {
@@ -382,33 +389,25 @@ void test_shared_client() {
     for (int oid = 0; oid <  10; oid++) {
         store.put(oid, oid);
     }
-    std::cout << "first ten puts successful" << std::endl;
 
     for (int i = 10; i <  20; i++) {
         struct cirrus::Dummy<SIZE> d(i);
         store2.put(i, d);
     }
 
-    std::cout << "dummy puts successful" << std::endl;
-
-
     for (int i = 0; i < 10; i++) {
-        std::cout << "start" << std::endl;
         int retval = store.get(i);
         if (retval != i) {
             std::cout << "Expected " << i << " but got " << retval << std::endl;
             throw std::runtime_error("wrong value returned");
         }
-        std::cout << i << std::endl;
         auto retstruct = store2.get(i + 10);
         if (retstruct.id != i + 10) {
             std::cout << "Expected " << i + 10 << " but got " << retstruct.id
                 << std::endl;
             throw std::runtime_error("wrong value returned");
         }
-        std::cout << "end" << std::endl;
     }
-    std::cout << "done with the test" << std::endl;
     return;
 }
 

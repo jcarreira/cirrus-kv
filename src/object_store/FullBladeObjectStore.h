@@ -152,7 +152,6 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-
     WriteUnitTemplate<T> w(serializer, obj);
     auto client_future = client->write_async(id, w);
 

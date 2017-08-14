@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
                 cache_benchmark 1_2 outstanding_requests
 
-LIBS         = 	-lcityhash \
+LIBS         = 	-lclient \
                	-lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
 
@@ -13,7 +13,7 @@ LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
 		-L$(top_srcdir)/src/cache_manager \
-		-L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/
+		-L$(top_srcdir)/src/client/
 
 1_1_SOURCES  = 	1_1.cpp
 1_1_LDFLAGS  = 	-pthread

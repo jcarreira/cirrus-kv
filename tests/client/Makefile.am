@@ -3,13 +3,13 @@ include $(top_srcdir)/common.mk
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = tcpclientmain
 
-LIBS          = -lcityhash -lutils -lauthentication \
+LIBS          = -lclient -lutils -lauthentication \
                  -lcommon
 
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
     	       -L$(top_srcdir)/src/authentication \
 	       -L$(top_srcdir)/src/common \
-     	       -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
+     	       -L$(top_srcdir)/src/client/ \
 	       $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
