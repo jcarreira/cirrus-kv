@@ -40,8 +40,6 @@ class ObjectStore {
     class ObjectStoreGetFuture {
      public:
         ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
-                            std::shared_ptr<std::vector<char>> mem,
-                            uint64_t serialized_size,
                             std::function<T(void*, unsigned int)> deserializer);
         ObjectStoreGetFuture() {}
         void wait();
@@ -56,19 +54,6 @@ class ObjectStore {
          * all calls to wait and get.
          */
         cirrus::BladeClient::ClientFuture client_future;
-
-        /**
-         * A pointer to the memory that the BladeClient will write the
-         * serialized object into.
-         */
-        std::shared_ptr<std::vector<char>> mem;
-
-        /**
-         * The size of serialized objects. This is obtained from the return
-         * value of the serializer() function. We assume that all serialized
-         * objects have the same length.
-         */
-         uint64_t serialized_size;
 
          // TODO(Tyler): Change to be a reference/pointer?
          /**
@@ -150,11 +135,8 @@ bool ObjectStore<T>::ObjectStorePutFuture::get() {
 template<class T>
 ObjectStore<T>::ObjectStoreGetFuture::ObjectStoreGetFuture(
     cirrus::BladeClient::ClientFuture client_future,
-    std::shared_ptr<std::vector<char>> mem,
-    uint64_t serialized_size,
     std::function<T(void*, unsigned int)> deserializer) :
-        client_future(client_future), mem(mem),
-        serialized_size(serialized_size), deserializer(deserializer) {}
+        client_future(client_future), deserializer(deserializer) {}
 
 /**
  * Waits until the result of the Get operation is available.
@@ -184,9 +166,11 @@ bool ObjectStore<T>::ObjectStoreGetFuture::try_wait() {
 template<class T>
 T ObjectStore<T>::ObjectStoreGetFuture::get() {
     // Ensure that the result is available, and throw error if needed
-    client_future.get();
+    auto ret_pair = client_future.getDataPair();
+    std::shared_ptr<char> ptr = ret_pair.first;
+    auto length = ret_pair.second;
     // Deserialize and return the memory.
-    return deserializer(mem->data(), serialized_size);
+    return deserializer(ptr.get(), length);
 }
 
 }  // namespace cirrus

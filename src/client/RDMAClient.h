@@ -45,15 +45,14 @@ struct GeneralContext {
 class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
-
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-
-    bool read_sync(ObjectID oid, void* data, uint64_t size) override;
+    std::pair<std::shared_ptr<char>, unsigned int> read_sync(ObjectID oid)
+        override;
 
     ClientFuture write_async(ObjectID oid, const void* data,
         uint64_t size) override;
 
-    ClientFuture read_async(ObjectID oid, void* data, uint64_t size) override;
+    ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
 

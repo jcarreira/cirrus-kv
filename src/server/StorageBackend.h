@@ -1,5 +1,5 @@
-#ifndef _BACKEND_MAP_H_
-#define _BACKEND_MAP_H_
+#ifndef SRC_SERVER_STORAGEBACKEND_H_
+#define SRC_SERVER_STORAGEBACKEND_H_
 
 #include <vector>
 #include <cstdint>
@@ -25,14 +25,14 @@ class StorageBackend {
       * @return bool Indicates success (true) or failure (false)
       */
     virtual bool put(uint64_t oid, const std::vector<int8_t>& data) = 0;
-    
+
     /**
       * Check if object exists
       * @param oid Object ID
       * @return bool Indicates whether object exists (true) or not (false)
       */
     virtual bool exists(uint64_t) const = 0;
-    
+
     /**
       * Get object
       * @param oid Object ID
@@ -40,14 +40,14 @@ class StorageBackend {
       * @return bool Indicates success (true) or failure (false)
       */
     virtual const MemData& get(uint64_t oid) = 0;
-    
+
     /**
       * Delete object
       * @param oid Object ID
       * @return bool Indicates success (true) or failure (false)
       */
     virtual bool delet(uint64_t oid) = 0;
-    
+
     /**
       * Get size of object
       * @param oid Object ID
@@ -58,4 +58,4 @@ class StorageBackend {
 
 }  // namespace cirrus
 
-#endif // _BACKEND_MAP_H_
+#endif  // SRC_SERVER_STORAGEBACKEND_H_

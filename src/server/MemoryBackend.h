@@ -1,5 +1,9 @@
+#ifndef SRC_SERVER_MEMORYBACKEND_H_
+#define SRC_SERVER_MEMORYBACKEND_H_
+
 #include "StorageBackend.h"
 #include <map>
+#include <vector>
 
 namespace cirrus {
 
@@ -23,3 +27,5 @@ class MemoryBackend : public StorageBackend {
 };
 
 }  // namespace cirrus
+
+#endif  // SRC_SERVER_MEMORYBACKEND_H_

@@ -1,12 +1,11 @@
 #include "MemoryBackend.h"
 
 #include <cstring>
+#include "server/MemoryBackend.h"
 
 namespace cirrus {
 
-void MemoryBackend::init() {
-
-}
+void MemoryBackend::init() {}
 
 bool MemoryBackend::put(uint64_t oid, const std::vector<int8_t>& data) {
     store[oid] = data;
@@ -21,16 +20,16 @@ const StorageBackend::MemData& MemoryBackend::get(uint64_t oid) {
     auto it = store.find(oid);
     if (it == store.end()) {
         throw std::runtime_error("Error");
-        //return false;
+        // return false;
     }
 
-    //std::memcpy(data, it->second.data(), it->second.size());
-    //return true;
+    // std::memcpy(data, it->second.data(), it->second.size());
+    // return true;
     return store[oid];
 }
 
 bool MemoryBackend::delet(uint64_t oid) {
-    store.erase(oid); // we assume object exists
+    store.erase(oid);  // we assume object exists
     return true;
 }
 
