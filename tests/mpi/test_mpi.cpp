@@ -34,7 +34,7 @@ static const uint32_t SIZE = 1;
 // #define CHECK_RESULTS
 
 void test_sync() {
-    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
@@ -89,7 +89,7 @@ void test_async() {
 #endif
 
 void test_sync(int N) {
-    cirrus::TCPClient<cirrus::Dummy<SIZE>> client;
+    cirrus::TCPClient client;
     cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,

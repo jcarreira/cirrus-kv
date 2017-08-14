@@ -5,8 +5,10 @@
 #include <sstream>
 #include <cstring>
 #include <string>
+
 #include "client/BladeClient.h"
 #include "common/AllocationRecord.h"
+#include "common/Serializer.h"
 #include "utils/logging.h"
 #include "authentication/AuthenticationToken.h"
 #include "utils/CirrusTime.h"
@@ -28,15 +30,15 @@ void test_1_client() {
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
-    cirrus::RDMAClient<int> client1;
+    cirrus::RDMAClient client1;
     cirrus::serializer_simple<int> serializer;
     client1.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
+    cirrus::WriteUnitTemplate<int> w(serializer, to_send);
+    client1.write_sync(0, w);
 
-    client1.write_sync(0, to_send, serializer);
-
-    auto ret_pair = client1.read_sync(0, &ret_val, sizeof(to_send));
+    auto ret_pair = client1.read_sync(0);
     int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
 
     if (ret_val != to_send)
@@ -50,7 +52,7 @@ void test_1_client() {
 void test_2_clients() {
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
-    cirrus::RDMAClient<int> client1, client2;
+    cirrus::RDMAClient client1, client2;
     cirrus::serializer_simple<int> serializer;
 
     client1.connect(IP, PORT);
@@ -64,16 +66,17 @@ void test_2_clients() {
         random = rand_r(&seed);
         cirrus::LOG<cirrus::INFO>("Writing ", random);
         cirrus::TimerFunction tf("client1.write");
-        WriteUnitTemplate<int> w(serializer, random);
+        cirrus::WriteUnitTemplate<int> w(serializer, random);
         client1.write_sync(0, w);
     }
     int data2 = 1442;
-    client2.write_sync(0, data2, serializer);
+    cirrus::WriteUnitTemplate<int> w(serializer, data2);
+    client2.write_sync(0, w);
 
     auto ret_pair = client1.read_sync(0);
-    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
-
     int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    
+    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
 
     // Check that client 1 receives the desired random value
     if (ret_val != random)
@@ -94,7 +97,7 @@ void test_2_clients() {
  */
 void test_performance() {
     const int size = 199 * MB;
-    cirrus::RDMAClient<cirrus::Dummy<size>> client;
+    cirrus::RDMAClient client;
     cirrus::serializer_simple<cirrus::Dummy<size>> serializer;
     client.connect(IP, PORT);
 
@@ -105,7 +108,7 @@ void test_performance() {
 
     {
         cirrus::TimerFunction tf("Timing write", true);
-        WriteUnitTemplate<cirrus::Dummy<size>> w(serializer, *d);
+        cirrus::WriteUnitTemplate<cirrus::Dummy<size>> w(serializer, *d);
         client.write_sync(0, w);
     }
 
@@ -116,10 +119,10 @@ void test_performance() {
         std::cout << "Length: " << ret_pair.second << std::endl;
 
         auto d2 =
-            *(reinterpret_cast<cirrus::Dummy<SIZE>*(ret_pair.first.get()));
+            *(reinterpret_cast<cirrus::Dummy<size>*>(ret_pair.first.get()));
 
-        std::cout << "Returned id: " << d2->id << std::endl;
-        if (d2->id != 42) {
+        std::cout << "Returned id: " << d2.id << std::endl;
+        if (d2.id != 42) {
             throw std::runtime_error("Returned value does not match");
         }
     }
@@ -134,7 +137,7 @@ void test_async() {
     client.connect(IP, PORT);
 
     int message = 42;
-    WriteUnitTemplate<int> w(serializer, message);
+    cirrus::WriteUnitTemplate<int> w(serializer, message);
     auto future = client.write_async(1, w);
     std::cout << "write async complete" << std::endl;
 
@@ -173,7 +176,8 @@ void test_async_N() {
     int i;
     for (i = 0; i < N; i++) {
         int val = i;
-        put_futures.push_back(client.write_async(i, val, serializer));
+        cirrus::WriteUnitTemplate<int> w(serializer, val);
+        put_futures.push_back(client.write_async(i, w));
     }
     // Check the success of each put operation
     for (i = 0; i < N; i++) {

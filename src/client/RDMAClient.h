@@ -30,9 +30,7 @@
 #include "utils/utils.h"
 #include "utils/CirrusTime.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"
-#include "third_party/libcuckoo/src/city_hasher.hh"
-
+#include "libcuckoo/cuckoohash_map.hh"
 
 namespace cirrus {
 
@@ -57,17 +55,17 @@ struct GeneralContext {
 /**
   * An RDMA based client that inherits from BladeClient.
   */
-template<class T>
-class RDMAClient : public BladeClient<T> {
+class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
     bool write_sync(ObjectID id, const WriteUnit& w) override;
-    std::pair<std::shared_ptr<char>, unsigned int> read_sync(ObjectID oid)
-        override;
+    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+        ObjectID oid) override;
 
-    ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
+    BladeClient::ClientFuture write_async(ObjectID oid,
+        const WriteUnit& w) override;
 
-    ClientFuture read_async(ObjectID oid) override;
+    BladeClient::ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
 
@@ -262,12 +260,12 @@ class RDMAClient : public BladeClient<T> {
 
     bool readToLocal(BladeLocation loc, void*);
 
-    ClientFuture readToLocalAsync(BladeLocation loc,
+    BladeClient::ClientFuture readToLocalAsync(BladeLocation loc,
             void* ptr);
 
     bool writeRemote(const void* data, BladeLocation loc,
         RDMAMem* mem = nullptr);
-    ClientFuture writeRemoteAsync(const void *data,
+    BladeClient::ClientFuture writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
             uint64_t size, const AllocationRecord& allocRec);
@@ -276,13 +274,13 @@ class RDMAClient : public BladeClient<T> {
       * hash to map oid and location.
       * if oid is not found, object is not in store.
       */
-    cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
+    cuckoohash_map<ObjectID, BladeLocation> objects_;
 
     AllocationRecord allocate(uint64_t size);
     bool deallocate(const AllocationRecord& ar);
 
     // writes
-    ClientFuture rdma_write_async(
+    BladeClient::ClientFuture rdma_write_async(
             const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length,
             const void* data,
@@ -292,7 +290,7 @@ class RDMAClient : public BladeClient<T> {
 
     // XXX We may not need a shared ptr here
     // reads
-    ClientFuture rdma_read_async(
+    BladeClient::ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset, uint64_t length, void *data,
         RDMAMem* mem = nullptr);

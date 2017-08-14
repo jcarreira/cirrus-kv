@@ -1,5 +1,3 @@
-#include "client/RDMAClient.h"
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -13,6 +11,7 @@
 #include <random>
 #include <cassert>
 
+#include "client/RDMAClient.h"
 #include "utils/utils.h"
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
@@ -30,7 +29,6 @@ static const int initial_buffer_size = 50;
 /**
   * Connects the client to the remote server.
   */
-
 void RDMAClient::connect(const std::string& host, const std::string& port) {
     seed = time(nullptr);
     connect_rdma_cm(host, port);
@@ -48,9 +46,13 @@ void RDMAClient::connect(const std::string& host, const std::string& port) {
   */
 
 BladeClient::ClientFuture RDMAClient::write_async(ObjectID id,
-                                       const void* data, uint64_t size) {
+                                       const WriteUnit& w) {
     BladeLocation loc;
-
+    auto size = w.size();
+    std::unique_ptr<char[]> ptr(new char[size]);
+    auto data = ptr.get();
+    // serialize into the buffer
+    w.serialize(data);
     if (!objects_.find(id, loc)) {
        cirrus::AllocationRecord allocRec = allocate(size);
        insertObjectLocation(id, size, allocRec);
@@ -233,7 +235,7 @@ BladeClient::ClientFuture RDMAClient::writeRemoteAsync(
 bool RDMAClient::insertObjectLocation(ObjectID id,
                                       uint64_t size,
                                       const AllocationRecord& allocRec) {
-    objects_[id] = BladeLocation(size, allocRec);
+    objects_.insert_or_assign(id, BladeLocation(size, allocRec));
     return true;
 }
 
@@ -946,7 +948,7 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
     }
     std::shared_ptr<std::shared_ptr<char>> dummy_ptr;
     std::shared_ptr<uint64_t> dummy_size_ptr;
-    return ClientFuture(op_info->result, op_info->result_available,
+    return BladeClient::ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
                         dummy_ptr, dummy_size_ptr);
 }
@@ -1052,7 +1054,7 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         std::make_shared<std::shared_ptr<char>>(reinterpret_cast<char*>(data),
             std::default_delete< char[]>());
 
-    return ClientFuture(op_info->result, op_info->result_available,
+    return BladeClient::ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
                         buffer_ptr, std::make_shared<uint64_t>(length));
 }
