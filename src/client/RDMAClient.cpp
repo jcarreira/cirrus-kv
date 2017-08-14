@@ -93,9 +93,16 @@ BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-bool RDMAClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+bool RDMAClient::write_sync(ObjectID oid, const WriteUnit& w) {
     bool retval;
     BladeLocation loc;
+
+    // allocate buffer to serialize into
+    auto size = w.size();
+    std::unique_ptr<char[]> ptr(new char[size]);
+    auto data = ptr.get();
+    // serialize into the buffer
+    w.serialize(data);
     if (objects_.find(oid, loc)) {
         retval = writeRemote(data, loc, nullptr);
     } else {
