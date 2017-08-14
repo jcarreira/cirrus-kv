@@ -252,9 +252,9 @@ void TCPClient::process_received() {
     // All elements stored on heap according to stack overflow, so it can grow
     std::vector<char> buffer;
     // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
+    uint64_t current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
+    uint64_t bytes_read = 0;
 
     /**
       * Message format
@@ -267,7 +267,7 @@ void TCPClient::process_received() {
         // Read in the size of the next message from the network
         LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
-        while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
+        while (bytes_read < sizeof(uint32_t)) {
             int retval = read(sock, buffer.data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
@@ -277,6 +277,8 @@ void TCPClient::process_received() {
                 if (errno == EINTR && terminate_threads == true) {
                     return;
                 } else {
+                    LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
+                        retval);
                     throw cirrus::Exception("Issue in reading socket. "
                         "Full size not read. Socket may have been closed.");
                 }
@@ -288,7 +290,7 @@ void TCPClient::process_received() {
         // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                                 buffer.data());
-        int incoming_size = ntohl(*incoming_size_ptr);
+        uint32_t incoming_size = ntohl(*incoming_size_ptr);
 
         LOG<INFO>("Size of incoming message received from server: ",
                   incoming_size);
@@ -301,21 +303,8 @@ void TCPClient::process_received() {
             buffer.resize(incoming_size);
         }
 
-        // Reset the counter to read in the flatbuffer
-        bytes_read = 0;
+        read_all(sock, buffer.data(), incoming_size);
 
-        while (bytes_read < incoming_size) {
-            int retval = read(sock, buffer.data() + bytes_read,
-                              incoming_size - bytes_read);
-
-            if (retval < 0) {
-                throw cirrus::Exception("error while reading full message");
-            }
-
-            bytes_read += retval;
-            LOG<INFO>("Client has read ", bytes_read, " of ", incoming_size,
-                                                        " bytes.");
-        }
 #ifdef PERF_LOG
         double receive_mbps = bytes_read / (1024 * 1024.0) /
             (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
@@ -323,6 +312,8 @@ void TCPClient::process_received() {
                 receive_msg_time.getUsElapsed(),
                 " bw (MB/s): ", receive_mbps);
 #endif
+
+        LOG<INFO>("Received full message from server");
 
         // Extract the flatbuffer from the receiving buffer
         auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
@@ -421,8 +412,8 @@ ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
     uint64_t total_sent = 0;
     int64_t sent = 0;
 
-    while (to_send != total_sent) {
-        sent = send(sock, data, len, 0);
+    while (total_sent != to_send) {
+        sent = send(sock, data, len - total_sent, 0);
 
         if (sent == -1) {
             throw cirrus::Exception("Server error sending data to client");
@@ -435,6 +426,30 @@ ssize_t TCPClient::send_all(int sock, const void* data, size_t len,
     }
 
     return total_sent;
+}
+
+/**
+ * Guarantees that an entire message is read.
+ * @param sock the fd of the socket to read on.
+ * @param data a pointer to the buffer to read into.
+ * @param len the number of bytes to read.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
+    uint64_t bytes_read = 0;
+
+    while (bytes_read < len) {
+        int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
+            len - bytes_read);
+
+        if (retval < 0) {
+            throw cirrus::Exception("Error reading from server");
+        }
+
+        bytes_read += retval;
+    }
+
+    return bytes_read;
 }
 
 /**
@@ -470,7 +485,7 @@ void TCPClient::process_send() {
 
         // XXX shouldn't this be a send_all?
         uint32_t network_order_size = htonl(message_size);
-        if (send(sock, &network_order_size, sizeof(uint32_t), 0)
+        if (send_all(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {
             throw cirrus::Exception("Client error sending data to server");
         }
