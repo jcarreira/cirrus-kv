@@ -14,9 +14,6 @@
 #include "utils/logging.h"
 #include "common/Exception.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"
-#include "third_party/libcuckoo/src/city_hasher.hh"
-
 namespace cirrus {
 namespace ostore {
 
