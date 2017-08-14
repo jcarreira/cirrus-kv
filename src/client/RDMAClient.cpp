@@ -66,10 +66,7 @@ BladeClient::ClientFuture RDMAClient::write_async(ObjectID id,
   * Asynchronously reads an object corresponding to ObjectID
   * from the remote server.
   * @param id the id of the object the user wishes to read to local memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read to.
-  * @param size the size of the serialized object being read from
-  * remote storage.
+  * @param w a WriteUnit that contains the serializer and object to serialize
   * @return True if the object was successfully read from the server, false
   * otherwise.
   */
@@ -88,10 +85,7 @@ BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
 /**
   * Writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read read from.
-  * @param size the size of the serialized object being read from
-  * local memory.
+  * @param w a WriteUnit that contains the serializer and object to serialize
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
