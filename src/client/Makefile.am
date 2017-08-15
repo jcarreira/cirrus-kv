@@ -6,8 +6,8 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = TCPClient.cpp BladeClient.cpp
 
-LIBS    = -lcityhash -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-	  -L../common/ -lcommon -L. -L$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src/.libs/ \
+LIBS    =  -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+	  -L../common/ -lcommon -L. \
 	  $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
@@ -19,4 +19,4 @@ noinst_LIBRARIES = libclient.a
 libclient_a_SOURCES = $(SOURCES)
 libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 		       -I$(top_srcdir)/third_party/flatbuffers/include \
-		       -I$(top_srcdir)/third_party/libcuckoo/cityhash-1.1.1/src
+		       -isystem $(top_srcdir)/third_party/libcuckoo/
