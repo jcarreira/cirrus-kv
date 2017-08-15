@@ -45,12 +45,39 @@ int samples_per_batch =100;
 int batch_size = samples_per_batch * features_per_sample;
 
 template<typename T>
+class ml_array_deleter {
+ public:
+    ml_array_deleter(const std::string& name) :
+        name(name) {}
+
+    void operator()(T* p) {
+        std::cout << "ml_array_deleter called: "
+            << name
+            << std::endl;
+        delete[] p;
+        std::cout << "delete done: "
+            << name
+            << std::endl;
+    }
+ private:
+    std::string name;
+};
+
+template<typename T>
+void ml_array_nodelete(T * p) {}
+
+template<typename T>
 class c_array_serializer{
-public:
-    c_array_serializer(int nslots) : numslots(nslots) {}
+ public:
+    c_array_serializer(int nslots, const std::string& name = "") :
+        numslots(nslots), name(name) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
+        std::cout << "[ARRAYSER-" + name + "]"
+            << " c_array_serializer numslots: " << numslots
+            << std::endl;
+        
         T* array = v.get();
 
         // allocate array
@@ -61,18 +88,24 @@ public:
         return std::make_pair(std::move(ptr), numslots * sizeof(T));
     }
 
-private:
+ private:
     int numslots;
+    std::string name;
 }; 
 
 template<typename T>
 class c_array_deserializer{
-public:
-    c_array_deserializer(int nslots) : numslots(nslots) {}
+ public:
+    c_array_deserializer(int nslots, const std::string& name = "", bool to_free = true) :
+        numslots(nslots), name(name), to_free(to_free) {}
     
     std::shared_ptr<T>
     operator()(void* data, unsigned int des_size) {
         unsigned int size = sizeof(T) * numslots;
+        
+        std::cout << "[ARRAYDESER-" + name + "]"
+            << " c_array_deserializer des_size: " << des_size
+            << std::endl;
 
         if (des_size != size) {
             std::cout << "Error in deserializing."
@@ -86,15 +119,24 @@ public:
         // cast the pointer
         T* ptr = reinterpret_cast<T*>(data);
 
-        auto ret_ptr = std::shared_ptr<T>(new T[numslots],
-                std::default_delete< T[]>());
+        std::shared_ptr<T> ret_ptr;
+        if (to_free) {
+            ret_ptr = std::shared_ptr<T>(new T[numslots],
+                    ml_array_deleter<T>(name));
+            //std::default_delete<T[]>());
+        } else {
+            ret_ptr = std::shared_ptr<T>(new T[numslots],
+                    ml_array_nodelete<T>);
+        }
 
         std::memcpy(ret_ptr.get(), ptr, size);
         return ret_ptr;
     }
 
-private:
+ private:
     int numslots;
+    std::string name;
+    bool to_free;
 };
 
 
@@ -102,49 +144,60 @@ private:
   * LRModel serializer / deserializer
   */
 class lr_model_serializer {
-public:
-    lr_model_serializer(int n) : n(n) {}
+ public:
+    lr_model_serializer(int n, const std::string& name = "") :
+        n(n), name(name) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRModel& v) {
-        std::cout << "[SER]"
+        std::cout << "[SER-" + name + "]"
             << " lr_model_serializer n: " << n << std::endl;
         auto model_serialized = v.serialize();
-        std::cout << "[SER]"
+        std::cout << "[SER-" + name + "]"
             << " lr_model_serializer serialized size: "
             << model_serialized.second << std::endl;
+
+        //v.print();
 
         return model_serialized;
     }
 
-private:
+ private:
     int n;
+    std::string name;
 }; 
 
 class lr_model_deserializer {
-public:
-    lr_model_deserializer(uint64_t n) : n(n) {}
+ public:
+    lr_model_deserializer(uint64_t n, const std::string& name = "") :
+        n(n), name(name) {}
     
     LRModel
     operator()(void* data, unsigned int des_size) {
+        std::cout << "[DESER-" + name + "]"
+            << " lr_model_deserializer des_size: " << des_size << std::endl;
         LRModel model(n);
         if (des_size != model.getSerializedSize()) {
             throw std::runtime_error(
                     "Wrong deserializer size at lr_model_deserializer");
         }
         model.loadSerialized(data);
+
+        //model.print();
+
         return model;
     }
 
-private:
+ private:
     uint64_t n;
+    std::string name;
 };
 
 /**
   * LRGradient serializer / deserializer
   */
 class lr_gradient_serializer {
-public:
+ public:
     lr_gradient_serializer(int n) : n(n) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
@@ -159,12 +212,12 @@ public:
         return std::make_pair(std::move(mem), g.getSerializedSize());
     }
 
-private:
+ private:
     int n;
 }; 
 
 class lr_gradient_deserializer {
-public:
+ public:
     lr_gradient_deserializer(uint64_t n) : n(n) {}
     
     LRGradient
@@ -184,7 +237,7 @@ public:
         return gradient;
     }
 
-private:
+ private:
     uint64_t n;
 };
 
@@ -205,13 +258,6 @@ void run_memory_task(const Configuration& config) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
-}
-
-/**
-  * This task is used to compute the training error in the background
-  */
-void training_error_task(const Configuration& config) {
-
 }
 
 /**
@@ -258,15 +304,20 @@ void run_ps_task(const Configuration& config) {
     std::cout << "[PS] "
         << "PS publishing model at id: "
         << MODEL_BASE
+        << " csum: " << model.checksum()
         << std::endl;
     // publish the model back to the store so workers can use it
     model_store.put(MODEL_BASE, model);
     
     std::cout << "[PS] "
-        << "PS getting model" << std::endl;
+        << "PS getting model"
+        << " with id: " << MODEL_BASE
+        << std::endl;
     auto m = model_store.get(MODEL_BASE);
     std::cout << "[PS] "
-        << "PS model is here" << std::endl;
+        << "PS model is here"
+        << " with csum: " << m.checksum()
+        << std::endl;
 
     // we keep a version number for the gradient produced by each worker
     std::vector<int> gradientCounts;
@@ -319,7 +370,9 @@ void run_ps_task(const Configuration& config) {
 
                 // do a gradient step and update model
                 std::cout << "[PS] "
-                    << "Updating model" << std::endl;
+                    << "Updating model"
+                    << " with csum: " << model.checksum()
+                    << std::endl;
 
                 model.sgd_update(config.get_learning_rate(), &gradient);
 
@@ -433,28 +486,26 @@ void run_worker_task(const Configuration& config) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
                 c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size));
+                c_array_deserializer<double>(batch_size, "samples_store"));
     
     // this is used to access the training labels
+    // we configure this store to return shared_ptr that do not free memory
+    // because these objects will be owned by the Dataset
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
                 c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch));
+                c_array_deserializer<double>(samples_per_batch, "labels_store", false));
 
     int samples_id = 0;
     int labels_id  = 0;
     int gradient_id = GRADIENT_BASE;
     uint64_t count = 0;
     while (1) {
-        // get model from parameter server
-        // get data from iterator
-        // compute gradient from model and data
-        // send gradient to object store
-
         // maybe we can wait a few iterations to get the model
-        LRModel model(MODEL_GRAD_SIZE);
+        //LRModel model(MODEL_GRAD_SIZE);
         std::shared_ptr<double> samples;
-        std::shared_ptr<double> labels;;
+        std::shared_ptr<double> labels;
+        LRModel model(MODEL_GRAD_SIZE);
         try {
             std::cout << "[WORKER] "
                 << "Worker task getting the model at id: "
@@ -463,21 +514,30 @@ void run_worker_task(const Configuration& config) {
             model = model_store.get(MODEL_BASE);
 
             std::cout << "[WORKER] "
+                << "Worker task received model csum: " << model.checksum()
+                << std::endl;
+            std::cout << "[WORKER] "
                 << "Worker task getting the training data with id: "
-                << samples_id << std::endl;
+                << (SAMPLE_BASE + samples_id)
+                << std::endl;
 
             samples = samples_store.get(SAMPLE_BASE + samples_id);
             std::cout << "[WORKER] "
                 << "Worker task received training data with id: "
-                << samples_id << std::endl;
+                << (SAMPLE_BASE + samples_id) << std::endl;
+
             labels = labels_store.get(LABEL_BASE + labels_id);
+
             std::cout << "[WORKER] "
                 << "Worker task received label data with id: "
                 << samples_id << std::endl;
+
         } catch(const cirrus::NoSuchIDException& e) {
             if (!first_time) {
-                throw std::runtime_error(
-                        "Couldn't get object from run_worker_task");
+                // wrap around
+                samples_id = 0;
+                labels_id = 0;
+                continue;
             }
             // this happens because the ps task
             // has not uploaded the model yet
@@ -488,6 +548,7 @@ void run_worker_task(const Configuration& config) {
             sleep(1);
             continue;
         }
+
         first_time = false;
 
         auto samples = samples_store.get(samples_id);
@@ -496,6 +557,7 @@ void run_worker_task(const Configuration& config) {
 
         std::cout << "[WORKER] "
             << "Worker task computing gradient" << std::endl;
+
         // compute mini batch gradient
         auto gradient = model.minibatch_grad(0, dataset.samples_,
                 labels.get(), samples_per_batch, config.get_epsilon());
@@ -507,13 +569,19 @@ void run_worker_task(const Configuration& config) {
             << std::endl;
 
         try {
-            gradient_store.put(GRADIENT_BASE + gradient_id,
-                    *dynamic_cast<LRGradient*>(gradient.get()));
+            auto lrg = *dynamic_cast<LRGradient*>(gradient.get());
+            gradient_store.put(
+                    GRADIENT_BASE + gradient_id,
+                    lrg);
         } catch(...) {
             std::cout << "[WORKER] "
                 << "Worker task error doing put of gradient"
                 << std::endl;
         }
+        std::cout << "[WORKER] "
+            << "Worker task stored gradient at id: "
+            << gradient_id
+            << std::endl;
 
         // move to next batch of samples
         samples_id++;
@@ -543,12 +611,12 @@ void run_loading_task(const Configuration& config) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
-                c_array_serializer<double>(samples_per_batch * features_per_sample),
-                c_array_deserializer<double>(samples_per_batch * features_per_sample));
+                c_array_serializer<double>(batch_size),
+                c_array_deserializer<double>(batch_size, "loader samples_store"));
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
                 c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch));
+                c_array_deserializer<double>(samples_per_batch, "loader labels_store"));
 
     std::cout << "[LOADER] "
         << "Read "
@@ -572,8 +640,8 @@ void run_loading_task(const Configuration& config) {
           * Build sample object
           */
         auto sample = std::shared_ptr<double>(
-                            new double[samples_per_batch * features_per_sample],
-                        std::default_delete<double[]>());
+                new double[batch_size],
+                std::default_delete<double[]>());
         // this memcpy can be avoided with some trickery
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
@@ -584,8 +652,8 @@ void run_loading_task(const Configuration& config) {
           * Build label object
           */
         auto label = std::shared_ptr<double>(
-                            new double[samples_per_batch],
-                        std::default_delete<double[]>());
+                new double[samples_per_batch],
+                std::default_delete<double[]>());
         // this memcpy can be avoided with some trickery
         std::memcpy(label.get(), dataset.label(i * samples_per_batch),
                 sizeof(double) * samples_per_batch);
@@ -593,12 +661,18 @@ void run_loading_task(const Configuration& config) {
         try {
             std::cout << "[LOADER] "
                 << "Adding sample batch id: "
-                << i
+                << (SAMPLE_BASE + i)
                 << " samples with size: " << sizeof(double) * batch_size
                 << std::endl;
             samples_store.put(SAMPLE_BASE + i, sample);
             std::cout << "[LOADER] "
                 << "Putting label" << std::endl;
+            //std::cout << "[LOADER] labels: "
+            //    << std::endl;
+            //for (int i = 0; i < samples_per_batch; ++i) {
+            //    std::cout << label.get()[i] << " ";
+            //}
+            //std::cout << std::endl;
             labels_store.put(LABEL_BASE + i, label);
         } catch(...) {
             std::cout << "[LOADER] "

@@ -92,6 +92,8 @@ class Model {
                 double* labels,
                 uint64_t labels_size,
                 double epsilon) const = 0;
+
+     virtual double checksum() const = 0;
 };
 
 #endif  // _MODEL_H_

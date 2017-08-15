@@ -29,6 +29,7 @@ static const int initial_buffer_size = 50;
  * threads so that the program will exit gracefully.
  */
 TCPClient::~TCPClient() {
+    LOG<INFO>("Terminating TCP client");
     terminate_threads = true;
 
     // We need to destroy threads if they are active
@@ -115,6 +116,8 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
     // Add the builder to the queue if it is of the right type (a write)
     // And if not over capacity
     std::unique_ptr<flatbuffers::FlatBufferBuilder> builder;
+
+    LOG<INFO>("TCPClient::write_async oid: ", oid, " size: ", size);
 
 #ifdef PERF_LOG
     TimerFunction builder_timer;
