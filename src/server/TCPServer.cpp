@@ -275,6 +275,14 @@ bool TCPServer::read_from_client(
     return true;
 }
 
+int64_t checksum(const std::vector<int8_t>& data) {
+    int64_t sum = 0;
+    for (const auto& d : data) {
+        sum += d;
+    }
+    return sum;
+}
+
 /**
   * Process the message incoming on a particular socket. Reads in the message
   * from the socket, extracts the flatbuffer, and then acts depending on
@@ -360,11 +368,11 @@ bool TCPServer::process(int sock) {
 #ifdef PERF_LOG
                 TimerFunction write_time;
 #endif
-                LOG<INFO>("Server processing write request.");
-
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
+
+                LOG<INFO>("Server processing write request to oid: .", oid);
 
                 auto entry_itr = store.find(oid);
                 if (entry_itr != store.end()) {
@@ -385,6 +393,7 @@ bool TCPServer::process(int sock) {
                     // Service the write request by
                     //  storing the serialized object
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
+                    LOG<INFO>("Object checksum: ", checksum(data));
                     // Create entry in store mapping the data to the id
                     curr_size += data_fb->size();
                     store[oid] = data;
@@ -419,7 +428,7 @@ bool TCPServer::process(int sock) {
                  to the client */
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
-                LOG<INFO>("Server extracted oid");
+                LOG<INFO>("Server extracted oid: ", oid);
                 auto entry_itr = store.find(oid);
                 LOG<INFO>("Got pair from store");
                 // If the oid is not on the server, this operation has failed
@@ -430,6 +439,7 @@ bool TCPServer::process(int sock) {
                 }
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
+                    LOG<INFO>("Object checksum: ", checksum(entry_itr->second));
                     fb_vector = builder.CreateVector(entry_itr->second);
                 } else {
                     std::vector<int8_t> data;

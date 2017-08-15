@@ -105,6 +105,10 @@ class LRModel : public Model {
       */
     std::unique_ptr<ModelGradient> loadGradient(void* mem) const override;
 
+    double checksum() const override;
+
+    void print() const;
+
  private:
     bool is_integer(double n) const;
 

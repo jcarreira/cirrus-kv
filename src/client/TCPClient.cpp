@@ -29,6 +29,7 @@ static const int initial_buffer_size = 50;
  * threads so that the program will exit gracefully.
  */
 TCPClient::~TCPClient() {
+    LOG<INFO>("Terminating TCP client");
     terminate_threads = true;
 
     // We need to destroy threads if they are active
@@ -108,6 +109,8 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
                                     uint64_t size) {
     // Make sure that the pointer is not null
     TEST_Z(data);
+
+    LOG<INFO>("TCPClient::write_async oid: ", oid, " size: ", size);
 
 #ifdef PERF_LOG
     TimerFunction builder_timer;

@@ -25,13 +25,12 @@ std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
 std::pair<std::unique_ptr<char[]>, uint64_t>
 LRModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
-    res.first.reset(new char[sizeof(double) * d]);
+    uint64_t size = sizeof(double) * d;
+    res.first.reset(new char[size]);
 
-    // XXX debugging: remove this
-    memset(res.first.get(), 0, sizeof(double) * d);
-    res.second = sizeof(double) * d;
+    res.second = size;
+    std::memcpy(res.first.get(), weights.data(), sizeof(double) * d);
 
-    std::copy(weights.data(), weights.data() + d, res.first.get());
     return res;
 }
 
@@ -186,4 +185,21 @@ std::unique_ptr<ModelGradient> LRModel::loadGradient(void* mem) const {
 bool LRModel::is_integer(double n) const {
     return floor(n) == n;
 }
+
+double LRModel::checksum() const {
+    double sum = 0;
+    for (const auto& w : weights) {
+        sum += w;
+    }
+    return sum;
+}
+
+void LRModel::print() const {
+    std::cout << "MODEL: ";
+    for (const auto& w : weights) {
+        std::cout << " " << w;
+    }
+    std::cout << std::endl;
+}
+
 
