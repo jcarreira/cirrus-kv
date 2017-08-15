@@ -22,7 +22,7 @@ void test_sync() {
 
     int returned;
     auto ptr_pair = client.read_sync(1);
-    int *int_ptr = reinterpret_cast<int*>(ptr_pair.first.get());
+    const int *int_ptr = reinterpret_cast<const int*>(ptr_pair.first.get());
     std::cout << *int_ptr << " returned from server" << std::endl;
 
     if (*int_ptr != message) {
@@ -53,7 +53,7 @@ void test_async() {
 
     auto ret_ptr = read_future.getDataPair().first;
 
-    int returned = *(reinterpret_cast<int*>(ret_ptr.get()));
+    const int returned = *(reinterpret_cast<const int*>(ret_ptr.get()));
 
     std::cout << returned << " returned from server" << std::endl;
 
