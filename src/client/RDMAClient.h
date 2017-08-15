@@ -91,7 +91,7 @@ class RDMAClient : public BladeClient {
                     throw std::runtime_error("BUG");
                 result = std::make_shared<bool>();
                 result_available = std::make_shared<bool>(false);
-                op_sem = std::make_shared<cirrus::SpinLock>();
+                op_sem = std::make_shared<cirrus::PosixSemaphore>();
                 error_code = std::make_shared<cirrus::ErrorCodes>();
             }
 
