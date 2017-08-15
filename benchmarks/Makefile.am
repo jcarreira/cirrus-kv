@@ -58,7 +58,7 @@ cache_benchmark_SOURCES  = cache_benchmark.cpp
 cache_benchmark_LDFLAGS  = -pthread
 cache_benchmark_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 			   -I$(top_srcdir)/examples/sparsehash/src/ \
-			    -isystem $(top_srcdir)/third_party/libcuckoo/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
+			   -isystem $(top_srcdir)/third_party/libcuckoo/ -O3 -I$(top_srcdir)/third_party/flatbuffers/include
 cache_benchmark_LDADD    = $(LINCLUDES) $(LIBS)
 
 outstanding_requests_SOURCES  = outstanding_requests.cpp
