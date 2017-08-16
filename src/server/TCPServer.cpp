@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <string.h>
 #include <map>
 #include <vector>
 #include <thread>
@@ -300,10 +301,12 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     int64_t sent = 0;
 
     while (to_send != total_sent) {
-        sent = send(sock, data, len, 0);
+        sent = send(sock, data, len - total_sent, 0);
 
         if (sent == -1) {
-            throw cirrus::Exception("Server error sending data to client");
+            LOG<ERROR>("Server error sending data to client, "
+                "possible client died");
+            return -1;
         }
 
         total_sent += sent;
@@ -316,6 +319,32 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
 }
 
 /**
+ * Guarantees that an entire message is read.
+ * @param sock the fd of the socket to read on.
+ * @param data a pointer to the buffer to read into.
+ * @param len the number of bytes to read.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPServer::read_all(int sock, void* data, size_t len) {
+    uint64_t bytes_read = 0;
+
+    while (bytes_read < len) {
+        int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
+            len - bytes_read);
+
+        if (retval == -1) {
+            char *error = strerror(errno);
+            LOG<ERROR>(error);
+            throw cirrus::Exception("Error reading from client");
+        }
+
+        bytes_read += retval;
+    }
+
+    return bytes_read;
+}
+
+/**
   * Read header from client's message or return false if client has disconnected
   * @param buffer Buffer where data is stored
   * @param sock Socket used for communication
@@ -323,7 +352,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
   * @param Return false if client disconnected, true otherwise
   */
 bool TCPServer::read_from_client(
-        std::vector<char>& buffer, int sock, int& bytes_read) {
+        std::vector<char>& buffer, int sock, uint64_t& bytes_read) {
     bool first_loop = true;
     while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,
@@ -335,7 +364,6 @@ bool TCPServer::read_from_client(
             LOG<INFO>("Closing socket: ", sock);
             return false;
         }
-
         if (retval < 0) {
             throw cirrus::Exception("Server issue in reading "
                                     "socket during size read.");
@@ -348,11 +376,11 @@ bool TCPServer::read_from_client(
 }
 
 /**
-  * Process the message incoming on a particular socket. Reads in the message
-  * from the socket, extracts the flatbuffer, and then acts depending on
-  * the type of the message.
-  * @param sock the file descriptor for the socket with an incoming message.
-  */
+ * Process the message incoming on a particular socket. Reads in the message
+ * from the socket, extracts the flatbuffer, and then acts depending on
+ * the type of the message.
+ * @param sock the file descriptor for the socket with an incoming message.
+ */
 bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
     std::vector<char> buffer;
@@ -360,9 +388,9 @@ bool TCPServer::process(int sock) {
     // Read in the incoming message
 
     // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
+    uint64_t current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0;
+    uint64_t bytes_read = 0;
 
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
@@ -373,7 +401,7 @@ bool TCPServer::process(int sock) {
     // Convert to host byte order
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                             buffer.data());
-    int incoming_size = ntohl(*incoming_size_ptr);
+    uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
@@ -387,24 +415,13 @@ bool TCPServer::process(int sock) {
             resize_time.getUsElapsed());
 #endif
 
-    bytes_read = 0;
 
 #ifdef PERF_LOG
     TimerFunction receive_time;
 #endif
-    // XXX shouldn't this be in a recv_all?
-    while (bytes_read < incoming_size) {
-        int retval = read(sock, buffer.data() + bytes_read,
-                          incoming_size - bytes_read);
 
-        if (retval < 0) {
-            throw cirrus::Exception("Serverside error while "
-                                    "reading full message.");
-        }
+    read_all(sock, buffer.data(), incoming_size);
 
-        bytes_read += retval;
-        LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
-    }
 #ifdef PERF_LOG
     double recv_mbps = bytes_read / (1024.0 * 1024) /
         (receive_time.getUsElapsed() / 1000000.0);
@@ -595,7 +612,7 @@ bool TCPServer::process(int sock) {
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
-    if (send(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
+    if (send_all(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
         LOG<ERROR>("Server error sending message back to client. "
             "Possible client died");
         return false;

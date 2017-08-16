@@ -6,9 +6,8 @@ AUTOMAKE_OPTIONS = foreign
 
 SOURCES = TCPClient.cpp BladeClient.cpp
 
-LIBS    = -lcityhash -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
-	  -L../common/ -lcommon -L. \
-	  $(LIBRDMACM) $(LIBIBVERBS)
+LIBS    =  -lclient -L../utils/ -lutils -L../authentication/ -lauthentication \
+	   -L../common/ -lcommon -L. $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
 SOURCES += RDMAClient.cpp
