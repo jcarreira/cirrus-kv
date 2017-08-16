@@ -89,7 +89,7 @@ class SoftmaxModel : public Model {
       * @return 
       */
     std::unique_ptr<ModelGradient> loadGradient(void* mem) const override;
-     
+
     double checksum() const override;
 
  private:

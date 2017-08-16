@@ -57,7 +57,7 @@ class Dataset {
     const double* sample(uint64_t sample) const {
         return samples_.row(sample);
     }
-    
+
     const double* label(uint64_t label) const {
         return labels_.get() + label;
     }

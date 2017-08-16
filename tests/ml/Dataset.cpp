@@ -41,7 +41,8 @@ void Dataset::check_values() const {
     const double* l = labels_.get();
     for (uint64_t i = 0; i < samples(); ++i) {
         if (std::isnan(l[i]) || std::isinf(l[i])) {
-            throw std::runtime_error("Dataset::check_values nan/inf error in labels");
+            throw std::runtime_error(
+                    "Dataset::check_values nan/inf error in labels");
         }
     }
     samples_.check_values();

@@ -30,7 +30,7 @@
 #include "client/TCPClient.h"
 #include "common/Exception.h"
 
-#define INSTS (1000000) // 1 million
+#define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
 
 #define MODEL_GRAD_SIZE 10
@@ -43,7 +43,7 @@
 #define LABEL_BASE (3 * BILLION)
 uint64_t nworkers = 1;
 
-int features_per_sample = 10; 
+int features_per_sample = 10;
 int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
@@ -111,7 +111,7 @@ void run_ps_task(const Configuration& config) {
         << std::endl;
     // publish the model back to the store so workers can use it
     model_store.put(MODEL_BASE, model);
-    
+
     std::cout << "[PS] "
         << "PS getting model"
         << " with id: " << MODEL_BASE
@@ -133,19 +133,19 @@ void run_ps_task(const Configuration& config) {
         // if there is a new gradient, get it and update the model
         // once model is updated publish it
         for (uint32_t worker = 0; worker < nworkers; ++worker) {
-
             int gradient_id = GRADIENT_BASE + worker;
             std::cout << "[PS] "
                 << "PS task checking gradient id: "
                 << gradient_id << std::endl;
-            
+
             // get gradient from store
             LRGradient gradient(MODEL_GRAD_SIZE);
             try {
                 gradient = gradient_store.get(GRADIENT_BASE + gradient_id);
             } catch(const cirrus::NoSuchIDException& e) {
                 if (!first_time) {
-                    throw std::runtime_error("PS task not able to get a gradient");
+                    throw std::runtime_error(
+                            "PS task not able to get a gradient");
                 }
                 // this happens because the worker task
                 // has not uploaded the gradient yet
@@ -188,7 +188,6 @@ void run_ps_task(const Configuration& config) {
 }
 
 void run_compute_error_task(const Configuration& config) {
-
     std::cout << "Compute error task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
@@ -204,7 +203,7 @@ void run_compute_error_task(const Configuration& config) {
         samples_store(IP, PORT, &client,
                 c_array_serializer<double>(batch_size),
                 c_array_deserializer<double>(batch_size));
-    
+
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
@@ -224,7 +223,7 @@ void run_compute_error_task(const Configuration& config) {
                 << std::endl;
             LRModel model(MODEL_GRAD_SIZE);
             model = model_store.get(MODEL_BASE);
-            
+
             std::cout << "[ERROR_TASK] received the model with id: "
                 << MODEL_BASE
                 << " csum: " << model.checksum()
@@ -243,19 +242,22 @@ void run_compute_error_task(const Configuration& config) {
                     samples = samples_store.get(SAMPLE_BASE + i);
                     labels = labels_store.get(LABEL_BASE + i);
                 } catch(const cirrus::NoSuchIDException& e) {
-                    if (i == 0) goto continue_point; // no loss to be computed
-                    else goto compute_loss; // we looked at all minibatches
+                    if (i == 0)
+                        goto continue_point;  // no loss to be computed
+                    else
+                        goto compute_loss;  // we looked at all minibatches
                 }
 
-                std::cout << "[ERROR_TASK] received data and labels with id: " << i
+                std::cout << "[ERROR_TASK] received data and labels with id: "
+                    << i
                     << " with csmus: "
                     << checksum(samples, batch_size) << " "
                     << checksum(labels, samples_per_batch)
                     << std::endl;
-        
+
                 Dataset dataset(samples.get(), labels.get(),
                         samples_per_batch, features_per_sample);
-                
+
                 std::cout << "[ERROR_TASK] checking the dataset"
                         << std::endl;
 
@@ -269,8 +271,7 @@ void run_compute_error_task(const Configuration& config) {
             }
 
 compute_loss:
-            loss = loss / count; // compute average loss over all minibatches
-
+            loss = loss / count;  // compute average loss over all minibatches
         } catch(const cirrus::NoSuchIDException& e) {
             std::cout << "run_compute_error_task unknown id" << std::endl;
         }
@@ -283,7 +284,6 @@ continue_point:
 }
 
 void run_worker_task(const Configuration& config) {
-
     std::cout << "[WORKER] "
         << "Worker task connecting to store" << std::endl;
 
@@ -305,15 +305,17 @@ void run_worker_task(const Configuration& config) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
                 c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size, "worker samples_store"));
-    
+                c_array_deserializer<double>(batch_size,
+                    "worker samples_store"));
+
     // this is used to access the training labels
     // we configure this store to return shared_ptr that do not free memory
     // because these objects will be owned by the Dataset
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
                 c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch, "worker labels_store", false));
+                c_array_deserializer<double>(samples_per_batch,
+                    "worker labels_store", false));
 
     bool first_time = true;
 
@@ -334,7 +336,8 @@ void run_worker_task(const Configuration& config) {
             model = model_store.get(MODEL_BASE);
 
             std::cout << "[WORKER] "
-                << "Worker task received model csum: " << model.checksum() << std::endl
+                << "Worker task received model csum: " << model.checksum()
+                << std::endl
                 << "Worker task getting the training data with id: "
                 << (SAMPLE_BASE + samples_id)
                 << std::endl;
@@ -353,7 +356,6 @@ void run_worker_task(const Configuration& config) {
                 << samples_id
                 << " and checksum: " << checksum(labels, samples_per_batch)
                 << std::endl;
-
         } catch(const cirrus::NoSuchIDException& e) {
             if (!first_time) {
                 // wrap around
@@ -376,7 +378,8 @@ void run_worker_task(const Configuration& config) {
         std::cout << "[WORKER] "
             << "Building and printing dataset"
             << " with checksums: "
-            << checksum(samples, batch_size) << " " << checksum(labels, samples_per_batch)
+            << checksum(samples, batch_size) << " "
+            << checksum(labels, samples_per_batch)
             << std::endl;
 
         Dataset dataset(samples.get(), labels.get(),
@@ -404,7 +407,7 @@ void run_worker_task(const Configuration& config) {
             exit(-1);
         }
         gradient->setCount(count++);
-        
+
         std::cout << "[WORKER] "
             << "Checking and Printing gradient: "
             << std::endl;
@@ -451,7 +454,7 @@ void run_loading_task(const Configuration& config) {
     auto dataset = input.read_input_csv(
             config.get_input_path(),
             " ", 3,
-            config.get_limit_cols(), false); // data is already normalized
+            config.get_limit_cols(), false);  // data is already normalized
 
     dataset.check_values();
 #ifdef DEBUG
@@ -462,11 +465,13 @@ void run_loading_task(const Configuration& config) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client,
                 c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size, "loader samples_store"));
+                c_array_deserializer<double>(batch_size,
+                    "loader samples_store"));
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
                 c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch, "loader labels_store"));
+                c_array_deserializer<double>(samples_per_batch,
+                    "loader labels_store"));
 
     std::cout << "[LOADER] "
         << "Adding "
@@ -477,7 +482,6 @@ void run_loading_task(const Configuration& config) {
 
     // We put in batches of N samples
     for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
-        
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /** Build sample object
@@ -488,7 +492,7 @@ void run_loading_task(const Configuration& config) {
         // this memcpy can be avoided with some trickery
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
-        
+
         std::cout << "[LOADER] "
             << "Building labels batch" << std::endl;
         /**
@@ -508,7 +512,7 @@ void run_loading_task(const Configuration& config) {
                 << " samples with size: " << sizeof(double) * batch_size
                 << std::endl;
             samples_store.put(SAMPLE_BASE + i, sample);
-            //std::cout << "[LOADER] "
+            // std::cout << "[LOADER] "
             //    << "Putting label" << std::endl;
             labels_store.put(LABEL_BASE + i, label);
         } catch(...) {
@@ -523,7 +527,7 @@ void run_loading_task(const Configuration& config) {
         << std::endl;
 
     auto sample = samples_store.get(0);
-    
+
     std::cout << "[LOADER] "
         << "Got sample with id: " << 0
         << " checksum: " << checksum(sample, batch_size) << std::endl
@@ -546,7 +550,7 @@ void run_loading_task(const Configuration& config) {
 void run_tasks(int rank, const Configuration& config) {
     std::cout << "Run tasks rank: " << rank << std::endl;
     if (rank == 0) {
-        //run_memory_task(config_path);
+        // run_memory_task(config_path);
         sleep_forever();
     } else if (rank == 1) {
         sleep(8);
@@ -592,7 +596,6 @@ Configuration load_configuration(const std::string& config_path) {
 }
 
 int main(int argc, char** argv) {
-
     std::cout << "Starting parameter server" << std::endl;
 
     int rank, nprocs;
@@ -600,7 +603,7 @@ int main(int argc, char** argv) {
     init_mpi(argc, argv);
     int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    //check_mpi_error(err);
+    // check_mpi_error(err);
 
     if (argc != 2) {
         print_arguments();

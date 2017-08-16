@@ -82,15 +82,16 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         uint64_t labels_size,
         double epsilon) const {
     auto w = weights;
-
+#ifdef DEBUG
     dataset.check_values();
+#endif
 
     const double* dataset_data =
-        reinterpret_cast<const double*>(dataset.data.get()); 
+        reinterpret_cast<const double*>(dataset.data.get());
     // create Matrix for dataset
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
         Eigen::Dynamic, Eigen::RowMajor>>
-            ds(const_cast<double*>(dataset_data), dataset.rows(), dataset.cols());
+          ds(const_cast<double*>(dataset_data), dataset.rows(), dataset.cols());
 
     // create weight vector
     Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
@@ -117,8 +118,9 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
-    //std::cout << "checking return gradient" << std::endl;
+#ifdef DEBUG
     ret->check_values();
+#endif
 
     return ret;
 }
@@ -128,9 +130,11 @@ double LRModel::calc_loss(Dataset& dataset) const {
 
     auto w = weights;
 
-    dataset.check_values();
 #ifdef DEBUG
-    check_dataset(dataset); // make sure dataset is valid
+    dataset.check_values();
+#endif
+#ifdef DEBUG
+    check_dataset(dataset);  // make sure dataset is valid
 #endif
 
     const double* ds_data =
@@ -147,7 +151,8 @@ double LRModel::calc_loss(Dataset& dataset) const {
     uint64_t wrong_count = 0;
     for (uint64_t i = 0; i < dataset.samples(); ++i) {
         // get labeled class for the ith sample
-        double class_i = reinterpret_cast<const double*>(dataset.labels_.get())[i];
+        double class_i =
+            reinterpret_cast<const double*>(dataset.labels_.get())[i];
 
         assert(is_integer(class_i));
 
@@ -168,14 +173,15 @@ double LRModel::calc_loss(Dataset& dataset) const {
             mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights)) +
             (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
                         ds.row(i) * weights));
-        
+
         if (value > 0 && value < 1e-6)
             value = 0;
 
         if (value > 0) {
             std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
             std::cout << "weights: " << std::endl << weights << std::endl;
-            std::cout << "Class: " << class_i << " " << v1 << " " << v2 << std::endl;
+            std::cout << "Class: " << class_i << " " << v1 << " " << v2
+                << std::endl;
             throw std::runtime_error("Error: logistic loss is > 0");
         }
 

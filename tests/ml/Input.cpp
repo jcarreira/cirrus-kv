@@ -16,9 +16,9 @@
 #include <cassert>
 #include <memory>
 
-static const int REPORT_LINES = 1000000; // how often to report readin progress
-static const int REPORT_THREAD = 100000; // how often proc. threads report
-static const int STR_SIZE = 10000;       // max size for dataset line
+static const int REPORT_LINES = 1000000;  // how often to report readin progress
+static const int REPORT_THREAD = 100000;  // how often proc. threads report
+static const int STR_SIZE = 10000;        // max size for dataset line
 
 Dataset Input::read_input_criteo(const std::string& samples_input_file,
         const std::string& labels_input_file) {
@@ -241,10 +241,10 @@ Dataset Input::read_input_csv(const std::string& input_file,
     std::vector<std::string> lines;
     std::string line;
 
-    std::mutex input_mutex;  // mutex to protect queue of raw samples
-    std::mutex output_mutex; // mutex to protect queue of processed samples
-    bool terminate = false;  // indicates when worker threads should terminate
-    std::vector<std::thread*> threads; // vector of worker thread
+    std::mutex input_mutex;   // mutex to protect queue of raw samples
+    std::mutex output_mutex;  // mutex to protect queue of processed samples
+    bool terminate = false;   // indicates when worker threads should terminate
+    std::vector<std::thread*> threads;  // vector of worker thread
 
     for (uint64_t i = 0; i < nthreads; ++i) {
         threads.push_back(

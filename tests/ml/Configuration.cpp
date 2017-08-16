@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-    
+
 Configuration::Configuration() :
         learning_rate(-1),
         epsilon(-1)

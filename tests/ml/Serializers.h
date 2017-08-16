@@ -9,11 +9,10 @@
 template<typename T>
 class ml_array_deleter {
  public:
-    ml_array_deleter(const std::string& name) :
+    explicit ml_array_deleter(const std::string& name) :
         name(name) {}
 
     void operator()(T* p) {
-        //std::cout << "Deleting: " << name << std::endl;
         delete[] p;
     }
  private:
@@ -26,15 +25,11 @@ void ml_array_nodelete(T * p) {}
 template<typename T>
 class c_array_serializer{
  public:
-    c_array_serializer(int nslots, const std::string& name = "") :
+    explicit c_array_serializer(int nslots, const std::string& name = "") :
         numslots(nslots), name(name) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
-        //std::cout << "[ARRAYSER-" + name + "]"
-        //    << " c_array_serializer numslots: " << numslots
-        //    << std::endl;
-        
         T* array = v.get();
 
         // allocate array
@@ -48,7 +43,7 @@ class c_array_serializer{
  private:
     int numslots;
     std::string name;
-}; 
+};
 
 template<typename T>
 class c_array_deserializer{
@@ -56,20 +51,12 @@ class c_array_deserializer{
     c_array_deserializer(
             int nslots, const std::string& name = "", bool to_free = true) :
         numslots(nslots), name(name), to_free(to_free) {}
-    
+
     std::shared_ptr<T>
     operator()(void* data, unsigned int des_size) {
         unsigned int size = sizeof(T) * numslots;
-        
-        //std::cout << "[ARRAYDESER-" + name + "]"
-        //    << " c_array_deserializer des_size: " << des_size
-        //    << std::endl;
 
         if (des_size != size) {
-            //std::cout << "Error in deserializing."
-            //   << " Expecting size: " << size
-            //   << " got des_size: " << des_size
-            //   << std::endl;
             throw std::runtime_error(
                     "Wrong deserializer size at c_array_deserializer");
         }
@@ -81,7 +68,6 @@ class c_array_deserializer{
         if (to_free) {
             ret_ptr = std::shared_ptr<T>(new T[numslots],
                     ml_array_deleter<T>(name));
-            //std::default_delete<T[]>());
         } else {
             ret_ptr = std::shared_ptr<T>(new T[numslots],
                     ml_array_nodelete<T>);
@@ -103,7 +89,7 @@ class c_array_deserializer{
   */
 class lr_model_serializer {
  public:
-    lr_model_serializer(int n, const std::string& name = "") :
+    explicit lr_model_serializer(int n, const std::string& name = "") :
         n(n), name(name) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
@@ -112,13 +98,13 @@ class lr_model_serializer {
  private:
     int n;
     std::string name;
-}; 
+};
 
 class lr_model_deserializer {
  public:
-    lr_model_deserializer(uint64_t n, const std::string& name = "") :
+    explicit lr_model_deserializer(uint64_t n, const std::string& name = "") :
         n(n), name(name) {}
-    
+
     LRModel
     operator()(void* data, unsigned int des_size);
 
@@ -132,19 +118,19 @@ class lr_model_deserializer {
   */
 class lr_gradient_serializer {
  public:
-    lr_gradient_serializer(int n) : n(n) {}
+    explicit lr_gradient_serializer(int n) : n(n) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRGradient& g);
 
  private:
     int n;
-}; 
+};
 
 class lr_gradient_deserializer {
  public:
-    lr_gradient_deserializer(uint64_t n) : n(n) {}
-    
+    explicit lr_gradient_deserializer(uint64_t n) : n(n) {}
+
     LRGradient
     operator()(void* data, unsigned int des_size);
 
