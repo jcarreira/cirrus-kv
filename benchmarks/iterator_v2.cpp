@@ -59,6 +59,11 @@ uint64_t setup() {
             cirrus::string_deserializer_simple);
 
     std::ifstream file("benchmarks/complete-works-mark-twain.txt");
+
+    if (file.fail()) {
+        throw std::runtime_error("Error opening example text. Is it in the "
+            "benchmarks directory?");
+    }
     std::string str;
     std::string full_string;
     uint64_t i = 0;
