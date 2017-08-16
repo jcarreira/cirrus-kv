@@ -23,7 +23,7 @@ CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
 CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
-              Checksum.cpp SoftmaxModel.cpp
+              Checksum.cpp SoftmaxModel.cpp Serializers.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 two_clients_test_SOURCES  = two_clients_test.cpp
