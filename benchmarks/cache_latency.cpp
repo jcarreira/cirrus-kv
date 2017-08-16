@@ -43,9 +43,8 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
 }
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark has aims to find the latency when getting items from a
+  * cache of one million objects.
   */
 template <uint64_t SIZE>
 void test_get_latency(std::ofstream& outfile) {
@@ -98,8 +97,8 @@ auto main() -> int {
     test_get_latency<32>(outfile);
     test_get_latency<1024>(outfile);
     test_get_latency<4 * 1024>(outfile);
-    test_get_latency<32 * 1024>(outfile);
-    test_get_latency<1024 * 1024>(outfile);
+    // test_get_latency<32 * 1024>(outfile);
+    // test_get_latency<1024 * 1024>(outfile);
     outfile.close();
 
     return 0;

@@ -27,13 +27,12 @@ static const uint64_t KB = 1024;
 static const uint64_t MB = 1024 * KB;
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
-static const uint64_t MILLION = 1000;
+static const uint64_t MILLION = 1000000;
 static const uint64_t N_ITER = 1000;
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark aims to find the put bandwidth achieved when it keeps
+  * outstanding_target requests in flight.
   */
 template <uint64_t SIZE>
 void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
@@ -48,7 +47,7 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (uint64_t i = 0; i < N_ITER; ++i) {
+    for (uint64_t i = 0; i < 1; i++) {
         store.put(i, d);
     }
 
@@ -57,6 +56,7 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
     typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture
         futures[outstanding_target];
 
+    std::cout << "Starting loop" << std::endl;
     uint64_t count_completed = 0;
     cirrus::TimerFunction timer;
     for (uint64_t loop = 0; 1; loop++) {
@@ -73,7 +73,9 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
                 count_completed++;
             }
 
-            if (loop % MILLION == 0) {
+            if (loop % 100000 == 0 && i == 0) {
+                std::cout << loop << std::endl;
+                std::cout << "Checking progress" << std::endl;
                 if (timer.getSecElapsed() > SECS_BENCHMARK) {
                     goto end_benchmark;
                 }
@@ -85,7 +87,7 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
     double secs_elapsed = timer.getSecElapsed();
     double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
     outfile
-        << "Size (B): "
+        << "Put Size (B): "
         << std::left << std::setw(20) << std::setfill(' ')
         << SIZE
         << " # outstanding: "
@@ -98,9 +100,8 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
     }
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark aims to find the get bandwidth achieved when it keeps 
+  * outstanding_target requests in flight.
   */
 template <uint64_t SIZE>
 void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
@@ -115,7 +116,7 @@ void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (uint64_t i = 0; i < N_ITER; ++i) {
+    for (uint64_t i = 0; i < 1; ++i) {
         store.put(i, d);
     }
 
@@ -126,12 +127,12 @@ void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
 
     uint64_t count_completed = 0;
     cirrus::TimerFunction timer;
-    for (uint64_t loop = 0; 1; ++loop) {
+    for (uint64_t loop = 0; 1; loop++) {
         // an entry in the futures array is either:
         // 1. initialized by default (begin of execution)
         // 2. completed (try_wait returns true)
         // 3. outstanding (try_wait returns false)
-        for (unsigned int i = 0; i < outstanding_target; ++i) {
+        for (unsigned int i = 0; i < outstanding_target; i++) {
             if (!send[i]) {
                 send[i] = true;
                 futures[i] = store.get_async(0);
@@ -139,8 +140,8 @@ void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
                 futures[i] = store.get_async(0);
                 count_completed++;
             }
-
-            if (loop % MILLION == 0) {
+            if (loop % 100000 == 0 && i == 0) {
+                std::cout << loop << std::endl;
                 if (timer.getSecElapsed() > SECS_BENCHMARK) {
                     goto end_benchmark;
                 }
@@ -152,7 +153,7 @@ end_benchmark:
     double secs_elapsed = timer.getSecElapsed();
     double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
     outfile
-        << "Size (B): "
+        << "Get Size (B): "
         << std::left << std::setw(20) << std::setfill(' ')
         << SIZE
         << " # outstanding: "
@@ -175,14 +176,14 @@ auto main() -> int {
         test_put_bandwidth<32>(outs, outfile);
         test_put_bandwidth<1 * KB>(outs, outfile);
         test_put_bandwidth<4 * KB>(outs, outfile);
-        test_put_bandwidth<32 * KB>(outs, outfile);
-        test_put_bandwidth<1 * MB>(outs, outfile);
+        // test_put_bandwidth<32 * KB>(outs, outfile);
+        // test_put_bandwidth<1 * MB>(outs, outfile);
 
         test_get_bandwidth<32>(outs, outfile);
         test_get_bandwidth<1 * KB>(outs, outfile);
         test_get_bandwidth<4 * KB>(outs, outfile);
-        test_get_bandwidth<32 * KB>(outs, outfile);
-        test_get_bandwidth<1 * MB>(outs, outfile);
+        // test_get_bandwidth<32 * KB>(outs, outfile);
+        // test_get_bandwidth<1 * MB>(outs, outfile);
     }
 
     outfile.close();

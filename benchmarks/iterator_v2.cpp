@@ -32,7 +32,7 @@ static const uint64_t N_ITER = MILLION;
 
 
 /**
- * Does a sort of word count thing by splitting a string into words,
+ * Does a sort of word count by splitting a string into words,
  * then counting occurences of the words.
  */
 void process(const std::string& s, std::map<std::string, uint64_t> *counts) {
@@ -46,14 +46,13 @@ void process(const std::string& s, std::map<std::string, uint64_t> *counts) {
 
 /**
  * Reads in the full works of mark twain seven times and parses them into
- * std strings. Once these strings reach a certain size, it pushes them
+ * std strings (~110 MB). Once these strings reach 4kB, they are pushed
  * to the remote store.
  * @return The highest objectid placed on the server, beginning from 0.
  */
 uint64_t setup() {
     cirrus::TCPClient client;
 
-    // set up a new serializer just for strings
     cirrus::ostore::FullBladeObjectStoreTempl<std::string>
         store(IP, PORT, &client,
             cirrus::string_serializer_simple,
@@ -61,9 +60,14 @@ uint64_t setup() {
 
     std::ifstream file("benchmarks/complete-works-mark-twain.txt");
     std::string str;
+    std::string full_string;
     uint64_t i = 0;
     while (std::getline(file, str)) {
-        store.put(i++, str);
+        full_string.append(str);
+        if (full_string.size() >= 4 * 1024) {
+            store.put(i++, full_string);
+            full_string.clear();
+        }
     }
     file.close();
     return i - 1;
@@ -84,9 +88,10 @@ void print_stats(std::ostream& out, uint64_t elapsed_us, uint64_t msg_sent,
 }
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark iterates through each item in the store and counts
+  * the words in the strings it receives. It does not use a cirrus::Iterator
+  * @param outfile the ofstream to write to
+  * @param highest_id the highest continuous id in the remote store
   */
 void test_iteration_store(std::ofstream& outfile, uint64_t highest_id) {
     cirrus::TCPClient client;
@@ -114,9 +119,10 @@ void test_iteration_store(std::ofstream& outfile, uint64_t highest_id) {
 }
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark iterates through each item in the store and counts
+  * the words in the strings it receives. It makes use of a cirrus::Iterator
+  * @param outfile the ofstream to write to
+  * @param highest_id the highest continuous id in the remote store
   */
 void test_iteration_cache(std::ofstream& outfile, uint64_t highest_id) {
     cirrus::TCPClient client;
@@ -129,7 +135,7 @@ void test_iteration_cache(std::ofstream& outfile, uint64_t highest_id) {
     cirrus::CacheManager<std::string> cm(&store, &policy, 100);
 
     // Use iterator to retrieve
-    uint64_t read_ahead = 25;
+    uint64_t read_ahead = 10;
     cirrus::CirrusIterable<std::string> iter(&cm, read_ahead, 0, highest_id);
 
     std::cout << "Measuring msgs/s.." << std::endl;

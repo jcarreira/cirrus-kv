@@ -32,9 +32,9 @@ const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
 // Number of times items will be fetched from the store/ cache
-static const uint64_t N_ITER = 10000;
+static const uint64_t N_ITER = MILLION;
 // Number of items that exist
-static const uint64_t N_ITEMS = 1000;
+static const uint64_t N_ITEMS = 10000;
 
 void print_stats(std::ostream& out, uint64_t msg_sent, uint64_t elapsed_us,
     uint64_t size, bool is_cache) {
@@ -51,9 +51,9 @@ void print_stats(std::ostream& out, uint64_t msg_sent, uint64_t elapsed_us,
 }
 
 /**
-  * This benchmark has two aims
-  * 1. find the distribution of latencies for synchronous puts
-  * 2. measure the throughput in terms of messages sent / second
+  * This benchmark aims to find the bandwidth of the cache vs the store.
+  * It makes use of caching and a skewed random number generator to
+  * demonstrate the benefits of caching heavily used IDs.
   */
 void test_iops(std::ofstream& outfile) {
     cirrus::TCPClient client;
