@@ -80,7 +80,9 @@ void TCPServer::wait_to_process() {
             queue_lock.signal();
             if (process(to_process_fd)) {
                 // make positive once more
+                pollfds_lock.wait();
                 to_process.fd *= -1;
+                pollfds_lock.signal();
                 LOG<INFO>("Processing successful");
             } else {
                 LOG<INFO>("Processing failed on socket: ",
@@ -204,8 +206,12 @@ void TCPServer::loop() {
     socklen_t clilen = sizeof(cli_addr);
 
     while (1) {
+        // Obtain the lock to prevent modifications to the pollfd array while
+        // a call to poll is underway
+        pollfds_lock.wait();
         LOG<INFO>("Server calling poll.");
         int poll_status = poll(fds.data(), curr_index, 0);
+        pollfds_lock.signal();
         LOG<INFO>("Poll returned with status: ", poll_status);
 
         if (poll_status == -1) {
@@ -272,8 +278,7 @@ void TCPServer::loop() {
             queue_lock.wait();
 
             // wait till no threads are processing
-            while (waiting_threads != num_threads) {
-            }
+            while (waiting_threads != num_threads) {}
 
             // Try to purge unused fds, those with fd == -1
             std::remove_if(fds.begin(), fds.end(),

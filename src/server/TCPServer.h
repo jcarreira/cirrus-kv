@@ -59,6 +59,10 @@ class TCPServer : public Server {
     cirrus::SpinLock write_lock;
     /** Lock on the process_queue. */
     cirrus::SpinLock queue_lock;
+    /**
+     * Lock to prevent threads from modifying fds while poll call is underway.
+     */
+    cirrus::SpinLock pollfds_lock;
     /** Semaphore to notify processing threads of new data. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Queue of references to pollfds to process. */
