@@ -23,7 +23,7 @@ void LRGradient::loadSerialized(const void* mem) {
 }
 
 void LRGradient::serialize(void* mem) const {
-    std::cout << "LRGradient::serialize" << std::endl;
+    //std::cout << "LRGradient::serialize" << std::endl;
 
     *reinterpret_cast<uint32_t*>(mem) = count;
     mem = reinterpret_cast<void*>(
@@ -44,6 +44,14 @@ void LRGradient::print() const {
         std::cout << v << " ";
     }
     std::cout << std::endl;
+}
+
+void LRGradient::check_values() const {
+    for (const auto& w : weights) {
+        if (std::isnan(w) || std::isinf(w)) {
+            throw std::runtime_error("LRGradient::check_values error");
+        }
+    }
 }
 
 SoftmaxGradient::SoftmaxGradient(uint64_t nclasses, uint64_t d) {
@@ -91,3 +99,15 @@ void SoftmaxGradient::print() const {
     }
     std::cout << std::endl;
 }
+
+void SoftmaxGradient::check_values() const {
+
+    for (const auto &v : weights) {
+        for (const auto &vv : v) {
+            if (std::isnan(vv) || std::isinf(vv)) {
+                throw std::runtime_error("SoftmaxGradient::check_values error");
+            }
+        }
+    }
+}
+

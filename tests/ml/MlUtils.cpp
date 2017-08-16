@@ -8,9 +8,11 @@ namespace mlutils {
 
 double s_1(double x) {
     double res = 1.0 / (1.0 + exp(-x));
+    //std::cout << "s_1(" << x << ") = " << res << std::endl;
     if (std::isnan(res) || std::isinf(res)) {
-        throw std::runtime_error(std::string("s_1 generated nan/inf ")
-                + to_string(x));
+        throw std::runtime_error(
+                std::string("s_1 generated nan/inf x: " + std::to_string(x)
+                    + " res: " + std::to_string(res)));
     }
 
     return res;
