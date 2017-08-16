@@ -117,6 +117,23 @@ T deserializer_simple(void* data, unsigned int /* size */) {
     return ret;
 }
 
+
+/* This function simply copies an object into a new portion of memory. */
+std::pair<std::unique_ptr<char[]>, unsigned int>
+                         string_serializer_simple(const std::string& v) {
+    auto length = v.size() + 1;
+    std::unique_ptr<char[]> ptr(new char[length]);
+    std::memcpy(ptr.get(), v.c_str(), length);
+    return std::make_pair(std::move(ptr), length);
+}
+
+/* Takes a pointer to raw mem passed in and returns as object. */
+std::string string_deserializer_simple(void* data, unsigned int /* size */) {
+    char *ptr = reinterpret_cast<char*>(data);
+    std::string ret(ptr);
+    return ret;
+}
+
 namespace test_internal {
 /**
  * Given a boolean indicating whether or not to return an RDMA client, returns
