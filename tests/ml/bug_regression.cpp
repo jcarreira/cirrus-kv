@@ -16,7 +16,7 @@
 #include "client/TCPClient.h"
 #include "common/Exception.h"
 
-#define INSTS (1000000) // 1 million
+#define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
 
 #define MODEL_GRAD_SIZE 10
@@ -25,14 +25,14 @@
 #define LABEL_BASE 3000
 uint64_t nworkers = 1;
 
-int features_per_sample = 10; 
-int samples_per_batch =100;
+int features_per_sample = 10;
+int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
 template<typename T>
 class c_array_serializer{
-public:
-    c_array_serializer(int nslots) : numslots(nslots) {}
+ public:
+    explicit c_array_serializer(int nslots) : numslots(nslots) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const std::shared_ptr<T>& v) {
@@ -48,15 +48,15 @@ public:
         return std::make_pair(std::move(ptr), array_size);
     }
 
-private:
+ private:
     int numslots;
-}; 
+};
 
 template<typename T>
 class c_array_deserializer{
-public:
-    c_array_deserializer(int nslots) : numslots(nslots) {}
-    
+ public:
+    explicit c_array_deserializer(int nslots) : numslots(nslots) {}
+
     std::shared_ptr<T>
     operator()(void* data, unsigned int input_size) {
         unsigned int size = sizeof(T) * numslots;
@@ -64,25 +64,25 @@ public:
         // cast the pointer
         T* ptr = reinterpret_cast<T*>(data);
         char* alloc = new char[size];
-        memset(alloc, 0, size); 
+        memset(alloc, 0, size);
 
-        //auto ret_ptr = std::shared_ptr<T>(new T[numslots],
-        //        std::default_delete< T[]>());
-
-        //std::memcpy(ret_ptr.get(), ptr, size);
-        std::cout << "Deserializing from address: "
-            << ptr
-            << " to addr: " << ((void*)alloc)
-            << " with size: " << size
-            << " informed with size: " << input_size
-            << std::endl;
-        std::memcpy(alloc, ptr, size);
-        return std::shared_ptr<T>(reinterpret_cast<T*>(alloc),
+        auto ret_ptr = std::shared_ptr<T>(new T[numslots],
                 std::default_delete< T[]>());
-        //return ret_ptr;
+
+        std::memcpy(ret_ptr.get(), ptr, size);
+        // std::cout << "Deserializing from address: "
+        //     << ptr
+        //     << " to addr: " << ((void*)alloc)
+        //     << " with size: " << size
+        //     << " informed with size: " << input_size
+        //     << std::endl;
+        // std::memcpy(alloc, ptr, size);
+        // return std::shared_ptr<T>(reinterpret_cast<T*>(alloc),
+        //         std::default_delete< T[]>());
+        return ret_ptr;
     }
 
-private:
+ private:
     int numslots;
 };
 
@@ -143,7 +143,7 @@ void run_loading_task(const Configuration& config) {
         << dataset.samples()
         << " samples "
         << std::endl;
- 
+
     std::cout << "[LOADER] "
         << "Adding "
         << dataset.samples()
@@ -153,7 +153,7 @@ void run_loading_task(const Configuration& config) {
 
     // We put in batches of N samples
     for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
-        
+
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /**
@@ -165,7 +165,7 @@ void run_loading_task(const Configuration& config) {
         // this memcpy can be avoided with some trickery
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
-        
+
         std::cout << "[LOADER] "
             << "Building labels batch" << std::endl;
         /**
@@ -240,7 +240,6 @@ Configuration load_configuration(const std::string& config_path) {
   * ./system --run --task=1
   */ 
 int main(int argc, char** argv) {
-
     std::cout << "Starting parameter server" << std::endl;
 
     int rank, nprocs;

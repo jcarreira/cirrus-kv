@@ -37,7 +37,7 @@ class ModelGradient {
      virtual uint64_t setCount(uint64_t c) {
          count = c;
      }
-     
+
      /**
        * Get version of gradient
        */
@@ -48,7 +48,6 @@ class ModelGradient {
      virtual void check_values() const = 0;
 
  protected:
-
      uint64_t count;
 };
 
@@ -63,7 +62,7 @@ class LRGradient : public ModelGradient {
     uint64_t getSerializedSize() const override;
 
     void print() const override;
-    virtual void check_values() const override;
+    void check_values() const override;
  protected:
     std::vector<double> weights;  //< gradients of the LR gradient
 };

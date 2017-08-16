@@ -8,8 +8,6 @@ lr_model_serializer::operator()(const LRModel& v) {
 
 LRModel
 lr_model_deserializer::operator()(void* data, unsigned int des_size) {
-    //std::cout << "[DESER-" + name + "]"
-    //    << " lr_model_deserializer des_size: " << des_size << std::endl;
     LRModel model(n);
     if (des_size != model.getSerializedSize()) {
         throw std::runtime_error(
@@ -22,10 +20,6 @@ lr_model_deserializer::operator()(void* data, unsigned int des_size) {
 
 std::pair<std::unique_ptr<char[]>, unsigned int>
 lr_gradient_serializer::operator()(const LRGradient& g) {
-    //std::cout << "[SER]"
-    //    << " LRGradient serializer writing size: "
-    //    << g.getSerializedSize()
-    //    << std::endl;
     std::unique_ptr<char[]> mem(new char[g.getSerializedSize()]);
     g.serialize(mem.get());
 
@@ -34,10 +28,6 @@ lr_gradient_serializer::operator()(const LRGradient& g) {
 
 LRGradient
 lr_gradient_deserializer::operator()(void* data, unsigned int des_size) {
-    //std::cout << "[SER]"
-    //    << " LRGradient deserializing n: " << n
-    //    << " size: " << des_size
-    //    << std::endl;
     LRGradient gradient(n);
     if (des_size != gradient.getSerializedSize()) {
         throw std::runtime_error(

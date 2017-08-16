@@ -24,7 +24,7 @@ Matrix::Matrix(std::vector<std::vector<double>> m) :
     data.reset(const_cast<const double*>(new_array),
             std::default_delete<const double[]>());
 }
-    
+
 Matrix::Matrix(const double* d, uint64_t rows, uint64_t cols) {
     r = rows;
     c = cols;
@@ -44,7 +44,7 @@ Matrix Matrix::T() const {
     if (cached_data.get()) {
         return *cached_data;
     }
-    
+
     const double* data_start = reinterpret_cast<const double*>(data.get());
 
     double* res = new double[rows() * cols()];

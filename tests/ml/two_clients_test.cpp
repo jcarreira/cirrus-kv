@@ -47,7 +47,6 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.87";
 
 void run_task_2() {
-
     std::cout << "Worker task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
@@ -66,7 +65,6 @@ void run_task_2() {
 }
 
 void run_task_1() {
-
     std::cout << "Worker task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
@@ -129,7 +127,6 @@ void init_mpi(int argc, char**argv) {
   * ./system --run --task=1
   */ 
 int main(int argc, char** argv) {
-
     std::cout << "Starting parameter server" << std::endl;
 
     int rank, nprocs;
@@ -137,7 +134,7 @@ int main(int argc, char** argv) {
     init_mpi(argc, argv);
     int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    //check_mpi_error(err);
+    // check_mpi_error(err);
 
     char name[200];
     gethostname(name, 200);
