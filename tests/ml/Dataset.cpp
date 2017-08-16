@@ -8,6 +8,7 @@
 #include <Dataset.h>
 #include <algorithm>
 #include <Utils.h>
+#include <Checksum.h>
 
 Dataset::Dataset() {
 }
@@ -34,5 +35,23 @@ uint64_t Dataset::features() const {
 
 uint64_t Dataset::samples() const {
     return samples_.rows();
+}
+
+void Dataset::check_values() const {
+    const double* l = labels_.get();
+    for (uint64_t i = 0; i < samples(); ++i) {
+        if (std::isnan(l[i]) || std::isinf(l[i])) {
+            throw std::runtime_error("Dataset::check_values nan/inf error in labels");
+        }
+    }
+    samples_.check_values();
+}
+
+double Dataset::checksum() const {
+    return crc32(labels_.get(), samples()) + samples_.checksum();
+}
+
+void Dataset::print() const {
+    samples_.print();
 }
 

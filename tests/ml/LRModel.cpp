@@ -2,7 +2,8 @@
 #include <Utils.h>
 #include <MlUtils.h>
 #include <Eigen/Dense>
-#include "utils/Log.h"
+#include <utils/Log.h>
+#include <Checksum.h>
 
 LRModel::LRModel(uint64_t d) :
     d(d) {
@@ -20,6 +21,17 @@ std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
     std::unique_ptr<LRModel> model = std::make_unique<LRModel>(
             reinterpret_cast<double*>(data), d);
     return model;
+}
+
+void check_dataset(Dataset& dataset) {
+    for (uint64_t i = 0; i < dataset.samples(); ++i) {
+        for (uint64_t j = 0; j < dataset.features(); ++j) {
+            const double* s = dataset.sample(i);
+            if (std::isnan(s[j]) || std::isinf(s[j])) {
+                throw std::runtime_error("Invalid dataset");
+            }
+        }
+    }
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
@@ -71,12 +83,14 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         double epsilon) const {
     auto w = weights;
 
+    dataset.check_values();
+
     const double* dataset_data =
         reinterpret_cast<const double*>(dataset.data.get()); 
     // create Matrix for dataset
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
-                             Eigen::Dynamic, Eigen::RowMajor>>
-        ds(const_cast<double*>(dataset_data), dataset.rows(), dataset.cols());
+        Eigen::Dynamic, Eigen::RowMajor>>
+            ds(const_cast<double*>(dataset_data), dataset.rows(), dataset.cols());
 
     // create weight vector
     Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
@@ -101,7 +115,12 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     vec_res.resize(res.size());
     Eigen::VectorXd::Map(&vec_res[0], res.size()) = res;
 
-    return std::make_unique<LRGradient>(vec_res);
+    std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
+
+    //std::cout << "checking return gradient" << std::endl;
+    ret->check_values();
+
+    return ret;
 }
 
 double LRModel::calc_loss(Dataset& dataset) const {
@@ -109,13 +128,18 @@ double LRModel::calc_loss(Dataset& dataset) const {
 
     auto w = weights;
 
+    dataset.check_values();
+#ifdef DEBUG
+    check_dataset(dataset); // make sure dataset is valid
+#endif
+
     const double* ds_data =
         reinterpret_cast<const double*>(dataset.samples_.data.get());
 
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
-                             Eigen::Dynamic, Eigen::RowMajor>>
-        ds(const_cast<double*>(ds_data),
-                dataset.samples_.rows(), dataset.samples_.cols());
+        Eigen::Dynamic, Eigen::RowMajor>>
+            ds(const_cast<double*>(ds_data),
+                    dataset.samples_.rows(), dataset.samples_.cols());
 
     Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
 
@@ -128,10 +152,14 @@ double LRModel::calc_loss(Dataset& dataset) const {
         assert(is_integer(class_i));
 
         int predicted_class = 0;
-        if (mlutils::s_1(ds.row(i) *  weights) > 0.5)
+
+        auto r1 = ds.row(i) *  weights;
+        if (mlutils::s_1(r1) > 0.5) {
             predicted_class = 1;
-        if (predicted_class != class_i)
+        }
+        if (predicted_class != class_i) {
             wrong_count++;
+        }
 
         double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights));
         double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights));
@@ -187,11 +215,7 @@ bool LRModel::is_integer(double n) const {
 }
 
 double LRModel::checksum() const {
-    double sum = 0;
-    for (const auto& w : weights) {
-        sum += w;
-    }
-    return sum;
+    return crc32(weights.data(), weights.size() * sizeof(double));
 }
 
 void LRModel::print() const {

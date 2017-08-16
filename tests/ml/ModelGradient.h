@@ -45,6 +45,8 @@ class ModelGradient {
          return count;
      }
 
+     virtual void check_values() const = 0;
+
  protected:
 
      uint64_t count;
@@ -61,6 +63,7 @@ class LRGradient : public ModelGradient {
     uint64_t getSerializedSize() const override;
 
     void print() const override;
+    virtual void check_values() const override;
  protected:
     std::vector<double> weights;  //< gradients of the LR gradient
 };
@@ -77,6 +80,7 @@ class SoftmaxGradient : public ModelGradient {
     uint64_t getSerializedSize() const override;
 
     void print() const override;
+    virtual void check_values() const override;
  protected:
     // [D * K]
     std::vector<std::vector<double>> weights;  //< weights for softmax gradient

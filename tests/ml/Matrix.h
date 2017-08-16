@@ -56,6 +56,12 @@ class Matrix {
       */
     uint64_t sizeBytes() const;
 
+    void check_values() const;
+
+    double checksum() const;
+
+    void print() const;
+
  public:
     uint64_t r;  //< number of rows of matrix
     uint64_t c;  //< number of columns of matrix

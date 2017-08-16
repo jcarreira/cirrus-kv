@@ -62,6 +62,12 @@ class Dataset {
         return labels_.get() + label;
     }
 
+    void check_values() const;
+
+    double checksum() const;
+
+    void print() const;
+
  public:
     Matrix samples_;  //< dataset in matrix format
     std::shared_ptr<const double> labels_;  //< vector of labels
