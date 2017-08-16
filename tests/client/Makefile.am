@@ -17,9 +17,9 @@ bin_PROGRAMS += rdmaclientmain
 endif
 
 CPPFLAGS = -ggdb -I$(top_srcdir) $(DEFINE_LOG) \
-						  -I$(top_srcdir)/third_party/flatbuffers/include \
-						  -I$(top_srcdir)/src \
-						  -isystem $(top_srcdir)/third_party/libcuckoo/
+	   -I$(top_srcdir)/third_party/flatbuffers/include \
+	   -I$(top_srcdir)/src \
+	   -isystem $(top_srcdir)/third_party/libcuckoo/
 LDFLAGS = -pthread
 
 LDADD = $(LIBS) $(LINCLUDES)
