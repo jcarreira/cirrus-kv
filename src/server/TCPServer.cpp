@@ -394,7 +394,7 @@ bool TCPServer::read_from_client(
  * Process the message incoming on a particular socket. Reads in the message
  * from the socket, extracts the flatbuffer, and then acts depending on
  * the type of the message.
- * @param sock the file descriptor for the socket with an incoming message.
+ * @param sock the file descriptor of a socket with an incoming message.
  */
 bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
@@ -475,6 +475,11 @@ bool TCPServer::process(int sock) {
     return send_ack(&builder, sock);
 }
 
+/**
+ * Sends an ack message to the client.
+ * @param builder a pointer to a FlatBufferBuilder that contains the ack.
+ * @param sock the socket to send on.
+ */
 bool TCPServer::send_ack(flatbuffers::FlatBufferBuilder *builder, int sock) {
     int message_size = builder->GetSize();
     // Convert size to network order and send
@@ -509,6 +514,11 @@ bool TCPServer::send_ack(flatbuffers::FlatBufferBuilder *builder, int sock) {
     return true;
 }
 
+/**
+ * Processes a write request.
+ * @param builder a pointer to a FlatBufferBuilder that will hold the write Ack
+ * @param msg a pointer to a TCPBladeMessage that contains the write request.
+ */
 void TCPServer::process_write(flatbuffers::FlatBufferBuilder *builder,
     const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
 #ifdef PERF_LOG
@@ -593,7 +603,11 @@ void TCPServer::process_write(flatbuffers::FlatBufferBuilder *builder,
 #endif
 }
 
-
+/**
+ * Processes a read request.
+ * @param builder a pointer to a FlatBufferBuilder that will hold the read Ack
+ * @param msg a pointer to a TCPBladeMessage that contains the read request.
+ */
 void TCPServer::process_read(flatbuffers::FlatBufferBuilder *builder,
     const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
 #ifdef PERF_LOG
@@ -650,6 +664,11 @@ void TCPServer::process_read(flatbuffers::FlatBufferBuilder *builder,
 #endif
 }
 
+/**
+ * Processes a remove request.
+ * @param builder a pointer to a FlatBufferBuilder that will hold the remove Ack
+ * @param msg a pointer to a TCPBladeMessage that contains the remove request.
+ */
 void TCPServer::process_remove(flatbuffers::FlatBufferBuilder *builder,
     const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
         ObjectID oid = msg->message_as_Remove()->oid();
