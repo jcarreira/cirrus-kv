@@ -31,12 +31,58 @@ static const uint64_t MILLION = 1000000;
 static const uint64_t N_ITER = 1000;
 
 /**
+ * This function is run by the threads in the put benchmark.
+ */
+template <uint64_t SIZE>
+void test_put_function(
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> *store,
+    int *total, bool *begin_test) {
+    struct cirrus::Dummy<SIZE> d(42);
+    // wait until signalled to begin
+    while (!(*begin_test)) {}
+    cirrus::TimerFunction timer;
+    for (int loop = 0; 1; loop++) {
+        // TODO(Tyler): Set this to put at different IDs once
+        // server parallelism is merged
+        store->put(0, d);
+        if (loop % 1000 == 0 && timer.getSecElapsed() > SECS_BENCHMARK) {
+            *total = loop;
+            return;
+        }
+    }
+}
+
+/**
+ * This function is run by the threads in the get benchmark.
+ */
+template <uint64_t SIZE>
+void test_get_function(
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> *store,
+    int *total, bool *begin_test) {
+    // wait until signalled to begin
+    while (!(*begin_test)) {}
+
+    cirrus::TimerFunction timer;
+    for (int loop = 0; 1; loop++) {
+        // TODO(Tyler): Set this to put at different IDs once
+        // server parallelism is merged
+        store->get(0);
+        if (loop % 1000 == 0 && timer.getSecElapsed() > SECS_BENCHMARK) {
+            *total = loop;
+            return;
+        }
+    }
+}
+
+/**
   * This benchmark aims to find the put bandwidth achieved when it keeps
   * outstanding_target requests in flight.
   */
 template <uint64_t SIZE>
 void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
     cirrus::TCPClient client;
+    // TODO(Tyler): Open additional connections from client once
+    // TCP Server parallelism is merged.
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
@@ -51,40 +97,30 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
         store.put(i, d);
     }
 
-    // we have space for outstanding_target futures
-    bool send[outstanding_target] = {0};
-    typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture
-        futures[outstanding_target];
+    bool begin_test = false;
+    std::vector<std::thread*> threads(outstanding_target);
+    std::vector<int> totals(outstanding_target);
 
-    std::cout << "Starting loop" << std::endl;
-    uint64_t count_completed = 0;
-    cirrus::TimerFunction timer;
-    for (uint64_t loop = 0; 1; loop++) {
-        // an entry in the futures array is either:
-        // 1. initialized by default (begin of execution)
-        // 2. completed (try_wait returns true)
-        // 3. outstanding (try_wait returns false)
-        for (unsigned int i = 0; i < outstanding_target; i++) {
-            if (!send[i]) {
-                send[i] = true;
-                futures[i] = store.put_async(0, d);
-            } else if (futures[i].try_wait()) {
-                futures[i] = store.put_async(0, d);
-                count_completed++;
-            }
-
-            if (loop % 100000 == 0 && i == 0) {
-                std::cout << loop << std::endl;
-                std::cout << "Checking progress" << std::endl;
-                if (timer.getSecElapsed() > SECS_BENCHMARK) {
-                    goto end_benchmark;
-                }
-            }
-        }
+    // launch the threads
+    for (unsigned int i = 0; i < outstanding_target; i++) {
+        threads[i] = new std::thread(test_put_function<SIZE>, &store,
+            &(totals[i]),
+            &begin_test);
     }
-    end_benchmark:
-    double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
+
+    cirrus::TimerFunction timer;
+    begin_test = true;
+    for (unsigned int i = 0; i < outstanding_target; ++i)
+        threads[i]->join();
+
     double secs_elapsed = timer.getSecElapsed();
+
+    int count_completed = 0;
+    for (auto& val : totals) {
+        count_completed += val;
+    }
+
+    double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
     double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
     outfile
         << "Put Size (B): "
@@ -97,15 +133,17 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
         << std::left << std::setw(20) << std::setfill(' ')
         << bw_MB
         << std::endl;
-    }
+}
 
 /**
-  * This benchmark aims to find the get bandwidth achieved when it keeps 
+  * This benchmark aims to find the get bandwidth achieved when it keeps
   * outstanding_target requests in flight.
   */
 template <uint64_t SIZE>
 void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
     cirrus::TCPClient client;
+    // TODO(Tyler): Open additional connections from client once
+    // TCP Server parallelism is merged.
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
             cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
@@ -116,44 +154,35 @@ void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
 
     // warm up
     std::cout << "Warming up" << std::endl;
-    for (uint64_t i = 0; i < 1; ++i) {
+    for (uint64_t i = 0; i < 1; i++) {
         store.put(i, d);
     }
 
-    // we have space for outstanding_target futures
-    bool send[outstanding_target] = {0};
-    typename cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStoreGetFuture
-        futures[outstanding_target];
-
-    uint64_t count_completed = 0;
-    cirrus::TimerFunction timer;
-    for (uint64_t loop = 0; 1; loop++) {
-        // an entry in the futures array is either:
-        // 1. initialized by default (begin of execution)
-        // 2. completed (try_wait returns true)
-        // 3. outstanding (try_wait returns false)
-        for (unsigned int i = 0; i < outstanding_target; i++) {
-            if (!send[i]) {
-                send[i] = true;
-                futures[i] = store.get_async(0);
-            } else if (futures[i].try_wait()) {
-                futures[i] = store.get_async(0);
-                count_completed++;
-            }
-            if (loop % 100000 == 0 && i == 0) {
-                std::cout << loop << std::endl;
-                if (timer.getSecElapsed() > SECS_BENCHMARK) {
-                    goto end_benchmark;
-                }
-            }
-        }
+    bool begin_test = false;
+    std::vector<std::thread*> threads(outstanding_target);
+    std::vector<int> totals(outstanding_target);
+    for (unsigned int i = 0; i < outstanding_target; i++) {
+        threads[i] = new std::thread(test_get_function<SIZE>, &store,
+            &(totals[i]),
+            &begin_test);
     }
-end_benchmark:
-    double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
+
+    cirrus::TimerFunction timer;
+    begin_test = true;
+    for (unsigned int i = 0; i < outstanding_target; ++i)
+        threads[i]->join();
+
     double secs_elapsed = timer.getSecElapsed();
+
+    int count_completed = 0;
+    for (auto& val : totals) {
+        count_completed += val;
+    }
+
+    double size_completed_MB = 1.0 * count_completed * SIZE / 1024 / 1024;
     double bw_MB = 1.0 * size_completed_MB / secs_elapsed;
     outfile
-        << "Get Size (B): "
+        << "Put Size (B): "
         << std::left << std::setw(20) << std::setfill(' ')
         << SIZE
         << " # outstanding: "
