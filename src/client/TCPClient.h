@@ -1,9 +1,11 @@
 #ifndef SRC_CLIENT_TCPCLIENT_H_
 #define SRC_CLIENT_TCPCLIENT_H_
 
+#include <poll.h>
 #include <string>
 #include <thread>
 #include <queue>
+#include <vector>
 #include <utility>
 #include <map>
 #include <atomic>
@@ -34,6 +36,8 @@ class TCPClient : public BladeClient {
     ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
+
+    void open_additional_cxns(uint64_t num_additional);
 
  private:
     /**
@@ -76,9 +80,11 @@ class TCPClient : public BladeClient {
                         const int txn_id);
     void process_received();
     void process_send();
+    void process_message(int sock);
 
-    /** fd of the socket used to communicate w/ remote store */
-    int sock = 0;
+    /** vector of sockets used to communicate w/ remote store */
+    std::vector<int> sockets;
+
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
     std::atomic<std::uint64_t> curr_txn_id = {0};
 
@@ -97,6 +103,25 @@ class TCPClient : public BladeClient {
      */
     std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
+    std::vector<struct pollfd> pollfds;
+
+    /**
+     * How long the client will wait during a call to poll() before
+     * timing out (in ms).
+     */
+    int timeout = 60 * 1000 * 3;
+
+    /**
+     * Lock to prevent threads from modifying fds while poll call is underway.
+     */
+    cirrus::SpinLock pollfds_lock;
+
+    /**
+     * Lock to prevent threads from accessing sockets vector while it is
+     * being modified.
+     */
+    cirrus::SpinLock sockets_lock;
+
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
@@ -107,6 +132,11 @@ class TCPClient : public BladeClient {
     std::thread* receiver_thread;
     /** Thread that runs the sending loop. */
     std::thread* sender_thread;
+
+    /** The port that the remote store is listening on. */
+    std::string port_string_;
+    /** The IP address of the remote store. */
+    std::string address_;
 
     /**
      * Bool that the process_send and process_received threads check.
