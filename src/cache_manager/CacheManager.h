@@ -1,7 +1,7 @@
 #ifndef SRC_CACHE_MANAGER_CACHEMANAGER_H_
 #define SRC_CACHE_MANAGER_CACHEMANAGER_H_
 
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <functional>
 #include <algorithm>
@@ -158,7 +158,7 @@ class CacheManager {
      * The map that serves as the actual cache. Maps ObjectIDs to cache
      * entries.
      */
-    std::map<ObjectID, struct cache_entry> cache;
+    std::unordered_map<ObjectID, struct cache_entry> cache;
 
     /**
      * The maximum capacity of the cache. Will never be exceeded. Set
