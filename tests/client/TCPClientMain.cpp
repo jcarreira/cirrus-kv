@@ -20,7 +20,6 @@ void test_sync() {
     client.write_sync(1, &message, sizeof(int));
     std::cout << "write sync complete" << std::endl;
 
-    int returned;
     auto ptr_pair = client.read_sync(1);
     const int *int_ptr = reinterpret_cast<const int*>(ptr_pair.first.get());
     std::cout << *int_ptr << " returned from server" << std::endl;

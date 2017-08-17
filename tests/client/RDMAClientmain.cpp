@@ -171,7 +171,6 @@ void test_async_N() {
         }
     }
     std::cout << "BEGINNING READS" << std::endl;
-    int ret_values[10];
     for (i = 0; i < N; i++) {
         auto pair = client.read_sync(i);
         const int val = *(reinterpret_cast<const int*>(pair.first.get()));

@@ -97,6 +97,8 @@ class TCPClient : public BladeClient {
     };
 
     ssize_t send_all(int, const void*, size_t, int);
+    ssize_t read_all(int sock, void* data, size_t len);
+
     ClientFuture enqueue_message(
                         std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
                         const int txn_id);
