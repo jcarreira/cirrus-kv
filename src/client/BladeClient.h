@@ -24,7 +24,7 @@ class BladeClient {
                std::shared_ptr<bool> result_available,
                std::shared_ptr<cirrus::Lock> sem,
                std::shared_ptr<cirrus::ErrorCodes> error_code,
-               std::shared_ptr<std::shared_ptr<char>> data_ptr,
+               std::shared_ptr<std::shared_ptr<const char>> data_ptr,
                std::shared_ptr<uint64_t> data_size);
         ClientFuture() {}
         void wait();
@@ -33,7 +33,7 @@ class BladeClient {
 
         bool get();
 
-        std::pair<std::shared_ptr<char>, unsigned int> getDataPair();
+        std::pair<std::shared_ptr<const char>, unsigned int> getDataPair();
 
      private:
          /** Pointer to the result. */
@@ -45,7 +45,7 @@ class BladeClient {
           /** Any errors thrown. */
          std::shared_ptr<cirrus::ErrorCodes> error_code;
          /** Pointer to a pointer to any mem for a read, if any. */
-         std::shared_ptr<std::shared_ptr<char>> data_ptr;
+         std::shared_ptr<std::shared_ptr<const char>> data_ptr;
          /** Size of the memory block for a read. */
          std::shared_ptr<uint64_t> data_size;
     };
@@ -57,7 +57,7 @@ class BladeClient {
 
     virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
 
-    virtual std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+    virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID id) = 0;
 
     virtual bool remove(ObjectID id) = 0;
