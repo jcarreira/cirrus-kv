@@ -189,7 +189,7 @@ void TCPServer::init() {
  * @return True if the struct should be removed. This is true if the fd is -1,
  * meaning that it is being ignored.
  */
-bool TCPServer::testRemove(struct pollfd x) {
+bool TCPServer::testRemove(const struct pollfd& x) {
     // If this pollfd will be removed, the index of the next location to insert
     // should be reduced by one correspondingly.
     if (x.fd == -1) {
@@ -202,9 +202,6 @@ bool TCPServer::testRemove(struct pollfd x) {
   * new connections and acting on messages received.
   */
 void TCPServer::loop() {
-    struct sockaddr_in cli_addr;
-    socklen_t clilen = sizeof(cli_addr);
-
     while (1) {
         // Obtain the lock to prevent modifications to the pollfd array while
         // a call to poll is underway
@@ -233,30 +230,13 @@ void TCPServer::loop() {
                         LOG<INFO>("Connection was closed by client");
                         LOG<INFO>("Closing socket: ", curr_fd.fd);
                         close(curr_fd.fd);
+                        // Mark as unused
                         curr_fd.fd = -1;
                     }
 
                 } else if (curr_fd.fd == server_sock_) {
                     LOG<INFO>("New connection incoming");
-
-                    // New data on main socket, accept and connect
-                    // TODO(Tyler): loop this to accept multiple at once?
-                    // TODO(Tyler): Switch to non blocking sockets?
-                    int newsock = accept(server_sock_,
-                            reinterpret_cast<struct sockaddr*>(&cli_addr),
-                            &clilen);
-                    if (newsock < 0) {
-                        throw std::runtime_error("Error accepting socket");
-                    }
-                    // If at capacity, reject connection
-                    if (curr_index == max_fds) {
-                        close(newsock);
-                    } else {
-                        LOG<INFO>("Created new socket: ", newsock);
-                        fds.at(curr_index).fd = newsock;
-                        fds.at(curr_index).events = POLLIN;
-                        curr_index++;
-                    }
+                    accept_incoming_connection();
                     curr_fd.revents = 0;  // Reset the event flags
                 } else {
                     LOG<INFO>("New message to process on socket: ", curr_fd.fd);
@@ -271,23 +251,53 @@ void TCPServer::loop() {
                 }
             }
         }
+
         // If at max capacity, try to make room
         if (curr_index == max_fds) {
             LOG<INFO>("At capacity, attempting to clear");
-            // lock all threads out of the processing queue
-            queue_lock.wait();
-
-            // wait till no threads are processing
-            while (waiting_threads != num_threads) {}
-
-            // Try to purge unused fds, those with fd == -1
-            std::remove_if(fds.begin(), fds.end(),
-                std::bind(&TCPServer::testRemove, this,
-                    std::placeholders::_1));
-            // let the threads run again
-            queue_lock.signal();
-            LOG<INFO>("Finished clearing old structs");
+            remove_unused_entries();
         }
+    }
+}
+
+void TCPServer::remove_unused_entries() {
+    // lock all threads out of the processing queue
+    queue_lock.wait();
+
+    // wait till no threads are processing
+    while (waiting_threads != num_threads) {}
+
+    // XXX fds could be a queue
+    // Try to purge unused fds, those with fd == -1
+    std::remove_if(fds.begin(), fds.end(),
+        std::bind(&TCPServer::testRemove, this,
+            std::placeholders::_1));
+    // let the threads run again
+    queue_lock.signal();
+    LOG<INFO>("Finished clearing old structs");
+}
+
+void TCPServer::accept_incoming_connection() {
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = sizeof(cli_addr);
+
+    // New data on main socket, accept and connect
+    // TODO(Tyler): loop this to accept multiple at once?
+    // TODO(Tyler): Switch to non blocking sockets?
+    int newsock = accept(server_sock_,
+            reinterpret_cast<struct sockaddr*>(&cli_addr),
+            &clilen);
+    if (newsock < 0) {
+        throw std::runtime_error("Error accepting socket");
+    }
+    // If at capacity, reject connection
+    if (curr_index == max_fds) {
+        close(newsock);
+    } else {
+        LOG<INFO>("Created new socket: ", newsock);
+        fds.at(curr_index).fd = newsock;
+        fds.at(curr_index).events = POLLIN;
+        curr_index++;
     }
 }
 
@@ -388,15 +398,12 @@ bool TCPServer::read_from_client(
  */
 bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
-    std::vector<char> buffer;
+    std::vector<char> buffer(sizeof(uint32_t));
 
-    // Read in the incoming message
-
-    // Reserve the size of a 32 bit int
     uint64_t current_buf_size = sizeof(uint32_t);
-    buffer.reserve(current_buf_size);
     uint64_t bytes_read = 0;
 
+    // Read in the size of the incoming message
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
         return false;
@@ -404,8 +411,7 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                            buffer.data());
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
@@ -438,23 +444,80 @@ bool TCPServer::process(int sock) {
 
     // Extract the message from the buffer
     auto msg = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
-    TxnID txn_id = msg->txnid();
+
     // Instantiate the builder
     flatbuffers::FlatBufferBuilder builder(initial_buffer_size);
 
-    // Initialize the error code
-    cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
-
     LOG<INFO>("Server checking type of message");
     // Check message type
-    bool success = true;
     switch (msg->message_type()) {
         case message::TCPBladeMessage::Message_Write:
             {
+                process_write(&builder, msg);
+                break;
+            }
+        case message::TCPBladeMessage::Message_Read:
+            {
+                process_read(&builder, msg);
+                break;
+            }
+        case message::TCPBladeMessage::Message_Remove:
+            {
+                process_remove(&builder, msg);
+                break;
+            }
+        default:
+            LOG<ERROR>("Unknown message", " type:", msg->message_type());
+            throw cirrus::Exception("Unknown message "
+                                    "type received from client.");
+            break;
+    }
+    return send_ack(&builder, sock);
+}
+
+bool TCPServer::send_ack(flatbuffers::FlatBufferBuilder *builder, int sock) {
+    int message_size = builder->GetSize();
+    // Convert size to network order and send
+    uint32_t network_order_size = htonl(message_size);
+    if (send_all(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
+    }
+
+    LOG<INFO>("Server sent size.");
+    // Send main message
+#ifdef PERF_LOG
+    TimerFunction reply_time;
+#endif
+    if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
+        != message_size) {
+        LOG<ERROR>("Server error sending message back to client. "
+            "Possible client died");
+        return false;
+    }
+#ifdef PERF_LOG
+    double reply_mbps = message_size / (1024.0 * 1024) /
+        (reply_time.getUsElapsed() / 1000000.0);
+    LOG<PERF>("TCPServer::process reply time (us): ",
+            reply_time.getUsElapsed(),
+            " bw (MB/s): ", reply_mbps);
+#endif
+
+    LOG<INFO>("Server sent ack of size: ", message_size);
+    LOG<INFO>("Server done processing message from client");
+    return true;
+}
+
+void TCPServer::process_write(flatbuffers::FlatBufferBuilder *builder,
+    const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
 #ifdef PERF_LOG
                 TimerFunction write_time;
 #endif
                 LOG<INFO>("Server processing write request.");
+                bool success = true;
+                cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
+                TxnID txn_id = msg->txnid();
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
@@ -480,9 +543,6 @@ bool TCPServer::process(int sock) {
                             data_fb->end());
                         return;
                     };
-
-                // This is to make sure the the capacity is strictly enforced
-                write_lock.wait();
 
                 // True if the item we've added did not replace a preexisting
                 // item
@@ -513,18 +573,16 @@ bool TCPServer::process(int sock) {
                     success = false;
                 }
 
-                write_lock.signal();
-
                 // Create and send ack
-                auto ack = message::TCPBladeMessage::CreateWriteAck(builder,
+                auto ack = message::TCPBladeMessage::CreateWriteAck(*builder,
                                            oid, success);
                 auto ack_msg =
-                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                     message::TCPBladeMessage::CreateTCPBladeMessage(*builder,
                                     txn_id,
                                     static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_WriteAck,
                                     ack.Union());
-                builder.Finish(ack_msg);
+                builder->Finish(ack_msg);
 #ifdef PERF_LOG
                 double write_mbps = data_fb->size() / (1024.0 * 1024) /
                     (write_time.getUsElapsed() / 1000000.0);
@@ -533,13 +591,17 @@ bool TCPServer::process(int sock) {
                         " bw (MB/s): ", write_mbps,
                         " size: ", data_fb->size());
 #endif
-                break;
-            }
-        case message::TCPBladeMessage::Message_Read:
-            {
+}
+
+
+void TCPServer::process_read(flatbuffers::FlatBufferBuilder *builder,
+    const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
 #ifdef PERF_LOG
                 TimerFunction read_time;
 #endif
+                bool success = true;
+                cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
+                TxnID txn_id = msg->txnid();
                 /* Service the read request by sending the serialized object
                  to the client */
                 LOG<INFO>("Processing read request");
@@ -553,7 +615,7 @@ bool TCPServer::process(int sock) {
                 // Constructs a flatbuffer vector if item exists
                 auto read_function = [&fb_vector, &builder, &data_length]
                     (const std::vector<int8_t>& vec) -> void {
-                        fb_vector = builder.CreateVector(vec);
+                        fb_vector = builder->CreateVector(vec);
                         data_length = vec.size();
                         return;
                     };
@@ -564,20 +626,19 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                     // create a blank vector
-                    std::vector<int8_t> data;
-                    fb_vector = builder.CreateVector(data);
+                    fb_vector = builder->CreateVector(std::vector<int8_t>());
                 }
                 LOG<INFO>("Server building response");
                 // Create and send ack
-                auto ack = message::TCPBladeMessage::CreateReadAck(builder,
+                auto ack = message::TCPBladeMessage::CreateReadAck(*builder,
                                             oid, success, fb_vector);
                 auto ack_msg =
-                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                    message::TCPBladeMessage::CreateTCPBladeMessage(*builder,
                                     txn_id,
                                     static_cast<int64_t>(error_code),
                                     message::TCPBladeMessage::Message_ReadAck,
                                     ack.Union());
-                builder.Finish(ack_msg);
+                builder->Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
                 double read_mbps = data_length / (1024.0 * 1024) /
@@ -587,67 +648,30 @@ bool TCPServer::process(int sock) {
                         " bw (MB/s): ", read_mbps,
                         " size: ", data_length);
 #endif
-                break;
-            }
-        case message::TCPBladeMessage::Message_Remove:
-            {
-                ObjectID oid = msg->message_as_Remove()->oid();
-
-                success = remove(oid);
-
-                // Create and send ack
-                auto ack = message::TCPBladeMessage::CreateRemoveAck(builder,
-                                         oid, success);
-                auto ack_msg =
-                   message::TCPBladeMessage::CreateTCPBladeMessage(builder,
-                                    txn_id,
-                                    static_cast<int64_t>(error_code),
-                                    message::TCPBladeMessage::Message_RemoveAck,
-                                    ack.Union());
-                builder.Finish(ack_msg);
-                break;
-            }
-        default:
-            LOG<ERROR>("Unknown message", " type:", msg->message_type());
-            throw cirrus::Exception("Unknown message "
-                                    "type received from client.");
-            break;
-    }
-
-    int message_size = builder.GetSize();
-    // Convert size to network order and send
-    uint32_t network_order_size = htonl(message_size);
-    if (send_all(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
-        LOG<ERROR>("Server error sending message back to client. "
-            "Possible client died");
-        return false;
-    }
-
-    LOG<INFO>("Server sent size.");
-    LOG<INFO>("On server error code is: ", static_cast<int64_t>(error_code));
-    // Send main message
-#ifdef PERF_LOG
-    TimerFunction reply_time;
-#endif
-    if (send_all(sock, builder.GetBufferPointer(), message_size, 0)
-        != message_size) {
-        LOG<ERROR>("Server error sending message back to client. "
-            "Possible client died");
-        return false;
-    }
-#ifdef PERF_LOG
-    double reply_mbps = message_size / (1024.0 * 1024) /
-        (reply_time.getUsElapsed() / 1000000.0);
-    LOG<PERF>("TCPServer::process reply time (us): ",
-            reply_time.getUsElapsed(),
-            " bw (MB/s): ", reply_mbps);
-#endif
-
-    LOG<INFO>("Server sent ack of size: ", message_size);
-    LOG<INFO>("Server done processing message from client");
-    return true;
 }
 
+void TCPServer::process_remove(flatbuffers::FlatBufferBuilder *builder,
+    const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg) {
+        ObjectID oid = msg->message_as_Remove()->oid();
+        TxnID txn_id = msg->txnid();
+        cirrus::ErrorCodes error_code = cirrus::ErrorCodes::kOk;
+        bool success = remove(oid);
+
+        if (!success) {
+            error_code = cirrus::ErrorCodes::kNoSuchIDException;
+        }
+
+        // Create and send ack
+        auto ack = message::TCPBladeMessage::CreateRemoveAck(*builder,
+                                 oid, success);
+        auto ack_msg =
+           message::TCPBladeMessage::CreateTCPBladeMessage(*builder,
+                            txn_id,
+                            static_cast<int64_t>(error_code),
+                            message::TCPBladeMessage::Message_RemoveAck,
+                            ack.Union());
+        builder->Finish(ack_msg);
+}
 /**
  * Removes an object from the store.
  * @param oid the ObjectID corresponding to the object to be removed.

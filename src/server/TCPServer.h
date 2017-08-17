@@ -11,10 +11,12 @@
 #include "server/Server.h"
 #include "common/Synchronization.h"
 #include "libcuckoo/cuckoohash_map.hh"
+#include "common/schemas/TCPBladeMessage_generated.h"
 
 namespace cirrus {
 
 using ObjectID = uint64_t;
+
 /**
   * This class serves as a remote store that allows connection from
   * clients over TCP.
@@ -37,11 +39,24 @@ class TCPServer : public Server {
     ssize_t read_all(int sock, void*, size_t len);
     bool read_from_client(std::vector<char>&, int, uint64_t&);
 
-    bool testRemove(struct pollfd x);
+    bool testRemove(const struct pollfd& x);
 
     void wait_to_process();
 
     bool remove(ObjectID oid);
+
+    void process_read(flatbuffers::FlatBufferBuilder *builder,
+        const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg);
+
+    void process_write(flatbuffers::FlatBufferBuilder *builder,
+        const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg);
+
+    void process_remove(flatbuffers::FlatBufferBuilder *builder,
+        const cirrus::message::TCPBladeMessage::TCPBladeMessage *msg);
+
+    bool send_ack(flatbuffers::FlatBufferBuilder *builder, int sock);
+    void remove_unused_entries();
+    void accept_incoming_connection();
 
     /** The port that the server is listening on. */
     int port_;
@@ -51,12 +66,6 @@ class TCPServer : public Server {
     /** Map between objectid and data. Used to store all data. */
     cuckoohash_map<ObjectID, std::vector<int8_t>> store;
 
-
-    /**
-     * Lock on writes, likely temporary. This is to ensure that
-     * the size limit cannot be exceed ever.
-     */
-    cirrus::SpinLock write_lock;
     /** Lock on the process_queue. */
     cirrus::SpinLock queue_lock;
     /**
@@ -78,7 +87,13 @@ class TCPServer : public Server {
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;
 
-    /** Number of bytes currently in the pool. */
+    /**
+     * Current number of bytes stored.
+     * Even though this value is accessed atomically, it is possible for the
+     * server to go over capacity if multiple processes each check the size
+     * simultaneously, all see that it is below the maximum, and then proceed
+     * to write.
+     */
     std::atomic<std::uint64_t> curr_size = {0};
 
     /** Max number of sockets open at once. */
