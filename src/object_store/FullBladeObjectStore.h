@@ -14,9 +14,6 @@
 #include "utils/logging.h"
 #include "common/Exception.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"
-#include "third_party/libcuckoo/src/city_hasher.hh"
-
 namespace cirrus {
 namespace ostore {
 
@@ -33,7 +30,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
                               BladeClient *client,
                               std::function<std::pair<std::unique_ptr<char[]>,
                               unsigned int>(const T&)> serializer,
-                              std::function<T(void*, unsigned int)>
+                              std::function<T(const void*, unsigned int)>
                               deserializer);
 
     T get(const ObjectID& id) const override;
@@ -72,7 +69,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
       * A function that reads the buffer passed in and deserializes it,
       * returning an object constructed from the information in the buffer.
       */
-    std::function<T(void*, unsigned int)> deserializer;
+    std::function<T(const void*, unsigned int)> deserializer;
 };
 
 /**
@@ -94,7 +91,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         BladeClient* client,
         std::function<std::pair<std::unique_ptr<char[]>,
         unsigned int>(const T&)> serializer,
-        std::function<T(void*, unsigned int)> deserializer) :
+        std::function<T(const void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
     client->connect(bladeIP, port);
@@ -108,8 +105,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // Read the object from the remote store
-    std::cout << "Getting object id: " << id << std::endl;
-    std::pair<std::shared_ptr<char>, unsigned int> ptr_pair =
+    std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
         client->read_sync(id);
     auto ptr = ptr_pair.first;
     // Deserialize the memory at ptr and return an object

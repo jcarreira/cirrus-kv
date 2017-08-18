@@ -16,8 +16,7 @@
 #include "client/BladeClient.h"
 #include "utils/logging.h"
 
-#include "third_party/libcuckoo/src/cuckoohash_map.hh"
-#include "third_party/libcuckoo/src/city_hasher.hh"
+#include "libcuckoo/cuckoohash_map.hh"
 
 namespace cirrus {
 
@@ -46,7 +45,7 @@ class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    std::pair<std::shared_ptr<char>, unsigned int> read_sync(ObjectID oid)
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync(ObjectID oid)
         override;
 
     ClientFuture write_async(ObjectID oid, const void* data,
@@ -261,7 +260,7 @@ class RDMAClient : public BladeClient {
       * hash to map oid and location.
       * if oid is not found, object is not in store.
       */
-    cuckoohash_map<ObjectID, BladeLocation, CityHasher<ObjectID> > objects_;
+    cuckoohash_map<ObjectID, BladeLocation> objects_;
 
     AllocationRecord allocate(uint64_t size);
     bool deallocate(const AllocationRecord& ar);

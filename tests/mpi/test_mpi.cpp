@@ -33,6 +33,9 @@ static const uint32_t SIZE = 1;
 
 // #define CHECK_RESULTS
 
+/**
+ * Tests that synchronous operations work correctly.
+ */
 void test_sync() {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
@@ -58,35 +61,39 @@ void test_sync() {
     }
 }
 
-#if 0
+/**
+ * Tests that asynchronous operations work properly.
+ */
 void test_async() {
-    cirrus::ostore::FullBladeObjectStoreTempl<> store(IP, PORT);
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-    d->id = 42;
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT, &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
+    struct cirrus::Dummy<SIZE> d(42);
 
-    auto future = store.put_async(d.get(), sizeof(Dummy), 1);
-    future(false);
-
-    void* d2 = ::operator new(sizeof(Dummy));
-    auto future2 = store.get_async(1, d2);
-
-    if (future2 == nullptr)
-        throw std::runtime_error("wrong future");
-
-    while (!future2(true)) {
-        std::cout << "try wait" << std::endl;
+    auto future = store.put_async(1, d);
+    if (!future.get()) {
+        throw std::runtime_error("Error during put");
     }
 
+    auto future2 = store.get_async(1);
+    std::cout << "waiting on get" << std::endl;
+    while (!future2.try_wait()) {
+        std::cout << "trywait" << std::endl;
+    }
     std::cout << "done" << std::endl;
 
-    std::cout << "d2.id: " << reinterpret_cast<Dummy*>(d2)->id << std::endl;
-
-    if (reinterpret_cast<Dummy*>(d2)->id != 42) {
+    auto d2 = future2.get();
+    if (d2.id != 42) {
         throw std::runtime_error("Wrong value");
     }
 }
-#endif
 
+/**
+ * Tests the performance of synchronous puts.
+ */
 void test_sync(int N) {
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
@@ -123,20 +130,28 @@ void test_sync(int N) {
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
 
-#if 0
+/**
+ * Tests the performance of asynchronous puts.
+ */
 void test_async_N(int N) {
-    cirrus::ostore::FullBladeObjectStoreTempl<Dummy> store(IP, PORT);
+    cirrus::TCPClient client;
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
+        store(IP, PORT, &client,
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
+                sizeof(cirrus::Dummy<SIZE>)>);
+
     cirrus::Stats stats;
 
-    std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+    cirrus::Dummy<SIZE> d(42);
     cirrus::TimerFunction tfs[N];
-    d->id = 42;
 
-    std::function<bool(bool)> futures[N];
+    cirrus::ObjectStore<cirrus::Dummy<SIZE>>::ObjectStorePutFuture
+        put_futures[N];
 
     // warm up
     for (int i = 0; i < N; ++i) {
-        store.put(d.get(), sizeof(Dummy), 1);
+        store.put(1, d);
     }
 
     std::cout << "Warm up done" << std::endl;
@@ -144,7 +159,7 @@ void test_async_N(int N) {
     for (int i = 0; i < N; ++i) {
         tfs[i].reset();
         std::cout << "put" << std::endl;
-        futures[i] = store.put_async(d.get(), sizeof(Dummy), 1);
+        put_futures[i] = store.put_async(1, d);
     }
 
     bool done[N];
@@ -154,7 +169,7 @@ void test_async_N(int N) {
     while (total_done != N) {
         for (int i = 0; i < N; ++i) {
             if (!done[i]) {
-                bool ret = futures[i](false);
+                bool ret = put_futures[i].try_wait();
                 if (ret) {
                     done[i] = true;
                     total_done++;
@@ -170,7 +185,7 @@ void test_async_N(int N) {
     std::cout << "sd: " << stats.sd() << std::endl;
     std::cout << "99%: " << stats.getPercentile(0.99) << std::endl;
 }
-#endif
+
 
 inline
 void init_mpi(int argc, char**argv) {
@@ -196,8 +211,9 @@ int main(int argc, char** argv) {
     gethostname(name, 200);
     std::cout << "MPI test running on hostname: " << name << std::endl;
 
-    test_sync(100);
-
+    test_sync();
+    test_async();
+    test_async_N(5);
     MPI_Finalize();
 
     std::cout << "Test successful" << std::endl;
