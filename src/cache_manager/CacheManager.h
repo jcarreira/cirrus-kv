@@ -259,7 +259,8 @@ T CacheManager<T>::get(ObjectID oid) {
 
 /**
   * A function that stores an object obj in the remote store under ObjectID oid.
-  * Calls the put() method in FullBladeObjectstore.h
+  * Calls the put() method in FullBladeObjectstore.h and stores cached copy
+  * of object locally.
   * @param oid the ObjectID to store under.
   * @param obj the object to store on the server
   * @see FullBladeObjectstore
