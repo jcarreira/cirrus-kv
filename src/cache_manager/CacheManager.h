@@ -272,6 +272,26 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
     // TODO(Tyler): Should we switch this to an async op for greater
     // performance potentially? what to do with the futures?
     store->put(oid, obj);
+
+    struct cache_entry *entry;
+    LOG<INFO>("Cache put called on oid: ", oid);
+    auto cache_iterator = cache.find(oid);
+    if (cache_iterator != cache.end()) {
+        LOG<INFO>("Entry exists for oid: ", oid);
+        // entry exists for the oid
+        entry = &(cache_iterator->second);
+        // replace existing entry
+        entry->obj = obj;
+    } else {
+        // entry does not exist.
+        // set up entry and fill it
+        if (cache.size() == max_size) {
+          throw cirrus::CacheCapacityException("Put operation would put cache "
+                                             "over capacity.");
+        }
+        entry = &cache[oid];
+        entry->obj = obj;
+    }
 }
 
 /**

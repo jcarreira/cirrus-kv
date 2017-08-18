@@ -390,8 +390,11 @@ auto main(int argc, char *argv[]) -> int {
     test_iterator();
     std::cout << "Starting iterator alt test." << std::endl;
     test_iterator_alt();
+    std::cout << "Starting iterator array test." << std::endl;
     test_array();
+    std::cout << "Starting random prefetch test." << std::endl;
     test_random_prefetching();
+    std::cout << "Starting custom iteration test." << std::endl;
     test_custom_iteration();
     std::cout << "Test successful" << std::endl;
     return 0;
