@@ -270,10 +270,15 @@ bool TCPClient::remove(ObjectID oid) {
 }
 
 /**
- * Given a socket number, reads from that socket in order to receive and
- * process message.
+ * Given a socket, reads the full incoming ack and places it in an std::vector
+ * which is then returned in an std::shared_ptr.
+ * @param sock the file descriptor of the socket that the incoming message
+ * is on.
+ * @return an std::shared_ptr<std::vector<char>>. The char vector contains the
+ * message that was just read from the server.
  */
-void TCPClient::process_message(int sock) {
+std::shared_ptr<std::vector<char>>
+TCPClient::get_message_from_server(int sock) {
     /**
       * Message format
       * |---------------------------------------------------
@@ -286,7 +291,6 @@ void TCPClient::process_message(int sock) {
     std::shared_ptr<std::vector<char>> buffer =
         std::make_shared<std::vector<char>>(sizeof(uint32_t));
 
-    // Reserve the size of a 32 bit int
     uint64_t current_buf_size = sizeof(uint32_t);
     uint64_t bytes_read = 0;
     while (bytes_read < sizeof(uint32_t)) {
@@ -297,7 +301,8 @@ void TCPClient::process_message(int sock) {
             char *info = strerror(errno);
             LOG<ERROR>(info);
             if (errno == EINTR && terminate_threads == true) {
-                return;
+                std::shared_ptr<std::vector<char>> ret;
+                return ret;
             } else {
                 LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
                     retval);
@@ -343,6 +348,20 @@ void TCPClient::process_message(int sock) {
 #endif
 
     LOG<INFO>("Received full message from server");
+    return buffer;
+}
+
+/**
+ * Given a socket number, obtains the full message on that socket and processes
+ * it.
+ */
+void TCPClient::process_message(int sock) {
+    // Get the full message from the server and place it into a vector
+    std::shared_ptr<std::vector<char>> buffer = get_message_from_server(sock);
+    // If failure due to termination, return
+    if (buffer.get() == nullptr) {
+        return;
+    }
 
     // Extract the flatbuffer from the receiving buffer
     auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer->data());

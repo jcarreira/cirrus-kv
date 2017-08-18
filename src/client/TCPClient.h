@@ -109,6 +109,8 @@ class TCPClient : public BladeClient {
     void process_send();
     void process_message(int sock);
 
+    std::shared_ptr<std::vector<char>> get_message_from_server(int sock);
+
     /** vector of sockets used to communicate w/ remote store */
     std::vector<int> sockets;
 
