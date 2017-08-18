@@ -8,8 +8,8 @@
 namespace cirrus {
 
 /**
-  * This is key-value store backed by memory
-  * It used a std::map key-value store to store data
+  * This is a key-value store backed by memory
+  * It's just a wrapper around a std::map or something similar
   */
 class MemoryBackend : public StorageBackend {
  public:

@@ -23,8 +23,6 @@ const StorageBackend::MemData& MemoryBackend::get(uint64_t oid) {
         // return false;
     }
 
-    // std::memcpy(data, it->second.data(), it->second.size());
-    // return true;
     return store[oid];
 }
 
