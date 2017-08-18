@@ -8,9 +8,9 @@
 #include <time.h>
 
 #include "object_store/FullBladeObjectStore.h"
-#include "tests/object_store/object_store_internal.h"
-#include "utils/CirrusTime.h"
-#include "utils/Stats.h"
+//#include "tests/object_store/object_store_internal.h"
+//#include "utils/CirrusTime.h"
+//#include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "cache_manager/CacheManager.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
