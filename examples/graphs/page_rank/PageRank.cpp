@@ -35,7 +35,6 @@ std::vector<double> pageRank(cirrus::CacheManager<Vertex> cm,
         std::cout << "PageRank iteration: " << count++ << std::endl;
 
         for (unsigned int i = 0; i < num_vertices; i++) {
-            //p_next[i] += p_curr[i];
             Vertex curr = cm.get(i);
 
             auto neighbors = curr.getNeighbors();
