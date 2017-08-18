@@ -116,6 +116,7 @@ void test_iteration_store(std::ofstream& outfile, uint64_t highest_id) {
         process(str, &counts);
     }
 
+
     uint64_t elapsed_us = start.getUsElapsed();
 
     print_stats(outfile, elapsed_us, i, false);
@@ -147,9 +148,22 @@ void test_iteration_cache(std::ofstream& outfile, uint64_t highest_id) {
     std::map<std::string, uint64_t> counts;
     cirrus::TimerFunction start;
 
-    for (const auto& str : iter) {
+    cirrus::Stats stats;
+
+    for (auto it = iter.begin(); it != iter.end(); it++) {
+        cirrus::TimerFunction tf;
+        std::string str = *it;
+        uint64_t elapsed_us = tf.getUsElapsed();
+        stats.add(elapsed_us);
         process(str, &counts);
     }
+
+    std::cout << "min: " << stats.min() << " µs" << std::endl;
+    std::cout << "avg: " << stats.avg() << " µs" << std::endl;
+    std::cout << "max: " << stats.max() << " µs"<< std::endl;
+    std::cout << "sd: " << stats.sd() << " µs" << std::endl;
+    std::cout << "99%: " << stats.getPercentile(0.99) << " µs" << std::endl;
+    std::cout << std::endl;
 
     uint64_t elapsed_us = start.getUsElapsed();
 

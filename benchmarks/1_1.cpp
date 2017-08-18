@@ -24,7 +24,7 @@ static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
-static const uint64_t N_ITER = MILLION;
+static const uint64_t N_ITER = 100000;
 
 void print_stats(std::ostream& out, const cirrus::Stats& stats,
         uint64_t msg_sent, uint64_t elapsed_us, uint64_t size, bool is_put) {

@@ -276,9 +276,9 @@ void test_iops_zipf(std::ofstream& outfile) {
     uint64_t elapsed_us = start.getUsElapsed();
 
 
-    print_stats(outfile, i, elapsed_us, SIZE, true);
+    print_stats_zipf(outfile, i, elapsed_us, SIZE, true);
 
-    print_stats(std::cout, i, elapsed_us, SIZE, true);
+    print_stats_zipf(std::cout, i, elapsed_us, SIZE, true);
 
 
     std::cout << "Measuring msgs/s.. w/o cache" << std::endl;
