@@ -204,7 +204,7 @@ bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
   * serialized object read from the server resides in as well as the size of
   * the buffer.
   */
-std::pair<std::shared_ptr<char>, unsigned int>
+std::pair<std::shared_ptr<const char>, unsigned int>
 TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
     BladeClient::ClientFuture future = read_async(oid);
@@ -242,20 +242,12 @@ bool TCPClient::remove(ObjectID oid) {
     return future.get();
 }
 
-
 /**
   * Loop run by the thread that processes incoming messages. Contains all
   * logic for acting upon the incoming messages, which includes copying
   * serialized objects and notifying futures.
   */
 void TCPClient::process_received() {
-    // All elements stored on heap according to stack overflow, so it can grow
-    std::vector<char> buffer;
-    // Reserve the size of a 32 bit int
-    uint64_t current_buf_size = sizeof(uint32_t);
-    buffer.reserve(current_buf_size);
-    uint64_t bytes_read = 0;
-
     /**
       * Message format
       * |---------------------------------------------------
@@ -264,11 +256,20 @@ void TCPClient::process_received() {
       */
 
     while (1) {
+        // Must be shared as it will be used in the custom deleter of another
+        // shared_ptr.
+        std::shared_ptr<std::vector<char>> buffer =
+            std::make_shared<std::vector<char>>();
+        // Reserve the size of a 32 bit int
+        int current_buf_size = sizeof(uint32_t);
+        buffer->reserve(current_buf_size);
+        int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
+
         // Read in the size of the next message from the network
         LOG<INFO>("client waiting for message from server");
         bytes_read = 0;
-        while (bytes_read < sizeof(uint32_t)) {
-            int retval = read(sock, buffer.data() + bytes_read,
+        while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
+            int retval = read(sock, buffer->data() + bytes_read,
                               sizeof(uint32_t) - bytes_read);
 
             if (retval < 0) {
@@ -289,8 +290,8 @@ void TCPClient::process_received() {
         }
         // Convert to host byte order
         uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                                buffer.data());
-        uint32_t incoming_size = ntohl(*incoming_size_ptr);
+                                                                buffer->data());
+        int incoming_size = ntohl(*incoming_size_ptr);
 
         LOG<INFO>("Size of incoming message received from server: ",
                   incoming_size);
@@ -300,10 +301,16 @@ void TCPClient::process_received() {
 #endif
         // Resize the buffer to be larger if necessary
         if (incoming_size > current_buf_size) {
-            buffer.resize(incoming_size);
+            // We use reserve() in place of resize() as it does not initialize
+            // the memory that it allocates. This is safe, but
+            // buffer.capacity() must be used to find the length of the buffer
+            // rather than buffer.size()
+            buffer->reserve(incoming_size);
         }
 
-        read_all(sock, buffer.data(), incoming_size);
+        // read in main message
+
+        read_all(sock, buffer->data(), incoming_size);
 
 #ifdef PERF_LOG
         double receive_mbps = bytes_read / (1024 * 1024.0) /
@@ -316,7 +323,7 @@ void TCPClient::process_received() {
         LOG<INFO>("Received full message from server");
 
         // Extract the flatbuffer from the receiving buffer
-        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer.data());
+        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer->data());
         TxnID txn_id = ack->txnid();
 
 #ifdef PERF_LOG
@@ -367,17 +374,26 @@ void TCPClient::process_received() {
                     // copy the data from the ReadAck into the given pointer
                     *(txn->result) = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
+                    // fb here stands for flatbuffer. This is the
+                    // flatbuffer vector representation of the data.
+                    // This operation returns a pointer to the vector
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
                     *(txn->mem_size) = data_fb_vector->size();
-                    *(txn->mem_for_read_ptr) = std::shared_ptr<char>(
-                        new char[data_fb_vector->size()],
-                        std::default_delete< char[]>());
+
+                    // data_fb_vector->Data() returns a pointer to the raw data.
+                    // This data lives inside of the std::vector buffer,
+                    // which was created with a call to std::make_shared.
+
+                    // Here we pass an std::shared_ptr pointer to the raw memory
+                    // to the future (via the txn info struct)
+                    // while tying the lifetime of the buffer to
+                    // the lifetime of the pointer. This ensures that when no
+                    // references to the data exist, the buffer containing
+                    // the data is deleted.
+                    *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
+                        reinterpret_cast<const char*>(data_fb_vector->Data()),
+                        read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
-                    // XXX we should get rid of this
-                    std::copy(data_fb_vector->begin(), data_fb_vector->end(),
-                                reinterpret_cast<char*>(
-                                    (txn->mem_for_read_ptr->get())));
-                    LOG<INFO>("Client copied vector");
                     break;
                 }
             case message::TCPBladeMessage::Message_RemoveAck:

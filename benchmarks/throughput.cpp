@@ -23,9 +23,9 @@ std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
 
 /* Takes a pointer to std::array passed in and returns as object. */
 template <uint64_t SIZE>
-std::array<char, SIZE> array_deserializer_simple(void* data,
+std::array<char, SIZE> array_deserializer_simple(const void* data,
             uint64_t /* size */) {
-    std::array<char, SIZE> *ptr = (std::array<char, SIZE> *) data;
+    const std::array<char, SIZE> *ptr = (const std::array<char, SIZE> *) data;
     std::array<char, SIZE> retArray;
     retArray = *ptr;
     return retArray;
