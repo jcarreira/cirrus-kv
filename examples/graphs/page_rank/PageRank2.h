@@ -7,8 +7,8 @@
 
 namespace graphs {
 
-std::vector<double> pageRank(cirrus::CacheManager<Vertex> cm,
-        const std::vector<Vertex>& vertices,
+void pageRank2(cirrus::CacheManager<Vertex> cm,
+        unsigned int num_vertices,
         double gamma, double epsilon);
 
 } // namespace graphs

@@ -10,7 +10,7 @@ namespace graphs {
 
 class Vertex {
     public:
-        Vertex(int id = 0) : id(id) {}
+        Vertex(int id = 0);
         Vertex(int id, const std::vector<int>& neighbors);
 
         void addNeighbor(int id);
@@ -28,9 +28,22 @@ class Vertex {
         serializer(const Vertex&);
         static Vertex deserializer(const void* data, unsigned int size);
 
+        double getCurrProb() const;
+        void setCurrProb(double prob);
+        double getNextProb() const;
+        void setNextProb(double prob);
+
+        void print() const;
+
     private:
         std::set<int> neighbors;
-        int id;
+
+        int id; //< id of the vertex
+
+        // these values hold the current and next probabilities of the pagerank
+        // algorithm. They alternate betwee
+        double p_curr;
+        double p_next;
 };
 
 } // graphs
