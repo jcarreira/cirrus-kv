@@ -37,8 +37,8 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
     out << "count: " << stats.getCount() << std::endl;
     out << "msg/s: " << (msg_sent * 1.0 / elapsed_us * MILLION)
         << std::endl;
-    out << "bytes/s: " << (size * msg_sent * 1.0
-        / elapsed_us * MILLION) << std::endl;
+    out << "MB/s: " << (size * msg_sent * 1.0
+        / ((elapsed_us / MILLION) * 1024 * 1024)) << std::endl;
     out << "min: " << stats.min() << " µs" << std::endl;
     out << "avg: " << stats.avg() << " µs" << std::endl;
     out << "max: " << stats.max() << " µs"<< std::endl;

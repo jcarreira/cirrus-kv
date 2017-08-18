@@ -46,8 +46,8 @@ void print_stats(std::ostream& out, uint64_t msg_sent, uint64_t elapsed_us,
     }
     out << "IO/s: " << (msg_sent * 1.0 / elapsed_us * MILLION)
         << std::endl;
-    out << "bytes/s: " << (size * msg_sent * 1.0
-        / elapsed_us * MILLION) << std::endl;
+    out << "MB/s: " << (size * msg_sent * 1.0
+        / ((elapsed_us / MILLION) * 1024 * 1024)) << std::endl;
     out << std::endl;
 }
 
@@ -60,8 +60,8 @@ void print_stats_zipf(std::ostream& out, uint64_t msg_sent, uint64_t elapsed_us,
     }
     out << "IO/s: " << (msg_sent * 1.0 / elapsed_us * MILLION)
         << std::endl;
-    out << "bytes/s: " << (size * msg_sent * 1.0
-        / elapsed_us * MILLION) << std::endl;
+    out << "MB/s: " << (size * msg_sent * 1.0
+        / ((elapsed_us / MILLION) * 1024 * 1024)) << std::endl;
     out << std::endl;
 }
 
