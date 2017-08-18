@@ -28,11 +28,10 @@ std::vector<ObjectID> LRAddedEvictionPolicy::get(ObjectID oid) {
 }
 
 /**
- * Put method for the eviction policy. Returns empty list as a put will never
- * require additional cache space.
+ * Put method for the eviction policy.
  */
-std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID /* oid */) {
-    return std::vector<ObjectID>();
+std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID oid) {
+    return process_oid(oid);
 }
 
 /**
