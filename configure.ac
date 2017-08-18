@@ -64,10 +64,12 @@ AC_CONFIG_FILES([Makefile
                  tests/object_store/Makefile
 		 tests/client/Makefile
                  tests/Makefile
+                 examples/Makefile
+                 examples/graph/Makefile
                  benchmarks/Makefile])
 
 
 AC_CONFIG_SUBDIRS([tests/mpi])
-AC_CONFIG_SUBDIRS([tests/ml])
+AC_CONFIG_SUBDIRS([examples/ml])
 
 AC_OUTPUT
