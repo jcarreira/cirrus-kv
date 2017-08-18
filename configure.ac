@@ -67,6 +67,7 @@ AC_CONFIG_FILES([Makefile
                  examples/Makefile
                  examples/graphs/Makefile
                  examples/graphs/page_rank/Makefile
+                 examples/graphs/wcc/Makefile
                  benchmarks/Makefile])
 
 
