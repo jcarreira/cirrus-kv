@@ -354,11 +354,10 @@ void test_array() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);
 
-    auto int_array = std::shared_ptr<int>(new int[4],
-        std::default_delete<int[]>());
-
     // Put items in the store
     for (int i = 0; i < 10; i++) {
+        auto int_array = std::shared_ptr<int>(new int[4],
+            std::default_delete<int[]>());
         for (int j = 0; j < 4; j++) {
             (int_array.get())[j] = (i * 4) + j;
         }
