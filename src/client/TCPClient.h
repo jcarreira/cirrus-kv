@@ -28,7 +28,7 @@ class TCPClient : public BladeClient {
         const std::string& port) override;
 
     bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
-    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
 
     ClientFuture write_async(ObjectID oid, const void* data,
@@ -53,10 +53,10 @@ class TCPClient : public BladeClient {
         /** Error code if any were thrown on the server. */
         std::shared_ptr<cirrus::ErrorCodes> error_code;
         /** Semaphore for the transaction. */
-        std::shared_ptr<cirrus::PosixSemaphore> sem;
+        std::shared_ptr<cirrus::SpinLock> sem;
 
         /** Pointer to shared ptr that points to any mem allocated for reads. */
-        std::shared_ptr<std::shared_ptr<char>> mem_for_read_ptr;
+        std::shared_ptr<std::shared_ptr<const char>> mem_for_read_ptr;
 
         /** Pointer to size of mem for read. */
         std::shared_ptr<uint64_t> mem_size;
@@ -65,11 +65,38 @@ class TCPClient : public BladeClient {
             result = std::make_shared<bool>();
             result_available = std::make_shared<bool>();
             *result_available = false;
-            sem = std::make_shared<cirrus::PosixSemaphore>();
+            sem = std::make_shared<cirrus::SpinLock>();
             error_code = std::make_shared<cirrus::ErrorCodes>();
-            mem_for_read_ptr = std::make_shared<std::shared_ptr<char>>();
+            mem_for_read_ptr = std::make_shared<std::shared_ptr<const char>>();
             mem_size = std::make_shared<uint64_t>(0);
         }
+    };
+
+    /**
+     * Custom deleter to allow for the deletion of a shared ptr to a
+     * char to delete the vector that contains the char.
+     */
+    class read_op_deleter {
+     public:
+        /**
+         * Constructor for the deleter.
+         * @param buf pointer to the vector that contains the character.
+         */
+        explicit read_op_deleter(
+            std::shared_ptr<std::vector<char>> buf) :
+            buffer(buf) {}
+
+        /**
+         * Function that actually performs the deletion. Does not need to do
+         * anything as going out of scope should eliminate the pointer to the
+         * vector and delete the vector itself. ptr is a pointer to a character
+         * that lives somewhere inside of the std::vector buf.
+         */
+        void operator()(const char * /* ptr */) {}
+
+     private:
+         /** Pointer to the vector that contains the data. */
+         std::shared_ptr<std::vector<char>> buffer;
     };
 
     ssize_t send_all(int, const void*, size_t, int);
