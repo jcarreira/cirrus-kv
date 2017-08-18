@@ -269,10 +269,6 @@ template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     std::vector<ObjectID> to_remove = eviction_policy->put(oid);
     evict_vector(to_remove);
-    // Push the object to the store under the given id
-    // TODO(Tyler): Should we switch this to an async op for greater
-    // performance potentially? what to do with the futures?
-    store->put(oid, obj);
 
     struct cache_entry *entry;
     LOG<INFO>("Cache put called on oid: ", oid);
@@ -293,6 +289,11 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
         entry = &cache[oid];
         entry->obj = obj;
     }
+
+    // Push the object to the store under the given id
+    // TODO(Tyler): Should we switch this to an async op for greater
+    // performance potentially? what to do with the futures?
+    store->put(oid, obj);
 }
 
 /**
