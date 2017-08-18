@@ -128,8 +128,9 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 }
 
 /* Takes a pointer to raw mem passed in and returns as object. */
-std::string string_deserializer_simple(void* data, unsigned int /* size */) {
-    char *ptr = reinterpret_cast<char*>(data);
+std::string string_deserializer_simple(const void* data,
+    unsigned int /* size */) {
+    const char *ptr = reinterpret_cast<const char*>(data);
     std::string ret(ptr);
     return ret;
 }
