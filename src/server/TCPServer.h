@@ -24,8 +24,7 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    TCPServer(int port, uint64_t pool_size_,
-        uint64_t num_threads = 1, uint64_t max_fds = 100);
+    TCPServer(int port, uint64_t pool_size_, uint64_t num_threads = 1);
     ~TCPServer() = default;
 
     void init();
@@ -96,8 +95,8 @@ class TCPServer : public Server {
      */
     std::atomic<std::uint64_t> curr_size = {0};
 
-    /** Max number of sockets open at once. */
-    const uint64_t max_fds;
+    /** Current max number of sockets open at once. */
+    uint64_t max_fds = 100;
 
     /**
      * Index that the next socket accepted should have in the

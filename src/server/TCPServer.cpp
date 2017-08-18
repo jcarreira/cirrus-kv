@@ -35,22 +35,16 @@ static const int initial_buffer_size = 50;
   * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_,
-    uint64_t num_threads, uint64_t max_fds_) :
+TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t num_threads) :
     port_(port), num_threads(num_threads),
-    pool_size(pool_size_), max_fds(max_fds_ + 1) {
-        if (max_fds_ + 1 == 0) {
-            throw cirrus::Exception("Max_fds value too high, "
-                "overflow occurred.");
-        }
-
+    pool_size(pool_size_) {
         for (unsigned int i = 0; i < num_threads; i++) {
             threads_vector.push_back(
                 std::move(std::make_unique<std::thread>(
                     &TCPServer::wait_to_process,
                     this)));
         }
-    }
+}
 
 /**
  * Function that is run by the processing threads. The threads wait in a
@@ -290,15 +284,22 @@ void TCPServer::accept_incoming_connection() {
     if (newsock < 0) {
         throw std::runtime_error("Error accepting socket");
     }
-    // If at capacity, reject connection
+    // If at capacity, add more capacity
     if (curr_index == max_fds) {
-        close(newsock);
-    } else {
-        LOG<INFO>("Created new socket: ", newsock);
-        fds.at(curr_index).fd = newsock;
-        fds.at(curr_index).events = POLLIN;
-        curr_index++;
+        max_fds *= 2;
+        // Make sure no other threads hold references to the
+        // contents of the vector in case they are invalidated
+        queue_lock.wait();
+
+        // wait till no threads are processing
+        while (waiting_threads != num_threads) {}
+        fds.reserve(max_fds);
+        queue_lock.signal();
     }
+    LOG<INFO>("Created new socket: ", newsock);
+    fds.at(curr_index).fd = newsock;
+    fds.at(curr_index).events = POLLIN;
+    curr_index++;
 }
 
 /**
@@ -549,8 +550,8 @@ void TCPServer::process_write(flatbuffers::FlatBufferBuilder *builder,
                         }
 
                         curr_size += change;
-                        vec = std::vector<int8_t>(data_fb->begin(),
-                            data_fb->end());
+                        vec = std::move(std::vector<int8_t>(data_fb->begin(),
+                            data_fb->end()));
                         return;
                     };
 
