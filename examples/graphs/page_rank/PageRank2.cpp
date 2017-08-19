@@ -4,20 +4,10 @@
 #include <stdlib.h>
 #include <cmath>
 
+#define EPS (1e-05)
+#define EQUAL(a,b) (fabs(a-b) < EPS)
+
 namespace graphs {
-
-double calculate_error(cirrus::CacheManager<Vertex>& cm,
-        unsigned int num_vertices) {
-    double error = 0.0;
-    for (unsigned int i = 0; i < num_vertices; i++) {
-        Vertex curr = cm.get(i);
-        error += std::abs(curr.getCurrProb() - curr.getNextProb());
-    }
-
-    std::cout << "calculate_error: " << error << std::endl;
-
-    return error;
-}
 
 /**
   * Compute PageRank on graph stored in a Cirrus store
@@ -28,60 +18,79 @@ double calculate_error(cirrus::CacheManager<Vertex>& cm,
   * @param cm CacheManager to be used to access the graph
   * @param num_vertices Number of vertices in the graph
   * @param gamma PageRanks's algorithm gamma
-  * @param epsilon PageRank's algorithm epsilon
   */
-void pageRank2(cirrus::CacheManager<Vertex> cm,
+void pageRank2(cirrus::CacheManager<Vertex>& cm,
         unsigned int num_vertices,
-        double gamma, double epsilon) {
+        double gamma, uint64_t num_iterations) {
 
-    double error = 1.0;
-
-    int count = 1;
-    while (error > epsilon) {
-        std::cout << "PageRank iteration: " << count++ << std::endl;
+    //int count = 1;
+    double error = 0;
+    for (uint64_t it = 0; it < num_iterations; ++it) {
+        //std::cout << "PageRank iteration: " << count++ << std::endl;
+        double prev_error = error;
 
         for (unsigned int i = 0; i < num_vertices; i++) {
             Vertex curr = cm.get(i);
 
             auto neighbors = curr.getNeighbors();
-            for (auto& neighbor : neighbors) {
-                Vertex n = cm.get(neighbor);
-                std::cout << "Updating vertex: " << neighbor
-                    << " with new value: "
-                    << n.getNextProb() + curr.getCurrProb() / neighbors.size()
-                    << " getNextProb: " << curr.getNextProb()
-                    << " getCurrProb: " << curr.getCurrProb()
-                    << " neighbors.size(): " << neighbors.size()
-                    << std::endl;
+            for (auto it = neighbors.begin();
+                    it != neighbors.end();
+                    ++it) {
+                Vertex n = cm.get(*it);
+
+                //auto it2 = it;
+                //++it2;
+                //if (it2 != neighbors.end()) {
+                //    cm.prefetch(*it2);
+                //}
+                //++it2;
+                //if (it2 != neighbors.end()) {
+                //    cm.prefetch(*it2);
+                //}
+
+                //std::cout << "Updating vertex: " << neighbor
+                //    << " with new value: "
+                //    << n.getNextProb() + curr.getCurrProb() / neighbors.size()
+                //    << " getNextProb: " << curr.getNextProb()
+                //    << " getCurrProb: " << curr.getCurrProb()
+                //    << " neighbors.size(): " << neighbors.size()
+                //    << std::endl;
                 n.setNextProb(n.getNextProb() +
                         curr.getCurrProb() / neighbors.size());
-                cm.put(neighbor, n);
+                cm.put(*it, n);
             }
         }
 
         // use iterator here
         for (unsigned int i = 0; i < num_vertices; i++) {
+
+            prev_error = error;
             Vertex curr = cm.get(i);
 
             // update p_curr for next round
             curr.setCurrProb(curr.getNextProb() * gamma + (1.0 - gamma) /
                     static_cast<double>(num_vertices));
-            std::cout << "New currProb: " << curr.getCurrProb()
-                << " nextProb: " << curr.getNextProb()
-                << std::endl;
+            //std::cout << "New currProb: " << curr.getCurrProb()
+            //    << " nextProb: " << curr.getNextProb()
+            //    << std::endl;
+
+            error += std::abs(curr.getCurrProb() - curr.getNextProb());
 
             // set p_next to 0.0
             curr.setNextProb(0.0);
-            curr.print();
+            //curr.print();
             cm.put(i, curr);
 
-            Vertex curr2 = cm.get(i);
-            curr2.print();
+            //Vertex curr2 = cm.get(i);
+            //curr2.print();
         }
+        //std::cout
+        //    << "Error: " << error
+        //    << " prev_error: " << prev_error
+        //    << std::endl;
 
-        // Check error once in a while
-        if (count % 10 == 0) {
-            error = calculate_error(cm, num_vertices);
+        if (EQUAL(error, prev_error)) {
+            break;
         }
     }
 }

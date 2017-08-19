@@ -52,9 +52,10 @@ int main(int argc, char** argv) {
 
     std::cout << "PageRank completed" << std::endl;
 
-    //std::cout << "PageRank probabilities: " << std::endl;
-    //for (unsigned int i = 0; i < vertices.size(); i++) {
-    //    std::cout << output[i] << "\t\t" << output[i] * vertices.size() << std::endl;
-    //}
+    std::cout << "PageRank probabilities: " << std::endl;
+    std::cout << vertices.size() << std::endl;
+    for (unsigned int i = 0; i < vertices.size(); i++) {
+        std::cout << output[i] << "\t\t" << output[i] * vertices.size() << std::endl;
+    }
 
 }

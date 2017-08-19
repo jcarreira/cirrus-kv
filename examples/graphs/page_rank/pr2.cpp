@@ -41,20 +41,23 @@ int main(int argc, char** argv) {
                 Vertex::deserializer);
 
     cirrus::LRAddedEvictionPolicy policy(cache_size);
-    std::cout << "Adding to cm" << std::endl;
     cirrus::CacheManager<Vertex> cm(&vertex_store, &policy, cache_size);
 
+    std::cout << "Adding to cm" << std::endl;
     for (uint64_t i = 0; i < vertices.size(); i++) {
+        std::cout << "Adding vertex: " << i << std::endl;
         cm.put(vertices[i].getId(), vertices[i]);
     }
     
-    graphs::pageRank2(cm, vertices.size(), 0.85, .01);
+    std::cout << "Running PageRank" << std::endl;
+    graphs::pageRank2(cm, vertices.size(), 0.85, 100);
 
     std::cout << "PageRank completed" << std::endl;
 
-    //std::cout << "PageRank probabilities: " << std::endl;
-    //for (unsigned int i = 0; i < vertices.size(); i++) {
-    //    std::cout << output[i] << "\t\t" << output[i] * vertices.size() << std::endl;
-    //}
+    std::cout << "PageRank probabilities size: " << vertices.size() << std::endl;
+    for (unsigned int i = 0; i < vertices.size(); i++) {
+        Vertex curr = cm.get(i);
+        curr.print();
+    }
 }
 

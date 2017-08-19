@@ -56,10 +56,6 @@ Vertex::serializer(const Vertex& v) {
         sizeof(double) * 2 +
         sizeof(uint32_t) * v.getNeighborsSize(); // neighbors
 
-    std::cout << "Serializing object with size: "
-        << size
-        << std::endl;
-
     std::unique_ptr<char[]> mem(new char[size]);
     
     double* double_ptr = reinterpret_cast<double*>(mem.get());

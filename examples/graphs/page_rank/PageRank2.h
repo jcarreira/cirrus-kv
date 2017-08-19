@@ -7,9 +7,9 @@
 
 namespace graphs {
 
-void pageRank2(cirrus::CacheManager<Vertex> cm,
+void pageRank2(cirrus::CacheManager<Vertex>& cm,
         unsigned int num_vertices,
-        double gamma, double epsilon);
+        double gamma, uint64_t num_iterations);
 
 } // namespace graphs
 
