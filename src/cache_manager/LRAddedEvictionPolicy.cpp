@@ -1,6 +1,3 @@
-#ifndef SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
-#define SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
-
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include <stdint.h>
 #include <vector>
@@ -90,5 +87,3 @@ std::vector<ObjectID> LRAddedEvictionPolicy::process_oid(ObjectID oid) {
     }
 }
 }  // namespace cirrus
-
-#endif  // SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
