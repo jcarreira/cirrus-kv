@@ -1,16 +1,17 @@
-#ifndef VERTEX_H_
-#define VERTEX_H_
+#ifndef _VERTEX_H_
+#define _VERTEX_H_
 
 #include <vector>
 #include <iostream>
 #include <set>
 #include <memory>
+#include <utility>
 
 namespace graphs {
 
 class Vertex {
  public:
-        Vertex(int id = 0);
+        explicit Vertex(int id = 0);
         Vertex(int id, const std::vector<int>& neighbors);
 
         void addNeighbor(int id);
@@ -32,16 +33,14 @@ class Vertex {
 
  public:
         bool seen;
-        int cc; // weakly connected component id
+        int cc;  // weakly connected component id
 
  private:
         std::set<int> neighbors;
 
-        int id; //< id of the vertex
-
+        int id;  //< id of the vertex
 };
 
-} // graphs
+}  // namespace graphs
 
-#endif
-
+#endif  // _VERTEX_H_

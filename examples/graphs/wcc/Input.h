@@ -9,6 +9,6 @@ namespace graphs {
 
 std::vector<Vertex> readGraph(const std::string& fname);
 
-} // graphs
+}  // namespace graphs
 
-#endif // _UTILS_H_
+#endif  // _UTILS_H_

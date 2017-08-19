@@ -1,11 +1,11 @@
 #include "PageRank.h"
-#include "Input.h"
-#include "Vertex.h"
-#include "utils/Log.h"
-
 #include <vector>
 #include <iostream>
 #include <time.h>
+
+#include "Input.h"
+#include "Vertex.h"
+#include "utils/Log.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -55,7 +55,9 @@ int main(int argc, char** argv) {
     std::cout << "PageRank probabilities: " << std::endl;
     std::cout << vertices.size() << std::endl;
     for (unsigned int i = 0; i < vertices.size(); i++) {
-        std::cout << output[i] << "\t\t" << output[i] * vertices.size() << std::endl;
+        std::cout
+            << output[i] << "\t\t"
+            << output[i] * vertices.size()
+            << std::endl;
     }
-
 }

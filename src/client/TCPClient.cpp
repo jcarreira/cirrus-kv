@@ -559,7 +559,7 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
     txn_map.insert_or_assign(txn_id, txn);
-    
+
     // Build the future
     BladeClient::ClientFuture future(txn->result, txn->result_available,
                           txn->sem, txn->error_code, txn->mem_for_read_ptr,

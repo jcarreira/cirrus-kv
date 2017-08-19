@@ -2,7 +2,7 @@
 #include <arpa/inet.h>
 
 namespace graphs {
-        
+
 Vertex::Vertex(int id) :
     seen(false), cc(-1), id(id) {
 }
@@ -51,14 +51,14 @@ bool Vertex::hasNeighbor(int id) const {
 std::pair<std::unique_ptr<char[]>, unsigned int>
 Vertex::serializer(const Vertex& v) {
     uint64_t size = sizeof(uint32_t) * 2 +
-        sizeof(uint32_t) * v.getNeighborsSize(); // neighbors
+        sizeof(uint32_t) * v.getNeighborsSize();  // neighbors
 
     std::cout << "Serializing object with size: "
         << size
         << std::endl;
 
     std::unique_ptr<char[]> mem(new char[size]);
-    
+
     uint32_t* ptr = reinterpret_cast<uint32_t*>(mem.get());
     *ptr++ = htonl(v.getId());
     *ptr++ = htonl(v.getNeighborsSize());
@@ -71,7 +71,7 @@ Vertex::serializer(const Vertex& v) {
 
 Vertex Vertex::deserializer(const void* data, unsigned int size) {
     Vertex v;
-    
+
     const uint32_t* ptr = reinterpret_cast<const uint32_t*>(data);
     v.setId(ntohl(*ptr++));
     uint32_t n = ntohl(*ptr++);
@@ -88,11 +88,11 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
     }
     return v;
 }
-         
+
 void Vertex::print() const {
-    std::cout 
+    std::cout
         << "Print vertex id: " << id
         << std::endl;
 }
 
-}
+}  // namespace graphs

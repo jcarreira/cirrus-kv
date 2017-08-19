@@ -1,8 +1,9 @@
 #include "PageRank.h"
-#include "cache_manager/CacheManager.h"
-
 #include <stdlib.h>
 #include <cmath>
+
+#include "cache_manager/CacheManager.h"
+
 
 namespace graphs {
 
@@ -18,7 +19,6 @@ double calculate_error(const std::vector<double>& p_curr,
 std::vector<double> pageRank(cirrus::CacheManager<Vertex> cm,
         const std::vector<Vertex>& vertices,
         double gamma, double epsilon) {
-
     unsigned int num_vertices = vertices.size();
     std::vector<double> p_curr(num_vertices);
     std::vector<double> p_next(num_vertices);
@@ -58,7 +58,6 @@ std::vector<double> pageRank(cirrus::CacheManager<Vertex> cm,
         }
     }
     return p_curr;
-
 }
 
-} // namespace graphs
+}  // namespace graphs
