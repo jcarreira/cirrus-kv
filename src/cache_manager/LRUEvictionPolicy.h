@@ -43,7 +43,7 @@ class LRUEvictionPolicy : public EvictionPolicy {
      std::unordered_map<ObjectID, std::list<ObjectID>::iterator> object_map;
 
      /**
-      * List to keep track of rodering.
+      * List to keep track of ordering.
       */
      std::list<ObjectID> object_list;
 };
