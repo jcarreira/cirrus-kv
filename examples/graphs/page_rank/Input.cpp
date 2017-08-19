@@ -15,6 +15,10 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     std::ifstream infile(fname.c_str());
     std::vector<Vertex> vertices;
 
+    if (!infile.is_open()) {
+        throw std::runtime_error("Error opening file: " + fname);
+    }
+
     int num_vertices = -1;
     infile >> num_vertices;
     int num_edges = -1;

@@ -8,8 +8,8 @@
 #include "common/Synchronization.h"
 
 #define INIT_SWITCH (1)
-// by default logging is on
-#define DEFAULT_SWITCH (1)
+// by default logging is off
+#define DEFAULT_SWITCH (0)
 
 namespace cirrus {
 
