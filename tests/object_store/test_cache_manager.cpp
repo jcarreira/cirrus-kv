@@ -453,12 +453,34 @@ void test_bulk_nonexistent() {
     cm.get_bulk(1492, 1501, ret_values.data());
 }
 
+void test_cache_put_local_copy() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
+            cirrus::serializer_simple<int>,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(10);
+    cirrus::CacheManager<int> cm(&store, &policy, 10);
+    cm.put(1, 1);
+    int ret = cm.get(1);
+    if (ret != 1) {
+        throw std::runtime_error("Wrong value after get");
+    }
+    cm.put(1, 2);
+    ret = cm.get(1);
+    if (ret != 2) {
+        throw std::runtime_error("Wrong value after second get");
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "test starting" << std::endl;
     test_cache_manager_simple();
     test_array();
+    test_cache_put_local_copy();
 
     try {
         test_capacity();
