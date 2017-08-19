@@ -1,16 +1,13 @@
 #include "PageRank2.h"
+
+#include <time.h>
+#include <vector>
+#include <iostream>
+
 #include "Input.h"
 #include "Vertex.h"
 #include "utils/Log.h"
-
-#include <vector>
-#include <iostream>
-#include <time.h>
-
 #include "object_store/FullBladeObjectStore.h"
-//#include "tests/object_store/object_store_internal.h"
-//#include "utils/CirrusTime.h"
-//#include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "cache_manager/CacheManager.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
@@ -48,13 +45,14 @@ int main(int argc, char** argv) {
         std::cout << "Adding vertex: " << i << std::endl;
         cm.put(vertices[i].getId(), vertices[i]);
     }
-    
+
     std::cout << "Running PageRank" << std::endl;
     graphs::pageRank2(cm, vertices.size(), 0.85, 100);
 
     std::cout << "PageRank completed" << std::endl;
 
-    std::cout << "PageRank probabilities size: " << vertices.size() << std::endl;
+    std::cout << "PageRank probabilities size: "
+        << vertices.size() << std::endl;
     for (unsigned int i = 0; i < vertices.size(); i++) {
         Vertex curr = cm.get(i);
         curr.print();

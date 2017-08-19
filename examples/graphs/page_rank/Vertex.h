@@ -1,16 +1,17 @@
-#ifndef VERTEX_H_
-#define VERTEX_H_
+#ifndef _VERTEX_H_
+#define _VERTEX_H_
 
 #include <vector>
 #include <iostream>
 #include <set>
 #include <memory>
+#include <utility>
 
 namespace graphs {
 
 class Vertex {
-    public:
-        Vertex(int id = 0);
+ public:
+        explicit Vertex(int id = 0);
         Vertex(int id, const std::vector<int>& neighbors);
 
         void addNeighbor(int id);
@@ -35,10 +36,10 @@ class Vertex {
 
         void print() const;
 
-    private:
+ private:
         std::set<int> neighbors;
 
-        int id; //< id of the vertex
+        int id;  //< id of the vertex
 
         // these values hold the current and next probabilities of the pagerank
         // algorithm. They alternate betwee
@@ -46,7 +47,7 @@ class Vertex {
         double p_next;
 };
 
-} // graphs
+}  // namespace graphs
 
-#endif
+#endif  // _VERTEX_H_
 

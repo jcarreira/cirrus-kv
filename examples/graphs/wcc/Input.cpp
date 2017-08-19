@@ -24,8 +24,8 @@ std::vector<Vertex> readGraph(const std::string& fname) {
         int num_edges_per_vertex = -1;
         infile >> num_edges_per_vertex;
 
-        Vertex v(j); // new vertex
-        
+        Vertex v(j);  // new vertex
+
         // read neighbors for new vertex
         for (int i = 0; i < num_edges_per_vertex; ++i) {
             int neigh_id;
@@ -33,9 +33,8 @@ std::vector<Vertex> readGraph(const std::string& fname) {
             v.addNeighbor(neigh_id);
         }
         vertices.push_back(v);
-
     }
     return vertices;
 }
 
-} // graphs
+}  // namespace graphs

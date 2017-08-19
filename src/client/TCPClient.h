@@ -122,14 +122,13 @@ class TCPClient : public BladeClient {
       * corresponding to the transaction.
       */
     cuckoohash_map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
-    
+
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
     boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
         boost::lockfree::capacity<200>> send_queue;
-    //std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
 
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;

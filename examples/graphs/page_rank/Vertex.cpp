@@ -2,7 +2,7 @@
 #include <arpa/inet.h>
 
 namespace graphs {
-        
+
 Vertex::Vertex(int id) :
     id(id), p_curr(1.0), p_next(0.0) {
 }
@@ -54,10 +54,10 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 Vertex::serializer(const Vertex& v) {
     uint64_t size = sizeof(uint32_t) * 2 +
         sizeof(double) * 2 +
-        sizeof(uint32_t) * v.getNeighborsSize(); // neighbors
+        sizeof(uint32_t) * v.getNeighborsSize();  // neighbors
 
     std::unique_ptr<char[]> mem(new char[size]);
-    
+
     double* double_ptr = reinterpret_cast<double*>(mem.get());
     *double_ptr++ = v.getCurrProb();
     *double_ptr++ = v.getNextProb();
@@ -82,7 +82,7 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
     std::cout << "deserialized with currProb: " << v.getCurrProb()
         << " nextProb: " << v.getNextProb()
         << std::endl;
-    
+
     const uint32_t* ptr = reinterpret_cast<const uint32_t*>(double_ptr);
     v.setId(ntohl(*ptr++));
     uint32_t n = ntohl(*ptr++);
@@ -99,7 +99,7 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
     }
     return v;
 }
-         
+
 double Vertex::getCurrProb() const {
     return p_curr;
 }
@@ -117,11 +117,11 @@ void Vertex::setNextProb(double prob) {
 }
 
 void Vertex::print() const {
-    std::cout 
+    std::cout
         << "Print vertex id: " << id
         << " p_next: " << p_next
         << " p_curr: " << p_curr
         << std::endl;
 }
 
-}
+}  // namespace graphs
