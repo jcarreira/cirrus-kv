@@ -9,6 +9,7 @@
 #include "cache_manager/CacheManager.h"
 #include "utils/CirrusTime.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
+#include "cache_manager/LRUEvictionPolicy.h"
 #include "utils/Stats.h"
 #include "cache_manager/PrefetchPolicy.h"
 using ObjectID = uint64_t;
@@ -405,6 +406,43 @@ void test_lradded() {
 }
 
 /**
+ * This test checks the behavior of the LRUEvictionPolicy by ensuring
+ * that it always returns the least recently accessed item,
+ * and only does so when at capacity.
+ */
+void test_lru() {
+    cirrus::LRUEvictionPolicy policy(10);
+    for (unsigned int i = 0; i < 10; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 0) {
+            std::cout << i << "id where error occured" << std::endl;
+            throw std::runtime_error("Item evicted when cache not full");
+         }
+    }
+
+    auto ret_vec = policy.get(2);
+
+    if (ret_vec.size() != 0) {
+        std::cout << 2 << "id where error occured" << std::endl;
+        throw std::runtime_error("Item evicted when cache not full");
+     }
+
+    std::vector<unsigned int> expected_order = {0, 1, 3, 4, 5, 6, 7, 8, 9, 2};
+    for (unsigned int i = 10; i < 20; i++) {
+        auto ret_vec = policy.get(i);
+        if (ret_vec.size() != 1) {
+            throw std::runtime_error("More or less than one item returned "
+                    "when at capacity.");
+        } else if (ret_vec.front() != expected_order[i - 10]) {
+            std::cout << "Got: " << ret_vec.front() << " but expected "
+                << expected_order[i - 10] << std::endl;
+            throw std::runtime_error("Item returned was not least recently "
+                    "used in the cache.");
+        }
+    }
+}
+
+/**
  * This test tests that get_bulk() and put_bulk() return proper values.
  */
 void test_bulk() {
@@ -494,6 +532,7 @@ auto main(int argc, char *argv[]) -> int {
     } catch (const cirrus::NoSuchIDException & e) {
     }
     test_lradded();
+    test_lru();
 
     test_prefetch_bulk();
     test_bulk();
