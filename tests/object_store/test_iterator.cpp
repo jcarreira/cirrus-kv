@@ -229,7 +229,7 @@ void test_random_prefetching() {
     auto end = std::chrono::system_clock::now();
     auto duration = end - start;
 
-    for (const auto& data : iter) {
+    for (const auto& data __attribute__((unused)) : iter) {
         end = std::chrono::system_clock::now();
         if (j != 0) {
             // Time how long this last loop took
@@ -354,11 +354,10 @@ void test_array() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);
 
-    auto int_array = std::shared_ptr<int>(new int[4],
-        std::default_delete<int[]>());
-
     // Put items in the store
     for (int i = 0; i < 10; i++) {
+        auto int_array = std::shared_ptr<int>(new int[4],
+            std::default_delete<int[]>());
         for (int j = 0; j < 4; j++) {
             (int_array.get())[j] = (i * 4) + j;
         }
@@ -390,8 +389,11 @@ auto main(int argc, char *argv[]) -> int {
     test_iterator();
     std::cout << "Starting iterator alt test." << std::endl;
     test_iterator_alt();
+    std::cout << "Starting iterator array test." << std::endl;
     test_array();
+    std::cout << "Starting random prefetch test." << std::endl;
     test_random_prefetching();
+    std::cout << "Starting custom iteration test." << std::endl;
     test_custom_iteration();
     std::cout << "Test successful" << std::endl;
     return 0;

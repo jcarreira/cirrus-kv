@@ -37,14 +37,14 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 }
 
 /* Checks that the N numbers are equal to each other and the number of ints. */
-int deserializer_variable_simple(void* data, unsigned int size) {
-    int *ptr = reinterpret_cast<int*>(data);
-    int returned_val = *ptr;
-    if (returned_val != size / sizeof(int)) {
+int deserializer_variable_simple(const void* data, unsigned int size) {
+    const int *ptr = reinterpret_cast<const int*>(data);
+    const int returned_val = *ptr;
+    if (returned_val != static_cast<int>(size / sizeof(int))) {
         throw std::runtime_error("Size not equal to the int val");
     }
     for (int i = 0; i < returned_val; i++) {
-        if (*(ptr + i) != size / sizeof(int)) {
+        if (*(ptr + i) != static_cast<int>(size / sizeof(int))) {
             throw std::runtime_error("Incorrect value returned");
         }
     }

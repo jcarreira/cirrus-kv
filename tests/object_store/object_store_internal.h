@@ -83,11 +83,11 @@ class c_array_deserializer_simple {
      * @param data a pointer to the raw data to deserialize
      */
     std::shared_ptr<T>
-    operator()(void* data, unsigned int /* size */) {
+    operator()(const void* data, unsigned int /* size */) {
         unsigned int size = sizeof(T) * num_slots;
 
         // cast the pointer
-        T *ptr = reinterpret_cast<T*>(data);
+        const T *ptr = reinterpret_cast<const T*>(data);
         // allocate memory for the data to live in
         auto ret_ptr = std::shared_ptr<T>(new T[num_slots],
                 std::default_delete< T[]>());
@@ -112,8 +112,8 @@ std::pair<std::unique_ptr<char[]>, unsigned int>
 
 /* Takes a pointer to raw mem passed in and returns as object. */
 template<typename T, unsigned int SIZE>
-T deserializer_simple(void* data, unsigned int /* size */) {
-    T *ptr = reinterpret_cast<T*>(data);
+T deserializer_simple(const void* data, unsigned int /* size */) {
+    const T *ptr = reinterpret_cast<const T*>(data);
     T ret;
     std::memcpy(&ret, ptr, SIZE);
     return ret;

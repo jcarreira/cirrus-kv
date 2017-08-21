@@ -139,7 +139,7 @@ void test_async() {
     }
     auto ret_pair = read_future.getDataPair();
 
-    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
     std::cout << ret_val << " returned from server" << std::endl;
 
     if (ret_val != message) {
@@ -171,10 +171,9 @@ void test_async_N() {
         }
     }
     std::cout << "BEGINNING READS" << std::endl;
-    int ret_values[10];
     for (i = 0; i < N; i++) {
         auto pair = client.read_sync(i);
-        int val = *(reinterpret_cast<int*>(pair.first.get()));
+        const int val = *(reinterpret_cast<const int*>(pair.first.get()));
 
         if (val != i) {
             std::cout << "Expected " << i << "but got " << val << std::endl;
@@ -191,7 +190,7 @@ void test_async_N() {
         if (!success) {
             throw std::runtime_error("Error during an async read");
         }
-        int ret_value = *(reinterpret_cast<int*>(
+        const int ret_value = *(reinterpret_cast<const int*>(
             get_futures[i].getDataPair().first.get()));
 
         if (ret_value != i) {

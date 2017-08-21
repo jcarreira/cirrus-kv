@@ -6,8 +6,11 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <string.h>
 #include <map>
 #include <vector>
+#include <algorithm>
+#include <iostream>
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -26,14 +29,17 @@ static const int initial_buffer_size = 50;
   * @param port the port the server will listen on
   * @param queue_len the length of the queue to make connections with the
   * server.
+  * @param max_fds_ the maximum number of clients that can be connected to the
+  * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, int queue_len) {
-    port_ = port;
-    queue_len_ = queue_len;
-    pool_size = pool_size_;
-    server_sock_ = 0;
-}
+TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
+    port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
+        if (max_fds_ + 1 == 0) {
+            throw cirrus::Exception("Max_fds value too high, "
+                "overflow occurred.");
+        }
+    }
 
 /**
   * Initializer for the server. Sets up the socket it uses to listen for
@@ -109,7 +115,8 @@ void TCPServer::init() {
                + to_string(port_));
     }
 
-    if (listen(server_sock_, queue_len_) == -1) {
+    // SOMAXCONN is the "max reasonable backlog size" defined in socket.h
+    if (listen(server_sock_, SOMAXCONN) == -1) {
         throw cirrus::ConnectionException("Error listening on port "
             + to_string(port_));
     }
@@ -120,6 +127,20 @@ void TCPServer::init() {
 }
 
 /**
+ * Function passed into std::remove_if
+ * @param x a struct pollfd being examined
+ * @return True if the struct should be removed. This is true if the fd is -1,
+ * meaning that it is being ignored.
+ */
+bool TCPServer::testRemove(struct pollfd x) {
+    // If this pollfd will be removed, the index of the next location to insert
+    // should be reduced by one correspondingly.
+    if (x.fd == -1) {
+        curr_index -= 1;
+    }
+    return x.fd == -1;
+}
+/**
   * Server processing loop. When called, server loops infinitely, accepting
   * new connections and acting on messages received.
   */
@@ -129,7 +150,7 @@ void TCPServer::loop() {
 
     while (1) {
         LOG<INFO>("Server calling poll.");
-        int poll_status = poll(fds.data(), num_fds, timeout);
+        int poll_status = poll(fds.data(), curr_index, timeout);
         LOG<INFO>("Poll returned with status: ", poll_status);
 
         if (poll_status == -1) {
@@ -145,9 +166,17 @@ void TCPServer::loop() {
                     continue;
                 }
                 if (curr_fd.revents != POLLIN) {
-                    LOG<INFO>("Non read event on socket: ", curr_fd.fd);
+                    LOG<ERROR>("Non read event on socket: ", curr_fd.fd);
+                    if (curr_fd.revents & POLLHUP) {
+                        LOG<INFO>("Connection was closed by client");
+                        LOG<INFO>("Closing socket: ", curr_fd.fd);
+                        close(curr_fd.fd);
+                        curr_fd.fd = -1;
+                    }
+
                 } else if (curr_fd.fd == server_sock_) {
                     LOG<INFO>("New connection incoming");
+
                     // New data on main socket, accept and connect
                     // TODO(Tyler): loop this to accept multiple at once?
                     // TODO(Tyler): Switch to non blocking sockets?
@@ -157,18 +186,31 @@ void TCPServer::loop() {
                     if (newsock < 0) {
                         throw std::runtime_error("Error accepting socket");
                     }
-                    LOG<INFO>("Created new socket: ", newsock);
-                    fds.at(curr_index).fd = newsock;
-                    fds.at(curr_index).events = POLLIN;
-                    curr_index++;
+                    // If at capacity, reject connection
+                    if (curr_index == max_fds) {
+                        close(newsock);
+                    } else {
+                        LOG<INFO>("Created new socket: ", newsock);
+                        fds.at(curr_index).fd = newsock;
+                        fds.at(curr_index).events = POLLIN;
+                        curr_index++;
+                    }
                 } else {
                     if (!process(curr_fd.fd)) {
+                        LOG<INFO>("Processing failed on socket: ", curr_fd.fd);
                         // do not make future alerts on this fd
                         curr_fd.fd = -1;
                     }
                 }
                 curr_fd.revents = 0;  // Reset the event flags
             }
+        }
+        // If at max capacity, try to make room
+        if (curr_index == max_fds) {
+            // Try to purge unused fds, those with fd == -1
+            std::remove_if(fds.begin(), fds.end(),
+                std::bind(&TCPServer::testRemove, this,
+                    std::placeholders::_1));
         }
     }
 }
@@ -188,10 +230,12 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
     int64_t sent = 0;
 
     while (to_send != total_sent) {
-        sent = send(sock, data, len, 0);
+        sent = send(sock, data, len - total_sent, 0);
 
         if (sent == -1) {
-            throw cirrus::Exception("Server error sending data to client");
+            LOG<ERROR>("Server error sending data to client, "
+                "possible client died");
+            return -1;
         }
 
         total_sent += sent;
@@ -204,6 +248,32 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
 }
 
 /**
+ * Guarantees that an entire message is read.
+ * @param sock the fd of the socket to read on.
+ * @param data a pointer to the buffer to read into.
+ * @param len the number of bytes to read.
+ * @return the number of bytes sent.
+ */
+ssize_t TCPServer::read_all(int sock, void* data, size_t len) {
+    uint64_t bytes_read = 0;
+
+    while (bytes_read < len) {
+        int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
+            len - bytes_read);
+
+        if (retval == -1) {
+            char *error = strerror(errno);
+            LOG<ERROR>(error);
+            throw cirrus::Exception("Error reading from client");
+        }
+
+        bytes_read += retval;
+    }
+
+    return bytes_read;
+}
+
+/**
   * Read header from client's message or return false if client has disconnected
   * @param buffer Buffer where data is stored
   * @param sock Socket used for communication
@@ -211,7 +281,7 @@ ssize_t TCPServer::send_all(int sock, const void* data, size_t len,
   * @param Return false if client disconnected, true otherwise
   */
 bool TCPServer::read_from_client(
-        std::vector<char>& buffer, int sock, int& bytes_read) {
+        std::vector<char>& buffer, int sock, uint64_t& bytes_read) {
     bool first_loop = true;
     while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
         int retval = read(sock, buffer.data() + bytes_read,
@@ -223,7 +293,6 @@ bool TCPServer::read_from_client(
             LOG<INFO>("Closing socket: ", sock);
             return false;
         }
-
         if (retval < 0) {
             throw cirrus::Exception("Server issue in reading "
                                     "socket during size read.");
@@ -236,11 +305,11 @@ bool TCPServer::read_from_client(
 }
 
 /**
-  * Process the message incoming on a particular socket. Reads in the message
-  * from the socket, extracts the flatbuffer, and then acts depending on
-  * the type of the message.
-  * @param sock the file descriptor for the socket with an incoming message.
-  */
+ * Process the message incoming on a particular socket. Reads in the message
+ * from the socket, extracts the flatbuffer, and then acts depending on
+ * the type of the message.
+ * @param sock the file descriptor for the socket with an incoming message.
+ */
 bool TCPServer::process(int sock) {
     LOG<INFO>("Processing socket: ", sock);
     std::vector<char> buffer;
@@ -248,9 +317,9 @@ bool TCPServer::process(int sock) {
     // Read in the incoming message
 
     // Reserve the size of a 32 bit int
-    int current_buf_size = sizeof(uint32_t);
+    uint64_t current_buf_size = sizeof(uint32_t);
     buffer.reserve(current_buf_size);
-    int bytes_read = 0;
+    uint64_t bytes_read = 0;
 
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
@@ -261,38 +330,30 @@ bool TCPServer::process(int sock) {
     // Convert to host byte order
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
                                                             buffer.data());
-    int incoming_size = ntohl(*incoming_size_ptr);
+    uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
     TimerFunction resize_time;
 #endif
     if (incoming_size > current_buf_size) {
-        buffer.resize(incoming_size);
+        // We use reserve() in place of resize() as it does not initialize the
+        // memory that it allocates. This is safe, but buffer.capacity() must
+        // be used to find the length of the buffer rather than buffer.size()
+        buffer.reserve(incoming_size);
     }
 #ifdef PERF_LOG
     LOG<PERF>("TCPServer::process resize time (us): ",
             resize_time.getUsElapsed());
 #endif
 
-    bytes_read = 0;
 
 #ifdef PERF_LOG
     TimerFunction receive_time;
 #endif
-    // XXX shouldn't this be in a recv_all?
-    while (bytes_read < incoming_size) {
-        int retval = read(sock, buffer.data() + bytes_read,
-                          incoming_size - bytes_read);
 
-        if (retval < 0) {
-            throw cirrus::Exception("Serverside error while "
-                                    "reading full message.");
-        }
+    read_all(sock, buffer.data(), incoming_size);
 
-        bytes_read += retval;
-        LOG<INFO>("Server received ", bytes_read, " bytes of ", incoming_size);
-    }
 #ifdef PERF_LOG
     double recv_mbps = bytes_read / (1024.0 * 1024) /
         (receive_time.getUsElapsed() / 1000000.0);
@@ -343,7 +404,7 @@ bool TCPServer::process(int sock) {
                     success = false;
                 } else {
                     // Service the write request by
-                    //  storing the serialized object
+                    // storing the serialized object
                     std::vector<int8_t> data(data_fb->begin(), data_fb->end());
                     // Create entry in store mapping the data to the id
                     curr_size += data_fb->size();
@@ -602,7 +663,7 @@ bool TCPServer::process(int sock) {
     int message_size = builder.GetSize();
     // Convert size to network order and send
     uint32_t network_order_size = htonl(message_size);
-    if (send(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
+    if (send_all(sock, &network_order_size, sizeof(uint32_t), 0) == -1) {
         LOG<ERROR>("Server error sending message back to client. "
             "Possible client died");
         return false;
@@ -632,5 +693,6 @@ bool TCPServer::process(int sock) {
     LOG<INFO>("Server done processing message from client");
     return true;
 }
+
 
 }  // namespace cirrus
