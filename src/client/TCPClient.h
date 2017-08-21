@@ -17,7 +17,6 @@
 #include <utility>
 #include <map>
 #include <atomic>
-#include <vector>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
