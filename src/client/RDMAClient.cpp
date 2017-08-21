@@ -124,7 +124,7 @@ bool RDMAClient::write_sync(ObjectID oid, const WriteUnit& w) {
   * serialized object read from the server resides in as well as the size of
   * the buffer.
   */
-std::pair<std::shared_ptr<char>, unsigned int>
+std::pair<std::shared_ptr<const char>, unsigned int>
 RDMAClient::read_sync(ObjectID oid) {
     BladeLocation loc;
     if (objects_.find(oid, loc)) {
@@ -940,7 +940,7 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
                 alloc_rec.peer_rkey,
                 *mem);
     }
-    std::shared_ptr<std::shared_ptr<char>> dummy_ptr;
+    std::shared_ptr<std::shared_ptr<const char>> dummy_ptr;
     std::shared_ptr<uint64_t> dummy_size_ptr;
     return BladeClient::ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
@@ -1044,9 +1044,10 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
                 [mem]() -> void { delete mem; });
     }
 
-    std::shared_ptr<std::shared_ptr<char>> buffer_ptr =
-        std::make_shared<std::shared_ptr<char>>(reinterpret_cast<char*>(data),
-            std::default_delete< char[]>());
+    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
+        std::make_shared<std::shared_ptr<const char>>(
+                reinterpret_cast<const char*>(data),
+                std::default_delete<const char[]>());
 
     return BladeClient::ClientFuture(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,

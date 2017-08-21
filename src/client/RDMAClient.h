@@ -59,8 +59,8 @@ class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
     bool write_sync(ObjectID id, const WriteUnit& w) override;
-    std::pair<std::shared_ptr<char>, unsigned int> read_sync(
-        ObjectID oid) override;
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync(ObjectID oid)
+        override;
 
     BladeClient::ClientFuture write_async(ObjectID oid,
         const WriteUnit& w) override;

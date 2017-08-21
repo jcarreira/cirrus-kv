@@ -40,7 +40,8 @@ class ObjectStore {
     class ObjectStoreGetFuture {
      public:
         ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
-                            std::function<T(void*, unsigned int)> deserializer);
+                            std::function<T(const void*, unsigned int)>
+                                deserializer);
         ObjectStoreGetFuture() {}
         void wait();
 
@@ -60,7 +61,7 @@ class ObjectStore {
           * A function that reads the buffer passed in and deserializes it,
           * returning an object constructed from the information in the buffer.
           */
-        std::function<T(void*, unsigned int)> deserializer;
+        std::function<T(const void*, unsigned int)> deserializer;
     };
 
     ObjectStore() {}
@@ -135,7 +136,7 @@ bool ObjectStore<T>::ObjectStorePutFuture::get() {
 template<class T>
 ObjectStore<T>::ObjectStoreGetFuture::ObjectStoreGetFuture(
     cirrus::BladeClient::ClientFuture client_future,
-    std::function<T(void*, unsigned int)> deserializer) :
+    std::function<T(const void*, unsigned int)> deserializer) :
         client_future(client_future), deserializer(deserializer) {}
 
 /**
@@ -167,7 +168,7 @@ template<class T>
 T ObjectStore<T>::ObjectStoreGetFuture::get() {
     // Ensure that the result is available, and throw error if needed
     auto ret_pair = client_future.getDataPair();
-    std::shared_ptr<char> ptr = ret_pair.first;
+    std::shared_ptr<const char> ptr = ret_pair.first;
     auto length = ret_pair.second;
     // Deserialize and return the memory.
     return deserializer(ptr.get(), length);
