@@ -337,7 +337,10 @@ bool TCPServer::process(int sock) {
     TimerFunction resize_time;
 #endif
     if (incoming_size > current_buf_size) {
-        buffer.resize(incoming_size);
+        // We use reserve() in place of resize() as it does not initialize the
+        // memory that it allocates. This is safe, but buffer.capacity() must
+        // be used to find the length of the buffer rather than buffer.size()
+        buffer.reserve(incoming_size);
     }
 #ifdef PERF_LOG
     LOG<PERF>("TCPServer::process resize time (us): ",

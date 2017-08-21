@@ -1,7 +1,7 @@
 #ifndef SRC_CACHE_MANAGER_CACHEMANAGER_H_
 #define SRC_CACHE_MANAGER_CACHEMANAGER_H_
 
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <functional>
 #include <algorithm>
@@ -158,7 +158,7 @@ class CacheManager {
      * The map that serves as the actual cache. Maps ObjectIDs to cache
      * entries.
      */
-    std::map<ObjectID, struct cache_entry> cache;
+    std::unordered_map<ObjectID, struct cache_entry> cache;
 
     /**
      * The maximum capacity of the cache. Will never be exceeded. Set
@@ -259,7 +259,8 @@ T CacheManager<T>::get(ObjectID oid) {
 
 /**
   * A function that stores an object obj in the remote store under ObjectID oid.
-  * Calls the put() method in FullBladeObjectstore.h
+  * Calls the put() method in FullBladeObjectstore.h and stores cached copy
+  * of object locally.
   * @param oid the ObjectID to store under.
   * @param obj the object to store on the server
   * @see FullBladeObjectstore
@@ -268,6 +269,27 @@ template<class T>
 void CacheManager<T>::put(ObjectID oid, T obj) {
     std::vector<ObjectID> to_remove = eviction_policy->put(oid);
     evict_vector(to_remove);
+
+    struct cache_entry *entry;
+    LOG<INFO>("Cache put called on oid: ", oid);
+    auto cache_iterator = cache.find(oid);
+    if (cache_iterator != cache.end()) {
+        LOG<INFO>("Entry exists for oid: ", oid);
+        // entry exists for the oid
+        entry = &(cache_iterator->second);
+        // replace existing entry
+        entry->obj = obj;
+    } else {
+        // entry does not exist.
+        // set up entry and fill it
+        if (cache.size() == max_size) {
+          throw cirrus::CacheCapacityException("Put operation would put cache "
+                                             "over capacity.");
+        }
+        entry = &cache[oid];
+        entry->obj = obj;
+    }
+
     // Push the object to the store under the given id
     // TODO(Tyler): Should we switch this to an async op for greater
     // performance potentially? what to do with the futures?
