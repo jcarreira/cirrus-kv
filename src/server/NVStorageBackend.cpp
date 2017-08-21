@@ -40,7 +40,6 @@ void NVStorageBackend::init() {
 }
 
 bool NVStorageBackend::put(uint64_t /* oid */, const MemData& /* data */) {
-
     return true;
 }
 
