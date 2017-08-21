@@ -7,3 +7,7 @@
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
 	url = https://github.com/google/flatbuffers.git
+[submodule "third_party/libbf"]
+	path = third_party/libbf
+	url = https://github.com/mavam/libbf.git
+	branch = master
