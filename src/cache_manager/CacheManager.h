@@ -35,7 +35,7 @@ class CacheManager {
     };
     CacheManager(cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                  cirrus::EvictionPolicy *eviction_policy,
-                 uint64_t cache_size);
+                 uint64_t cache_size, bool defer_writes = false);
     T get(ObjectID oid);
     void put(ObjectID oid, T obj);
     void prefetch(ObjectID oid);
@@ -141,6 +141,10 @@ class CacheManager {
     struct cache_entry {
         /** Boolean indicating whether this item is in the cache. */
         bool cached = true;
+        /**
+         * Boolean indicating whether this entry is up to date with the remote.
+         */
+        bool dirty = false;
         /** Object that will be retrieved by a get() operation. */
         T obj;
         /** Future indicating status of operation */
@@ -160,6 +164,10 @@ class CacheManager {
      */
     std::unordered_map<ObjectID, struct cache_entry> cache;
 
+    /** Map used to keep track of asynchronously evicted items. */
+    std::unordered_map<ObjectID,
+        typename cirrus::ObjectStore<T>::ObjectStorePutFuture> pending_writes;
+
     /**
      * The maximum capacity of the cache. Will never be exceeded. Set
      * at time of instantiation.
@@ -176,11 +184,15 @@ class CacheManager {
      * PrefetchPolicy used to determine prefetch operations.
      */
     cirrus::PrefetchPolicy<T> *prefetch_policy;
+
     // Policies to use if specified
     /** An instance of an off policy. */
     OffPolicy off_policy;
     /** An instance of an ordered policy. */
     OrderedPolicy ordered_policy;
+
+    /** Boolean indicating whether writes should be deferred until eviction. */
+    bool defer_writes;
 };
 
 
@@ -192,15 +204,19 @@ class CacheManager {
   * from.
   * @param cache_size the maximum number of objects that the cache should
   * hold. Must be at least one.
+  * @param defer_writes whether calls to put should write immediately to the
+  * remote store or if no write should occur until eviction. Should be set
+  * to true in order to defer writes.
   */
 template<class T>
 CacheManager<T>::CacheManager(
                            cirrus::ostore::FullBladeObjectStoreTempl<T> *store,
                            cirrus::EvictionPolicy *eviction_policy,
-                           uint64_t cache_size) :
+                           uint64_t cache_size, bool defer_writes) :
                            store(store),
                            max_size(cache_size),
-                           eviction_policy(eviction_policy) {
+                           eviction_policy(eviction_policy),
+                           defer_writes(defer_writes) {
     if (cache_size < 1) {
         throw cirrus::CacheCapacityException(
               "Cache capacity must be at least one.");
@@ -222,6 +238,19 @@ T CacheManager<T>::get(ObjectID oid) {
     evict_vector(to_remove);
     // check if entry exists for the oid in cache
     struct cache_entry *entry;
+
+    if (defer_writes) {
+        // If attempting to get an item that was evicted, ensure that
+        // the asynchronous write has completed before attempting to access it
+        auto it = pending_writes.find(oid);
+        if (it != pending_writes.end()) {
+            auto future = it->second;
+            // wait for completion
+            future.wait();
+            // Remove the entry as the operation has completed.
+            pending_writes.erase(it);
+        }
+    }
 
     LOG<INFO>("Cache get called on oid: ", oid);
     auto cache_iterator = cache.find(oid);
@@ -279,6 +308,7 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
         entry = &(cache_iterator->second);
         // replace existing entry
         entry->obj = obj;
+        entry->dirty = true;
     } else {
         // entry does not exist.
         // set up entry and fill it
@@ -288,12 +318,12 @@ void CacheManager<T>::put(ObjectID oid, T obj) {
         }
         entry = &cache[oid];
         entry->obj = obj;
+        entry->dirty = true;
     }
 
-    // Push the object to the store under the given id
-    // TODO(Tyler): Should we switch this to an async op for greater
-    // performance potentially? what to do with the futures?
-    store->put(oid, obj);
+    if (!defer_writes) {
+        store->put(oid, obj);
+    }
 }
 
 /**
@@ -413,6 +443,26 @@ void CacheManager<T>::evict(ObjectID oid) {
     if (it == cache.end()) {
         throw cirrus::Exception("Attempted to remove item not in cache.");
     } else {
+        if (defer_writes) {
+            // If the entry is dirty, write it to the store asynchronously
+            // and keep track of the future.
+            auto entry = it->second;
+            if (entry.dirty) {
+                pending_writes[oid] = store->put_async(oid, entry.obj);
+            }
+
+            // Clean the pending writes map if too full by
+            // removing all operations that have completed
+            if (pending_writes.size() > 50) {
+                for (auto it = pending_writes.begin();
+                    it != pending_writes.end(); it++) {
+                    auto future = it->second;
+                    if (future.try_wait()) {
+                        it = pending_writes.erase(it);
+                    }
+                }
+            }
+        }
         cache.erase(it);
     }
 }
