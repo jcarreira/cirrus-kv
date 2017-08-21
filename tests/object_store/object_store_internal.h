@@ -12,6 +12,8 @@
 #include "client/RDMAClient.h"
 #endif  // HAVE_LIBRDMACM
 
+using AtomicType = uint32_t;
+
 namespace cirrus {
 
 /**

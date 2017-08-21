@@ -1,14 +1,17 @@
 #ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 #define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
 #include <utility>
+#include <type_traits>
 #include <memory>
 #include <vector>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
+#include "client/TCPClient.h"
 #include "utils/utils.h"
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
@@ -32,6 +35,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
                               unsigned int>(const T&)> serializer,
                               std::function<T(const void*, unsigned int)>
                               deserializer);
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
+                              const std::string& port,
+                              BladeClient *client);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
@@ -41,8 +47,13 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
             const ObjectID& id) override;
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
             const T& obj) override;
-    void removeBulk(ObjectID first, ObjectID last) override;
 
+    AtomicType exchange(ObjectID oid, AtomicType value);
+    AtomicType fetchAdd(ObjectID oid, AtomicType value);
+    AtomicType increment(ObjectID oid);
+    AtomicType decrement(ObjectID oid);
+
+    void removeBulk(ObjectID first, ObjectID last) override;
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
     void put_bulk(ObjectID start, ObjectID last, T* data) override;
 
@@ -50,13 +61,46 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 
  private:
     /**
+     * This function serializes objects of type AtomicType.
+     * @param v the object to be serialized.
+     * @return an std::pair containing a pointer to the serialized object
+     * as well as the length of the serialized object.
+     */
+    static std::pair<std::unique_ptr<char[]>, unsigned int>
+    serializeAtomicType(const AtomicType& v) {
+        std::unique_ptr<char[]> ptr(new char[sizeof(AtomicType)]);
+        // Convert to network byte order.
+        *(reinterpret_cast<AtomicType*>(ptr.get())) = htonl(v);
+        return std::make_pair(std::move(ptr), sizeof(AtomicType));
+    }
+
+    /**
+     * Deserializes objects of type AtomicType.
+     * @param data a pointer to the start of the serialized object.
+     * @return a deserialized object of type AtomicType
+     */
+    static AtomicType deserializeAtomicType(const void* data,
+        unsigned int /* size */) {
+        const AtomicType *ptr = reinterpret_cast<const AtomicType*>(data);
+        // Convert to host byte order
+        AtomicType ret = ntohl(*ptr);
+        return ret;
+    }
+
+    /**
       * The client that the store uses to achieve all interaction with the
       * remote store.
       */
     BladeClient *client;
 
-// TODO(Tyler): Change the serializer/deserializer to
-//  be references/pointers?
+    /**
+     * Boolean indicating whether atomic operations will be allowed. It is set
+     * to false if a custom serializer or deserializer is provided.
+     */
+    bool allow_atomic_ops;
+
+    // TODO(Tyler): Change the serializer/deserializer to
+    //  be references/pointers?
     /**
       * A function that takes an object and serializes it. Returns a pointer
       * to the buffer containing the serialized object as well as the size of
@@ -73,7 +117,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 };
 
 /**
-  * Constructor for new object stores.
+  * Constructor for new object stores. Should only be used if type is not
+  * AtomicType as AtomicType requires a specific serializer and deserializer.
   * @param bladeIP the ip of the remote server.
   * @param port the port to use to communicate with the remote server
   * @param serializer A function that takes an object and serializes it.
@@ -94,6 +139,27 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         std::function<T(const void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
+    allow_atomic_ops = false;
+    client->connect(bladeIP, port);
+}
+
+/**
+  * Constructor for new object stores when type is AtomicType.
+  * @param bladeIP the ip of the remote server.
+  * @param port the port to use to communicate with the remote server
+  */
+template<class T>
+FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
+        const std::string& bladeIP,
+        const std::string& port,
+        BladeClient* client) :
+    ObjectStore<T>(), client(client),
+    serializer(serializeAtomicType), deserializer(deserializeAtomicType) {
+    if (!std::is_same<T, AtomicType>::value) {
+        throw cirrus::Exception("The three argument constructor only works for "
+            "AtomicType stores");
+    }
+    allow_atomic_ops = true;
     client->connect(bladeIP, port);
 }
 
@@ -114,6 +180,88 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     T retval = deserializer(ptr.get(), length);
 
     return retval;
+}
+
+/**
+ * Performs an atomic exchange. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to exchange is stored under.
+ * @param value a value of AtomicType. It will be
+ * exchanged with the value stored under oid on the server.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::exchange(ObjectID oid,
+    AtomicType value) {
+    if (std::is_same<T, AtomicType>::value && allow_atomic_ops) {
+        TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
+        if (tcp_client_ptr == nullptr) {
+            throw cirrus::Exception("This operation only supported "
+                "in TCP mode");
+        }
+
+        std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                            serializer(value);
+        std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+        AtomicType returned_serialized = tcp_client_ptr->exchange(oid,
+            *(reinterpret_cast<AtomicType*>(serial_ptr.get())));
+        return deserializer(&returned_serialized, sizeof(AtomicType));
+    } else {
+        throw cirrus::Exception("This is only supported when working with the "
+            "atomic type without a custom serializer/deserializer.");
+    }
+}
+
+/**
+ * Performs an atomic fetchadd. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to modify is stored under.
+ * @param value a value of AtomicType. It will be added to the value on the
+ * server.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::fetchAdd(ObjectID oid,
+    AtomicType value) {
+    if (std::is_same<T, AtomicType>::value && allow_atomic_ops) {
+        TCPClient* tcp_client_ptr = dynamic_cast<TCPClient *>(client);
+        if (tcp_client_ptr == nullptr) {
+            throw cirrus::Exception("This operation only supported "
+                "in TCP mode");
+        }
+
+        std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
+                                                            serializer(value);
+        std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
+        AtomicType returned_serialized = tcp_client_ptr->fetchAdd(oid,
+            *(reinterpret_cast<AtomicType*>(serial_ptr.get())));
+        return deserializer(&returned_serialized, sizeof(AtomicType));
+    } else {
+        throw cirrus::Exception("This is only supported when working with the "
+            "atomic type without a custom serializer/deserializer.");
+    }
+}
+
+/**
+ * Performs an atomic fetchadd. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to increment is stored under.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::increment(ObjectID oid) {
+    return fetchAdd(oid, 1);
+}
+
+/**
+ * Performs an atomic fdecrement. This operation is only supported in TCP mode
+ * and with a store of type AtomicType.
+ * @param oid the objectID the item you wish to decrement is stored under.
+ * @return the previous value stored under oid.
+ */
+template<class T>
+AtomicType FullBladeObjectStoreTempl<T>::decrement(ObjectID oid) {
+    return fetchAdd(oid, -1);
 }
 
 

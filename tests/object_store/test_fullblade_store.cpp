@@ -21,6 +21,8 @@ const char *IP;
 static const uint32_t SIZE = 1;
 bool use_rdma_client;
 
+using AtomicType = uint32_t;
+
 // #define CHECK_RESULTS
 
 /* This function takes an int with value N and makes N copies of it. */
@@ -388,6 +390,76 @@ void test_shared_client() {
     }
 }
 
+/**
+ * Test verifying that atomics work as expected. Checks returned value, and
+ * then checks the value left on the server.
+ */
+void test_atomics() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::ostore::FullBladeObjectStoreTempl<AtomicType> store(IP, PORT,
+            client.get());
+
+    AtomicType message = 15;
+    store.put(1, message);
+
+    std::cout << "Exchanging" << std::endl;
+    AtomicType retval = store.exchange(1, 23);
+    if (retval != message) {
+        std::cout << retval << std::endl;
+        throw std::runtime_error("Wrong value returned from exchange.");
+    }
+
+    AtomicType message2 = 3;
+    store.put(2, message2);
+
+    std::cout << "FetchAdd" << std::endl;
+    AtomicType val = 1;
+    retval = store.fetchAdd(2, val);
+    if (retval != message2) {
+        std::cout << retval << std::endl;
+        std::cout << "Wrong value returned" << std::endl;
+        throw std::runtime_error("Wrong value returned from fetchadd.");
+    }
+
+    retval = store.get(2);
+
+    if (retval != val + message2) {
+        std::cout << retval << " but expected " << val + message2 << std::endl;
+        throw std::runtime_error("Wrong value returned after fetchadd");
+    }
+
+    store.put(1, 1);
+    retval = store.increment(1);
+
+    if (retval != 1) {
+        std::cout << retval << " but expected " << 1 << std::endl;
+        throw std::runtime_error("Wrong value returned from increment");
+    }
+
+    retval = store.get(1);
+
+    if (retval != 2) {
+        std::cout << retval << " but expected " << 2 << std::endl;
+        throw std::runtime_error("Wrong value returned after increment");
+    }
+
+    retval = store.decrement(1);
+
+    if (retval != 2) {
+        std::cout << retval << " but expected " << 2 << std::endl;
+        throw std::runtime_error("Wrong value returned from decrement");
+    }
+
+    retval = store.get(1);
+
+    if (retval != 1) {
+        std::cout << retval << " but expected " << 1 << std::endl;
+        throw std::runtime_error("Wrong value returned after decrement");
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
@@ -423,6 +495,11 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     std::cout << "Test remove starting." << std::endl;
+
+    // These tests are only supported on TCP, do not run on RDMA
+    if (!use_rdma_client) {
+        test_atomics();
+    }
 
     try {
         test_remove();
