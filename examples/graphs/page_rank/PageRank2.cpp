@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "cache_manager/CacheManager.h"
+#include "iterator/CirrusIterable.h"
 
 #define EPS (1e-05)
 #define EQUAL(a, b) (fabs(a - b) < EPS)
@@ -23,12 +24,12 @@ void pageRank2(cirrus::CacheManager<Vertex>& cm,
         unsigned int num_vertices,
         double gamma, uint64_t num_iterations) {
     double error = 0;
+    
     for (uint64_t it = 0; it < num_iterations; ++it) {
         double prev_error = error;
 
-        for (unsigned int i = 0; i < num_vertices; i++) {
-            Vertex curr = cm.get(i);
-
+        cirrus::CirrusIterable<Vertex> iter(&cm, 40, 0, num_vertices - 1);
+        for (const auto& curr : iter) {
             auto neighbors = curr.getNeighbors();
             for (auto it = neighbors.begin();
                     it != neighbors.end();
@@ -42,9 +43,10 @@ void pageRank2(cirrus::CacheManager<Vertex>& cm,
         }
 
         // use iterator here
-        for (unsigned int i = 0; i < num_vertices; i++) {
+        iter = cirrus::CirrusIterable<Vertex>(&cm, 40, 0, num_vertices - 1);
+        uint64_t i = 0;
+        for (auto curr : iter) {
             prev_error = error;
-            Vertex curr = cm.get(i);
 
             // update p_curr for next round
             curr.setCurrProb(curr.getNextProb() * gamma + (1.0 - gamma) /
@@ -54,7 +56,7 @@ void pageRank2(cirrus::CacheManager<Vertex>& cm,
 
             // set p_next to 0.0
             curr.setNextProb(0.0);
-            cm.put(i, curr);
+            cm.put(i++, curr);
         }
 
         if (EQUAL(error, prev_error)) {
