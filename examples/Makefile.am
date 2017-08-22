@@ -1,5 +1,5 @@
 include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = graphs
+SUBDIRS = graphs ml
 
