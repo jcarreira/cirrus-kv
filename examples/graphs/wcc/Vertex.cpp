@@ -15,7 +15,6 @@ Vertex::Vertex(int id, const std::vector<int>& neighbors) :
 void Vertex::setNeighbors(const std::vector<int>& v) {
     for (const auto& i : v) {
         addNeighbor(i);
-        neighbors.insert(i);
     }
 }
 

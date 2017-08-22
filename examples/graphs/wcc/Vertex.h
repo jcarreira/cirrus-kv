@@ -32,13 +32,13 @@ class Vertex {
         void print() const;
 
  public:
-        bool seen;
-        int cc;  // weakly connected component id
+        bool seen; //< flag to indicate whether node has been traversed yet
+        int cc;    //< weakly connected component id (-1 if not assigned yet)
 
  private:
-        std::set<int> neighbors;
+        std::set<int> neighbors; //< set of the neighbors of this node
 
-        int id;  //< id of the vertex
+        int id;  //< id of this vertex
 };
 
 }  // namespace graphs

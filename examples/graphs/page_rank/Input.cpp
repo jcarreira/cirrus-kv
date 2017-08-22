@@ -20,9 +20,11 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     }
 
     int num_vertices = -1;
-    infile >> num_vertices;
     int num_edges = -1;
+    infile >> num_vertices;
     infile >> num_edges;
+
+    vertices.resize(num_vertices);
 
     for (int j = 0; j < num_vertices; ++j) {
         int num_edges_per_vertex = -1;

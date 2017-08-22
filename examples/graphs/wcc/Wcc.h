@@ -12,9 +12,14 @@
 
 namespace graphs {
 
-void bfs(int cc, const std::vector<Vertex> &vertices, std::set<int> &seen,
-                std::list<int> &fringe, int* &ccs);
-void make_undirected(std::vector<Vertex>& vertices);
+/**
+  * Compute the weakly connected components of the graph stored in this object store
+  * A weakly connected component is a subset of a graph for which all vertices
+  * are weakly connected, i.e., there is a path ignoring the edges direction
+  * @param cm Object store where input graph is stored
+  * @param size Number of vertices of the graph (vertices in ids 0..size-1)
+  * @return Vector of ints containing assignment of each vertex to a CC
+  */
 std::unique_ptr<int[]> weakly_cc(
         cirrus::CacheManager<Vertex>& cm, unsigned int size);
 

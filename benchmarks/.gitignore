@@ -4,3 +4,4 @@
 cache_benchmark
 iterator_benchmark
 outstanding_requests
+throughput

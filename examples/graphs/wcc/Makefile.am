@@ -2,7 +2,7 @@ include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS =  wcc
+bin_PROGRAMS =  main
 
 LIBS         =  -lcityhash -lclient \
                 -lauthentication -lutils -lcommon -levictionpolicies \
@@ -21,7 +21,7 @@ CPPFLAGS =  -ggdb -O3 -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
 		-I$(top_srcdir)/third_party/flatbuffers/include
 SOURCES  =  Wcc.cpp Input.cpp Vertex.cpp
 
-wcc_SOURCES  =  wcc.cpp $(SOURCES)
-wcc_LDFLAGS  =  -pthread
-wcc_LDADD    =  $(LINCLUDES) $(LIBS)
+main_SOURCES  =  main.cpp $(SOURCES)
+main_LDFLAGS  =  -pthread
+main_LDADD    =  $(LINCLUDES) $(LIBS)
 

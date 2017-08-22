@@ -1,16 +1,13 @@
 #include "PageRank.h"
+
+#include <time.h>
 #include <vector>
 #include <iostream>
-#include <time.h>
 
 #include "Input.h"
 #include "Vertex.h"
 #include "utils/Log.h"
-
 #include "object_store/FullBladeObjectStore.h"
-#include "tests/object_store/object_store_internal.h"
-#include "utils/CirrusTime.h"
-#include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "cache_manager/CacheManager.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
@@ -40,24 +37,25 @@ int main(int argc, char** argv) {
                 Vertex::serializer,
                 Vertex::deserializer);
 
-
     cirrus::LRAddedEvictionPolicy policy(cache_size);
-    std::cout << "Adding to cm" << std::endl;
     cirrus::CacheManager<Vertex> cm(&vertex_store, &policy, cache_size);
 
+    std::cout << "Adding to cm" << std::endl;
     for (uint64_t i = 0; i < vertices.size(); i++) {
+        std::cout << "Adding vertex: " << i << std::endl;
         cm.put(vertices[i].getId(), vertices[i]);
     }
-    std::vector<double> output = graphs::pageRank(cm, vertices, 0.85, .01);
+
+    std::cout << "Running PageRank" << std::endl;
+    graphs::pageRank(cm, vertices.size(), 0.85, 100);
 
     std::cout << "PageRank completed" << std::endl;
 
-    std::cout << "PageRank probabilities: " << std::endl;
-    std::cout << vertices.size() << std::endl;
+    std::cout << "PageRank probabilities size: "
+        << vertices.size() << std::endl;
     for (unsigned int i = 0; i < vertices.size(); i++) {
-        std::cout
-            << output[i] << "\t\t"
-            << output[i] * vertices.size()
-            << std::endl;
+        Vertex curr = cm.get(i);
+        curr.print();
     }
 }
+

@@ -8,7 +8,7 @@
 #include <atomic>
 #include <vector>
 #include "common/schemas/TCPBladeMessage_generated.h"
-#include "third_party/libcuckoo/libcuckoo/cuckoohash_map.hh"
+#include "libcuckoo/cuckoohash_map.hh"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
 #include <boost/lockfree/queue.hpp>
