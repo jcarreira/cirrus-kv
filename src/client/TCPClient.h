@@ -15,7 +15,6 @@
 #include <thread>
 #include <queue>
 #include <utility>
-#include <map>
 #include <atomic>
 #include <unordered_map>
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -26,6 +25,8 @@
 #include "utils/logging.h"
 #include "utils/utils.h"
 #include <boost/lockfree/queue.hpp>
+
+#define SEND_QUEUE_SIZE 10000
 
 namespace cirrus {
 
@@ -140,7 +141,7 @@ class TCPClient : public BladeClient {
      * messages to the server.
      */
     boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
-        boost::lockfree::capacity<200>> send_queue;
+        boost::lockfree::capacity<SEND_QUEUE_SIZE>> send_queue;
 
     /**
      * Queue of FlatBufferBuilders that are ready for reuse for writes.
