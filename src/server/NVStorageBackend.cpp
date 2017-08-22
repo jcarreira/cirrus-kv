@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdexcept>
-
+#include "utils/logging.h"
 
 /**
   * Design of an on-SSD key-value store
