@@ -20,25 +20,23 @@ static const uint64_t MILLION = 1000000;
 static const uint64_t N_ITER = 100;
 const int cache_size = 200;
 
-using namespace graphs;
-
 int main(int argc, char** argv) {
     if (argc != 2) {
         throw std::runtime_error("./pr <input_file>");
     }
 
     // read vertices from file
-    std::vector<Vertex> vertices = graphs::readGraph(argv[1]);
+    std::vector<graphs::Vertex> vertices = graphs::readGraph(argv[1]);
     cirrus::LOG<cirrus::INFO>("Read ", vertices.size(), " vertices");
 
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<graphs::Vertex>
         vertex_store(IP, PORT, &client,
-                Vertex::serializer,
-                Vertex::deserializer);
+                graphs::Vertex::serializer,
+                graphs::Vertex::deserializer);
 
     cirrus::LRAddedEvictionPolicy policy(cache_size);
-    cirrus::CacheManager<Vertex> cm(&vertex_store, &policy, cache_size);
+    cirrus::CacheManager<graphs::Vertex> cm(&vertex_store, &policy, cache_size);
 
     std::cout << "Adding to cm" << std::endl;
     for (uint64_t i = 0; i < vertices.size(); i++) {
@@ -54,7 +52,7 @@ int main(int argc, char** argv) {
     std::cout << "PageRank probabilities size: "
         << vertices.size() << std::endl;
     for (unsigned int i = 0; i < vertices.size(); i++) {
-        Vertex curr = cm.get(i);
+        graphs::Vertex curr = cm.get(i);
         curr.print();
     }
 }
