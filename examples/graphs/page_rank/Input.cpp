@@ -24,7 +24,7 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     infile >> num_vertices;
     infile >> num_edges;
 
-    vertices.resize(num_vertices);
+    vertices.reserve(num_vertices);
 
     for (int j = 0; j < num_vertices; ++j) {
         int num_edges_per_vertex = -1;
