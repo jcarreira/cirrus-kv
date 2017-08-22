@@ -46,7 +46,7 @@ void process(const std::string& s, std::map<std::string, uint64_t> *counts) {
 
 /**
  * Reads in the full works of mark twain seven times and parses them into
- * std strings (~110 MB). Once these strings reach 4kB, they are pushed
+ * std strings (~100 MB). Once these strings reach 4kB, they are pushed
  * to the remote store.
  * @return The highest objectid placed on the server, beginning from 0.
  */
@@ -58,7 +58,7 @@ uint64_t setup() {
             cirrus::string_serializer_simple,
             cirrus::string_deserializer_simple);
 
-    std::ifstream file("benchmarks/complete-works-mark-twain.txt");
+    std::ifstream file("benchmarks/very_big.txt");
 
     if (file.fail()) {
         throw std::runtime_error("Error opening example text. Is it in the "
