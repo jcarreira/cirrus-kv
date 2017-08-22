@@ -223,7 +223,7 @@ void PSTask::run(const Configuration& config) {
         << std::endl;
 
     // we keep a version number for the gradient produced by each worker
-    std::vector<int> gradientCounts;
+    std::vector<unsigned int> gradientCounts;
     gradientCounts.resize(10);
 
     bool first_time = true;
@@ -287,7 +287,7 @@ void PSTask::run(const Configuration& config) {
     }
 }
 
-void ErrorTask::run(const Configuration& config) {
+void ErrorTask::run(const Configuration& /* config */) {
     std::cout << "Compute error task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
@@ -424,7 +424,7 @@ void LoadingTask::run(const Configuration& config) {
         << std::endl;
 
     // We put in batches of N samples
-    for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
+    for (unsigned int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /** Build sample object

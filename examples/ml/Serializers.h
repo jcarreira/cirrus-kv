@@ -20,7 +20,7 @@ class ml_array_deleter {
 };
 
 template<typename T>
-void ml_array_nodelete(T * p) {}
+void ml_array_nodelete(T * /* p */) {}
 
 template<typename T>
 class c_array_serializer{

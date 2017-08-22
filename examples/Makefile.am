@@ -1,5 +1,8 @@
 include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = graphs ml
+SUBDIRS = graphs
 
+if USE_MPI
+SUBDIRS += ml
+endif

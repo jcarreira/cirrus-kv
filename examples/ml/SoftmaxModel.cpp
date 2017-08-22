@@ -68,7 +68,7 @@ void SoftmaxModel::loadSerialized(const void* data) {
 }
 
 std::unique_ptr<Model> SoftmaxModel::deserialize(void* data,
-            uint64_t size) const {
+            uint64_t /* size */) const {
     std::unique_ptr<SoftmaxModel> model =
         std::make_unique<SoftmaxModel>(
                 reinterpret_cast<double*>(data), nclasses, d);
@@ -97,7 +97,7 @@ uint64_t SoftmaxModel::getSerializedSize() const {
 }
 
 std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
-            int rank, const Matrix& m,
+            int /* rank */, const Matrix& m,
             double* labels,
             uint64_t labels_size,
             double epsilon) const {

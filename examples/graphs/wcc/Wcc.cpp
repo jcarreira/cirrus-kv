@@ -14,7 +14,7 @@ static void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
 
         Vertex curr = cm.get(ID);
         curr.seen = true;
-        cm.put(ID, curr); // update vertex to indicate it has been seen
+        cm.put(ID, curr);  // update vertex to indicate it has been seen
 
         curr.cc = cc;
         ccs[ID] = cc;

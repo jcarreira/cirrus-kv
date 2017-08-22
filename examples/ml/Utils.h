@@ -1,7 +1,7 @@
 /* Copyright Joao Carreira 2017 */
 
-#ifndef SRC_UTILS_UTILS_H_
-#define SRC_UTILS_UTILS_H_
+#ifndef _UTILS_H_
+#define _UTILS_H_
 
 #include <mpi.h>
 #include <sys/time.h>
