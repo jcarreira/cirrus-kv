@@ -535,17 +535,18 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
                           txn->mem_size);
 
     // Add builder to send queue
-    send_queue.push(builder);
+    while (!send_queue.push(builder)) {
+    }
 
 #ifdef PERF_LOG
-    TimerFunction enqueue_time;
+    TimerFunction sem_time;
 #endif
     // Alert that the queue has been updated
     queue_semaphore.signal();
 
 #ifdef PERF_LOG
     LOG<PERF>("TCPClient::enqueue_message semaphore signal time (us): ",
-            enqueue_time.getUsElapsed());
+            sem_time.getUsElapsed());
 #endif
     return future;
 }
