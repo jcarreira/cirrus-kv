@@ -3,9 +3,9 @@
 namespace graphs {
 
 /** Traverse all the vertices that are weakly connected
-  * XXX We should use DFS
+  * XXX We should use DFS instead
   */
-void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
+static void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
         std::list<int> &fringe,
         const std::unique_ptr<int[]>& ccs) {
     while (!fringe.empty()) {
@@ -14,6 +14,7 @@ void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
 
         Vertex curr = cm.get(ID);
         curr.seen = true;
+        cm.put(ID, curr); // update vertex to indicate it has been seen
 
         curr.cc = cc;
         ccs[ID] = cc;
@@ -29,7 +30,10 @@ void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
     }
 }
 
-void make_undirected(std::vector<Vertex>& vertices) {
+/**
+  * Transform a directed graph into an undirected one
+  */
+static void make_undirected(std::vector<Vertex>& vertices) {
     // make directed edges undirected
     for (auto& curr : vertices) {
         for (auto& v : curr.getNeighbors()) {
@@ -43,13 +47,6 @@ void make_undirected(std::vector<Vertex>& vertices) {
     }
 }
 
-/** Weakly connected components
-  * A weakly connected component is a subset of a graph for which all vertices
-  * are weakly connected, i.e., there is a path ignoring the edges direction
-  * @param vertices Graph vertices
-  * @param num-vertices Number of vertices
-  * @return Returns a vector containing component id for each vertex
-  */
 std::unique_ptr<int[]> weakly_cc(cirrus::CacheManager<Vertex>& cm,
         unsigned int num_vertices) {
     // vertices have to be 0-indexed, maybe can use a map instead

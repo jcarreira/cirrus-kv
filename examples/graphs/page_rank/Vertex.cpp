@@ -15,7 +15,6 @@ Vertex::Vertex(int id, const std::vector<int>& neighbors) :
 void Vertex::setNeighbors(const std::vector<int>& v) {
     for (const auto& i : v) {
         addNeighbor(i);
-        neighbors.insert(i);
     }
 }
 
@@ -91,7 +90,8 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
 
     if (size != expected_size) {
         throw std::runtime_error("Incorrect size: "
-                + std::to_string(size));
+                + std::to_string(size) +
+                + " expected: " + std::to_string(expected_size));
     }
 
     for (uint32_t i = 0; i < n; ++i) {

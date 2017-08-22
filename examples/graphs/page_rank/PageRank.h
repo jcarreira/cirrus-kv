@@ -1,5 +1,5 @@
-#ifndef PAGE_RANK2_H
-#define PAGE_RANK2_H
+#ifndef PAGE_RANK_H
+#define PAGE_RANK_H
 
 #include <vector>
 #include "Vertex.h"
@@ -7,9 +7,16 @@
 
 namespace graphs {
 
-std::vector<double> pageRank(cirrus::CacheManager<Vertex> cm,
-        const std::vector<Vertex>& vertices,
-        double gamma, double epsilon);
+/**
+  * Compute the PageRank probs. of a set of nodes stored in a Cirrus store
+  * @param cm Cache manager used to access nodes
+  * @param num_vertices Number of vertices (0..num_vertices - 1)
+  * @param gamma Value of PageRank's gamma (e.g., 0.85)
+  * @param num_iterations Number of pageRank iterations
+  */
+void pageRank(cirrus::CacheManager<Vertex>& cm,
+        unsigned int num_vertices,
+        double gamma, uint64_t num_iterations);
 
 }  // namespace graphs
 
