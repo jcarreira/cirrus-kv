@@ -23,6 +23,12 @@ namespace graphs {
 std::unique_ptr<int[]> weakly_cc(
         cirrus::CacheManager<Vertex>& cm, unsigned int size);
 
-}
+/**
+  * Transform a directed graph into an undirected one
+  * @param Set of vertices
+  */
+void make_undirected(std::vector<Vertex>& vertices);
+
+}  // namespace graphs
 
 #endif

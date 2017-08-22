@@ -24,7 +24,7 @@ void pageRank(cirrus::CacheManager<Vertex>& cm,
         unsigned int num_vertices,
         double gamma, uint64_t num_iterations) {
     double error = 0;
-    
+
     for (uint64_t it = 0; it < num_iterations; ++it) {
         double prev_error = error;
 

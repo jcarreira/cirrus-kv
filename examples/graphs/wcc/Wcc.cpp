@@ -30,10 +30,7 @@ static void bfs(int cc, cirrus::CacheManager<Vertex>& cm,
     }
 }
 
-/**
-  * Transform a directed graph into an undirected one
-  */
-static void make_undirected(std::vector<Vertex>& vertices) {
+void make_undirected(std::vector<Vertex>& vertices) {
     // make directed edges undirected
     for (auto& curr : vertices) {
         for (auto& v : curr.getNeighbors()) {

@@ -58,10 +58,10 @@ class Vertex {
         void print() const;
 
  private:
-        std::set<int> neighbors; //< set of neighboring vetrices
-        int id;        //< id of the vertex
-        double p_curr; //< current probability of this vertex
-        double p_next; //<  probability of this vertex in the next round
+        std::set<int> neighbors;  //< set of neighboring vetrices
+        int id;         //< id of the vertex
+        double p_curr;  //< current probability of this vertex
+        double p_next;  //<  probability of this vertex in the next round
 };
 
 }  // namespace graphs
