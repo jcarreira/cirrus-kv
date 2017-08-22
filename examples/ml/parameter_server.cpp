@@ -60,7 +60,7 @@ const char IP[] = "10.10.49.87";
 
 static const uint32_t SIZE = 1;
 
-void run_memory_task(const Configuration& config) {
+void run_memory_task(const Configuration& /* config */) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
@@ -76,30 +76,28 @@ void run_tasks(int rank, const Configuration& config) {
         sleep(8);
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample,
-                nworkers);
+                samples_per_batch, features_per_sample, nworkers);
         pt.run(config);
         sleep_forever();
     } else if (rank == 2 || rank == 5) {
         sleep(10);
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample);
+                samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
         sleep_forever();
     } else if (rank == 3) {
         sleep(3);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample);
+                samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
         sleep_forever();
     } else if (rank == 4) {
         sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample,
-                nworkers);
+                samples_per_batch, features_per_sample, nworkers);
         et.run(config);
         sleep_forever();
     } else {
@@ -137,7 +135,7 @@ int main(int argc, char** argv) {
     init_mpi(argc, argv);
     int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    // check_mpi_error(err);
+    check_mpi_error(err);
 
     if (argc != 2) {
         print_arguments();

@@ -69,16 +69,12 @@ class c_array_deserializer{
         auto ret_ptr = std::shared_ptr<T>(new T[numslots],
                 std::default_delete< T[]>());
 
+        if (size != input_size) {
+            throw std::runtime_error("Wrong size: " + std::to_string(size) +
+                    " expected: " + std::to_string(input_size));
+        }
+
         std::memcpy(ret_ptr.get(), ptr, size);
-        // std::cout << "Deserializing from address: "
-        //     << ptr
-        //     << " to addr: " << ((void*)alloc)
-        //     << " with size: " << size
-        //     << " informed with size: " << input_size
-        //     << std::endl;
-        // std::memcpy(alloc, ptr, size);
-        // return std::shared_ptr<T>(reinterpret_cast<T*>(alloc),
-        //         std::default_delete< T[]>());
         return ret_ptr;
     }
 
@@ -98,7 +94,7 @@ const char PORT[] = "12345";
 const char IP[] = "10.10.49.87";
 static const uint32_t SIZE = 1;
 
-void run_memory_task(const Configuration& config) {
+void run_memory_task(const Configuration& /* config */) {
     std::cout << "Launching TCP server" << std::endl;
     int ret = system("~/tcpservermain");
     std::cout << "System returned: " << ret << std::endl;
@@ -152,7 +148,7 @@ void run_loading_task(const Configuration& config) {
         << std::endl;
 
     // We put in batches of N samples
-    for (int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
+    for (unsigned int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /**
@@ -241,8 +237,6 @@ Configuration load_configuration(const std::string& config_path) {
 int main(int argc, char** argv) {
     std::cout << "Starting parameter server" << std::endl;
 
-    int rank, nprocs;
-
     if (argc != 2) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
@@ -251,7 +245,6 @@ int main(int argc, char** argv) {
     char name[200];
     gethostname(name, 200);
     std::cout << "MPI multi task test running on hostname: " << name
-        << " with rank: " << rank
         << std::endl;
 
     auto config = load_configuration(argv[1]);

@@ -16,6 +16,7 @@
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "common/Exception.h"
+#include "Utils.h"
 
 #define OBJ_ID 1000
 
@@ -133,8 +134,9 @@ int main(int argc, char** argv) {
 
     init_mpi(argc, argv);
     int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    check_mpi_error(err);
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    // check_mpi_error(err);
+    check_mpi_error(err);
 
     char name[200];
     gethostname(name, 200);

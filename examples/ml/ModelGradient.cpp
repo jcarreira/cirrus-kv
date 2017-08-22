@@ -99,7 +99,6 @@ void SoftmaxGradient::print() const {
 }
 
 void SoftmaxGradient::check_values() const {
-
     for (const auto &v : weights) {
         for (const auto &vv : v) {
             if (std::isnan(vv) || std::isinf(vv)) {
