@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
     std::vector<graphs::Vertex> vertices = graphs::readGraph(argv[1]);
     cirrus::LOG<cirrus::INFO>("Read ", vertices.size(), " vertices");
 
+    graphs::VertexSerializer vs;
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<graphs::Vertex>
         vertex_store(IP, PORT, &client,
-                graphs::Vertex::serializer,
-                graphs::Vertex::deserializer);
+                vs, graphs::Vertex::deserializer);
 
     cirrus::LRAddedEvictionPolicy policy(cache_size);
     cirrus::CacheManager<graphs::Vertex> cm(&vertex_store, &policy, cache_size);

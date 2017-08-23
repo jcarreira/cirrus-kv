@@ -37,13 +37,17 @@ void check_dataset(Dataset& dataset) {
 std::pair<std::unique_ptr<char[]>, uint64_t>
 LRModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
-    uint64_t size = sizeof(double) * d;
+    uint64_t size = getSerializedSize();
     res.first.reset(new char[size]);
 
     res.second = size;
-    std::memcpy(res.first.get(), weights.data(), sizeof(double) * d);
+    std::memcpy(res.first.get(), weights.data(), getSerializedSize());
 
     return res;
+}
+
+void LRModel::serializeTo(void* mem) const {
+    std::memcpy(mem, weights.data(), getSerializedSize());
 }
 
 void LRModel::randomize() {

@@ -1,5 +1,4 @@
 #include "Vertex.h"
-#include <arpa/inet.h>
 
 namespace graphs {
 
@@ -40,35 +39,6 @@ void Vertex::setId(int i) {
 
 bool Vertex::hasNeighbor(int id) const {
     return neighbors.find(id) != neighbors.end();
-}
-
-/** Format:
-  * p_curr (double)
-  * p_next (double)
-  * id (uint32_t)
-  * n neighbors (uint32_t)
-  * neighbors list (n * uint32_t)
-  */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-Vertex::serializer(const Vertex& v) {
-    uint64_t size = sizeof(uint32_t) * 2 +
-        sizeof(double) * 2 +
-        sizeof(uint32_t) * v.getNeighborsSize();  // neighbors
-
-    std::unique_ptr<char[]> mem(new char[size]);
-
-    double* double_ptr = reinterpret_cast<double*>(mem.get());
-    *double_ptr++ = v.getCurrProb();
-    *double_ptr++ = v.getNextProb();
-
-    uint32_t* ptr = reinterpret_cast<uint32_t*>(double_ptr);
-    *ptr++ = htonl(v.getId());
-    *ptr++ = htonl(v.getNeighborsSize());
-
-    for (const auto& n : v.getNeighbors()) {
-        *ptr++ = htonl(n);
-    }
-    return std::make_pair(std::move(mem), size);
 }
 
 Vertex Vertex::deserializer(const void* data, unsigned int size) {

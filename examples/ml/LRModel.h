@@ -39,11 +39,16 @@ class LRModel : public Model {
     void loadSerialized(const void* mem) override;
 
     /**
-      * Serializes this model into memory
-      * @return Pair of memory pointer and size of serialized model
+      * serializes this model into memory
+      * @return pair of memory pointer and size of serialized model
       */
     std::pair<std::unique_ptr<char[]>, uint64_t>
         serialize() const override;
+
+    /**
+      * serializes this model into memory pointed by mem
+      */
+    void serializeTo(void* mem) const;
 
     /**
      * Create new model from serialized weights

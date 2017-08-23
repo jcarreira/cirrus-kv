@@ -116,9 +116,9 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
 
     // Add the builder to the queue if it is of the right type (a write)
     // And if not over capacity
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder;
+    flatbuffers::FlatBufferBuilder* builder;
 
-    LOG<INFO>("TCPClient::write_async oid: ", oid, " size: ", size);
+    LOG<INFO>("TCPClient::write_async oid: ", oid);
 
 #ifdef PERF_LOG
     TimerFunction builder_timer;
@@ -128,13 +128,13 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
     uint64_t size = w.size();
     reuse_lock.wait();
     if (!reuse_queue.empty()) {
-        builder = std::move(reuse_queue.front());
+        builder = reuse_queue.front();
         reuse_queue.pop();
         reuse_lock.signal();
     } else {
         reuse_lock.signal();
         // The 64 is to give space for additional flatbuffer internal info
-        builder = std::make_unique<flatbuffers::FlatBufferBuilder>(size + 64);
+        builder = new flatbuffers::FlatBufferBuilder(size + 64);
     }
 
 
@@ -539,7 +539,7 @@ void TCPClient::process_send() {
 
             if (message_type == message::TCPBladeMessage::Message_Write) {
                 builder->Clear();
-                reuse_queue.push(std::move(builder));
+                reuse_queue.push(builder);
             }
         }
         reuse_lock.signal();

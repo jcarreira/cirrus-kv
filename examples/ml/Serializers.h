@@ -4,7 +4,10 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include <arpa/inet.h>
 #include <LRModel.h>
+
+#include "common/Serializer.h"
 
 /**
   * Deleter used to free arrays
@@ -32,23 +35,22 @@ void ml_array_nodelete(T * /* p */) {}
   * Serializer for raw arrays
   */
 template<typename T>
-class c_array_serializer{
+class c_array_serializer : public cirrus::Serializer<std::shared_ptr<T>> {
  public:
     explicit c_array_serializer(int nslots, const std::string& name = "") :
         numslots(nslots), name(name) {}
 
-    std::pair<std::unique_ptr<char[]>, unsigned int>
-    operator()(const std::shared_ptr<T>& v) {
-        T* array = v.get();
-
-        // allocate array
-        std::unique_ptr<char[]> ptr(new char[numslots * sizeof(T)]);
-
-        // copy samples to array
-        memcpy(ptr.get(), array, numslots * sizeof(T));
-        return std::make_pair(std::move(ptr), numslots * sizeof(T));
+    uint64_t size(const std::shared_ptr<T>& /*obj*/) const override {
+        uint64_t size = numslots * sizeof(T);
+        return size;
     }
 
+    void serialize(const std::shared_ptr<T>& obj, void* mem) const override {
+        T* array = obj.get();
+
+        // copy samples to array
+        memcpy(mem, array, size(obj));
+    }
  private:
     int numslots;      //< number of entries in the array
     std::string name;  //< name associated with this serializer
@@ -102,13 +104,13 @@ class c_array_deserializer{
 /**
   * LRModel serializer
   */
-class lr_model_serializer {
+class lr_model_serializer : public cirrus::Serializer<LRModel> {
  public:
     explicit lr_model_serializer(uint64_t n, const std::string& name = "") :
         n(n), name(name) {}
 
-    std::pair<std::unique_ptr<char[]>, unsigned int>
-    operator()(const LRModel& v);
+    uint64_t size(const LRModel& model) const override;
+    void serialize(const LRModel& model, void* mem) const override;
 
  private:
     uint64_t n;             //< size of the model
@@ -132,17 +134,19 @@ class lr_model_deserializer {
 };
 
 /**
-  * LRGradient serializer
+  * LRModel serializer
   */
-class lr_gradient_serializer {
+class lr_gradient_serializer : public cirrus::Serializer<LRGradient> {
  public:
-    explicit lr_gradient_serializer(uint64_t n) : n(n) {}
+    explicit lr_gradient_serializer(uint64_t n, const std::string& name = "") :
+        n(n), name(name) {}
 
-    std::pair<std::unique_ptr<char[]>, unsigned int>
-    operator()(const LRGradient& g);
+    uint64_t size(const LRGradient& g) const override;
+    void serialize(const LRGradient& g, void* mem) const override;
 
  private:
-    uint64_t n;  //< size of the gradient
+    uint64_t n;             //< size of the model
+    std::string name;  //< name associated with this serializer
 };
 
 /**

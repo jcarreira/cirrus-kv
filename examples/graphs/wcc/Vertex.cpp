@@ -42,32 +42,6 @@ bool Vertex::hasNeighbor(int id) const {
     return neighbors.find(id) != neighbors.end();
 }
 
-/** Format:
-  * id (uint32_t)
-  * n neighbors (uint32_t)
-  * neighbors list (n * uint32_t)
-  */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-Vertex::serializer(const Vertex& v) {
-    uint64_t size = sizeof(uint32_t) * 2 +
-        sizeof(uint32_t) * v.getNeighborsSize();  // neighbors
-
-    std::cout << "Serializing object with size: "
-        << size
-        << std::endl;
-
-    std::unique_ptr<char[]> mem(new char[size]);
-
-    uint32_t* ptr = reinterpret_cast<uint32_t*>(mem.get());
-    *ptr++ = htonl(v.getId());
-    *ptr++ = htonl(v.getNeighborsSize());
-
-    for (const auto& n : v.getNeighbors()) {
-        *ptr++ = htonl(n);
-    }
-    return std::make_pair(std::move(mem), size);
-}
-
 Vertex Vertex::deserializer(const void* data, unsigned int size) {
     Vertex v;
 

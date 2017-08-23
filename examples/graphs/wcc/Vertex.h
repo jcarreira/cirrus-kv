@@ -6,6 +6,9 @@
 #include <set>
 #include <memory>
 #include <utility>
+#include <arpa/inet.h>
+
+#include "common/Serializer.h"
 
 namespace graphs {
 
@@ -25,8 +28,6 @@ class Vertex {
 
         bool hasNeighbor(int id) const;
 
-        static std::pair<std::unique_ptr<char[]>, unsigned int>
-        serializer(const Vertex&);
         static Vertex deserializer(const void* data, unsigned int size);
 
         void print() const;
@@ -39,6 +40,33 @@ class Vertex {
         std::set<int> neighbors;  //< set of the neighbors of this node
 
         int id;  //< id of this vertex
+};
+
+/** Format:
+  * id (uint32_t)
+  * n neighbors (uint32_t)
+  * neighbors list (n * uint32_t)
+  */
+class VertexSerializer : public cirrus::Serializer<Vertex> {
+ public:
+    uint64_t size(const Vertex& v) const override {
+        uint64_t size = sizeof(uint32_t) * 2 +
+            sizeof(uint32_t) * v.getNeighborsSize();  // neighbors
+        return size;
+    }
+    void serialize(const Vertex& v, void* mem) const override {
+        std::cout << "Serializing vertex: "
+            << std::endl;
+
+        uint32_t* ptr = reinterpret_cast<uint32_t*>(mem);
+        *ptr++ = htonl(v.getId());
+        *ptr++ = htonl(v.getNeighborsSize());
+
+        for (const auto& n : v.getNeighbors()) {
+            *ptr++ = htonl(n);
+        }
+    }
+ private:
 };
 
 }  // namespace graphs

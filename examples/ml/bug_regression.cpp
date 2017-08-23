@@ -30,26 +30,26 @@ int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
 template<typename T>
-class c_array_serializer{
+class c_array_serializer : public cirrus::Serializer<std::shared_ptr<T>> {
  public:
-    explicit c_array_serializer(int nslots) : numslots(nslots) {}
+    explicit c_array_serializer(int nslots, const std::string& name = "") :
+        numslots(nslots), name(name) {}
 
-    std::pair<std::unique_ptr<char[]>, unsigned int>
-    operator()(const std::shared_ptr<T>& v) {
-        T* array = v.get();
-
-        uint64_t array_size = numslots * sizeof(T);
-        // allocate array
-        std::unique_ptr<char[]> ptr(new char[array_size]);
-
-        // copy samples to array
-        memcpy(ptr.get(), array, array_size);
-        std::cout << "Serialized array with size: " << array_size << std::endl;
-        return std::make_pair(std::move(ptr), array_size);
+    uint64_t size(const std::shared_ptr<T>& /*obj*/) const override {
+        return numslots * sizeof(T);
     }
 
+    void serialize(const std::shared_ptr<T>& obj, void* mem) const override {
+        T* array = obj.get();
+
+        // copy samples to array
+        uint64_t array_size = size(obj);
+        memcpy(mem, array, array_size);
+        std::cout << "Serialized array with size: " << array_size << std::endl;
+    }
  private:
     int numslots;
+    std::string name;  //< name associated with this serializer
 };
 
 template<typename T>

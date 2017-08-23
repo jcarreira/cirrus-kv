@@ -146,7 +146,7 @@ class TCPClient : public BladeClient {
     /**
      * Queue of FlatBufferBuilders that are ready for reuse for writes.
      */
-    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> reuse_queue;
+    std::queue<flatbuffers::FlatBufferBuilder*> reuse_queue;
 
     /** Max number of flatbuffer builders in reuse_queue. */
     const unsigned int reuse_max = 5;

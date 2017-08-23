@@ -22,12 +22,22 @@
 
 // This is used for non-array objects
 template<typename T>
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer(const T& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(T)]);
-    std::memcpy(ptr.get(), &v, sizeof(T));
-    return std::make_pair(std::move(ptr), sizeof(T));
-}
+class serializer : public cirrus::Serializer<T> {
+ public:
+    explicit serializer(const std::string& name = "") :
+        name(name) {}
+
+    uint64_t size(const T& /*obj*/) const override {
+        return sizeof(T);
+    }
+
+    void serialize(const T& obj, void* mem) const override {
+        // copy samples to array
+        memcpy(mem, &obj, size(obj));
+    }
+ private:
+    std::string name;  //< name associated with this serializer
+};
 
 /* Takes a pointer to raw mem passed in and returns as object. */
 template<typename T, unsigned int SIZE>
@@ -52,10 +62,10 @@ void run_task_2() {
 
     cirrus::TCPClient client;
     // this is used to access the training labels
+    serializer<int> ser;
     cirrus::ostore::FullBladeObjectStoreTempl<int>
         int_store(IP, PORT, &client,
-                serializer<int>,
-                deserializer<int, sizeof(int)>);
+                ser, deserializer<int, sizeof(int)>);
 
     int d = int_store.get(OBJ_ID);
     if (d == 42) {
@@ -70,10 +80,10 @@ void run_task_1() {
 
     cirrus::TCPClient client;
     // this is used to access the training labels
+    serializer<int> ser;
     cirrus::ostore::FullBladeObjectStoreTempl<int>
         int_store(IP, PORT, &client,
-                serializer<int>,
-                deserializer<int, sizeof(int)>);
+                ser, deserializer<int, sizeof(int)>);
 
     int n = 42;
     int_store.put(OBJ_ID, n);

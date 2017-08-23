@@ -1,9 +1,13 @@
 #include <Serializers.h>
+#include <iostream>
 
-std::pair<std::unique_ptr<char[]>, unsigned int>
-lr_model_serializer::operator()(const LRModel& v) {
-    auto model_serialized = v.serialize();
-    return model_serialized;
+uint64_t lr_model_serializer::size(const LRModel& model) const {
+    std::cout << "LRModel sizerializer size()" << std::endl;
+    return model.getSerializedSize();
+}
+
+void lr_model_serializer::serialize(const LRModel& model, void* mem) const {
+    model.serializeTo(mem);
 }
 
 LRModel
@@ -18,12 +22,12 @@ lr_model_deserializer::operator()(const void* data, unsigned int des_size) {
     return model;
 }
 
-std::pair<std::unique_ptr<char[]>, unsigned int>
-lr_gradient_serializer::operator()(const LRGradient& g) {
-    std::unique_ptr<char[]> mem(new char[g.getSerializedSize()]);
-    g.serialize(mem.get());
+uint64_t lr_gradient_serializer::size(const LRGradient& g) const {
+    return g.getSerializedSize();
+}
 
-    return std::make_pair(std::move(mem), g.getSerializedSize());
+void lr_gradient_serializer::serialize(const LRGradient& g, void* mem) const {
+    g.serialize(mem);
 }
 
 LRGradient
