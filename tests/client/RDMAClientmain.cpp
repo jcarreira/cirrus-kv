@@ -39,7 +39,7 @@ void test_1_client() {
     client1.write_sync(0, w);
 
     auto ret_pair = client1.read_sync(0);
-    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
 
     if (ret_val != to_send)
         throw std::runtime_error("Incorrect value returned");
@@ -74,7 +74,7 @@ void test_2_clients() {
     client2.write_sync(0, w);
 
     auto ret_pair = client1.read_sync(0);
-    int ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
+    const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
 
     cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
 
@@ -83,11 +83,11 @@ void test_2_clients() {
         throw std::runtime_error("Error in test");
 
     ret_pair = client2.read_sync(0);
-    ret_val = *(reinterpret_cast<int*>(ret_pair.first.get()));
-    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_val);
+    auto ret_val_2 = *(reinterpret_cast<const int*>(ret_pair.first.get()));
+    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_val_2);
 
     // Check that client2 receives "data2"
-    if (ret_val != data2)
+    if (ret_val_2 != data2)
         throw std::runtime_error("Error in test");
 }
 
@@ -119,7 +119,8 @@ void test_performance() {
         std::cout << "Length: " << ret_pair.second << std::endl;
 
         auto d2 =
-            *(reinterpret_cast<cirrus::Dummy<size>*>(ret_pair.first.get()));
+            *(reinterpret_cast<const cirrus::Dummy<size>*>(
+                ret_pair.first.get()));
 
         std::cout << "Returned id: " << d2.id << std::endl;
         if (d2.id != 42) {
