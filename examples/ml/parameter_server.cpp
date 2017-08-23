@@ -42,7 +42,7 @@
 #define MODEL_BASE (BILLION)
 #define GRADIENT_BASE (2 * BILLION)
 #define LABEL_BASE (3 * BILLION)
-uint64_t nworkers = 1;
+int nworkers = 1;
 
 int num_classes = 2;
 int features_per_sample = 10;
@@ -57,7 +57,7 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.87";
+const char IP[] = "10.10.49.88";
 
 static const uint32_t SIZE = 1;
 
@@ -80,27 +80,32 @@ void run_tasks(int rank, const Configuration& config) {
                 samples_per_batch, features_per_sample, nworkers);
         pt.run(config);
         sleep_forever();
-    } else if (rank == 2 || rank == 5) {
-        sleep(10);
-        LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
-        lt.run(config);
-        sleep_forever();
-    } else if (rank == 3) {
+    } else if (rank == 2) {
         sleep(3);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
         sleep_forever();
-    } else if (rank == 4) {
+    } else if (rank == 3) {
         sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         et.run(config);
         sleep_forever();
+    } else if (rank >= 4 && rank < 4 + nworkers) {
+        /**
+          * Worker tasks run here
+          * Number of tasks is determined by the value of nworkers
+          */
+        sleep(10);
+        LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
+                samples_per_batch, features_per_sample, nworkers);
+        lt.run(config, rank - 4);
+        sleep_forever();
+
     } else {
         throw std::runtime_error("Wrong number of tasks");
     }
@@ -119,7 +124,7 @@ void init_mpi(int argc, char**argv) {
 }
 
 void print_arguments() {
-    std::cout << "./parameter_server config_file" << std::endl;
+    std::cout << "./parameter_server config_file [nworkers]" << std::endl;
 }
 
 Configuration load_configuration(const std::string& config_path) {
@@ -138,7 +143,7 @@ int main(int argc, char** argv) {
     err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     check_mpi_error(err);
 
-    if (argc != 2) {
+    if (argc != 2 && argc != 3) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
     }
@@ -149,12 +154,21 @@ int main(int argc, char** argv) {
         << " with rank: " << rank
         << std::endl;
 
+    if (argc == 3) {
+        nworkers = string_to<int>(argv[2]);
+        std::cout << "Running parameter server with: "
+            << nworkers << " workers"
+            << std::endl;
+    }
+
     auto config = load_configuration(argv[1]);
+    config.print();
 
     // from config we get
     // 1. the number of classes
     // 2. the size of input
     samples_per_batch = config.get_minibatch_size();
+    batch_size = samples_per_batch * features_per_sample;
     num_classes = config.get_num_classes();
 
     // call the right task for this process

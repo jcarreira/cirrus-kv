@@ -97,14 +97,14 @@ class ReversePolicy : public cirrus::IteratorPolicy {
      * Returns the value of current_id, which is indicative of the state
      * of the policy.
      */
-    uint64_t getState() override {
+    uint64_t getState() const override {
         return current_id;
     }
 
     /**
      * An implementation of the clone method from the template.
      */
-    std::unique_ptr<IteratorPolicy> clone() override {
+    std::unique_ptr<IteratorPolicy> clone() const override {
         return std::make_unique<ReversePolicy>(*this);
     }
 

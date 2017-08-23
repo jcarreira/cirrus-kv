@@ -12,10 +12,10 @@ LRGradient::LRGradient(const std::vector<double>& data) :
 }
 
 void LRGradient::loadSerialized(const void* mem) {
-    std::cout << "LRGradient::loadSerialized" << std::endl;
+    //std::cout << "LRGradient::loadSerialized" << "\n";
 
-    cirrus::LOG<cirrus::INFO>(
-            "LRGradient::loadSerialized size: ", weights.size());
+    //cirrus::LOG<cirrus::INFO>(
+    //        "LRGradient::loadSerialized size: ", weights.size());
     count = *reinterpret_cast<const uint32_t*>(mem);
     mem = reinterpret_cast<const void*>(
             (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));

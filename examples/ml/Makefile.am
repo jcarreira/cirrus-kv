@@ -8,13 +8,15 @@ bin_PROGRAMS = parameter_server two_clients_test bug_regression
 
 #TOP_DIR = $(top_srcdir)/../../
  
-LIBS         =  -lclient -lauthentication -lutils -lmpi -lrdmacm -libverbs
+LIBS         =  -lclient -lauthentication -lutils -lmpi -lrdmacm \
+	        -libverbs -levictionpolicies
 
 LINCLUDES    = -L$(top_srcdir)/src/utils/ \
 	       -L$(top_srcdir)/src/client/ \
 	       -L$(top_srcdir)/src/ \
 	       -L$(top_srcdir)/src/authentication \
-	       -L$(top_srcdir)/src/common
+	       -L$(top_srcdir)/src/common \
+	       -L$(top_srcdir)/src/cache_manager
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -pthread

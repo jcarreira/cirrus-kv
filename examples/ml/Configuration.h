@@ -93,6 +93,11 @@ class Configuration {
       */
     bool get_normalize() const;
 
+    /**
+      * Get number of training samples
+      */
+    uint64_t get_num_samples() const;
+
  private:
     /**
       * Parse a specific line in the config file
@@ -121,6 +126,8 @@ class Configuration {
 
     uint64_t limit_cols;  //< max number of columns to read from dataset input
     bool normalize;       //< whether to normalize the dataset
+
+    uint64_t num_samples;  //< number of training input samples
 };
 
 #endif  // SRC_CONFIGURATION_H_

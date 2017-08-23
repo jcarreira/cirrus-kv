@@ -18,7 +18,11 @@ class LogisticTask {
          batch_size(batch_size), samples_per_batch(samples_per_batch),
          features_per_sample(features_per_sample), nworkers(nworkers)
     {}
-     void run(const Configuration& config);
+
+     /**
+       * Worker here is a value 0..nworkers - 1
+       */
+     void run(const Configuration& config, int worker);
 
  private:
      std::string IP;
