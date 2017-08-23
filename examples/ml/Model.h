@@ -93,6 +93,10 @@ class Model {
                 uint64_t labels_size,
                 double epsilon) const = 0;
 
+     /**
+       * Compute the checksum of this model's weights
+       * @return This model's checksum
+       */
      virtual double checksum() const = 0;
 };
 

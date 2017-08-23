@@ -105,11 +105,21 @@ class LRModel : public Model {
       */
     std::unique_ptr<ModelGradient> loadGradient(void* mem) const override;
 
+    /**
+      * Compute checksum of the model
+      * @return Checksum of the model
+      */
     double checksum() const override;
 
+    /**
+      * Print the model's weights
+      */
     void print() const;
 
  private:
+    /**
+      * Check whether value n is an integer
+      */
     bool is_integer(double n) const;
 
     std::vector<double> weights;  //< vector of the model weights

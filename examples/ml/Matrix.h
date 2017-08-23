@@ -56,10 +56,20 @@ class Matrix {
       */
     uint64_t sizeBytes() const;
 
+    /**
+      * Sanity check of values in this matrix
+      */
     void check_values() const;
 
+    /**
+      * Compute checksum of values in this matrix
+      * @return Matrix checksum
+      */
     double checksum() const;
 
+    /**
+      * Print matrix values
+      */
     void print() const;
 
  public:

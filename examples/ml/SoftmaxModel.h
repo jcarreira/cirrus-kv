@@ -90,6 +90,10 @@ class SoftmaxModel : public Model {
       */
     std::unique_ptr<ModelGradient> loadGradient(void* mem) const override;
 
+    /**
+      * Compute a checksum of this model's weights
+      * @return Checksum
+      */
     double checksum() const override;
 
  private:

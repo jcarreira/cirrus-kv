@@ -108,8 +108,8 @@ class Configuration {
     double learning_rate;     //< sgd learning rate
     double epsilon;           //< regularization rate
 
-    int prefetching;
-    uint64_t num_classes;
+    int prefetching;       //< whether to prefetch input data
+    uint64_t num_classes;  //< number of sample classes
 
     std::string input_path;  //< path to dataset input
     std::string input_type;  //< dataset input format

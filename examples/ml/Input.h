@@ -26,6 +26,7 @@ class Input {
       * @param delimiter Delimiter string between every feature in the csv file
       * @param nthreads Number of threads to read the csv file
       * @param limit_cols Maximum number of columns/features to read from file
+      * @returns The dataset
       */
     Dataset read_input_csv(const std::string& input_file,
             std::string delimiter, uint64_t nthreads, uint64_t limit_cols = 0,
@@ -36,6 +37,7 @@ class Input {
       * Does not split between samples and labels (see split_data_labels)
       * @param input_file Path to input csv dataset file
       * @param delimiter Delimiter string in the csv
+      * @returns the mnist data
       */
     std::vector<std::vector<double>> read_mnist_csv(
             const std::string& input_file,
@@ -64,13 +66,13 @@ class Input {
     /**
       * Thread worker that reads raw lines of text from queue and appends labels and features
       * into formated samples queue
-      * @param input_mutex
-      * @param output_mutex
-      * @param delimiter
-      * @param lines
-      * @param samples
-      * @param labels
-      * @param terminate
+      * @param input_mutex Mutex used to synchronize access to input data
+      * @param output_mutex Mutex used to synch access to output store
+      * @param delimiter Delimiter between input data entries
+      * @param lines Input lines
+      * @param samples Output store for samples
+      * @param labels Output store for labels
+      * @param terminate Indicate whether threads should terminate
       * @param limit_cols Maximum number of columns/features to read from file
       */
     void read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,

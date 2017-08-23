@@ -34,6 +34,9 @@ class ModelGradient {
        */
      virtual void print() const = 0;
 
+     /**
+       * Set gradient version
+       */
      virtual void setCount(uint64_t c) {
          count = c;
      }
@@ -45,10 +48,13 @@ class ModelGradient {
          return count;
      }
 
+     /**
+       * Sanity check gradient values
+       */
      virtual void check_values() const = 0;
 
  protected:
-     uint64_t count;
+     uint64_t count;  //< this gradient's version
 };
 
 class LRGradient : public ModelGradient {
