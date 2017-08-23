@@ -91,8 +91,9 @@ void TCPClient::connect(const std::string& address,
 
     // Connect to the server
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        throw cirrus::ConnectionException("Client could "
-                                          "not connect to server.");
+        throw cirrus::ConnectionException(
+                "Client could not connect to server."
+                " Address: " + address + " port: " + port_string);
     }
 
     receiver_thread = new std::thread(&TCPClient::process_received, this);
