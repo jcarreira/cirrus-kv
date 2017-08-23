@@ -44,6 +44,7 @@
 #define LABEL_BASE (3 * BILLION)
 uint64_t nworkers = 1;
 
+int num_classes = 2;
 int features_per_sample = 10;
 int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
@@ -149,6 +150,13 @@ int main(int argc, char** argv) {
         << std::endl;
 
     auto config = load_configuration(argv[1]);
+
+    // from config we get
+    // 1. the number of classes
+    // 2. the size of input
+    samples_per_batch = config.get_minibatch_size();
+    num_classes = config.get_num_classes();
+
     // call the right task for this process
     run_tasks(rank, config);
 
