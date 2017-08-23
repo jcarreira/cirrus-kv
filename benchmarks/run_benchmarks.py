@@ -8,7 +8,8 @@ import time
 
 benchmarks = [["./benchmarks/1_3"], ["./benchmarks/1_1"],
     ["./benchmarks/iterator_benchmark"], ["./benchmarks/cache_benchmark"],
-    ["./benchmarks/1_2"], ["./benchmarks/outstanding_requests"]]
+    ["./benchmarks/1_2"], ["./benchmarks/outstanding_requests"],
+    ["./benchmarks/throughput"]]
 
 server_name =  ["./src/server/tcpservermain"]
 
@@ -30,7 +31,7 @@ for benchmark in benchmarks:
 
     # for line in child.stdout:
     #     print(line.decode(), end='')
-    
+
     streamdata = child.communicate()[0]
     rc = child.returncode
     server.kill()

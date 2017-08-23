@@ -5,8 +5,10 @@
 #include <memory>
 #include <utility>
 
+#include "common/Serializer.h"
 #include "common/Synchronization.h"
 #include "common/Exception.h"
+#include "utils/Log.h"
 
 namespace cirrus {
 
@@ -54,8 +56,7 @@ class BladeClient {
 
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
-
-    virtual bool write_sync(ObjectID id, const void* data, uint64_t size) = 0;
+    virtual bool write_sync(ObjectID id,  const WriteUnit& w) = 0;
 
     virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID id) = 0;
@@ -63,8 +64,7 @@ class BladeClient {
     virtual bool remove(ObjectID id) = 0;
 
     virtual BladeClient::ClientFuture write_async(ObjectID oid,
-        const void* data,
-        uint64_t size) = 0;
+        const WriteUnit& w) = 0;
 
     virtual BladeClient::ClientFuture read_async(ObjectID oid) = 0;
 };

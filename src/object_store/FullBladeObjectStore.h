@@ -13,6 +13,7 @@
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
 
 namespace cirrus {
 namespace ostore {
@@ -28,8 +29,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
                               BladeClient *client,
-                              std::function<std::pair<std::unique_ptr<char[]>,
-                              unsigned int>(const T&)> serializer,
+                              const Serializer<T>& serializer,
                               std::function<T(const void*, unsigned int)>
                               deserializer);
 
@@ -58,12 +58,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 // TODO(Tyler): Change the serializer/deserializer to
 //  be references/pointers?
     /**
-      * A function that takes an object and serializes it. Returns a pointer
-      * to the buffer containing the serialized object as well as the size of
-      * the buffer.
+      * A cirrus::Serializer used for all write operations.
       */
-    std::function<std::pair<std::unique_ptr<char[]>,
-                                unsigned int>(const T&)> serializer;
+    const Serializer<T>& serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -89,8 +86,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
         BladeClient* client,
-        std::function<std::pair<std::unique_ptr<char[]>,
-        unsigned int>(const T&)> serializer,
+        const Serializer<T>& serializer,
         std::function<T(const void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
@@ -143,20 +139,8 @@ template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
 
-    // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
-#ifdef PERF_LOG
-    TimerFunction serialize_time;
-#endif
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    uint64_t serialized_size = serializer_out.second;
-#ifdef PERF_LOG
-    LOG<PERF>("FullBladeObjectStoreTempl::put serialize time (ns): ",
-            serialize_time.getNsElapsed());
-#endif
-
-    return client->write_sync(id, serial_ptr.get(), serialized_size);
+    WriteUnitTemplate<T> w(serializer, obj);
+    return client->write_sync(id, w);
 }
 
 /**
@@ -168,21 +152,8 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-#ifdef PERF_LOG
-    TimerFunction serialize_time;
-#endif
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    uint64_t serialized_size = serializer_out.second;
-#ifdef PERF_LOG
-    LOG<PERF>("FullBladeObjectStoreTempl::put_async serialize time (ns): ",
-            serialize_time.getNsElapsed());
-#endif
-
-    auto client_future = client->write_async(id,
-                                           serial_ptr.get(),
-                                           serialized_size);
+    WriteUnitTemplate<T> w(serializer, obj);
+    auto client_future = client->write_async(id, w);
 
     // Constructor takes a pointer to a client future
     return typename ObjectStore<T>::ObjectStorePutFuture(client_future);

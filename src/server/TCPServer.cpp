@@ -327,10 +327,10 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                            buffer.data());
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
+
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
     TimerFunction resize_time;
@@ -404,10 +404,11 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     // storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
+
                     // Create entry in store mapping the data to the id
+                    store[oid] = std::vector<int8_t>(data_fb->begin(),
+                                                     data_fb->end());
                     curr_size += data_fb->size();
-                    store[oid] = data;
                 }
 
                 // Create and send ack
@@ -448,6 +449,7 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
+
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
                     fb_vector = builder.CreateVector(entry_itr->second);

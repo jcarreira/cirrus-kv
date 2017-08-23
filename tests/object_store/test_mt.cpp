@@ -30,10 +30,11 @@ void test_mt() {
 
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                         PORT,
                         client.get(),
-                        cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                        serializer,
                         cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                             sizeof(cirrus::Dummy<SIZE>)>);
 
