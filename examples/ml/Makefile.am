@@ -32,5 +32,5 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               Tasks.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
-two_clients_test_SOURCES  = two_clients_test.cpp
+two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
 bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)
