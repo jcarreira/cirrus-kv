@@ -6,6 +6,9 @@
 #include <utility>
 #include <LRModel.h>
 
+/**
+  * Deleter used to free arrays
+  */
 template<typename T>
 class ml_array_deleter {
  public:
@@ -16,12 +19,18 @@ class ml_array_deleter {
         delete[] p;
     }
  private:
-    std::string name;
+    std::string name;  //< name associated with this deleter
 };
 
+/**
+  * Deleter used to NOT free arrays
+  */
 template<typename T>
 void ml_array_nodelete(T * /* p */) {}
 
+/**
+  * Serializer for raw arrays
+  */
 template<typename T>
 class c_array_serializer{
  public:
@@ -41,10 +50,13 @@ class c_array_serializer{
     }
 
  private:
-    int numslots;
-    std::string name;
+    int numslots;      //< number of entries in the array
+    std::string name;  //< name associated with this serializer
 };
 
+/**
+  * Deserializer for raw arrays
+  */
 template<typename T>
 class c_array_deserializer{
  public:
@@ -78,28 +90,31 @@ class c_array_deserializer{
     }
 
  private:
-    int numslots;
-    std::string name;
-    bool to_free;
+    int numslots;      //< number of slots in input arrays
+    std::string name;  //< name associated with this deserializer
+    bool to_free;      //< whether memory passed be reference counted
 };
 
 
 /**
-  * LRModel serializer / deserializer
+  * LRModel serializer
   */
 class lr_model_serializer {
  public:
-    explicit lr_model_serializer(int n, const std::string& name = "") :
+    explicit lr_model_serializer(uint64_t n, const std::string& name = "") :
         n(n), name(name) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRModel& v);
 
  private:
-    int n;
-    std::string name;
+    uint64_t n;             //< size of the model
+    std::string name;  //< name associated with this serializer
 };
 
+/**
+  * LRModel deserializer
+  */
 class lr_model_deserializer {
  public:
     explicit lr_model_deserializer(uint64_t n, const std::string& name = "") :
@@ -109,24 +124,27 @@ class lr_model_deserializer {
     operator()(const void* data, unsigned int des_size);
 
  private:
-    uint64_t n;
-    std::string name;
+    uint64_t n;             //< size of the model
+    std::string name;  //< name associated with this serializer
 };
 
 /**
-  * LRGradient serializer / deserializer
+  * LRGradient serializer
   */
 class lr_gradient_serializer {
  public:
-    explicit lr_gradient_serializer(int n) : n(n) {}
+    explicit lr_gradient_serializer(uint64_t n) : n(n) {}
 
     std::pair<std::unique_ptr<char[]>, unsigned int>
     operator()(const LRGradient& g);
 
  private:
-    int n;
+    uint64_t n;  //< size of the gradient
 };
 
+/**
+  * LRModel deserializer
+  */
 class lr_gradient_deserializer {
  public:
     explicit lr_gradient_deserializer(uint64_t n) : n(n) {}
@@ -135,7 +153,7 @@ class lr_gradient_deserializer {
     operator()(const void* data, unsigned int des_size);
 
  private:
-    uint64_t n;
+    uint64_t n;  //< size of the gradient
 };
 
 #endif  // _SERIALIZERS_H_

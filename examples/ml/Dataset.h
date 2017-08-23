@@ -58,14 +58,28 @@ class Dataset {
         return samples_.row(sample);
     }
 
+    /**
+      * Get pointer to label
+      * @return point to label data index by input label
+      */
     const double* label(uint64_t label) const {
         return labels_.get() + label;
     }
 
+    /**
+      * Sanity check values in the dataset
+      */
     void check_values() const;
 
+    /**
+      * Compute checksum of values in the dataset
+      * @return crc32 checksum
+      */
     double checksum() const;
 
+    /**
+      * Print this dataset
+      */
     void print() const;
 
  public:
