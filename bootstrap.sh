@@ -4,8 +4,7 @@ git submodule update
 
 # compile libcuckoo
 cd third_party/libcuckoo
-autoreconf -fis
-./configure
+cmake .
 make -j 10
 
 # compile sparsehash

@@ -1,4 +1,6 @@
-include $(top_srcdir)/common.mk
+TOP_DIR = $(top_srcdir)/../../
+
+include $(TOP_DIR)/common.mk
 AUTOMAKE_OPTIONS = foreign
 
 CXX = mpic++
@@ -6,25 +8,23 @@ CXX = mpic++
 
 bin_PROGRAMS = parameter_server two_clients_test bug_regression
 
-#TOP_DIR = $(top_srcdir)/../../
- 
 LIBS         =  -lclient -lauthentication -lutils -lmpi -lrdmacm \
 	        -libverbs -levictionpolicies
 
-LINCLUDES    = -L$(top_srcdir)/src/utils/ \
-	       -L$(top_srcdir)/src/client/ \
-	       -L$(top_srcdir)/src/ \
-	       -L$(top_srcdir)/src/authentication \
-	       -L$(top_srcdir)/src/common \
-	       -L$(top_srcdir)/src/cache_manager
+LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
+	       -L$(TOP_DIR)/src/client/ \
+	       -L$(TOP_DIR)/src/ \
+	       -L$(TOP_DIR)/src/authentication \
+	       -L$(TOP_DIR)/src/common \
+	       -L$(TOP_DIR)/src/cache_manager
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -pthread
-CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
-           -I$(top_srcdir)/src \
-           -I$(top_srcdir)/third_party/flatbuffers/include \
-           -I$(top_srcdir)/third_party/eigen_source \
-           -isystem $(top_srcdir)/third_party/libcuckoo/ \
+CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+           -I$(TOP_DIR)/src \
+           -I$(TOP_DIR)/third_party/flatbuffers/include \
+           -I$(TOP_DIR)/third_party/eigen_source \
+           -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/
 
 CPP_SOURCES = Input.cpp Utils.cpp \

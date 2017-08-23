@@ -68,7 +68,6 @@ AC_CONFIG_FILES([Makefile
                  examples/graphs/Makefile
                  examples/graphs/page_rank/Makefile
                  examples/graphs/wcc/Makefile
-                 examples/ml/Makefile
                  benchmarks/Makefile])
 
 
@@ -76,3 +75,5 @@ AC_CONFIG_SUBDIRS([tests/mpi])
 AC_CONFIG_SUBDIRS([examples/ml])
 
 AC_OUTPUT
+                 
+#examples/ml/Makefile
