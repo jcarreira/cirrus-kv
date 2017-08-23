@@ -1,5 +1,5 @@
 #include <Utils.h>
-
+#include <time.h>
 
 void check_mpi_error(int err, std::string error) {
     if (err != MPI_SUCCESS) {
@@ -21,6 +21,12 @@ uint64_t get_time_ms() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (1000000UL * tv.tv_sec + tv.tv_usec) / 1000;
+}
+
+uint64_t get_time_ns() {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_nsec + ts.tv_sec * 1000000000UL;
 }
 
 std::ifstream::pos_type filesize(const std::string& filename) {

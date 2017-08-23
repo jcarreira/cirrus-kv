@@ -70,7 +70,10 @@ class c_array_deserializer{
 
         if (des_size != size) {
             throw std::runtime_error(
-                    "Wrong deserializer size at c_array_deserializer");
+                 std::string("Wrong size received at c_array_deserializer)")
+                    + " size: " + std::to_string(des_size)
+                    + " expected: " + std::to_string(size)
+                    + " name: " + name);
         }
 
         // cast the pointer

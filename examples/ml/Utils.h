@@ -23,6 +23,11 @@
 void check_mpi_error(int err, std::string error = "");
 
 /**
+  * Get current time/epoch in ns
+  */
+uint64_t get_time_ns();
+
+/**
   * Get current time/epoch in microseconds
   */
 uint64_t get_time_us();

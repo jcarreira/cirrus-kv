@@ -108,7 +108,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // Deserialize the memory at ptr and return an object
 
     uint64_t length = ptr_pair.second;
-    std::cout << "Deserializing object id: " << id << std::endl;
+    //std::cout << "Deserializing object id: " << id << std::endl;
     T retval = deserializer(ptr.get(), length);
 
     return retval;

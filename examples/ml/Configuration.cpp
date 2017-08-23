@@ -32,9 +32,10 @@ void Configuration::read(const std::string& path) {
 
 void Configuration::print() const {
     std::cout << "Printing configuration: " << std::endl;
-    std::cout << "input_path: " << input_path << std::endl;
-    std::cout << "Minibatch size: " << minibatch_size << std::endl;
-    std::cout << "learning rate: " << learning_rate << std::endl;
+    std::cout << "input_path: " << get_input_path() << std::endl;
+    std::cout << "Minibatch size: " << get_minibatch_size() << std::endl;
+    std::cout << "learning rate: " << get_learning_rate() << std::endl;
+    std::cout << "num_samples: " << get_num_samples() << std::endl;
 }
 
 /**
@@ -71,6 +72,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> num_classes;
     } else if (s == "limit_cols:") {
         iss >> limit_cols;
+    } else if (s == "num_samples:") {
+        iss >> num_samples;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -182,3 +185,11 @@ uint64_t Configuration::get_limit_cols() const {
 bool Configuration::get_normalize() const {
     return normalize;
 }
+
+/**
+  * Get number of training input samples
+  */
+uint64_t Configuration::get_num_samples() const {
+    return num_samples;
+}
+
