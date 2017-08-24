@@ -106,7 +106,7 @@ class RDMAClient : public BladeClient {
                 result = std::make_shared<bool>();
                 result_available = std::make_shared<bool>(false);
                 op_sem = std::make_shared<cirrus::PosixSemaphore>();
-                error_code = std::make_shared<cirrus::ErrorCodes>();
+                std::cout << "Error code is: " << *error_code << std::endl;
             }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
@@ -116,11 +116,12 @@ class RDMAClient : public BladeClient {
                 if (fn == nullptr)
                     throw std::runtime_error("BUG");
                 result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>();
-                *result_available = false;
-                error_code = std::make_shared<cirrus::ErrorCodes>();
+                result_available = std::make_shared<bool>(false);
+                std::cout << "Error code is: " << *error_code << std::endl;
             }
-
+        // ~RDMAOpInfo() {
+        //     std::cout << "Destroying RDMAOpInfo Instance" << std::endl;
+        // }
         /**
          * Apply the given function on completion. Mark the operation as
          * completed.
@@ -131,8 +132,10 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applied fn");
             *result_available = true;
             *result = true;
+            *error_code = cirrus::ErrorCodes::kOk;
         }
 
+        char *data = nullptr;
         struct rdma_cm_id* id;
         /** Pointer to the semaphore for the operation. */
         std::shared_ptr<cirrus::Lock> op_sem;
@@ -141,7 +144,8 @@ class RDMAClient : public BladeClient {
         /** Pointer to operation completion. */
         std::shared_ptr<bool> result_available;
         /** Pointer to error code. Will always be okay. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code;
+        std::shared_ptr<cirrus::ErrorCodes> error_code =
+            std::make_shared<cirrus::ErrorCodes>(cirrus::ErrorCodes::kOk);
         /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };
@@ -209,6 +213,7 @@ class RDMAClient : public BladeClient {
           */
         bool prepare(GeneralContext gctx) {
             LOG<INFO>("prepare()");
+            std::cout << "Address is: " << addr_ << std::endl;
             // we don't register more than once
             if (registered_) {
                 LOG<INFO>("already registered");
@@ -312,7 +317,8 @@ class RDMAClient : public BladeClient {
 
     // RDMA (write/read)
     RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
+            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&,
+            RDMAOpInfo* op_info);
     bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
