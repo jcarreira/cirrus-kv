@@ -5,8 +5,6 @@
 #include <sstream>
 #include <cstring>
 #include <string>
-#include <chrono>
-#include <thread>
 
 #include "client/BladeClient.h"
 #include "common/AllocationRecord.h"
@@ -143,7 +141,7 @@ void test_async() {
     cirrus::WriteUnitTemplate<int> w(serializer, message);
     auto future = client.write_async(1, w);
     std::cout << "write async complete" << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
     if (!future.get()) {
         throw std::runtime_error("Error during async write.");
     }
@@ -152,7 +150,7 @@ void test_async() {
     const int sync_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
     if (sync_val != message) {
         std::cout << "Received: " << sync_val << std::endl;
-        // throw std::runtime_error("Improper value placed by put async");
+        throw std::runtime_error("Improper value placed by put async");
     }
 
     auto read_future = client.read_async(1);
