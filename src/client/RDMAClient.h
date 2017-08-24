@@ -292,7 +292,8 @@ class RDMAClient : public BladeClient {
     // reads
     BladeClient::ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
-        uint64_t offset, uint64_t length, void *data);
+        uint64_t offset, uint64_t length, void *data, 
+        RDMAMem* mem = nullptr);
 
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
@@ -319,8 +320,7 @@ class RDMAClient : public BladeClient {
     void read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
-            RDMAOpInfo* op_info,
-            std::function<void()> apply_fn = []() -> void {});
+            RDMAOpInfo* op_info);
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
