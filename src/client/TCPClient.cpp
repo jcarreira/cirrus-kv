@@ -137,7 +137,6 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
         builder = new flatbuffers::FlatBufferBuilder(size + 64);
     }
 
-
     // Create and send write request
     // Pointer to the vector inside of the flatbuffer to write to
     int8_t *mem;
@@ -540,7 +539,11 @@ void TCPClient::process_send() {
             if (message_type == message::TCPBladeMessage::Message_Write) {
                 builder->Clear();
                 reuse_queue.push(builder);
+            } else {
+                delete builder;
             }
+        } else {
+            delete builder;
         }
         reuse_lock.signal();
     }

@@ -65,7 +65,6 @@ class Vertex {
         double p_next;  //<  probability of this vertex in the next round
 };
 
-        
 /** Format:
   * p_curr (double)
   * p_next (double)
