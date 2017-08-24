@@ -2,7 +2,6 @@
 #include <iostream>
 
 uint64_t lr_model_serializer::size(const LRModel& model) const {
-    std::cout << "LRModel sizerializer size()" << std::endl;
     return model.getSerializedSize();
 }
 

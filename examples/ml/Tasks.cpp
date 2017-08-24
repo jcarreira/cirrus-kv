@@ -22,28 +22,32 @@ void LogisticTask::run(const Configuration& config, int worker) {
         << "Worker task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
+    lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
+    lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
+    lr_model_serializer lms(MODEL_GRAD_SIZE);
+    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    c_array_serializer<double> cas_samples(batch_size);
+    c_array_deserializer<double> cad_samples(batch_size,
+            "worker samples_store");
+    c_array_serializer<double> cas_labels(samples_per_batch);
+    c_array_deserializer<double> cad_labels(samples_per_batch,
+            "worker labels_store", false);
 
     // used to publish the gradient
     cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
-        gradient_store(IP, PORT, &client,
-            lr_gradient_serializer(MODEL_GRAD_SIZE),
-            lr_gradient_deserializer(MODEL_GRAD_SIZE));
+        gradient_store(IP, PORT, &client, lgs, lgd);
 
     // this is used to access the most up to date model
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
-                lr_model_serializer(MODEL_GRAD_SIZE),
-                lr_model_deserializer(MODEL_GRAD_SIZE));
+                lms, lmd);
 
     uint64_t num_batches = config.get_num_samples() /
         config.get_minibatch_size();
 
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        samples_store(IP, PORT, &client,
-                c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size,
-                    "worker samples_store"));
+        samples_store(IP, PORT, &client, cas_samples, cad_samples);
     cirrus::LRAddedEvictionPolicy samples_policy(100);
     cirrus::CacheManager<std::shared_ptr<double>> samples_cm(
             &samples_store, &samples_policy, 100);
@@ -56,9 +60,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
     // because these objects will be owned by the Dataset
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
-                c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch,
-                    "worker labels_store", false));
+                cas_labels, cad_labels);
     cirrus::LRAddedEvictionPolicy labels_policy(100);
     cirrus::CacheManager<std::shared_ptr<double>> labels_cm(
             &labels_store, &labels_policy, 100);
@@ -225,27 +227,22 @@ void LogisticTask::run(const Configuration& config, int worker) {
   *
   */
 void PSTask::run(const Configuration& config) {
-    // should read from the config file how many workers there are
-
-    // communication workers -> PS to communicate gradients
-    // objects ids 5000 + worker ID
-
-    // communication PS -> workers
-    // object ids 10000 + worker ID
-
     std::cout << "[PS] "
         << "PS connecting to store" << std::endl;
     cirrus::TCPClient client;
 
+
+    lr_model_serializer lms(MODEL_GRAD_SIZE);
+    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
+    lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
+
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
-            lr_model_serializer(MODEL_GRAD_SIZE),
-            lr_model_deserializer(MODEL_GRAD_SIZE));
+            lms, lmd);
     cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
         gradient_store(IP, PORT, &client,
-            lr_gradient_serializer(MODEL_GRAD_SIZE),
-            lr_gradient_deserializer(MODEL_GRAD_SIZE));
-
+                lgs, lgd);
 
     std::cout << "[PS] "
         << "PS task initializing model" << std::endl;
@@ -349,24 +346,26 @@ void ErrorTask::run(const Configuration& /* config */) {
 
     cirrus::TCPClient client;
 
+    lr_model_serializer lms(MODEL_GRAD_SIZE);
+    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    c_array_serializer<double> cas_samples(batch_size);
+    c_array_deserializer<double> cad_samples(batch_size,
+            "error samples_store");
+    c_array_serializer<double> cas_labels(samples_per_batch);
+    c_array_deserializer<double> cad_labels(samples_per_batch,
+            "error labels_store", false);
+
     // this is used to access the most up to date model
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
-        model_store(IP, PORT, &client,
-                lr_model_serializer(MODEL_GRAD_SIZE),
-                lr_model_deserializer(MODEL_GRAD_SIZE));
+        model_store(IP, PORT, &client, lms, lmd);
 
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        samples_store(IP, PORT, &client,
-                c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size));
+        samples_store(IP, PORT, &client, cas_samples, cad_samples);
 
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        labels_store(IP, PORT, &client,
-                c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch,
-                "error_labels_store", false));
+        labels_store(IP, PORT, &client, cas_labels, cad_labels);
 
     bool first_time = true;
     while (1) {
@@ -460,18 +459,19 @@ void LoadingTask::run(const Configuration& config) {
 #ifdef DEBUG
     dataset.print();
 #endif
+    
+    c_array_serializer<double> cas_samples(batch_size);
+    c_array_deserializer<double> cad_samples(batch_size,
+            "loader samples_store");
+    c_array_serializer<double> cas_labels(samples_per_batch);
+    c_array_deserializer<double> cad_labels(samples_per_batch,
+            "loader labels_store", false);
 
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        samples_store(IP, PORT, &client,
-                c_array_serializer<double>(batch_size),
-                c_array_deserializer<double>(batch_size,
-                    "loader samples_store"));
+        samples_store(IP, PORT, &client, cas_samples, cad_samples);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        labels_store(IP, PORT, &client,
-                c_array_serializer<double>(samples_per_batch),
-                c_array_deserializer<double>(samples_per_batch,
-                    "loader labels_store"));
+        labels_store(IP, PORT, &client, cas_labels, cad_labels);
 
     std::cout << "[LOADER] "
         << "Adding "

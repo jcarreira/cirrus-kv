@@ -513,8 +513,6 @@ void TCPClient::process_send() {
             throw cirrus::Exception("Client error sending data to server");
         }
 
-        // free builder
-        delete builder;
 #ifdef PERF_LOG
         double send_mbps = message_size / (1024 * 1024.0) /
             (send_time.getUsElapsed() / 1000.0 / 1000.0);
