@@ -15,7 +15,7 @@ cp configs/mnist_fbox.cfg ~/
 # plain
 
 SUPPORT_WORKERS=4
-ML_WORKERS=1
+ML_WORKERS=2
 TOTAL_WORKERS=$((${SUPPORT_WORKERS} + ${ML_WORKERS}))
 
 echo "Running ${EXEC}. MPI Support workers:${SUPPORT_WORKERS} Ml_workers:${ML_WORKERS}"

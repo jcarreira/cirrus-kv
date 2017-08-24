@@ -101,7 +101,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
 template<class T>
 T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // Read the object from the remote store
-    std::cout << "Getting object id: " << id << std::endl;
+    //std::cout << "Getting object id: " << id << std::endl;
     std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
         client->read_sync(id);
     auto ptr = ptr_pair.first;
