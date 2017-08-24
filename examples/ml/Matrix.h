@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #ifndef SRC_MATRIX_H_
 #define SRC_MATRIX_H_
 

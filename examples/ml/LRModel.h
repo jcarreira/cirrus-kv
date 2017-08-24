@@ -81,7 +81,7 @@ class LRModel : public Model {
      * Compute a minibatch gradient
      * @param rank MPI worker rank
      * @param dataset Dataset to learn on
-     * @param labels Labels of the samples
+     * @param labels Labels of the samples (size matches dataset)
      * @param epsilon L2 Regularization rate
      * @return Newly computed gradient
      */

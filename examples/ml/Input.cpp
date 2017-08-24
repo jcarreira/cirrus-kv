@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 /**
   * The Input class is used to aggregate all the routines to read datasets
   * We support datasets in CSV and binary
@@ -82,7 +80,7 @@ Dataset Input::read_input_criteo(const std::string& samples_input_file,
 
 void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         const std::string& delimiter,
-        std::vector<std::string>& lines,  //< content produced by producer
+        std::queue<std::string>& lines,  //< content produced by producer
         std::vector<std::vector<double>>& samples,
         std::vector<double>& labels,
         bool& terminate,
@@ -97,9 +95,12 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         input_mutex.lock();
         std::vector<std::string> thread_lines;
 
+        /**
+          * Read up to read_at_a_time limes
+          */
         while (lines.size() && thread_lines.size() < read_at_a_time) {
             thread_lines.push_back(lines.back());
-            lines.pop_back();
+            lines.pop();
         }
 
         if (thread_lines.size() == 0) {
@@ -114,7 +115,7 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
 
         char str[STR_SIZE];
 
-        while (thread_lines.size()) {
+        while (!thread_lines.empty()) {
             std::string line = thread_lines.back();
             thread_lines.pop_back();
             /*
@@ -135,6 +136,7 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
             }
 
             double label = sample.front();
+            // first value is the label
             sample.erase(sample.begin());
 
             thread_labels.push_back(label);
@@ -238,13 +240,13 @@ Dataset Input::read_input_csv(const std::string& input_file,
     std::vector<std::vector<double>> samples;
     std::vector<double> labels;
 
-    std::vector<std::string> lines;
+    std::queue<std::string> lines;
     std::string line;
 
     std::mutex input_mutex;   // mutex to protect queue of raw samples
     std::mutex output_mutex;  // mutex to protect queue of processed samples
     bool terminate = false;   // indicates when worker threads should terminate
-    std::vector<std::thread*> threads;  // vector of worker thread
+    std::vector<std::thread*> threads;  // vector of worker threads
 
     for (uint64_t i = 0; i < nthreads; ++i) {
         threads.push_back(
@@ -273,7 +275,7 @@ Dataset Input::read_input_csv(const std::string& input_file,
     uint64_t i = 0;
     while (getline(fin, line)) {
         input_mutex.lock();
-        lines.push_back(line);
+        lines.push(line);
         input_mutex.unlock();
         ++i;
 

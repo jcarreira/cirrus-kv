@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #ifndef _UTILS_H_
 #define _UTILS_H_
 

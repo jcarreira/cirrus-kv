@@ -24,8 +24,8 @@ std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
 }
 
 void check_dataset(Dataset& dataset) {
-    for (uint64_t i = 0; i < dataset.samples(); ++i) {
-        for (uint64_t j = 0; j < dataset.features(); ++j) {
+    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+        for (uint64_t j = 0; j < dataset.num_features(); ++j) {
             const double* s = dataset.sample(i);
             if (std::isnan(s[j]) || std::isinf(s[j])) {
                 throw std::runtime_error("Invalid dataset");
@@ -65,6 +65,11 @@ std::unique_ptr<Model> LRModel::copy() const {
 void LRModel::sgd_update(double learning_rate,
         const ModelGradient* gradient) {
     const LRGradient* grad = dynamic_cast<const LRGradient*>(gradient);
+
+    if (grad == nullptr) {
+        throw std::runtime_error("Error casting gradient");
+    }
+
     for (uint64_t i = 0; i < d; ++i) {
        weights[i] += learning_rate * grad->weights[i];
     }
@@ -90,8 +95,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     dataset.check_values();
 #endif
 
-    const double* dataset_data =
-        reinterpret_cast<const double*>(dataset.data.get());
+    const double* dataset_data = dataset.data.get();
     // create Matrix for dataset
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
         Eigen::Dynamic, Eigen::RowMajor>>
@@ -118,7 +122,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
     std::vector<double> vec_res;
     vec_res.resize(res.size());
-    Eigen::VectorXd::Map(&vec_res[0], res.size()) = res;
+    Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
@@ -153,7 +157,7 @@ double LRModel::calc_loss(Dataset& dataset) const {
 
     // count how many samples are wrongly classified
     uint64_t wrong_count = 0;
-    for (uint64_t i = 0; i < dataset.samples(); ++i) {
+    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
         // get labeled class for the ith sample
         double class_i =
             reinterpret_cast<const double*>(dataset.labels_.get())[i];
@@ -197,7 +201,7 @@ double LRModel::calc_loss(Dataset& dataset) const {
     }
 
     std::cout
-        << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.samples()))
+        << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.num_samples()))
         << std::endl;
 
     if (std::isnan(total_loss) || std::isinf(total_loss))

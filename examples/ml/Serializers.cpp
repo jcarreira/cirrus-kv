@@ -41,3 +41,49 @@ lr_gradient_deserializer::operator()(const void* data, unsigned int des_size) {
     return gradient;
 }
 
+
+/*************************************************************************
+  ************************************************************************
+  * Softmax Serializers
+  ************************************************************************
+  ************************************************************************
+  */
+uint64_t sm_gradient_serializer::size(const SoftmaxGradient& g) const {
+    return g.getSerializedSize();
+}
+
+void sm_gradient_serializer::serialize(const SoftmaxGradient& g, void* mem) const {
+    g.serialize(mem);
+}
+
+SoftmaxGradient
+sm_gradient_deserializer::operator()(const void* data, unsigned int des_size) {
+    SoftmaxGradient gradient(nclasses, d);
+    if (des_size != gradient.getSerializedSize()) {
+        throw std::runtime_error(
+                "Wrong deserializer size at sm_gradient_deserializer");
+    }
+
+    gradient.loadSerialized(data);
+    return gradient;
+}
+
+uint64_t sm_model_serializer::size(const SoftmaxModel& model) const {
+    return model.getSerializedSize();
+}
+
+void sm_model_serializer::serialize(const SoftmaxModel& model, void* mem) const {
+    model.serializeTo(mem);
+}
+
+SoftmaxModel
+sm_model_deserializer::operator()(const void* data, unsigned int des_size) {
+    SoftmaxModel model(nclasses, d);
+    if (des_size != model.getSerializedSize()) {
+        throw std::runtime_error(
+                "Wrong deserializer size at lr_model_deserializer");
+    }
+    model.loadSerialized(data);
+
+    return model;
+}

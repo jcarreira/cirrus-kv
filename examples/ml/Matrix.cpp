@@ -5,7 +5,7 @@
 Matrix::Matrix(std::vector<std::vector<double>> m) :
         r(0), c(0), data(0) {
     if (!m.size()) {
-        return;
+        throw std::runtime_error("Error building matrix");
     }
 
     r = m.size();

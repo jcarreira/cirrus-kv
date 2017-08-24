@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #include <Configuration.h>
 
 #include <fstream>
@@ -106,7 +104,7 @@ std::string Configuration::get_input_path() const {
 std::string Configuration::get_samples_path() const {
     if (samples_path == "")
         throw std::runtime_error("samples path not loaded");
-    if (input_path != "double_binary")
+    if (input_type != "double_binary")
         throw std::runtime_error("mismatch between paths and input type");
     return samples_path;
 }

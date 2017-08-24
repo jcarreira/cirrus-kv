@@ -136,19 +136,19 @@ void run_loading_task(const Configuration& config) {
 
     std::cout << "[LOADER] "
         << "Read "
-        << dataset.samples()
+        << dataset.num_samples()
         << " samples "
         << std::endl;
 
     std::cout << "[LOADER] "
         << "Adding "
-        << dataset.samples()
+        << dataset.num_samples()
         << " samples in batches of size: "
         << batch_size
         << std::endl;
 
     // We put in batches of N samples
-    for (unsigned int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
+    for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /**

@@ -1,4 +1,4 @@
-#include <Tasks.h>
+#include <Tasks_softmax.h>
 #include <unistd.h>
 #include <iostream>
 #include <memory>
@@ -22,10 +22,10 @@ void LogisticTask::run(const Configuration& config, int worker) {
         << "Worker task connecting to store" << std::endl;
 
     cirrus::TCPClient client;
-    lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
-    lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
-    lr_model_serializer lms(MODEL_GRAD_SIZE);
-    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    sm_gradient_serializer sgs(nclasses, MODEL_GRAD_SIZE);
+    sm_gradient_deserializer sgd(nclasses, MODEL_GRAD_SIZE);
+    sm_model_serializer sms(nclasses, MODEL_GRAD_SIZE);
+    sm_model_deserializer smd(nclasses, MODEL_GRAD_SIZE);
     c_array_serializer<double> cas_samples(batch_size);
     c_array_deserializer<double> cad_samples(batch_size,
             "worker samples_store");
@@ -34,13 +34,12 @@ void LogisticTask::run(const Configuration& config, int worker) {
             "worker labels_store", false);
 
     // used to publish the gradient
-    cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
-        gradient_store(IP, PORT, &client, lgs, lgd);
+    cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxGradient>
+        gradient_store(IP, PORT, &client, sgs, sgd);
 
     // this is used to access the most up to date model
-    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
-        model_store(IP, PORT, &client,
-                lms, lmd);
+    cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
+        model_store(IP, PORT, &client, sms, smd);
 
     uint64_t num_batches = config.get_num_samples() /
         config.get_minibatch_size();
@@ -79,7 +78,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         // maybe we can wait a few iterations to get the model
         std::shared_ptr<double> samples;
         std::shared_ptr<double> labels;
-        LRModel model(MODEL_GRAD_SIZE);
+        SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
         try {
             //std::cout << "[WORKER] "
             //    << "Worker task getting the model at id: "
@@ -190,9 +189,9 @@ void LogisticTask::run(const Configuration& config, int worker) {
         //    << gradient_id
         //    << "\n";
         try {
-            auto lrg = *dynamic_cast<LRGradient*>(gradient.get());
+            auto smg = *dynamic_cast<SoftmaxGradient*>(gradient.get());
             gradient_store.put(
-                    GRADIENT_BASE + gradient_id, lrg);
+                    GRADIENT_BASE + gradient_id, smg);
         } catch(...) {
             std::cout << "[WORKER] "
                 << "Worker task error doing put of gradient"
@@ -232,23 +231,23 @@ void PSTask::run(const Configuration& config) {
     cirrus::TCPClient client;
 
 
-    lr_model_serializer lms(MODEL_GRAD_SIZE);
-    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-    lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
-    lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
+    sm_model_serializer sms(nclasses, MODEL_GRAD_SIZE);
+    sm_model_deserializer smd(nclasses, MODEL_GRAD_SIZE);
+    sm_gradient_serializer sgs(nclasses, MODEL_GRAD_SIZE);
+    sm_gradient_deserializer sgd(nclasses, MODEL_GRAD_SIZE);
 
-    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
+    cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
         model_store(IP, PORT, &client,
-            lms, lmd);
-    cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
+            sms, smd);
+    cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxGradient>
         gradient_store(IP, PORT, &client,
-                lgs, lgd);
+                sgs, sgd);
 
     std::cout << "[PS] "
         << "PS task initializing model" << std::endl;
     // initialize model
 
-    LRModel model(MODEL_GRAD_SIZE);
+    SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
     model.randomize();
     std::cout << "[PS] "
         << "PS publishing model at id: "
@@ -286,7 +285,7 @@ void PSTask::run(const Configuration& config) {
             //    << std::endl;
 
             // get gradient from store
-            LRGradient gradient(MODEL_GRAD_SIZE);
+            SoftmaxGradient gradient(nclasses, MODEL_GRAD_SIZE);
             try {
                 gradient = gradient_store.get(GRADIENT_BASE + gradient_id);
             } catch(const cirrus::NoSuchIDException& e) {
@@ -346,8 +345,8 @@ void ErrorTask::run(const Configuration& /* config */) {
 
     cirrus::TCPClient client;
 
-    lr_model_serializer lms(MODEL_GRAD_SIZE);
-    lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    sm_model_serializer sms(nclasses, MODEL_GRAD_SIZE);
+    sm_model_deserializer smd(nclasses, MODEL_GRAD_SIZE);
     c_array_serializer<double> cas_samples(batch_size);
     c_array_deserializer<double> cad_samples(batch_size,
             "error samples_store");
@@ -356,8 +355,8 @@ void ErrorTask::run(const Configuration& /* config */) {
             "error labels_store", false);
 
     // this is used to access the most up to date model
-    cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
-        model_store(IP, PORT, &client, lms, lmd);
+    cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
+        model_store(IP, PORT, &client, sms, smd);
 
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
@@ -377,7 +376,7 @@ void ErrorTask::run(const Configuration& /* config */) {
             std::cout << "[ERROR_TASK] getting the model at id: "
                 << MODEL_BASE
                 << "\n";
-            LRModel model(MODEL_GRAD_SIZE);
+            SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
             model = model_store.get(MODEL_BASE);
 
             std::cout << "[ERROR_TASK] received the model with id: "

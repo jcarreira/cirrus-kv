@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #ifndef SRC_CONFIGURATION_H_
 #define SRC_CONFIGURATION_H_
 

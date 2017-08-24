@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 #ifndef SRC_INPUT_H_
 #define SRC_INPUT_H_
 
@@ -7,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <queue>
 
 class Input {
  public:
@@ -77,7 +76,7 @@ class Input {
       */
     void read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
             const std::string& delimiter,
-            std::vector<std::string>& lines,  //< content produced by producer
+            std::queue<std::string>& lines,  //< content produced by producer
             std::vector<std::vector<double>>& samples,
             std::vector<double>& labels,
             bool& terminate,
