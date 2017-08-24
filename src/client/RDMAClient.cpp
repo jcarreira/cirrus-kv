@@ -635,15 +635,18 @@ RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
   */
 void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
-        RDMAClient::RDMAOpInfo* op_info = read_rdma_async(id, size,
-            remote_addr, peer_rkey, mem);
+    auto op_info = new RDMAClient::RDMAOpInfo(id);
+    auto wait_sem = op_info->op_sem;
+    auto result_available = op_info->result_available;
+    read_rdma_async(id, size,
+        remote_addr, peer_rkey, mem, op_info);
 
     // wait until operation is completed
 
     {
         TimerFunction tf("read_rdma_async wait for lock", true);
-        while (!*(op_info->result_available)) {
-            op_info->op_sem->wait();
+        while (!*result_available) {
+            wait_sem->wait();
         }
     }
 }
@@ -666,6 +669,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
                                             uint64_t remote_addr,
                                             uint64_t peer_rkey,
                                             const RDMAMem& mem,
+                                            RDMAOpInfo *op_info,
                                             std::function<void()> apply_fn) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
@@ -680,7 +684,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    auto op_info    = new RDMAClient::RDMAOpInfo(id, apply_fn);
+    op_info->apply_fn = apply_fn;
     wr.wr_id        = reinterpret_cast<uint64_t>(op_info);
     wr.opcode       = IBV_WR_RDMA_READ;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -1039,14 +1043,22 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
 
-    RDMAClient::RDMAOpInfo* op_info;
+    RDMAClient::RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
+    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
+        std::make_shared<std::shared_ptr<const char>>(
+                reinterpret_cast<const char*>(data),
+                std::default_delete<const char[]>());
+    auto ret = BladeClient::ClientFuture(op_info->result,
+            op_info->result_available,
+            op_info->op_sem, op_info->error_code,
+            buffer_ptr, std::make_shared<uint64_t>(length));
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
 
-        op_info = read_rdma_async(id_, length,
+        read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                *mem,
+                *mem, op_info,
                 []() -> void {});
     } else {
         RDMAMem* mem = new RDMAMem(data, length);
@@ -1054,20 +1066,13 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
 
-        op_info = read_rdma_async(id_, length,
+        read_rdma_async(id_, length,
                 alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                *mem,
+                *mem, op_info,
                 [mem]() -> void { delete mem; });
     }
 
-    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
-        std::make_shared<std::shared_ptr<const char>>(
-                reinterpret_cast<const char*>(data),
-                std::default_delete<const char[]>());
-
-    return BladeClient::ClientFuture(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code,
-                        buffer_ptr, std::make_shared<uint64_t>(length));
+    return ret; 
 }
 
 }  // namespace cirrus

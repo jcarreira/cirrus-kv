@@ -325,6 +325,7 @@ class RDMAClient : public BladeClient {
     RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
+            RDMAOpInfo* op_info,
             std::function<void()> apply_fn = []() -> void {});
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
