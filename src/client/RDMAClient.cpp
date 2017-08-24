@@ -407,7 +407,6 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
 
     op_info->apply();
 
-    // TODO(Tyler): Should we delete the op info here?
     // TODO(Tyler): Remove the checks that the lock exists?
     switch (wc->opcode) {
         case IBV_WC_RECV:
@@ -429,9 +428,6 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
             outstanding_send_wr--;
             if (op_info->op_sem)
                 op_info->op_sem->signal();
-            if (op_info->data != nullptr) {
-                delete[] op_info->data;
-            }
             break;
         default:
             LOG<ERROR>("Unknown opcode");
@@ -526,7 +522,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::send_message(struct rdma_cm_id *id,
 bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
     LOG<INFO>("RDMAClient:: write_rdma_async");
-    
+
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
     auto wait_sem = op_info->op_sem;
     write_rdma_async(id, size, remote_addr, peer_rkey, mem, op_info);
@@ -577,10 +573,10 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
   * @param remote_addr the remote address to write to
   * @param peer_rkey
   * @param mem a reference to an RDMAMem.
-  * @return A pointer to an RDMAOpInfo containing information about the status
-  * of the write.
+  * @param op_info a pointer to an RDMAOpInfo that will be used for this
+  * operation. This function takes ownership of the pointer.
   */
-RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
+void RDMAClient::write_rdma_async(struct rdma_cm_id *id,
                                                     uint64_t size,
                                                     uint64_t remote_addr,
                                                     uint64_t peer_rkey,
@@ -612,15 +608,12 @@ RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
     //    wr.send_flags |= IBV_SEND_INLINE;
 
     sge.addr   = mem.addr_;
-    std::cout << "Writing from address: " << sge.addr << std::endl;
     sge.length = size;
-    int value = *(reinterpret_cast<int*>(sge.addr));
-    std::cout << "Value just before sending is: " << value << std::endl;
     sge.lkey   = mem.mr->lkey;
 
     if (!post_send(id->qp, &wr, &bad_wr))
         throw std::runtime_error("write_rdma_async: error post_send");
-    return op_info;
+    return;
 }
 
 /**
@@ -635,6 +628,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::write_rdma_async(struct rdma_cm_id *id,
   */
 void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
+    // This will be freed in poll_cq
     auto op_info = new RDMAClient::RDMAOpInfo(id);
     auto wait_sem = op_info->op_sem;
     auto result_available = op_info->result_available;
@@ -661,16 +655,15 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
   * @param remote_addr the remote address to read from
   * @param peer_rkey
   * @param mem a reference to an RDMAMem.
-  * @return A pointer to an RDMAOpInfo containing information about the status
-  * of the read.
+  * @param RDMAOpInfo A pointer to an RDMAOpInfo that will be used by this
+  * operation. This function takes ownership of the pointer.
   */
-RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
+void RDMAClient::read_rdma_async(struct rdma_cm_id *id,
                                             uint64_t size,
                                             uint64_t remote_addr,
                                             uint64_t peer_rkey,
                                             const RDMAMem& mem,
-                                            RDMAOpInfo *op_info,
-                                            std::function<void()> apply_fn) {
+                                            RDMAOpInfo *op_info) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
@@ -684,7 +677,6 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
-    op_info->apply_fn = apply_fn;
     wr.wr_id        = reinterpret_cast<uint64_t>(op_info);
     wr.opcode       = IBV_WR_RDMA_READ;
     wr.wr.rdma.remote_addr = remote_addr;
@@ -702,7 +694,7 @@ RDMAClient::RDMAOpInfo* RDMAClient::read_rdma_async(struct rdma_cm_id *id,
     if (!post_send(id->qp, &wr, &bad_wr))
         throw std::runtime_error("read_rdma_async: error post_send");
 
-    return op_info;
+    return;
 }
 
 void RDMAClient::connect_rdma_cm(const std::string& host,
@@ -936,11 +928,12 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
 
     if (length > SEND_MSG_SIZE)
         throw cirrus::Exception("Message being sent is over RDMA max size.");
-
+    // This will be freed in poll_cq
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
+    // These are to fill fields in the future. They are unused as this is a
+    // write operation.
     std::shared_ptr<std::shared_ptr<const char>> dummy_ptr;
     std::shared_ptr<uint64_t> dummy_size_ptr;
-    std::cout << "Creating future" << std::endl;
     BladeClient::ClientFuture ret(op_info->result, op_info->result_available,
                         op_info->op_sem, op_info->error_code,
                         dummy_ptr, dummy_size_ptr);
@@ -1043,36 +1036,37 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
 
-    RDMAClient::RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
-    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
-        std::make_shared<std::shared_ptr<const char>>(
-                reinterpret_cast<const char*>(data),
-                std::default_delete<const char[]>());
-    auto ret = BladeClient::ClientFuture(op_info->result,
-            op_info->result_available,
-            op_info->op_sem, op_info->error_code,
-            buffer_ptr, std::make_shared<uint64_t>(length));
+    RDMAClient::RDMAOpInfo* op_info; = new RDMAClient::RDMAOpInfo(id_);
+
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
+        op_info = = new RDMAClient::RDMAOpInfo(id_, []() -> void {});
 
-        read_rdma_async(id_, length,
-                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                *mem, op_info,
-                []() -> void {});
     } else {
         RDMAMem* mem = new RDMAMem(data, length);
 
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
 
-        read_rdma_async(id_, length,
-                alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
-                *mem, op_info,
-                [mem]() -> void { delete mem; });
+        op_info = new RDMAClient::RDMAOpInfo(id_,
+            [mem]() -> void { delete mem; });
     }
 
-    return ret; 
+    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
+        std::make_shared<std::shared_ptr<const char>>(
+                reinterpret_cast<const char*>(data),
+                std::default_delete<const char[]>());
+
+    BladeClient::ClientFuture ret = BladeClient::ClientFuture(op_info->result,
+        op_info->result_available,
+        op_info->op_sem, op_info->error_code,
+        buffer_ptr, std::make_shared<uint64_t>(length));
+    read_rdma_async(id_, length,
+            alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
+            *mem, op_info);
+
+    return ret;
 }
 
 }  // namespace cirrus

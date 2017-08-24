@@ -106,7 +106,6 @@ class RDMAClient : public BladeClient {
                 result = std::make_shared<bool>();
                 result_available = std::make_shared<bool>(false);
                 op_sem = std::make_shared<cirrus::PosixSemaphore>();
-                std::cout << "Error code is: " << *error_code << std::endl;
             }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
@@ -117,11 +116,8 @@ class RDMAClient : public BladeClient {
                     throw std::runtime_error("BUG");
                 result = std::make_shared<bool>();
                 result_available = std::make_shared<bool>(false);
-                std::cout << "Error code is: " << *error_code << std::endl;
             }
-        // ~RDMAOpInfo() {
-        //     std::cout << "Destroying RDMAOpInfo Instance" << std::endl;
-        // }
+
         /**
          * Apply the given function on completion. Mark the operation as
          * completed.
@@ -213,7 +209,6 @@ class RDMAClient : public BladeClient {
           */
         bool prepare(GeneralContext gctx) {
             LOG<INFO>("prepare()");
-            std::cout << "Address is: " << addr_ << std::endl;
             // we don't register more than once
             if (registered_) {
                 LOG<INFO>("already registered");
@@ -297,8 +292,7 @@ class RDMAClient : public BladeClient {
     // reads
     BladeClient::ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
-        uint64_t offset, uint64_t length, void *data,
-        RDMAMem* mem = nullptr);
+        uint64_t offset, uint64_t length, void *data);
 
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
             uint64_t length, void *data, RDMAMem* reg = nullptr);
@@ -316,13 +310,13 @@ class RDMAClient : public BladeClient {
     bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
-    RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
+    void write_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&,
             RDMAOpInfo* op_info);
     bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
-    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size,
+    void read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
             RDMAOpInfo* op_info,
