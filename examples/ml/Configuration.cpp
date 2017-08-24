@@ -171,9 +171,6 @@ uint64_t Configuration::get_num_classes() const {
   * Get the maximum number of features/columns to read from each sample
   */
 uint64_t Configuration::get_limit_cols() const {
-    if (limit_cols == 0) {
-        throw std::runtime_error("num_classes not loaded");
-    }
     return limit_cols;
 }
 

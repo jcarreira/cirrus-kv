@@ -34,7 +34,7 @@
 #define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
 
-#define MODEL_GRAD_SIZE 10
+#define MODEL_GRAD_SIZE (28*28)
 
 #define BILLION (1000000000ULL)
 
@@ -45,7 +45,7 @@
 int nworkers = 1;
 
 int num_classes = 2;
-int features_per_sample = 10;
+int features_per_sample = (28*28);
 int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
@@ -82,7 +82,7 @@ void run_tasks(int rank, const Configuration& config) {
         pt.run(config);
         sleep_forever();
     } else if (rank == 2) {
-        sleep(3);
+        sleep(1);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
                 samples_per_batch, features_per_sample, nworkers,
@@ -102,7 +102,7 @@ void run_tasks(int rank, const Configuration& config) {
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-        sleep(10);
+        sleep(20);
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
                 samples_per_batch, features_per_sample, nworkers,

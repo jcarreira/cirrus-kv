@@ -147,6 +147,11 @@ std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
         }
     }
 
+    //std::cout << "minibatch_grad"
+    //    << " weights.size(): " << weights.size()
+    //    << " weights[0].size(): " << weights[0].size()
+    //    << std::endl;
+
     Eigen::MatrixXd W(dataset.cols(), nclasses);
     for (unsigned int d = 0; d < dataset.cols(); ++d) {
         for (unsigned int k = 0; k < nclasses; ++k) {
@@ -265,7 +270,10 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
 
     for (unsigned int i = 0; i < dataset.rows(); ++i) {
         double class_i = reinterpret_cast<const double*>(data.labels_.get())[i];
+        //std::cout << "Correct class: " << class_i << std::endl;
         for (int c = 0; c < probs.cols(); ++c) {
+            //std::cout << "class: " << c << std::endl;
+            //std::cout << "prob class: " << probs(i, c) << std::endl;
             // if there is a different class with higher probability
             // we count it as wrong
             if (probs(i, c) > probs(i, class_i)) {
@@ -290,6 +298,7 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
 
     std::cout
         << "Accuracy: " << (1.0 - (1.0 * count_wrong / dataset.rows()))
+        << " wrong: " << count_wrong << " samples: " << dataset.rows()
         << std::endl;
 
     // constant

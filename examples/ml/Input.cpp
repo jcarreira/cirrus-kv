@@ -13,8 +13,9 @@
 #include <thread>
 #include <cassert>
 #include <memory>
+#include <algorithm>
 
-static const int REPORT_LINES = 1000000;  // how often to report readin progress
+static const int REPORT_LINES = 10000;  // how often to report readin progress
 static const int REPORT_THREAD = 100000;  // how often proc. threads report
 static const int STR_SIZE = 10000;        // max size for dataset line
 
@@ -98,9 +99,11 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         /**
           * Read up to read_at_a_time limes
           */
+        std::cout << "Popping lines size: " << lines.size() << std::endl;
         while (lines.size() && thread_lines.size() < read_at_a_time) {
-            thread_lines.push_back(lines.back());
+            thread_lines.push_back(lines.front());
             lines.pop();
+            //std::cout << "Popped line: " << thread_lines.back() << std::endl;
         }
 
         if (thread_lines.size() == 0) {
@@ -121,6 +124,10 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
             /*
              * We have the line, now split it into features
              */ 
+
+            //std::cout << "[INPUT] "
+            //    << "Parsing line: " << line << std::endl;
+
             assert(line.size() < STR_SIZE);
             strncpy(str, line.c_str(), STR_SIZE);
             char* s = str;
@@ -133,12 +140,14 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
                 k++;
                 if (limit_cols && k == limit_cols)
                     break;
+                //std::cout << "[INPUT] sample index: " << sample.size() << std::endl;
             }
 
             double label = sample.front();
             // first value is the label
             sample.erase(sample.begin());
 
+            //std::cout << "[INPUT] Parsed label: " << label << std::endl;
             thread_labels.push_back(label);
             thread_samples.push_back(sample);
         }
@@ -241,7 +250,6 @@ Dataset Input::read_input_csv(const std::string& input_file,
     std::vector<double> labels;
 
     std::queue<std::string> lines;
-    std::string line;
 
     std::mutex input_mutex;   // mutex to protect queue of raw samples
     std::mutex output_mutex;  // mutex to protect queue of processed samples
@@ -273,6 +281,7 @@ Dataset Input::read_input_csv(const std::string& input_file,
     }
 
     uint64_t i = 0;
+    std::string line;
     while (getline(fin, line)) {
         input_mutex.lock();
         lines.push(line);
@@ -282,6 +291,7 @@ Dataset Input::read_input_csv(const std::string& input_file,
         if (i % REPORT_LINES == 0) {
             std::cout << "Read: " << i << " lines." << std::endl;
         }
+        //std::cout << "Pushing line: " << line << std::endl;
     }
 
     while (1) {
@@ -302,12 +312,26 @@ Dataset Input::read_input_csv(const std::string& input_file,
 
     assert(samples.size() == labels.size());
 
+    std::cout << "Read " << samples.size() << " samples" << std::endl;
     std::cout << "Printing first sample" << std::endl;
     print_sample(samples[0]);
 
     if (to_normalize) {
         normalize(samples);
     }
+
+    std::srand (42);
+    std::random_shuffle(samples.begin(), samples.end());
+    std::srand (42);
+    std::random_shuffle(labels.begin(), labels.end());
+    
+    std::cout << "Printing first sample after normalization" << std::endl;
+    print_sample(samples[0]);
+
+    //std::cout << "Printing label" << std::endl;
+    //for (unsigned int i = 0; i < samples.size(); ++i) {
+    //    std::cout << labels[i] << "\n";
+    //}
 
     // we transfer ownership of the samples and labels here
     return Dataset(samples, labels);
@@ -317,9 +341,9 @@ void Input::normalize(std::vector<std::vector<double>>& data) {
     std::vector<double> means(data[0].size());
     std::vector<double> sds(data[0].size());
 
-    // calculate means
-    for (unsigned int i = 0; i < data.size(); ++i) {
-        for (unsigned int j = 0; j < data[0].size(); ++j) {
+    // calculate mean of each feature
+    for (unsigned int i = 0; i < data.size(); ++i) { // for each sample
+        for (unsigned int j = 0; j < data[0].size(); ++j) { // for each feature
             means[j] += data[i][j] / data.size();
         }
     }

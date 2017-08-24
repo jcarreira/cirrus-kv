@@ -122,7 +122,7 @@ class Configuration {
 
     Configuration::ModelType model_type;  //< type of the model
 
-    uint64_t limit_cols;  //< max number of columns to read from dataset input
+    uint64_t limit_cols;       //< max number of columns to read from dataset input
     bool normalize;       //< whether to normalize the dataset
 
     uint64_t num_samples;  //< number of training input samples

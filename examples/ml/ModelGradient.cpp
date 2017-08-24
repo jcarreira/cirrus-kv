@@ -64,6 +64,9 @@ SoftmaxGradient::SoftmaxGradient(const std::vector<std::vector<double>>& w) {
 }
 
 void SoftmaxGradient::serialize(void* mem) const {
+    *reinterpret_cast<uint32_t*>(mem) = count;
+    mem = reinterpret_cast<void*>(
+            (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
     double* data = reinterpret_cast<double*>(mem);
 
     for (const auto& v : weights) {
@@ -73,10 +76,14 @@ void SoftmaxGradient::serialize(void* mem) const {
 }
 
 uint64_t SoftmaxGradient::getSerializedSize() const {
-    return weights.size() * weights[0].size() * sizeof(double);
+    return weights.size() * weights[0].size() * sizeof(double)
+        + sizeof(uint32_t);
 }
 
 void SoftmaxGradient::loadSerialized(const void* mem) {
+    count = *reinterpret_cast<const uint32_t*>(mem);
+    mem = reinterpret_cast<const void*>(
+            (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
     const double* data = reinterpret_cast<const double*>(mem);
 
     for (auto& v : weights) {

@@ -43,30 +43,33 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
     uint64_t num_batches = config.get_num_samples() /
         config.get_minibatch_size();
+    std::cout << "[WORKER] "
+        << "num_batches: " << num_batches
+        << "batch_size: " << batch_size
+        << std::endl;
 
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client, cas_samples, cad_samples);
-    cirrus::LRAddedEvictionPolicy samples_policy(100);
-    cirrus::CacheManager<std::shared_ptr<double>> samples_cm(
-            &samples_store, &samples_policy, 100);
-    cirrus::CirrusIterable<std::shared_ptr<double>> s_iter(
-          &samples_cm, READ_AHEAD, SAMPLE_BASE, SAMPLE_BASE + num_batches - 1);
-    auto samples_iter = s_iter.begin();
+    //cirrus::LRAddedEvictionPolicy samples_policy(100);
+    //cirrus::CacheManager<std::shared_ptr<double>> samples_cm(
+    //        &samples_store, &samples_policy, 100);
+    //cirrus::CirrusIterable<std::shared_ptr<double>> s_iter(
+    //      &samples_cm, READ_AHEAD, SAMPLE_BASE, SAMPLE_BASE + num_batches - 1);
+    //auto samples_iter = s_iter.begin();
 
     // this is used to access the training labels
     // we configure this store to return shared_ptr that do not free memory
     // because these objects will be owned by the Dataset
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-        labels_store(IP, PORT, &client,
-                cas_labels, cad_labels);
-    cirrus::LRAddedEvictionPolicy labels_policy(100);
-    cirrus::CacheManager<std::shared_ptr<double>> labels_cm(
-            &labels_store, &labels_policy, 100);
-    cirrus::CirrusIterable<std::shared_ptr<double>> l_iter(
-            &labels_cm, READ_AHEAD, LABEL_BASE,
-            LABEL_BASE + num_batches - 1);
-    auto labels_iter = l_iter.begin();
+        labels_store(IP, PORT, &client, cas_labels, cad_labels);
+    //cirrus::LRAddedEvictionPolicy labels_policy(100);
+    //cirrus::CacheManager<std::shared_ptr<double>> labels_cm(
+    //        &labels_store, &labels_policy, 100);
+    //cirrus::CirrusIterable<std::shared_ptr<double>> l_iter(
+    //        &labels_cm, READ_AHEAD, LABEL_BASE,
+    //        LABEL_BASE + num_batches - 1);
+    //auto labels_iter = l_iter.begin();
 
     bool first_time = true;
 
@@ -93,18 +96,18 @@ void LogisticTask::run(const Configuration& config, int worker) {
             //    << (SAMPLE_BASE + samples_id)
             //    << "\n";
 
-            //samples = samples_store.get(SAMPLE_BASE + samples_id);
-            auto now = get_time_ns();
-            samples = *samples_iter;
-            std::cout << "Samples Elapsed (ns): " << get_time_ns() - now << "\n";
+            samples = samples_store.get(SAMPLE_BASE + samples_id);
+            //auto now = get_time_ns();
+            //samples = *samples_iter;
+            //std::cout << "Samples Elapsed (ns): " << get_time_ns() - now << "\n";
             //std::cout << "[WORKER] "
             //    << "Worker task received training data with id: "
             //    << (SAMPLE_BASE + samples_id)
             //    << " and checksum: " << checksum(samples, batch_size)
             //    << "\n";
 
-            //labels = labels_store.get(LABEL_BASE + labels_id);
-            labels = *labels_iter;
+            labels = labels_store.get(LABEL_BASE + labels_id);
+            //labels = *labels_iter;
 
             //std::cout << "[WORKER] "
             //    << "Worker task received label data with id: "
@@ -198,23 +201,29 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
             exit(-1);
         }
-        std::cout << "[WORKER] "
-            << "Worker task stored gradient at id: " << gradient_id
-            << " at time: " << get_time_us()
-            << "\n";
+        //std::cout << "[WORKER] "
+        //    << "Worker task stored gradient at id: " << gradient_id
+        //    << " at time: " << get_time_us()
+        //    << " with count: " << gradient->getCount()
+        //    << "\n";
 
         // move to next batch of samples
         samples_id++;
         labels_id++;
-        samples_iter++;
-        labels_iter++;
+        //samples_iter++;
+        //labels_iter++;
 
         // Wrap around
+        if (samples_id == static_cast<int>(num_batches)) {
+            samples_id = labels_id = 0;
+        }
+#if 0
         if (samples_iter == s_iter.end()) {
             samples_id = labels_id = 0;
             samples_iter = s_iter.begin();
             labels_iter = l_iter.begin();
         }
+#endif
     }
 }
 
@@ -229,7 +238,6 @@ void PSTask::run(const Configuration& config) {
     std::cout << "[PS] "
         << "PS connecting to store" << std::endl;
     cirrus::TCPClient client;
-
 
     sm_model_serializer sms(nclasses, MODEL_GRAD_SIZE);
     sm_model_deserializer smd(nclasses, MODEL_GRAD_SIZE);
@@ -249,6 +257,7 @@ void PSTask::run(const Configuration& config) {
 
     SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
     model.randomize();
+    //model.print();
     std::cout << "[PS] "
         << "PS publishing model at id: "
         << MODEL_BASE
@@ -330,9 +339,9 @@ void PSTask::run(const Configuration& config) {
 
                 model.sgd_update(config.get_learning_rate(), &gradient);
 
-                std::cout << "[PS] "
-                    << "Publishing model at: " << get_time_us()
-                    << "\n";
+                //std::cout << "[PS] "
+                //    << "Publishing model at: " << get_time_us()
+                //    << "\n";
                 // publish the model back to the store so workers can use it
                 model_store.put(MODEL_BASE, model);
             }
@@ -373,16 +382,16 @@ void ErrorTask::run(const Configuration& /* config */) {
         double loss = 0;
         try {
             // first we get the model
-            std::cout << "[ERROR_TASK] getting the model at id: "
-                << MODEL_BASE
-                << "\n";
+            //std::cout << "[ERROR_TASK] getting the model at id: "
+            //    << MODEL_BASE
+            //    << "\n";
             SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
             model = model_store.get(MODEL_BASE);
 
-            std::cout << "[ERROR_TASK] received the model with id: "
-                << MODEL_BASE
-                << " csum: " << model.checksum()
-                << "\n";
+            //std::cout << "[ERROR_TASK] received the model with id: "
+            //    << MODEL_BASE
+            //    << " csum: " << model.checksum()
+            //    << "\n";
 
             // then we compute the error
             loss = 0;
@@ -403,23 +412,27 @@ void ErrorTask::run(const Configuration& /* config */) {
                         goto compute_loss;  // we looked at all minibatches
                 }
 
-                std::cout << "[ERROR_TASK] received data and labels with id: "
-                    << i << " with csmus: "
-                    << checksum(samples, batch_size) << " "
-                    << checksum(labels, samples_per_batch)
-                    << "\n";
+                //std::cout << "[ERROR_TASK] received data and labels with id: "
+                //    << i << " with csmus: "
+                //    << checksum(samples, batch_size) << " "
+                //    << checksum(labels, samples_per_batch)
+                //    << "\n";
 
                 Dataset dataset(samples.get(), labels.get(),
                         samples_per_batch, features_per_sample);
 
-                std::cout << "[ERROR_TASK] checking the dataset"
-                        << "\n";
+                //std::cout << "[ERROR_TASK] checking the dataset"
+                //        << "\n";
 
                 dataset.check_values();
 
-                std::cout << "[ERROR_TASK] computing loss"
-                        << "\n";
+                //std::cout << "[ERROR_TASK] computing loss"
+                //        << "\n";
 
+                //std::cout << "First 10 samples labels: " << std::endl;
+                //for (int k = 0; k < 10; ++k) {
+                //    std::cout << "label " << k << ": " << labels.get()[k] << std::endl;
+                //}
                 loss += model.calc_loss(dataset);
                 count++;
             }
@@ -451,8 +464,13 @@ void LoadingTask::run(const Configuration& config) {
 
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            " ", 3,
-            config.get_limit_cols(), false);  // data is already normalized
+            " ", 1,
+            config.get_limit_cols(), true);  // data is already normalized
+
+    std::cout << "First 10 labels" << std::endl;
+    for (int i = 0; i < 10; ++i) {
+        std::cout << "label: " << *dataset.label(i) << std::endl;
+    }
 
     dataset.check_values();
 #ifdef DEBUG
@@ -472,17 +490,17 @@ void LoadingTask::run(const Configuration& config) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client, cas_labels, cad_labels);
 
-    std::cout << "[LOADER] "
-        << "Adding "
-        << dataset.num_samples()
-        << " samples in batches of size (samples*features): "
-        << batch_size
-        << std::endl;
+    //std::cout << "[LOADER] "
+    //    << "Adding "
+    //    << dataset.num_samples()
+    //    << " samples in batches of size (samples*features): "
+    //    << batch_size
+    //    << std::endl;
 
     // We put in batches of N samples
     for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {
-        std::cout << "[LOADER] "
-            << "Building samples batch" << std::endl;
+        //std::cout << "[LOADER] "
+        //    << "Building samples batch" << std::endl;
         /** Build sample object
           */
         auto sample = std::shared_ptr<double>(
@@ -492,8 +510,8 @@ void LoadingTask::run(const Configuration& config) {
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
 
-        std::cout << "[LOADER] "
-            << "Building labels batch" << std::endl;
+        //std::cout << "[LOADER] "
+        //    << "Building labels batch" << std::endl;
         /**
           * Build label object
           */
@@ -505,11 +523,19 @@ void LoadingTask::run(const Configuration& config) {
                 sizeof(double) * samples_per_batch);
 
         try {
-            std::cout << "[LOADER] "
-                << "Adding sample batch id: "
-                << (SAMPLE_BASE + i)
-                << " samples with size (bytes): " << sizeof(double) * batch_size
-                << std::endl;
+            //std::cout << "[LOADER] "
+            //    << "Adding sample batch id: "
+            //    << (SAMPLE_BASE + i)
+            //    << " samples with size (bytes): " << sizeof(double) * batch_size
+            //    << std::endl;
+
+            if (i == 0) {
+                std::cout << "[LOADER] "
+                    << "Storing sample with id: " << 0
+                    << " checksum: " << checksum(sample, batch_size) << std::endl
+                    << std::endl;
+            }
+
             samples_store.put(SAMPLE_BASE + i, sample);
             // std::cout << "[LOADER] "
             //    << "Putting label" << std::endl;
