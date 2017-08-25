@@ -128,7 +128,6 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applied fn");
             *result_available = true;
             *result = true;
-            *error_code = cirrus::ErrorCodes::kOk;
         }
 
         char *data = nullptr;
