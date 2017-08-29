@@ -5,31 +5,13 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "utils/CirrusTime.h"
 #include "client/TCPClient.h"
+#include "tests/object_store/object_store_internal.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
-
-/* This function simply copies a std::array into a new portion of memory. */
-template <uint64_t SIZE>
-std::pair<std::unique_ptr<char[]>, uint64_t> array_serializer_simple(
-            const std::array<char, SIZE>& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(v)]);
-    std::memcpy(ptr.get(), &v, sizeof(v));
-    return std::make_pair(std::move(ptr), sizeof(v));
-}
-
-/* Takes a pointer to std::array passed in and returns as object. */
-template <uint64_t SIZE>
-std::array<char, SIZE> array_deserializer_simple(const void* data,
-            uint64_t /* size */) {
-    const std::array<char, SIZE> *ptr = (const std::array<char, SIZE> *) data;
-    std::array<char, SIZE> retArray;
-    retArray = *ptr;
-    return retArray;
-}
 
 /**
   * This benchmark tests the throughput of the system at various sizes
@@ -40,9 +22,12 @@ std::array<char, SIZE> array_deserializer_simple(const void* data,
 template <uint64_t SIZE>
 void test_throughput(uint64_t numRuns) {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-        store(IP, PORT, &client, array_serializer_simple<SIZE>,
-                array_deserializer_simple<SIZE>);
+        store(IP, PORT, &client,
+                serializer,
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
 
     std::cout << "Creating the array to put." << std::endl;
     std::unique_ptr<std::array<char, SIZE>> array =
@@ -81,9 +66,12 @@ void test_throughput(uint64_t numRuns) {
 template <uint64_t SIZE>
 void test_throughput_get(uint64_t numRuns) {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
-        store(IP, PORT, &client, array_serializer_simple<SIZE>,
-                array_deserializer_simple<SIZE>);
+        store(IP, PORT, &client,
+                serializer,
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
 
     std::cout << "Creating the array to put." << std::endl;
     std::unique_ptr<std::array<char, SIZE>> array =
@@ -115,12 +103,13 @@ void test_throughput_get(uint64_t numRuns) {
 
 auto main() -> int {
     uint64_t num_runs = 20000;
-
+    std::cout << "Starting" << std::endl;
     test_throughput<128>(num_runs);                // 128B
     test_throughput<4    * 1024>(num_runs);        // 4K
     test_throughput<50   * 1024>(num_runs);        // 50K
     test_throughput<1024 * 1024>(num_runs / 20);        // 1MB, total 1 gig
     test_throughput<10   * 1024 * 1024>(num_runs / 100);  // 10MB, total 2 gig
+    test_throughput<50 * 1024 * 1024>(num_runs / 100);
     test_throughput<100  * 1024 * 1024>(50);  // 100MB, total 5 gig
 
     test_throughput_get<128>(num_runs);                // 128B
@@ -129,6 +118,5 @@ auto main() -> int {
     // Objects larger than this cause a segfault, likely as the store does not
     // return by reference, and the object is placed on the stack
     test_throughput_get<1024 * 1024>(num_runs / 20);        // 1MB, total 1 gig
-
     return 0;
 }

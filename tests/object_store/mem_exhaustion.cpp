@@ -26,9 +26,10 @@ bool use_rdma_client;
 void test_exhaustion() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -46,9 +47,10 @@ void test_exhaustion() {
 void test_exhaustion_remove() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
 

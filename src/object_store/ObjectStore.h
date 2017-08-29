@@ -18,8 +18,8 @@ class ObjectStore {
      */
     class ObjectStorePutFuture {
      public:
-        explicit ObjectStorePutFuture(cirrus::BladeClient::ClientFuture
-                                          client_future);
+        explicit ObjectStorePutFuture(
+            cirrus::BladeClient::ClientFuture client_future);
         ObjectStorePutFuture() {}
         void wait();
 

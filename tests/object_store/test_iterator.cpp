@@ -127,10 +127,11 @@ class ReversePolicy : public cirrus::IteratorPolicy {
 void test_iterator() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -166,10 +167,11 @@ void test_iterator() {
 void test_iterator_alt() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -203,10 +205,11 @@ void test_iterator_alt() {
 void test_random_prefetching() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -267,10 +270,11 @@ void test_random_prefetching() {
 void test_custom_iteration() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -344,7 +348,8 @@ void test_array() {
         cirrus::test_internal::GetClient(use_rdma_client);
 
     auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
-    auto serializer = cirrus::c_array_serializer_simple<int>(4);
+    auto serializer =
+        cirrus::c_int_array_serializer_simple<std::shared_ptr<int>>(4);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
                       PORT,
                       client.get(),
@@ -354,11 +359,10 @@ void test_array() {
     cirrus::LRAddedEvictionPolicy policy(10);
     cirrus::CacheManager<std::shared_ptr<int>> cm(&store, &policy, 10);
 
-    auto int_array = std::shared_ptr<int>(new int[4],
-        std::default_delete<int[]>());
-
     // Put items in the store
     for (int i = 0; i < 10; i++) {
+        auto int_array = std::shared_ptr<int>(new int[4],
+            std::default_delete<int[]>());
         for (int j = 0; j < 4; j++) {
             (int_array.get())[j] = (i * 4) + j;
         }
@@ -390,8 +394,11 @@ auto main(int argc, char *argv[]) -> int {
     test_iterator();
     std::cout << "Starting iterator alt test." << std::endl;
     test_iterator_alt();
+    std::cout << "Starting iterator array test." << std::endl;
     test_array();
+    std::cout << "Starting random prefetch test." << std::endl;
     test_random_prefetching();
+    std::cout << "Starting custom iteration test." << std::endl;
     test_custom_iteration();
     std::cout << "Test successful" << std::endl;
     return 0;

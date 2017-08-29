@@ -128,30 +128,43 @@ void TCPClient::open_additional_cxns(uint64_t num_additional) {
 /**
   * Asynchronously writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read read from.
-  * @param size the size of the serialized object being read from
-  * local memory.
+  * @param w a WriteUnit containing a serializer and the item to be serialized
   * @return A ClientFuture that contains information about the status of the
   * operation.
   */
-BladeClient::ClientFuture TCPClient::write_async(ObjectID oid, const void* data,
-                                    uint64_t size) {
-    // Make sure that the pointer is not null
-    TEST_Z(data);
+BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
+    const WriteUnit& w) {
+
+
+    // Create flatbuffer builder if none to reuse;
+
+    // Add the builder to the queue if it is of the right type (a write)
+    // And if not over capacity
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder;
 
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
-    // Create flatbuffer builder
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_unique<flatbuffers::FlatBufferBuilder>(
-                                initial_buffer_size);
+    // Size of serialized object, ASSUMED TO BE CONSTANT
+    // TODO(Tyler): Change this! Allow variable sizes!
+    uint64_t size = w.size();
+    reuse_lock.wait();
+    if (!reuse_queue.empty()) {
+        builder = std::move(reuse_queue.front());
+        reuse_queue.pop();
+        reuse_lock.signal();
+    } else {
+        reuse_lock.signal();
+        // The 64 is to give space for additional flatbuffer internal info
+        builder = std::make_unique<flatbuffers::FlatBufferBuilder>(size + 64);
+    }
+
 
     // Create and send write request
-    const int8_t *data_cast = reinterpret_cast<const int8_t*>(data);
-    std::vector<int8_t> data_vector(data_cast, data_cast + size);
-    auto data_fb_vector = builder->CreateVector(data_vector);
+    // Pointer to the vector inside of the flatbuffer to write to
+    int8_t *mem;
+    auto data_fb_vector = builder->CreateUninitializedVector(size, &mem);
+    w.serialize(mem);
     auto msg_contents = message::TCPBladeMessage::CreateWrite(*builder,
                                                               oid,
                                                               data_fb_vector);
@@ -210,16 +223,13 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
 /**
   * Writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
-  * @param data a pointer to the buffer where the serialized object should
-  * be read read from.
-  * @param size the size of the serialized object being read from
-  * local memory.
+  * @param w a WriteUnit containing a serializer and the object to be serialized
   * @return True if the object was successfully written to the server, false
   * otherwise.
   */
-bool TCPClient::write_sync(ObjectID oid, const void* data, uint64_t size) {
+bool TCPClient::write_sync(ObjectID oid, const WriteUnit& w) {
     LOG<INFO>("Call to write_sync");
-    BladeClient::ClientFuture future = write_async(oid, data, size);
+    BladeClient::ClientFuture future = write_async(oid, w);
     LOG<INFO>("returned from write async");
     return future.get();
 }
@@ -588,7 +598,6 @@ void TCPClient::process_send() {
         int sock = sockets.at(socket_index);
         socket_index = (socket_index + 1) % sockets.size();
         sockets_lock.signal();
-        // XXX shouldn't this be a send_all?
         uint32_t network_order_size = htonl(message_size);
         if (send_all(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {
@@ -615,11 +624,27 @@ void TCPClient::process_send() {
 
         // Release the lock so that the other thread may add to the send queue
         queue_lock.signal();
+
+        // Add the builder to the queue if it is of the right type (a write)
+        // And if not over capacity
+        reuse_lock.wait();
+
+        if (reuse_queue.size() < reuse_max) {
+            // Clean the builder and reuse if it is the right type
+            auto message_type = message::TCPBladeMessage::GetTCPBladeMessage(
+                builder->GetBufferPointer())->message_type();
+
+            if (message_type == message::TCPBladeMessage::Message_Write) {
+                builder->Clear();
+                reuse_queue.push(std::move(builder));
+            }
+        }
+        reuse_lock.signal();
     }
 }
 
 /**
-  * Given a message and optionally a pointer to memory, adds a message to the
+  * Given a message, adds it to the
   * send queue, adds a transaction to the map, and returns a future.
   * @param builder a unique_ptr to a FlatBufferBuilder, containing the
   * message.

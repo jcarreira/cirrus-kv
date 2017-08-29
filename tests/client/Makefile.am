@@ -3,14 +3,13 @@ include $(top_srcdir)/common.mk
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS = tcpclientmain
 
-LIBS          = -lclient -lutils -lauthentication \
-                 -lcommon
+LIBS          = -lclient -lutils -lauthentication -lcommon
 
-LINCLUDES    = -L$(top_srcdir)/src/utils/ \
-	       -L$(top_srcdir)/src/client/ \
-    	       -L$(top_srcdir)/src/authentication \
-	       -L$(top_srcdir)/src/common \
-	       $(LIBRDMACM) $(LIBIBVERBS)
+LINCLUDES     = -L$(top_srcdir)/src/utils/ \
+	        -L$(top_srcdir)/src/client/ \
+    	        -L$(top_srcdir)/src/authentication \
+	        -L$(top_srcdir)/src/common \
+	        $(LIBRDMACM) $(LIBIBVERBS)
 
 if USE_RDMA
 bin_PROGRAMS += rdmaclientmain

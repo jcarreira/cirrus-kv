@@ -1,6 +1,3 @@
-#ifndef SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
-#define SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_
-
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include <stdint.h>
 #include <vector>
@@ -28,11 +25,10 @@ std::vector<ObjectID> LRAddedEvictionPolicy::get(ObjectID oid) {
 }
 
 /**
- * Put method for the eviction policy. Returns empty list as a put will never
- * require additional cache space.
+ * Put method for the eviction policy.
  */
-std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID /* oid */) {
-    return std::vector<ObjectID>();
+std::vector<ObjectID> LRAddedEvictionPolicy::put(ObjectID oid) {
+    return process_oid(oid);
 }
 
 /**
@@ -91,5 +87,3 @@ std::vector<ObjectID> LRAddedEvictionPolicy::process_oid(ObjectID oid) {
     }
 }
 }  // namespace cirrus
-
-#endif  // SRC_CACHE_MANAGER_LRUEVICTIONPOLICY_H_

@@ -415,6 +415,7 @@ bool TCPServer::process(int sock) {
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
+
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
     TimerFunction resize_time;

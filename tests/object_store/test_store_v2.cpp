@@ -21,9 +21,11 @@ bool use_rdma_client;
 void test_store_simple() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
+
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT,
                         client.get(),
-                        cirrus::serializer_simple<int>,
+                        serializer,
                         cirrus::deserializer_simple<int, sizeof(int)>);
     for (int oid = 0; oid <  10; oid++) {
         store.put(oid, oid);

@@ -2,16 +2,28 @@
 #define SRC_CLIENT_TCPCLIENT_H_
 
 #include <poll.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <vector>
+#include <algorithm>
+#include <memory>
+#include <iostream>
 #include <string>
 #include <thread>
 #include <queue>
-#include <vector>
 #include <utility>
 #include <map>
 #include <atomic>
 #include "common/schemas/TCPBladeMessage_generated.h"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
+#include "utils/logging.h"
+#include "utils/utils.h"
 
 namespace cirrus {
 
@@ -27,12 +39,12 @@ class TCPClient : public BladeClient {
     void connect(const std::string& address,
         const std::string& port) override;
 
-    bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
+    bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
 
-    ClientFuture write_async(ObjectID oid, const void* data,
-                                       uint64_t size) override;
+
+    ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
     ClientFuture read_async(ObjectID oid) override;
 
     bool remove(ObjectID id) override;
@@ -151,10 +163,20 @@ class TCPClient : public BladeClient {
      */
     cirrus::SpinLock sockets_lock;
 
+    /**
+     * Queue of FlatBufferBuilders that are ready for reuse for writes.
+     */
+    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> reuse_queue;
+
+    /** Max number of flatbuffer builders in reuse_queue. */
+    const unsigned int reuse_max = 5;
+
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    /** Lock on the reuse_queue. */
+    cirrus::SpinLock reuse_lock;
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */

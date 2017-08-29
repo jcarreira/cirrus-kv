@@ -9,10 +9,10 @@ LIBS         = 	-lclient -lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    = 	-L$(top_srcdir)/src/utils/ \
-		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
-		-L$(top_srcdir)/src/cache_manager
+		-L$(top_srcdir)/src/cache_manager \
+		-L$(top_srcdir)/src/client/
 
 LDFLAGS  = -pthread
 LDADD 	 = $(LINCLUDES) $(LIBS)
