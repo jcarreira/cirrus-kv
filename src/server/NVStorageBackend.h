@@ -4,6 +4,12 @@
 #include "StorageBackend.h"
 #include <string>
 
+#include "rocksdb/db.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/options.h"
+
+using namespace rocksdb;
+
 namespace cirrus {
 
 /**
@@ -12,18 +18,21 @@ namespace cirrus {
   */
 class NVStorageBackend : public StorageBackend {
  public:
-    explicit NVStorageBackend(const std::string& path);
+    explicit NVStorageBackend(const std::string& path = "/data/joao/rocksdb");
 
     void init();
-    bool put(uint64_t oid, const StorageBackend::MemData& data) override;
+    bool put(uint64_t oid, const MemSlice& data) override;
     bool exists(uint64_t oid) const override;
-    const StorageBackend::MemData& get(uint64_t oid) override;
+    MemSlice get(uint64_t oid) override;
     bool delet(uint64_t oid) override;
     uint64_t size(uint64_t oid) const override;
 
  private:
     std::string path;  //< path to raw device
-    int fd;  //< file descriptor used to access raw device
+    
+    DB* db;           //< rocksdb handler 
+    Options options;  //< rocksdb options
+
 };
 
 }  // namespace cirrus

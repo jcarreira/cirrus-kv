@@ -19,6 +19,10 @@ cmake -G "Unix Makefiles"
 make -j 10
 cd ../..
 
+# rocksdb
+cd ../rocksdb
+make -j 10
+
 # main compilation
 touch config.rpath
 autoreconf

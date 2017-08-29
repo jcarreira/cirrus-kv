@@ -11,3 +11,6 @@
 	path = third_party/libbf
 	url = https://github.com/mavam/libbf.git
 	branch = master
+[submodule "third_party/rocksdb"]
+	path = third_party/rocksdb
+	url = https://github.com/facebook/rocksdb.git

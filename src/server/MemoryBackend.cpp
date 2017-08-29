@@ -7,7 +7,7 @@ namespace cirrus {
 
 void MemoryBackend::init() {}
 
-bool MemoryBackend::put(uint64_t oid, const std::vector<int8_t>& data) {
+bool MemoryBackend::put(uint64_t oid, const MemSlice& data) {
     store[oid] = data;
     return true;
 }
@@ -16,7 +16,7 @@ bool MemoryBackend::exists(uint64_t oid) const {
     return store.find(oid) != store.end();
 }
 
-const StorageBackend::MemData& MemoryBackend::get(uint64_t oid) {
+MemSlice MemoryBackend::get(uint64_t oid) {
     auto it = store.find(oid);
     if (it == store.end()) {
         throw std::runtime_error("Error");

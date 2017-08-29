@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <vector>
 #include <map>
+#include <memory>
 #include "server/Server.h"
 #include "server/MemoryBackend.h"
 
@@ -17,7 +18,10 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, uint64_t max_fds = 100);
+    explicit TCPServer(
+            int port, uint64_t pool_size_,
+            std::string backend = "Memory",
+            uint64_t max_fds = 100);
     ~TCPServer() = default;
 
     virtual void init();
@@ -72,7 +76,7 @@ class TCPServer : public Server {
     /**
       * Memory interface
       */
-    MemoryBackend mem;
+    std::unique_ptr<StorageBackend> mem;
 };
 
 }  // namespace cirrus
