@@ -17,11 +17,11 @@ make -j 10
 cd ../flatbuffers
 cmake -G "Unix Makefiles"
 make -j 10
-cd ../..
 
 # rocksdb
 cd ../rocksdb
 make -j 10
+cd ../..
 
 # main compilation
 touch config.rpath
