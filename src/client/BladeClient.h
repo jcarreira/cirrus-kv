@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "common/Serializer.h"
 #include "common/Synchronization.h"
@@ -60,6 +61,8 @@ class BladeClient {
 
     virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID id) = 0;
+    virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
+        const std::vector<ObjectID>& ids) = 0;
 
     virtual bool remove(ObjectID id) = 0;
 
@@ -67,6 +70,8 @@ class BladeClient {
         const WriteUnit& w) = 0;
 
     virtual BladeClient::ClientFuture read_async(ObjectID oid) = 0;
+    virtual BladeClient::ClientFuture read_async_bulk(
+                                                std::vector<ObjectID> oids) = 0;
 };
 
 }  // namespace cirrus

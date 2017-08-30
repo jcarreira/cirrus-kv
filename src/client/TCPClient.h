@@ -41,10 +41,13 @@ class TCPClient : public BladeClient {
     bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
+        const std::vector<ObjectID>& ids) override;
 
 
     ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
     ClientFuture read_async(ObjectID oid) override;
+    ClientFuture read_async_bulk(std::vector<ObjectID> oids) override;
 
     bool remove(ObjectID id) override;
 
