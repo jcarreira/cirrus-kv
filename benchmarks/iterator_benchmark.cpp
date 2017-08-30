@@ -50,10 +50,11 @@ void print_stats(std::ostream& out, uint64_t iterator_elapsed,
  */
 void test_iterator(int num_items) {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
             PORT,
             &client,
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 

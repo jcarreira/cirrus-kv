@@ -342,10 +342,10 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                            buffer.data());
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
+
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
     TimerFunction resize_time;
@@ -419,10 +419,9 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     // storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
-                    // Create entry in store mapping the data to the id
-                    curr_size += data_fb->size();
+
                     mem->put(oid, data);
+                    curr_size += data_fb->size();
                 }
 
                 // Create and send ack
@@ -463,6 +462,7 @@ bool TCPServer::process(int sock) {
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
+
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
                     fb_vector = builder.CreateVector(
@@ -501,9 +501,8 @@ bool TCPServer::process(int sock) {
                 ObjectID oid = msg->message_as_Remove()->oid();
 
                 success = false;
-                // auto entry_itr = store.find(oid);
                 // Remove the object if it exists on the server.
-                if (mem->exists(oid)) {  // entry_itr != store.end()) {
+                if (mem->exists(oid)) {
                     curr_size -= mem->size(oid);
                     mem->delet(oid);
                     success = true;

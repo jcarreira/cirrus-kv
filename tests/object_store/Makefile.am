@@ -1,16 +1,16 @@
 include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
-				test_mult_clients test_cache_manager test_iterator
+bin_PROGRAMS =  exhaustion test_store_v2 test_mt test_mult_clients \
+		test_cache_manager test_iterator test_fullblade_store
 
 LIBS         = -lclient -lauthentication -lutils -lcommon -levictionpolicies \
 			   $(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    =  -L$(top_srcdir)/src/utils/ \
-		-L$(top_srcdir)/src/client/ \
 		-L$(top_srcdir)/src/authentication \
 		-L$(top_srcdir)/src/common \
+		-L$(top_srcdir)/src/client \
 		-L$(top_srcdir)/src/cache_manager
 
 LDFLAGS  = -pthread

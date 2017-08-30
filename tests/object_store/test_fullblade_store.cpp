@@ -10,6 +10,7 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
 #include "utils/CirrusTime.h"
 #include "utils/Stats.h"
 #include "client/BladeClient.h"
@@ -24,15 +25,20 @@ bool use_rdma_client;
 // #define CHECK_RESULTS
 
 /* This function takes an int with value N and makes N copies of it. */
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer_variable_simple(const int& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(int) * v]);
-    int *int_ptr = reinterpret_cast<int*>(ptr.get());
-    for (int i = 0; i < v; i++) {
-        *(int_ptr + i) = v;
+class SerializerVariableSimple : public cirrus::Serializer<int> {
+ public:
+    uint64_t size(const int& object) const override {
+        return object * sizeof(int);
     }
-    return std::make_pair(std::move(ptr), sizeof(int) * v);
-}
+
+    void serialize(const int& val, void *mem) const override {
+        int *int_ptr = reinterpret_cast<int*>(mem);
+        for (int i = 0; i < val; i++) {
+            *(int_ptr + i) = val;
+        }
+        return;
+    }
+};
 
 /* Checks that the N numbers are equal to each other and the number of ints. */
 int deserializer_variable_simple(const void* data, unsigned int size) {
@@ -58,10 +64,11 @@ int deserializer_variable_simple(const void* data, unsigned int size) {
 void test_sync() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
                       PORT,
                       client.get(),
-                      cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                      serializer,
                       cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                         sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -87,7 +94,8 @@ void test_sync_array() {
         cirrus::test_internal::GetClient(use_rdma_client);
 
     auto deserializer = cirrus::c_array_deserializer_simple<int>(4);
-    auto serializer = cirrus::c_array_serializer_simple<int>(4);
+    auto serializer =
+        cirrus::c_int_array_serializer_simple<std::shared_ptr<int>>(4);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<int>> store(IP,
                       PORT,
                       client.get(),
@@ -123,10 +131,11 @@ void test_sync_array() {
 void test_sync(int N) {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store(IP,
-                PORT,
-                client.get(),
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                      PORT,
+                      client.get(),
+                      serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -166,8 +175,10 @@ void test_sync(int N) {
 void test_nonexistent_get() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
+
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     for (int oid = 0; oid <  10; oid++) {
@@ -187,8 +198,9 @@ void test_nonexistent_get() {
 void test_async() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     auto returned_future = store.put_async(0, 42);
     if (!returned_future.get()) {
@@ -211,8 +223,9 @@ void test_async() {
 void test_async_N(int N) {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     std::vector<cirrus::ObjectStore<int>::ObjectStorePutFuture> put_futures;
     std::vector<cirrus::ObjectStore<int>::ObjectStoreGetFuture> get_futures;
@@ -247,8 +260,9 @@ void test_async_N(int N) {
 void test_bulk() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     std::vector<int> values(10);
     for (int i = 0; i < 10; i++) {
@@ -274,8 +288,9 @@ void test_bulk() {
 void test_remove_bulk() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
      for (int i = 0; i < 10; i++) {
         store.put(i, i);
@@ -301,8 +316,9 @@ void test_remove_bulk() {
 void test_remove() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     store.put(0, 42);
 
@@ -319,8 +335,9 @@ void test_remove() {
 void test_variable_sizes() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    SerializerVariableSimple serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            serializer_variable_simple,
+            serializer,
             deserializer_variable_simple);
 
     for (int i = 1; i < 4; i++) {
@@ -338,8 +355,11 @@ void test_variable_sizes() {
 void test_bulk_nonexistent() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::serializer_simple<int> serializer;
+
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
     store.put(1, 1);
     std::vector<int> ret_values(10);
@@ -353,14 +373,16 @@ void test_bulk_nonexistent() {
 void test_shared_client() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<int> serializer_int;
     cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+            serializer_int,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer_dummy;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>> store2(IP,
             PORT,
             client.get(),
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer_dummy,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -386,6 +408,7 @@ void test_shared_client() {
             throw std::runtime_error("wrong value returned");
         }
     }
+    return;
 }
 
 auto main(int argc, char *argv[]) -> int {
@@ -431,8 +454,9 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException& e) {
     }
-
+    std::cout << "test remove bulk" << std::endl;
     test_remove_bulk();
+    std::cout << "test shared client" << std::endl;
     test_shared_client();
     test_variable_sizes();
     std::cout << "Test Successful." << std::endl;

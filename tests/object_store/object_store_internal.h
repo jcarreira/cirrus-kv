@@ -12,6 +12,8 @@
 #include "client/RDMAClient.h"
 #endif  // HAVE_LIBRDMACM
 
+#include "common/Serializer.h"
+
 namespace cirrus {
 
 /**
@@ -27,34 +29,60 @@ struct Dummy {
     int id;
 };
 
+template<class T>
+class serializer_simple : public cirrus::Serializer<T> {
+ public:
+    serializer_simple();
+    uint64_t size(const T& object) const override;
+
+    void serialize(const T& object, void *mem) const override;
+};
+
+template<typename T>
+serializer_simple<T>::serializer_simple() {
+}
+
+template<typename T>
+uint64_t serializer_simple<T>::size(const T& object) const {
+    return sizeof(object);
+}
+
+template<typename T>
+void serializer_simple<T>::serialize(const T& object, void* mem) const {
+    std::memcpy(mem, &object, sizeof(object));
+}
+
+
 /**
  * This class copies the c style array underneath the pointer into a new
  * portion of memory and returns the size of the new portion as well as
- * its location.
+ * its location. T will be an std::shared_ptr<int>
  */
 template<typename T>
-class c_array_serializer_simple {
+class c_int_array_serializer_simple : public cirrus::Serializer<T>{
  public:
     /**
      * Constructor for the serializer.
      * @param nslots number of objects of type T in the array to be serialized
      */
-    explicit c_array_serializer_simple(unsigned int nslots) :
+    explicit c_int_array_serializer_simple(unsigned int nslots) :
         num_slots(nslots) {}
+
+    uint64_t size(const T& /* object */) const override {
+        return num_slots * sizeof(int);
+    }
 
     /**
      * Function that actually performs the serialization.
      * @param v a std::shared ptr to the first item in the array to be
      * serialized
      */
-    std::pair<std::unique_ptr<char[]>, unsigned int>
-    operator()(const std::shared_ptr<T>& v) {
-        unsigned int num_bytes = num_slots * sizeof(T);
-        // allocate the array to copy into
-        std::unique_ptr<char[]> ptr(new char[num_bytes]);
+    void serialize(const T& ptr, void *mem) const override {
+        int* address = ptr.get();
+        unsigned int num_bytes = num_slots * sizeof(int);
         // copy the data
-        std::memcpy(ptr.get(), v.get(), num_bytes);
-        return std::make_pair(std::move(ptr), num_bytes);
+        std::memcpy(mem, address, num_bytes);
+        return;
     }
 
  private:
@@ -98,15 +126,6 @@ class c_array_deserializer_simple {
      /** Number of items in the array being deserialized. */
      int num_slots;
 };
-
-/* This function simply copies an object into a new portion of memory. */
-template<typename T>
-std::pair<std::unique_ptr<char[]>, unsigned int>
-                         serializer_simple(const T& v) {
-    std::unique_ptr<char[]> ptr(new char[sizeof(T)]);
-    std::memcpy(ptr.get(), &v, sizeof(T));
-    return std::make_pair(std::move(ptr), sizeof(T));
-}
 
 /* Takes a pointer to raw mem passed in and returns as object. */
 template<typename T, unsigned int SIZE>

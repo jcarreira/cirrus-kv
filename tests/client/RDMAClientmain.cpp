@@ -5,40 +5,44 @@
 #include <sstream>
 #include <cstring>
 #include <string>
+
 #include "client/BladeClient.h"
 #include "common/AllocationRecord.h"
+#include "common/Serializer.h"
 #include "utils/logging.h"
 #include "authentication/AuthenticationToken.h"
 #include "utils/CirrusTime.h"
 #include "client/RDMAClient.h"
 #include "tests/object_store/object_store_internal.h"
-// TODO(Tyler): Remove hardcoded IP and PORT
 
+// TODO(Tyler): Remove hardcoded IP and PORT
 const char PORT[] = "12345";
+const char *IP;
 static const uint64_t MB = (1024*1024);
 static const uint64_t GB = (1024*MB);
-const char *IP;
 
 
 /**
- * Tests that simple get and put work with a string.
+ * Tests that simple get and put work with integers.
  */
 void test_1_client() {
-    std::string to_send("CIRRUS_DDC");
+    int to_send = 42;
 
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
     cirrus::RDMAClient client1;
+    cirrus::serializer_simple<int> serializer;
     client1.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
-
-    client1.write_sync(0, to_send.c_str(), to_send.size());
+    cirrus::WriteUnitTemplate<int> w(serializer, to_send);
+    client1.write_sync(0, w);
 
     auto ret_pair = client1.read_sync(0);
+    const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
 
-    if (strncmp(ret_pair.first.get(), to_send.c_str(), to_send.size()))
-        throw std::runtime_error("Error in test");
+    if (ret_val != to_send)
+        throw std::runtime_error("Incorrect value returned");
 }
 
 /**
@@ -49,6 +53,7 @@ void test_2_clients() {
     cirrus::LOG<cirrus::INFO>("Connecting to server in port: ", PORT);
 
     cirrus::RDMAClient client1, client2;
+    cirrus::serializer_simple<int> serializer;
 
     client1.connect(IP, PORT);
     client2.connect(IP, PORT);
@@ -56,65 +61,72 @@ void test_2_clients() {
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
     unsigned int seed = 42;
-    std::ostringstream oss;
+    int random;
     {
-        oss << "data" << rand_r(&seed);
-        cirrus::LOG<cirrus::INFO>("Writing ", oss.str().c_str());
+        random = rand_r(&seed);
+        cirrus::LOG<cirrus::INFO>("Writing ", random);
         cirrus::TimerFunction tf("client1.write");
-        client1.write_sync(0, oss.str().c_str(), oss.str().size());
+        cirrus::WriteUnitTemplate<int> w(serializer, random);
+        client1.write_sync(0, w);
     }
-    std::string message("data2");
-    client2.write_sync(0, message.c_str(), message.size());
+    int data2 = 1442;
+    cirrus::WriteUnitTemplate<int> w(serializer, data2);
+    client2.write_sync(0, w);
 
     auto ret_pair = client1.read_sync(0);
-    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_pair.first.get());
+    const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
 
-    // Check that client 1 receives the desired string
-    if (strncmp(ret_pair.first.get(), oss.str().c_str(), oss.str().size()))
+    cirrus::LOG<cirrus::INFO>("Received data 1: ", ret_val);
+
+    // Check that client 1 receives the desired random value
+    if (ret_val != random)
         throw std::runtime_error("Error in test");
 
-    auto ret_pair2 = client2.read_sync(0);
-    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_pair2.first.get());
+    ret_pair = client2.read_sync(0);
+    auto ret_val_2 = *(reinterpret_cast<const int*>(ret_pair.first.get()));
+    cirrus::LOG<cirrus::INFO>("Received data 2: ", ret_val_2);
 
     // Check that client2 receives "data2"
-    if (strncmp(ret_pair2.first.get(), message.c_str(), message.size()))
+    if (ret_val_2 != data2)
         throw std::runtime_error("Error in test");
 }
 
 /**
- * Test proper performance when writing large objects
+ * Test proper performance when writing large objects, in this case
+ * a std::array
  */
 void test_performance() {
+    const int size = 199 * MB;
     cirrus::RDMAClient client;
+    cirrus::serializer_simple<cirrus::Dummy<size>> serializer;
     client.connect(IP, PORT);
 
     cirrus::LOG<cirrus::INFO>("Connected to blade");
 
-    uint64_t mem_size = 150 * MB;
-
-    char* data = new char[mem_size];
-    if (!data)
-        exit(-1);
-
-    memset(data, 0, mem_size);
-    data[0] = 'Y';
+    std::unique_ptr<cirrus::Dummy<size>> d =
+        std::make_unique<cirrus::Dummy<size>>(42);
 
     {
         cirrus::TimerFunction tf("Timing write", true);
-        client.write_sync(0, data, mem_size);
+        cirrus::WriteUnitTemplate<cirrus::Dummy<size>> w(serializer, *d);
+        client.write_sync(0, w);
     }
 
     {
         cirrus::TimerFunction tf("Timing read", true);
         auto ret_pair = client.read_sync(0);
+
         std::cout << "Length: " << ret_pair.second << std::endl;
-        std::cout << "first byte: " << *(ret_pair.first.get()) << std::endl;
-        if (*(ret_pair.first.get()) != 'Y') {
+
+        auto d2 =
+            *(reinterpret_cast<const cirrus::Dummy<size>*>(
+                ret_pair.first.get()));
+
+        std::cout << "Returned id: " << d2.id << std::endl;
+        if (d2.id != 42) {
             throw std::runtime_error("Returned value does not match");
         }
     }
-
-    delete[] data;
 }
 
 /**
@@ -122,10 +134,12 @@ void test_performance() {
  */
 void test_async() {
     cirrus::RDMAClient client;
+    cirrus::serializer_simple<int> serializer;
     client.connect(IP, PORT);
 
     int message = 42;
-    auto future = client.write_async(1, &message, sizeof(int));
+    cirrus::WriteUnitTemplate<int> w(serializer, message);
+    auto future = client.write_async(1, w);
     std::cout << "write async complete" << std::endl;
 
     if (!future.get()) {
@@ -155,6 +169,7 @@ void test_async() {
 template <int N>
 void test_async_N() {
     cirrus::RDMAClient client;
+    cirrus::serializer_simple<int> serializer;
     client.connect(IP, PORT);
     std::vector<cirrus::BladeClient::ClientFuture> put_futures;
     std::vector<cirrus::BladeClient::ClientFuture> get_futures;
@@ -162,7 +177,8 @@ void test_async_N() {
     int i;
     for (i = 0; i < N; i++) {
         int val = i;
-        put_futures.push_back(client.write_async(i, &val, sizeof(int)));
+        cirrus::WriteUnitTemplate<int> w(serializer, val);
+        put_futures.push_back(client.write_async(i, w));
     }
     // Check the success of each put operation
     for (i = 0; i < N; i++) {
