@@ -6,10 +6,11 @@ import time
 import shutil
 import os
 
-# A function that will launch a test of a given name and return its exit
-# status. Will automatically start and kill the server before and after
-# the test.
-
+# Change this to change the ip that the client connects to
+ip = "127.0.0.1"
+half_gig = str(512) # in MB
+        
+storage_path = "/tmp/cirrus_storage"
 
 def remove_nonvolatile_storage(storage_path):
     print("Removing: ", storage_path)
@@ -20,9 +21,9 @@ def use_storage():
     ret = os.getenv('CIRRUS_TEST_STORAGE')
     return ret == "1"
 
-# Change this to change the ip that the client connects to
-ip = "127.0.0.1"
-half_gig = str(512) # in MB
+# A function that will launch a test of a given name and return its exit
+# status. Will automatically start and kill the server before and after
+# the test.
 # NOTE: all pathnames start from the top directory where make check is run
 def runTestTCP(testPath):
 
@@ -33,7 +34,6 @@ def runTestTCP(testPath):
     time.sleep(1)
 
     if use_storage():
-        storage_path = "/tmp/cirrus_storage"
         remove_nonvolatile_storage(storage_path);
         server = subprocess.Popen(
                 ["./src/server/tcpservermain", half_gig,
@@ -56,6 +56,8 @@ def runTestTCP(testPath):
     rc = child.returncode
 
     server.kill()
+    if use_storage():
+        remove_nonvolatile_storage(storage_path);
     sys.exit(rc)
 
 def runTestRDMA(testPath):

@@ -405,6 +405,7 @@ bool TCPServer::process(int sock) {
                 ObjectID oid = msg->message_as_Write()->oid();
 
                 // update current used size
+                // XXX maybe tracking this size should be done by the backend
                 if (mem->exists(oid)) {
                     curr_size -= mem->size(oid);
                 }
