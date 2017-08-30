@@ -19,11 +19,11 @@ bool MemoryBackend::exists(uint64_t oid) const {
 MemSlice MemoryBackend::get(uint64_t oid) const {
     auto it = store.find(oid);
     if (it == store.end()) {
-        throw std::runtime_error("Error");
-        // return false;
+        throw std::runtime_error(
+                "MemoryBackend get() called on nonexistent id");
     }
 
-    return store[oid];
+    return it->second;
 }
 
 bool MemoryBackend::delet(uint64_t oid) {

@@ -3,21 +3,43 @@
 import sys
 import subprocess
 import time
+import shutil
+import os
 
 # A function that will launch a test of a given name and return its exit
 # status. Will automatically start and kill the server before and after
 # the test.
 
+
+def remove_nonvolatile_storage(storage_path):
+    print("Removing: ", storage_path)
+    shutil.rmtree(storage_path, True)
+
+# check whether to use nv storage instead of memory
+def use_storage():
+    ret = os.getenv('CIRRUS_TEST_STORAGE')
+    return ret == "1"
+
 # Change this to change the ip that the client connects to
 ip = "127.0.0.1"
-half_gig = "536870912"
+half_gig = str(512) # in MB
 # NOTE: all pathnames start from the top directory where make check is run
 def runTestTCP(testPath):
+
+
     # Launch the server in the background
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/tcpservermain"])
+
+    if use_storage():
+        storage_path = "/tmp/cirrus_storage"
+        remove_nonvolatile_storage(storage_path);
+        server = subprocess.Popen(
+                ["./src/server/tcpservermain", half_gig,
+                 "Storage", storage_path])
+    else:
+        server = subprocess.Popen(["./src/server/tcpservermain"])
 
     # Sleep to give server time to start
     print("Started server, sleeping.")

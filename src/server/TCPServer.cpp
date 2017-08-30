@@ -31,14 +31,16 @@ static const int initial_buffer_size = 50;
   * Constructor for the server. Given a port and queue length, sets the values
   * of the variables.
   * @param port the port the server will listen on
-  * @param queue_len the length of the queue to make connections with the
-  * server.
+  * @param pool_size_ the number of bytes to have in the memory pool.
+  * @param backend the Type of backend: "Memory" or "Storage"
+  * @param storage_path Path to disk storage. Used when backend is "Storage"
   * @param max_fds_ the maximum number of clients that can be connected to the
   * server at the same time.
-  * @param pool_size_ the number of bytes to have in the memory pool.
   */
 TCPServer::TCPServer(int port, uint64_t pool_size_,
-                     std::string backend, uint64_t max_fds_) :
+                     const std::string& backend,
+                     const std::string& storage_path,
+                     uint64_t max_fds_) :
     port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
     if (max_fds_ + 1 == 0) {
         throw cirrus::Exception("Max_fds value too high, "
@@ -48,7 +50,7 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
     if (backend == "Memory") {
         mem = std::make_unique<MemoryBackend>();
     } else if (backend == "Storage") {
-        mem = std::make_unique<NVStorageBackend>();
+        mem = std::make_unique<NVStorageBackend>(storage_path);
     } else {
         throw std::runtime_error("Wrong backend option");
     }
@@ -470,7 +472,6 @@ bool TCPServer::process(int sock) {
                 if (success) {
                     fb_vector = builder.CreateVector(
                             std::vector<int8_t>(mem->get(oid)));
-                    // fb_vector = builder.CreateVector(entry_itr->second);
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
@@ -495,7 +496,6 @@ bool TCPServer::process(int sock) {
                         read_time.getUsElapsed(),
                         " bw (MB/s): ", read_mbps,
                         " size: ", mem->size(oid));
-                        // entry_itr->second.size());
 #endif
                 break;
             }

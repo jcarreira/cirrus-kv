@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 DEFAULT_LIB = -L. -lserver \
               -L../authentication/ -lauthentication \
               -L../utils/ -lutils \
-              -L../../third_party/rocksdb/ -lrocksdb_debug -lsnappy -lbz2 -lz \
+              -L../../third_party/rocksdb/ -lrocksdb -lsnappy -lbz2 -lz \
               -L../common/ -lcommon $(LIBRDMACM) $(LIBIBVERBS)
 
 noinst_LIBRARIES = libserver.a

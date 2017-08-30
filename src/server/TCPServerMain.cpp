@@ -25,8 +25,13 @@ void print_arguments() {
 auto main(int argc, char *argv[]) -> int {
     uint64_t pool_size = 10 * GB;
     std::string backend_type = "Memory";
+    std::string storage_path = "/tmp/cirrus_storage";
 
     switch (argc) {
+        case 4:
+            {
+                storage_path = argv[3];
+            }
         case 3:
             {
                 if (strcmp(argv[2], "Memory") && strcmp(argv[2], "Storage")) {
@@ -55,7 +60,8 @@ auto main(int argc, char *argv[]) -> int {
     cirrus::LOG<cirrus::INFO>(
             "Starting TCPServer in port: ", port,
             " with memory: ", pool_size);
-    cirrus::TCPServer server(port, pool_size, backend_type, max_fds);
+    cirrus::TCPServer server(port, pool_size, backend_type,
+                             storage_path, max_fds);
     // Initialize the server
     server.init();
     // Loop the server and listen for clients. Act on requests

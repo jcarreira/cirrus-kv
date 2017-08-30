@@ -62,7 +62,7 @@ class StorageBackend {
     /**
       * Put object
       * @param oid Object ID
-      * @param data Raw data to be written
+      * @param data MemSlice to be written
       * @return bool Indicates success (true) or failure (false)
       */
     virtual bool put(uint64_t oid, const MemSlice& data) = 0;
@@ -77,8 +77,7 @@ class StorageBackend {
     /**
       * Get object
       * @param oid Object ID
-      * @param data Memory to copy the object to
-      * @return bool Indicates success (true) or failure (false)
+      * @return MemSlice containing the object's data
       */
     virtual MemSlice get(uint64_t oid) const = 0;
 
@@ -92,7 +91,7 @@ class StorageBackend {
     /**
       * Get size of object
       * @param oid Object ID
-      * @return bool Indicates success (true) or failure (false)
+      * @return Size of the object
       */
     virtual uint64_t size(uint64_t oid) const = 0;
 };

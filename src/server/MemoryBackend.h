@@ -2,7 +2,7 @@
 #define SRC_SERVER_MEMORYBACKEND_H_
 
 #include "StorageBackend.h"
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace cirrus {
@@ -25,7 +25,7 @@ class MemoryBackend : public StorageBackend {
  private:
      // make this mutable because std::map
      // doesn't play well with const
-     mutable std::map<uint64_t, std::vector<int8_t>> store;
+     mutable std::unordered_map<uint64_t, std::vector<int8_t>> store;
 };
 
 }  // namespace cirrus

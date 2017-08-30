@@ -21,7 +21,8 @@ class TCPServer : public Server {
  public:
     explicit TCPServer(
             int port, uint64_t pool_size_,
-            std::string backend = "Memory",
+            const std::string& backend = "Memory",
+            const std::string& storage_path = "/tmp/cirrus_storage/",
             uint64_t max_fds = 100);
     ~TCPServer() = default;
 

@@ -16,7 +16,7 @@ namespace cirrus {
   */
 class NVStorageBackend : public StorageBackend {
  public:
-    explicit NVStorageBackend(const std::string& path = "/data/joao/rocksdb");
+    explicit NVStorageBackend(const std::string& path);
 
     void init();
     bool put(uint64_t oid, const MemSlice& data) override;

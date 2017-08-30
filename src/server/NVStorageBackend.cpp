@@ -31,8 +31,7 @@ void NVStorageBackend::init() {
 bool NVStorageBackend::put(uint64_t oid, const MemSlice& data) {
     std::string st = data;
     LOG<INFO>("Putting in rocksdb. oid: ", oid,
-            " int8_t size is: ", data.size(),
-            " string size is: ", st.size());
+            " with size: ", data.size());
     rocksdb::Status s = db->Put(rocksdb::WriteOptions(),
             std::to_string(oid), st);
 
@@ -64,6 +63,7 @@ MemSlice NVStorageBackend::get(uint64_t oid) const {
 }
 
 bool NVStorageBackend::delet(uint64_t oid) {
+    // we assume object exists
     db->Delete(rocksdb::WriteOptions(), std::to_string(oid));
     LOG<INFO>("Deleted oid: ", oid);
     return true;
