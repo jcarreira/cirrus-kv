@@ -27,17 +27,17 @@ Dataset::Dataset(const double* samples,
     labels_.reset(labels);
 }
 
-uint64_t Dataset::features() const {
-    return samples_.cols();
+uint64_t Dataset::num_features() const {
+    return samples_.cols;
 }
 
-uint64_t Dataset::samples() const {
-    return samples_.rows();
+uint64_t Dataset::num_samples() const {
+    return samples_.rows;
 }
 
 void Dataset::check_values() const {
     const double* l = labels_.get();
-    for (uint64_t i = 0; i < samples(); ++i) {
+    for (uint64_t i = 0; i < num_samples(); ++i) {
         if (std::isnan(l[i]) || std::isinf(l[i])) {
             throw std::runtime_error(
                     "Dataset::check_values nan/inf error in labels");
@@ -47,7 +47,7 @@ void Dataset::check_values() const {
 }
 
 double Dataset::checksum() const {
-    return crc32(labels_.get(), samples()) + samples_.checksum();
+    return crc32(labels_.get(), num_samples()) + samples_.checksum();
 }
 
 void Dataset::print() const {

@@ -37,18 +37,6 @@ class Matrix {
     Matrix T() const;
 
     /**
-      * Returns number of rows of the matrix
-      * @returns Number of rows
-      */
-    uint64_t rows() const;
-
-    /**
-      * Returns number of columns of the matrix
-      * @returns Number of columns
-      */
-    uint64_t cols() const;
-
-    /**
       * Returns size (in bytes) of the matrix contents
       * @returns Size (bytes) of the matrix contents
       */
@@ -71,8 +59,8 @@ class Matrix {
     void print() const;
 
  public:
-    uint64_t r;  //< number of rows of matrix
-    uint64_t c;  //< number of columns of matrix
+    uint64_t rows;   //< number of rows of matrix
+    uint64_t cols;   //< number of columns of matrix
     std::shared_ptr<const double> data;  //< pointer to matrix contents
     mutable std::shared_ptr<Matrix> cached_data;  //< cache for the transpose
 };

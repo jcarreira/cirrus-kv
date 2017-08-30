@@ -25,8 +25,8 @@ std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
 }
 
 void check_dataset(Dataset& dataset) {
-    for (uint64_t i = 0; i < dataset.samples(); ++i) {
-        for (uint64_t j = 0; j < dataset.features(); ++j) {
+    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+        for (uint64_t j = 0; j < dataset.num_features(); ++j) {
             const double* s = dataset.sample(i);
             if (std::isnan(s[j]) || std::isinf(s[j])) {
                 throw std::runtime_error("Invalid dataset");
@@ -91,12 +91,11 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     dataset.check_values();
 #endif
 
-    const double* dataset_data =
-        reinterpret_cast<const double*>(dataset.data.get());
+    const double* dataset_data = dataset.data.get();
     // create Matrix for dataset
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
         Eigen::Dynamic, Eigen::RowMajor>>
-          ds(const_cast<double*>(dataset_data), dataset.rows(), dataset.cols());
+          ds(const_cast<double*>(dataset_data), dataset.rows, dataset.cols);
 
     // create weight vector
     Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
@@ -119,7 +118,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
     std::vector<double> vec_res;
     vec_res.resize(res.size());
-    Eigen::VectorXd::Map(&vec_res[0], res.size()) = res;
+    Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
@@ -148,13 +147,13 @@ double LRModel::calc_loss(Dataset& dataset) const {
     Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
         Eigen::Dynamic, Eigen::RowMajor>>
             ds(const_cast<double*>(ds_data),
-                    dataset.samples_.rows(), dataset.samples_.cols());
+                    dataset.samples_.rows, dataset.samples_.cols);
 
-    Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
+    Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), d);
 
     // count how many samples are wrongly classified
     uint64_t wrong_count = 0;
-    for (uint64_t i = 0; i < dataset.samples(); ++i) {
+    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
         // get labeled class for the ith sample
         double class_i =
             reinterpret_cast<const double*>(dataset.labels_.get())[i];
@@ -163,7 +162,7 @@ double LRModel::calc_loss(Dataset& dataset) const {
 
         int predicted_class = 0;
 
-        auto r1 = ds.row(i) *  weights;
+        auto r1 = ds.row(i) *  weights_eig;
         if (mlutils::s_1(r1) > 0.5) {
             predicted_class = 1;
         }
@@ -171,20 +170,21 @@ double LRModel::calc_loss(Dataset& dataset) const {
             wrong_count++;
         }
 
-        double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights));
-        double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights));
+        double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
+        double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
 
         double value = class_i *
-            mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights)) +
+            mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
             (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
-                        ds.row(i) * weights));
+                        ds.row(i) * weights_eig));
 
+        // XXX not sure this check is necessary
         if (value > 0 && value < 1e-6)
             value = 0;
 
         if (value > 0) {
             std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
-            std::cout << "weights: " << std::endl << weights << std::endl;
+            std::cout << "weights: " << std::endl << weights_eig << std::endl;
             std::cout << "Class: " << class_i << " " << v1 << " " << v2
                 << std::endl;
             throw std::runtime_error("Error: logistic loss is > 0");
@@ -198,7 +198,7 @@ double LRModel::calc_loss(Dataset& dataset) const {
     }
 
     std::cout
-        << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.samples()))
+        << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.num_samples()))
         << std::endl;
 
     if (std::isnan(total_loss) || std::isinf(total_loss))

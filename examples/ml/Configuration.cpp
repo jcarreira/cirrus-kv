@@ -112,7 +112,7 @@ std::string Configuration::get_samples_path() const {
 std::string Configuration::get_labels_path() const {
     if (labels_path == "")
         throw std::runtime_error("labels path not loaded");
-    if (input_path != "double_binary")
+    if (input_type != "double_binary")
         throw std::runtime_error("mismatch between paths and input type");
     return labels_path;
 }

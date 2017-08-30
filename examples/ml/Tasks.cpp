@@ -78,7 +78,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
     int samples_id = 0;
     int labels_id  = 0;
     int gradient_id = GRADIENT_BASE + worker;
-    uint64_t count = 0;
+    uint64_t version = 0;
     while (1) {
         // maybe we can wait a few iterations to get the model
         std::shared_ptr<double> samples;
@@ -189,7 +189,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
             std::cout << "There was an error here" << std::endl;
             exit(-1);
         }
-        gradient->setCount(count++);
+        gradient->setVersion(version++);
 
 #ifdef DEBUG
         std::cout << "[WORKER] "
@@ -286,8 +286,8 @@ void PSTask::run(const Configuration& config) {
         << std::endl;
 
     // we keep a version number for the gradient produced by each worker
-    std::vector<unsigned int> gradientCounts;
-    gradientCounts.resize(10);
+    std::vector<unsigned int> gradientVersions;
+    gradientVersions.resize(10);
 
     bool first_time = true;
 
@@ -325,23 +325,23 @@ void PSTask::run(const Configuration& config) {
 
 #ifdef DEBUG
             std::cout << "[PS] "
-                << "PS task received gradient with #count: "
-                << gradient.getCount()
+                << "PS task received gradient with #version: "
+                << gradient.getVersion()
                 << " from worker: " << worker
                 << "\n";
 #endif
 
             // check if this is a gradient we haven't used before
-            if (gradient.getCount() > gradientCounts[worker]) {
+            if (gradient.getVersion() > gradientVersions[worker]) {
 #ifdef DEBUG
                 std::cout << "[PS] "
                     << "PS task received new gradient: "
-                    << gradient.getCount()
+                    << gradient.getVersion()
                     << std::endl;
 #endif
 
                 // if it's new
-                gradientCounts[worker] = gradient.getCount();
+                gradientVersions[worker] = gradient.getVersion();
 
                 // do a gradient step and update model
 #ifdef DEBUG
@@ -497,13 +497,13 @@ void LoadingTask::run(const Configuration& config) {
 
     std::cout << "[LOADER] "
         << "Adding "
-        << dataset.samples()
+        << dataset.num_samples()
         << " samples in batches of size (samples*features): "
         << batch_size
         << std::endl;
 
     // We put in batches of N samples
-    for (unsigned int i = 0; i < dataset.samples() / samples_per_batch; ++i) {
+    for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /** Build sample object

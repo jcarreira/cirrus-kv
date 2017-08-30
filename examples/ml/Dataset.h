@@ -39,13 +39,13 @@ class Dataset {
       * Get the number of samples in this dataset
       * @return Number of samples in the dataset
       */
-    uint64_t samples() const;
+    uint64_t num_samples() const;
 
     /**
       * Get the number of features in this dataset
       * @return Number of features in the dataset
       */
-    uint64_t features() const;
+    uint64_t num_features() const;
 
     /**
       * Returns pointer to specific sample in this dataset

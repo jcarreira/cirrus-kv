@@ -37,15 +37,15 @@ class ModelGradient {
      /**
        * Set gradient version
        */
-     virtual void setCount(uint64_t c) {
-         count = c;
+     virtual void setVersion(uint64_t v) {
+         version = v;
      }
 
      /**
        * Get version of gradient
        */
-     virtual uint64_t getCount() const {
-         return count;
+     virtual uint64_t getVersion() const {
+         return version;
      }
 
      /**
@@ -54,7 +54,7 @@ class ModelGradient {
      virtual void check_values() const = 0;
 
  protected:
-     uint64_t count;  //< this gradient's version
+     uint64_t version;  //< this gradient's version
 };
 
 class LRGradient : public ModelGradient {

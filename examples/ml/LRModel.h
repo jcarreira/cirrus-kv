@@ -82,6 +82,7 @@ class LRModel : public Model {
      * @param rank MPI worker rank
      * @param dataset Dataset to learn on
      * @param labels Labels of the samples
+     * @param labels_size Size of the labels array
      * @param epsilon L2 Regularization rate
      * @return Newly computed gradient
      */

@@ -432,7 +432,8 @@ T CirrusIterable<T>::Iterator::operator*() {
     auto elapsed = tf.getNsElapsed();
 
     auto ret = cm->get(policy->dereference());
-    std::cout << "operator* cm->get elapsed (ns): " << tf.getNsElapsed() - elapsed << "\n";
+    std::cout << "operator* cm->get elapsed (ns): "
+        << tf.getNsElapsed() - elapsed << "\n";
     std::cout << "operator* prefetch elapsed (ns): " << elapsed << "\n";
     return ret;
 }

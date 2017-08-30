@@ -102,13 +102,13 @@ std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
             double* labels,
             uint64_t labels_size,
             double epsilon) const {
-    assert(labels_size == m.rows());
+    assert(labels_size == m.rows);
 
     const double* m_data = reinterpret_cast<const double*>(m.data.get());
-    Eigen::MatrixXd dataset(m.rows(), m.cols());
-    for (unsigned int row = 0; row < m.rows(); ++row) {
-        for (unsigned int col = 0; col < m.cols(); ++col) {
-            dataset(row, col) = m_data[row * m.cols() + col];
+    Eigen::MatrixXd dataset(m.rows, m.cols);
+    for (unsigned int row = 0; row < m.rows; ++row) {
+        for (unsigned int col = 0; col < m.cols; ++col) {
+            dataset(row, col) = m_data[row * m.cols + col];
         }
     }
 
@@ -189,10 +189,10 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
     const Matrix& m = data.samples_;
     // XXX Fix, there is some code repetition here
     const double* m_data = reinterpret_cast<const double*>(m.data.get());
-    Eigen::MatrixXd dataset(m.rows(), m.cols());
-    for (unsigned int row = 0; row < m.rows(); ++row) {
-        for (unsigned int col = 0; col < m.cols(); ++col) {
-            dataset(row, col) = m_data[row * m.cols() + col];
+    Eigen::MatrixXd dataset(m.rows, m.cols);
+    for (unsigned int row = 0; row < m.rows; ++row) {
+        for (unsigned int col = 0; col < m.cols; ++col) {
+            dataset(row, col) = m_data[row * m.cols + col];
         }
     }
 
