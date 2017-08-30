@@ -12,8 +12,7 @@
 
 namespace graphs {
 
-void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
-        unsigned int k) {
+void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices) {
 }
 
 } // namespace graphs

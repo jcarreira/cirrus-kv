@@ -21,11 +21,13 @@ public:
     bool hasNeighbor(int id) const;
 
     void deleteNeighbor(int id);
+    void setK(int val);
 private:
     int neighbors[1000];
     std::vector<int> kCoreNeighbors;
     int id;
     int numNeighbors;
+    int k;
 };
 
 } // graphs

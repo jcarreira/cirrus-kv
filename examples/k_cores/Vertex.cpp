@@ -40,4 +40,8 @@ bool Vertex::hasNeighbor(int id) const {
     return false;
 }
 
+void Vertex::setK(int val) {
+    k = val;
+}
+
 }

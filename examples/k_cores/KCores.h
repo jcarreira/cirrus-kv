@@ -14,9 +14,11 @@ namespace graphs {
  * @param k The maximum degree of a vertex in the ending graph
  */
 
-void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
-        unsigned int k);
-
+void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices);
+    int k = 1;
+    std::set<int> processed;
+    while (seen.size() != num_vertices) {
+        
 } // namespace graphs
 
 #endif
