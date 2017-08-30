@@ -1,4 +1,4 @@
-#include "Wcc.h"
+#include <examples/graphs/wcc/Wcc.h>
 
 namespace graphs {
 

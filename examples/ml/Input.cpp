@@ -1,5 +1,3 @@
-/* Copyright Joao Carreira 2017 */
-
 /**
   * The Input class is used to aggregate all the routines to read datasets
   * We support datasets in CSV and binary
@@ -7,7 +5,7 @@
   * Note: this code is still pretty slow reading datasets
   */
 
-#include <Input.h>
+#include <examples/ml/Input.h>
 #include <Utils.h>
 
 #include <string>

@@ -1,5 +1,5 @@
-#ifndef _MODEL_GRADIENT_H_
-#define _MODEL_GRADIENT_H_
+#ifndef EXAMPLES_ML_MODELGRADIENT_H_
+#define EXAMPLES_ML_MODELGRADIENT_H_
 
 #include <cstdint>
 #include <vector>
@@ -91,4 +91,4 @@ class SoftmaxGradient : public ModelGradient {
     std::vector<std::vector<double>> weights;  //< weights for softmax gradient
 };
 
-#endif  // _MODEL_GRADIENT_H_
+#endif  // EXAMPLES_ML_MODELGRADIENT_H_

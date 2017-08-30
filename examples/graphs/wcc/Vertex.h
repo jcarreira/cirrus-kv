@@ -1,12 +1,12 @@
-#ifndef _VERTEX_H_
-#define _VERTEX_H_
+#ifndef EXAMPLES_GRAPHS_WCC_VERTEX_H_
+#define EXAMPLES_GRAPHS_WCC_VERTEX_H_
 
+#include <arpa/inet.h>
 #include <vector>
 #include <iostream>
 #include <set>
 #include <memory>
 #include <utility>
-#include <arpa/inet.h>
 
 #include "common/Serializer.h"
 
@@ -71,4 +71,4 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
 
 }  // namespace graphs
 
-#endif  // _VERTEX_H_
+#endif  // EXAMPLES_GRAPHS_WCC_VERTEX_H_

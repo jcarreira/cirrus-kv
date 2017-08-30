@@ -1,7 +1,5 @@
-/* Copyright Joao Carreira 2017 */
-
-#ifndef SRC_CONFIGURATION_H_
-#define SRC_CONFIGURATION_H_
+#ifndef EXAMPLES_ML_CONFIGURATION_H_
+#define EXAMPLES_ML_CONFIGURATION_H_
 
 #include <string>
 
@@ -130,4 +128,4 @@ class Configuration {
     uint64_t num_samples;  //< number of training input samples
 };
 
-#endif  // SRC_CONFIGURATION_H_
+#endif  // EXAMPLES_ML_CONFIGURATION_H_

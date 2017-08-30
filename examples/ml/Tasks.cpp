@@ -1,11 +1,15 @@
-#include <Tasks.h>
-#include <unistd.h>
-#include <iostream>
-#include <memory>
+#include <examples/ml/Tasks.h>
 
 #include <ModelGradient.h>
 #include <Dataset.h>
 #include <client/TCPClient.h>
+
+#include <unistd.h>
+#include <iostream>
+#include <memory>
+#include <algorithm>
+#include <vector>
+
 #include "object_store/FullBladeObjectStore.h"
 #include "cache_manager/CacheManager.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
@@ -81,37 +85,46 @@ void LogisticTask::run(const Configuration& config, int worker) {
         std::shared_ptr<double> labels;
         LRModel model(MODEL_GRAD_SIZE);
         try {
-            //std::cout << "[WORKER] "
-            //    << "Worker task getting the model at id: "
-            //    << MODEL_BASE
-            //    << "\n";
+#ifdef DEBUG
+            std::cout << "[WORKER] "
+                << "Worker task getting the model at id: "
+                << MODEL_BASE
+                << "\n";
+#endif
             model = model_store.get(MODEL_BASE);
 
-            //std::cout << "[WORKER] "
-            //    << "Worker task received model csum: " << model.checksum()
-            //    << std::endl
-            //    << "Worker task getting the training data with id: "
-            //    << (SAMPLE_BASE + samples_id)
-            //    << "\n";
+#ifdef DEBUG
+            std::cout << "[WORKER] "
+                << "Worker task received model csum: " << model.checksum()
+                << std::endl
+                << "Worker task getting the training data with id: "
+                << (SAMPLE_BASE + samples_id)
+                << "\n";
+#endif
 
-            //samples = samples_store.get(SAMPLE_BASE + samples_id);
+            // samples = samples_store.get(SAMPLE_BASE + samples_id);
             auto now = get_time_ns();
             samples = *samples_iter;
-            std::cout << "Samples Elapsed (ns): " << get_time_ns() - now << "\n";
-            //std::cout << "[WORKER] "
-            //    << "Worker task received training data with id: "
-            //    << (SAMPLE_BASE + samples_id)
-            //    << " and checksum: " << checksum(samples, batch_size)
-            //    << "\n";
+            std::cout << "Samples Elapsed (ns): "
+                << get_time_ns() - now << "\n";
+#ifdef DEBUG
+            std::cout << "[WORKER] "
+                << "Worker task received training data with id: "
+                << (SAMPLE_BASE + samples_id)
+                << " and checksum: " << checksum(samples, batch_size)
+                << "\n";
+#endif
 
-            //labels = labels_store.get(LABEL_BASE + labels_id);
+            // labels = labels_store.get(LABEL_BASE + labels_id);
             labels = *labels_iter;
 
-            //std::cout << "[WORKER] "
-            //    << "Worker task received label data with id: "
-            //    << samples_id
-            //    << " and checksum: " << checksum(labels, samples_per_batch)
-            //    << "\n";
+#ifdef DEBUG
+            std::cout << "[WORKER] "
+                << "Worker task received label data with id: "
+                << samples_id
+                << " and checksum: " << checksum(labels, samples_per_batch)
+                << "\n";
+#endif
         } catch(const cirrus::NoSuchIDException& e) {
             if (!first_time) {
                 exit(0);
@@ -135,35 +148,37 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
         first_time = false;
 
-        //std::cout << "[WORKER] "
-        //    << "Building and printing dataset"
-        //    << " with checksums: "
-        //    << checksum(samples, batch_size) << " "
-        //    << checksum(labels, samples_per_batch)
-        //    << "\n";
+#ifdef DEBUG
+        std::cout << "[WORKER] "
+            << "Building and printing dataset"
+            << " with checksums: "
+            << checksum(samples, batch_size) << " "
+            << checksum(labels, samples_per_batch)
+            << "\n";
+#endif
 
         // Big hack. Shame on me
-        //auto now = get_time_us();
+        // auto now = get_time_us();
         std::shared_ptr<double> l(new double[samples_per_batch],
                 ml_array_nodelete<double>);
         std::copy(labels.get(), labels.get() + samples_per_batch, l.get());
-        //std::cout << "Elapsed: " << get_time_us() - now << "\n";
+        // std::cout << "Elapsed: " << get_time_us() - now << "\n";
 
         Dataset dataset(samples.get(), l.get(),
                 samples_per_batch, features_per_sample);
 #ifdef DEBUG
         dataset.print();
-#endif
 
-        //std::cout << "[WORKER] "
-        //    << "Worker task checking dataset with csum: " << dataset.checksum()
-        //    << "\n";
+        std::cout << "[WORKER] "
+            << "Worker task checking dataset with csum: " << dataset.checksum()
+            << "\n";
 
         dataset.check_values();
 
-        //std::cout << "[WORKER] "
-        //    << "Worker task computing gradient"
-        //    << "\n";
+        std::cout << "[WORKER] "
+            << "Worker task computing gradient"
+            << "\n";
+#endif
 
         // compute mini batch gradient
         std::unique_ptr<ModelGradient> gradient;
@@ -176,19 +191,21 @@ void LogisticTask::run(const Configuration& config, int worker) {
         }
         gradient->setCount(count++);
 
-        //std::cout << "[WORKER] "
-        //    << "Checking and Printing gradient: "
-        //    << "\n";
+#ifdef DEBUG
+        std::cout << "[WORKER] "
+            << "Checking and Printing gradient: "
+            << "\n";
+#endif
 
 #ifdef DEBUG
         gradient->check_values();
         gradient->print();
-#endif
 
-        //std::cout << "[WORKER] "
-        //    << "Worker task storing gradient at id: "
-        //    << gradient_id
-        //    << "\n";
+        std::cout << "[WORKER] "
+            << "Worker task storing gradient at id: "
+            << gradient_id
+            << "\n";
+#endif
         try {
             auto lrg = *dynamic_cast<LRGradient*>(gradient.get());
             gradient_store.put(
@@ -280,10 +297,12 @@ void PSTask::run(const Configuration& config) {
         // once model is updated publish it
         for (int worker = 0; worker < static_cast<int>(nworkers); ++worker) {
             int gradient_id = GRADIENT_BASE + worker;
-            //std::cout << "[PS] "
-            //    << "PS task checking gradient id: "
-            //    << gradient_id
-            //    << std::endl;
+#ifdef DEBUG
+            std::cout << "[PS] "
+                << "PS task checking gradient id: "
+                << gradient_id
+                << std::endl;
+#endif
 
             // get gradient from store
             LRGradient gradient(MODEL_GRAD_SIZE);
@@ -295,9 +314,6 @@ void PSTask::run(const Configuration& config) {
                         << "PS task not able to get gradient: "
                         << std::to_string(GRADIENT_BASE + gradient_id)
                         << std::endl;
-                    //throw std::runtime_error(
-                    //        "PS task not able to get gradient: "
-                    //        + std::to_string(GRADIENT_BASE + gradient_id));
                 }
                 // this happens because the worker task
                 // has not uploaded the gradient yet
@@ -307,27 +323,33 @@ void PSTask::run(const Configuration& config) {
 
             first_time = false;
 
-            //std::cout << "[PS] "
-            //    << "PS task received gradient with #count: "
-            //    << gradient.getCount()
-            //    << " from worker: " << worker
-            //    << "\n";
+#ifdef DEBUG
+            std::cout << "[PS] "
+                << "PS task received gradient with #count: "
+                << gradient.getCount()
+                << " from worker: " << worker
+                << "\n";
+#endif
 
             // check if this is a gradient we haven't used before
             if (gradient.getCount() > gradientCounts[worker]) {
-                //std::cout << "[PS] "
-                //    << "PS task received new gradient: "
-                //    << gradient.getCount()
-                //    << std::endl;
+#ifdef DEBUG
+                std::cout << "[PS] "
+                    << "PS task received new gradient: "
+                    << gradient.getCount()
+                    << std::endl;
+#endif
 
                 // if it's new
                 gradientCounts[worker] = gradient.getCount();
 
                 // do a gradient step and update model
-                //std::cout << "[PS] "
-                //    << "Updating model"
-                //    << " with csum: " << model.checksum()
-                //    << std::endl;
+#ifdef DEBUG
+                std::cout << "[PS] "
+                    << "Updating model"
+                    << " with csum: " << model.checksum()
+                    << std::endl;
+#endif
 
                 model.sgd_update(config.get_learning_rate(), &gradient);
 
@@ -459,7 +481,7 @@ void LoadingTask::run(const Configuration& config) {
 #ifdef DEBUG
     dataset.print();
 #endif
-    
+
     c_array_serializer<double> cas_samples(batch_size);
     c_array_deserializer<double> cad_samples(batch_size,
             "loader samples_store");

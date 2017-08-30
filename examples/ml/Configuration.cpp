@@ -1,6 +1,4 @@
-/* Copyright Joao Carreira 2017 */
-
-#include <Configuration.h>
+#include <examples/ml/Configuration.h>
 
 #include <fstream>
 #include <iostream>

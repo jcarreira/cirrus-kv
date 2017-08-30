@@ -1,4 +1,4 @@
-#include "PageRank.h"
+#include <examples/graphs/page_rank/PageRank.h>
 #include <stdlib.h>
 #include <cmath>
 

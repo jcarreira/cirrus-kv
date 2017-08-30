@@ -1,4 +1,4 @@
-#include "Input.h"
+#include <examples/graphs/wcc/Input.h>
 #include <fstream>
 
 namespace graphs {

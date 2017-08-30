@@ -1,7 +1,8 @@
-#include <SoftmaxModel.h>
+#include <examples/ml/SoftmaxModel.h>
 #include <Utils.h>
 #include <Eigen/Dense>
 #include <cmath>
+#include <algorithm>
 #include <Checksum.h>
 
 SoftmaxModel::SoftmaxModel(uint64_t classes, uint64_t d) :

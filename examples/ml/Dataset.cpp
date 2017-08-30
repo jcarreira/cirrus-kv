@@ -1,11 +1,9 @@
-/* Copyright Joao Carreira 2017 */
-
 /**
   * Dataset is a class that is used to manage a dataset
   * where each sample is a vector of doubles and the labels are also doubles
   */
 
-#include <Dataset.h>
+#include <examples/ml/Dataset.h>
 #include <algorithm>
 #include <Utils.h>
 #include <Checksum.h>

@@ -1,7 +1,5 @@
-/* Copyright Joao Carreira 2017 */
-
-#ifndef SRC_MATRIX_H_
-#define SRC_MATRIX_H_
+#ifndef EXAMPLES_ML_MATRIX_H_
+#define EXAMPLES_ML_MATRIX_H_
 
 #include <cstring>
 #include <iostream>
@@ -79,4 +77,4 @@ class Matrix {
     mutable std::shared_ptr<Matrix> cached_data;  //< cache for the transpose
 };
 
-#endif  // SRC_MATRIX_H_
+#endif  // EXAMPLES_ML_MATRIX_H_

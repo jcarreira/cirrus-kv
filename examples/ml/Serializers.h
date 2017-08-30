@@ -1,10 +1,10 @@
-#ifndef _SERIALIZERS_H_
-#define _SERIALIZERS_H_
+#ifndef EXAMPLES_ML_SERIALIZERS_H_
+#define EXAMPLES_ML_SERIALIZERS_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <memory>
 #include <utility>
-#include <arpa/inet.h>
 #include <LRModel.h>
 
 #include "common/Serializer.h"
@@ -163,4 +163,4 @@ class lr_gradient_deserializer {
     uint64_t n;  //< size of the gradient
 };
 
-#endif  // _SERIALIZERS_H_
+#endif  // EXAMPLES_ML_SERIALIZERS_H_

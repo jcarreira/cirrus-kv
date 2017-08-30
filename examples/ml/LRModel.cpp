@@ -1,9 +1,10 @@
-#include <LRModel.h>
+#include <examples/ml/LRModel.h>
 #include <Utils.h>
 #include <MlUtils.h>
 #include <Eigen/Dense>
 #include <utils/Log.h>
 #include <Checksum.h>
+#include <algorithm>
 
 LRModel::LRModel(uint64_t d) :
     d(d) {

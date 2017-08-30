@@ -1,5 +1,5 @@
-#ifndef _MODEL_H_
-#define _MODEL_H_
+#ifndef EXAMPLES_ML_MODEL_H_
+#define EXAMPLES_ML_MODEL_H_
 
 #include <utility>
 #include <memory>
@@ -100,4 +100,4 @@ class Model {
      virtual double checksum() const = 0;
 };
 
-#endif  // _MODEL_H_
+#endif  // EXAMPLES_ML_MODEL_H_

@@ -1,7 +1,5 @@
-/* Copyright Joao Carreira 2017 */
-
-#ifndef SRC_INPUT_H_
-#define SRC_INPUT_H_
+#ifndef EXAMPLES_ML_INPUT_H_
+#define EXAMPLES_ML_INPUT_H_
 
 #include <Dataset.h>
 #include <string>
@@ -90,4 +88,4 @@ class Input {
     void print_sample(const std::vector<double>& sample) const;
 };
 
-#endif  // SRC_INPUT_H_
+#endif  // EXAMPLES_ML_INPUT_H_

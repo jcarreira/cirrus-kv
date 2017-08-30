@@ -1,4 +1,4 @@
-#include "Vertex.h"
+#include <examples/graphs/wcc/Vertex.h>
 #include <arpa/inet.h>
 
 namespace graphs {

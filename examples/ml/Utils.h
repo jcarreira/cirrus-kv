@@ -1,7 +1,5 @@
-/* Copyright Joao Carreira 2017 */
-
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef EXAMPLES_ML_UTILS_H_
+#define EXAMPLES_ML_UTILS_H_
 
 #include <mpi.h>
 #include <sys/time.h>
@@ -13,7 +11,7 @@
 #include <random>
 #include <cfloat>
 
-#define LOG2(X) ((unsigned) (8*sizeof (unsigned long long) - \
+#define LOG2(X) ((unsigned) (8*sizeof (uint64_t) - \
             __builtin_clzll((X)) - 1)
 
 /**
@@ -120,4 +118,4 @@ void print_statistics(const T& begin, const T& end) {
         << std::endl;
 }
 
-#endif  // SRC_UTILS_UTILS_H_
+#endif  // EXAMPLES_ML_UTILS_H_
