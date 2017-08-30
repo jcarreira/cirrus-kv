@@ -20,7 +20,7 @@ make -j 10
 
 # rocksdb
 cd ../rocksdb
-make -j 10
+make -j 10 static_lib
 cd ../..
 
 # main compilation
