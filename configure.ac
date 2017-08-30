@@ -59,6 +59,7 @@ AC_CONFIG_FILES([Makefile
                  src/iterator/Makefile
                  src/client/Makefile
                  src/server/Makefile
+                 src/coordinator/Makefile
                  src/cache_manager/Makefile
                  src/common/schemas/Makefile
                  tests/object_store/Makefile

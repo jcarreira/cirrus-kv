@@ -15,6 +15,8 @@
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
 
+static const int COORD_PORT = 1337;
+
 namespace cirrus {
 
 using TxnID = uint64_t;
@@ -32,13 +34,72 @@ static const int initial_buffer_size = 50;
   * server at the same time.
   * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
-    port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
-        if (max_fds_ + 1 == 0) {
-            throw cirrus::Exception("Max_fds value too high, "
-                "overflow occurred.");
-        }
+TCPServer::TCPServer(int port, uint64_t pool_size_,
+        uint64_t max_fds_,
+        const std::string& coordinator_ip) :
+    port_(port),
+    pool_size(pool_size_),
+    max_fds(max_fds_ + 1),
+    coordinator_ip(coordinator_ip) {
+    if (max_fds_ + 1 == 0) {
+        throw cirrus::Exception("Max_fds value too high, "
+            "overflow occurred.");
     }
+
+    if (coordinator_ip != "") {
+        coord_sock = connect_coordinator(coordinator_ip);
+        get_list_servers(coord_sock);
+    }
+}
+
+/**
+  * Ask each of the other servers
+  * for a list of all the object ids to be migrated
+  * Then start migrating data from other servers
+  * In the meantime, if a request for an object that has not been migrated
+  * yet arrives
+  * 1) wait until migration is done
+  * 2) send reply back saying to retry some microseconds later
+  */
+void TCPServer::get_list_servers(int coord_sock) {
+
+}
+
+int TCPServer::connect_coordinator(const std::string& ip) {
+    int coord_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (coord_sock < 0) {
+        throw std::runtime_error("Error connecting to coordinator");
+    }
+    int opt = 1;
+    if (setsockopt(coord_sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+        throw cirrus::ConnectionException("Error setting socket options.");
+    }
+    
+    struct sockaddr_in serv_addr;
+    // Set the type of address being used, assuming ip v4
+    serv_addr.sin_family = AF_INET;
+    if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) != 1) {
+        throw cirrus::ConnectionException("Address family invalid or invalid "
+            "IP address passed in");
+    }
+    // Save the port in the info
+    serv_addr.sin_port = htons(COORD_PORT);
+
+    LOG<INFO>("Connecting to coordinator");
+    // Connect to the server
+    if (::connect(coord_sock, (struct sockaddr *)&serv_addr,
+                sizeof(serv_addr)) < 0) {
+        throw cirrus::ConnectionException("Client could "
+                                          "not connect to server.");
+    }
+
+    /** Send a message to the coordinator
+      * asking for the list of current servers
+      */
+    flatbuffers::FlatBufferBuilder builder;
+
+    return coord_sock;
+}
 
 /**
   * Initializer for the server. Sets up the socket it uses to listen for
