@@ -1,0 +1,12 @@
+namespace cirrus.message.CoordinatorMessage;
+
+table RequestMemory {
+    amount:ulong;
+}
+
+table RequestMemoryAck {
+  oid:ulong;
+  data:[byte];
+}
+
+root_type CoordinatorMessage;
