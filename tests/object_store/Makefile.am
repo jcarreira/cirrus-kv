@@ -1,11 +1,11 @@
 include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
-bin_PROGRAMS =  exhaustion test_store_v2 test_mt test_mult_clients \
-		test_cache_manager test_iterator test_fullblade_store
+bin_PROGRAMS =  test_store_v2 exhaustion test_fullblade_store test_mt \
+		test_mult_clients test_cache_manager test_iterator
 
 LIBS         = -lclient -lauthentication -lutils -lcommon -levictionpolicies \
-			   $(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    =  -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/authentication \

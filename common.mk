@@ -1,1 +1,1 @@
-AM_CXXFLAGS = -Wall -Wextra -ansi
+AM_CXXFLAGS = -Wall -Wextra -O3

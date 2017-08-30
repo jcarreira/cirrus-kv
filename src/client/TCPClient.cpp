@@ -29,6 +29,7 @@ static const int initial_buffer_size = 50;
  * threads so that the program will exit gracefully.
  */
 TCPClient::~TCPClient() {
+    LOG<INFO>("Terminating TCP client");
     terminate_threads = true;
 
     // We need to destroy threads if they are active
@@ -91,8 +92,9 @@ void TCPClient::connect(const std::string& address,
     LOG<INFO>("Connecting to server");
     // Connect to the server
     if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        throw cirrus::ConnectionException("Client could "
-                                          "not connect to server.");
+        throw cirrus::ConnectionException(
+                "Client could not connect to server."
+                " Address: " + address + " port: " + port_string);
     }
 
     receiver_thread = new std::thread(&TCPClient::process_received, this);
@@ -114,7 +116,9 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
 
     // Add the builder to the queue if it is of the right type (a write)
     // And if not over capacity
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder;
+    flatbuffers::FlatBufferBuilder* builder;
+
+    LOG<INFO>("TCPClient::write_async oid: ", oid);
 
 #ifdef PERF_LOG
     TimerFunction builder_timer;
@@ -124,15 +128,14 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
     uint64_t size = w.size();
     reuse_lock.wait();
     if (!reuse_queue.empty()) {
-        builder = std::move(reuse_queue.front());
+        builder = reuse_queue.front();
         reuse_queue.pop();
         reuse_lock.signal();
     } else {
         reuse_lock.signal();
         // The 64 is to give space for additional flatbuffer internal info
-        builder = std::make_unique<flatbuffers::FlatBufferBuilder>(size + 64);
+        builder = new flatbuffers::FlatBufferBuilder(size + 64);
     }
-
 
     // Create and send write request
     // Pointer to the vector inside of the flatbuffer to write to
@@ -157,7 +160,7 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
             builder_timer.getUsElapsed());
 #endif
 
-    return enqueue_message(std::move(builder), txn_id);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -170,9 +173,7 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_unique<flatbuffers::FlatBufferBuilder>(
-                                initial_buffer_size);
+    auto builder = new flatbuffers::FlatBufferBuilder(initial_buffer_size);
 
     // Create and send read request
     auto msg_contents = message::TCPBladeMessage::CreateRead(*builder, oid);
@@ -191,7 +192,7 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
     LOG<PERF>("TCPClient::read_async time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(std::move(builder), txn_id);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -231,9 +232,7 @@ TCPClient::read_sync(ObjectID oid) {
   * if the object does not exist remotely or if another error occurred.
   */
 bool TCPClient::remove(ObjectID oid) {
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_unique<flatbuffers::FlatBufferBuilder>(
-                                initial_buffer_size);
+    auto builder = new flatbuffers::FlatBufferBuilder(initial_buffer_size);
 
     // Create and send removal request
     auto msg_contents = message::TCPBladeMessage::CreateRemove(*builder, oid);
@@ -248,7 +247,7 @@ bool TCPClient::remove(ObjectID oid) {
                                     msg_contents.Union());
     builder->Finish(msg);
 
-    BladeClient::ClientFuture future = enqueue_message(std::move(builder),
+    BladeClient::ClientFuture future = enqueue_message(builder,
         txn_id);
     return future.get();
 }
@@ -341,26 +340,20 @@ void TCPClient::process_received() {
         TimerFunction map_time;
 #endif
         // obtain lock on map
-        map_lock.wait();
 
         // find pair for this item in the map
-        auto txn_pair = txn_map.find(txn_id);
-
-        // ensure that the id really exists, error otherwise
-        if (txn_pair == txn_map.end()) {
+        std::shared_ptr<struct txn_info> txn;
+        try {
+            txn = txn_map.find(txn_id);
+        } catch(const std::out_of_range& e) {
             LOG<ERROR>("The client received an unknown txn_id: ", txn_id);
             throw cirrus::Exception("Client error when processing "
                                      "Messages. txn_id received was invalid.");
         }
 
-        // get the struct
-        std::shared_ptr<struct txn_info> txn = txn_pair->second;
-
         // remove from map
-        txn_map.erase(txn_pair);
+        txn_map.erase(txn_id);
 
-        // release lock
-        map_lock.signal();
 #ifdef PERF_LOG
         LOG<PERF>("TCPClient::process_received map time (us): ",
                 map_time.getUsElapsed());
@@ -488,23 +481,17 @@ void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
         queue_semaphore.wait();
-        queue_lock.wait();
 
         if (terminate_threads) {
             return;
         }
-        // This thread now owns the lock on the send queue
 
-        // If a spurious wakeup, just continue
-        if (send_queue.empty()) {
-            queue_lock.signal();
-            LOG<INFO>("Spurious wakeup.");
+#pragma GCC diagnostic ignored "-Wuninitialized"
+        flatbuffers::FlatBufferBuilder* builder;
+        if (!send_queue.pop(builder)) {
             continue;
         }
-        // Take one item out of the send queue
-        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
-            std::move(send_queue.front());
-        send_queue.pop();
+
         int message_size = builder->GetSize();
 
         LOG<INFO>("Client sending size: ", message_size);
@@ -525,6 +512,7 @@ void TCPClient::process_send() {
                 != message_size) {
             throw cirrus::Exception("Client error sending data to server");
         }
+
 #ifdef PERF_LOG
         double send_mbps = message_size / (1024 * 1024.0) /
             (send_time.getUsElapsed() / 1000.0 / 1000.0);
@@ -548,8 +536,12 @@ void TCPClient::process_send() {
 
             if (message_type == message::TCPBladeMessage::Message_Write) {
                 builder->Clear();
-                reuse_queue.push(std::move(builder));
+                reuse_queue.push(builder);
+            } else {
+                delete builder;
             }
+        } else {
+            delete builder;
         }
         reuse_lock.signal();
     }
@@ -564,41 +556,30 @@ void TCPClient::process_send() {
   * @return Returns a Future.
   */
 BladeClient::ClientFuture TCPClient::enqueue_message(
-            std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
+            flatbuffers::FlatBufferBuilder* builder,
             const int txn_id) {
-#ifdef PERF_LOG
-    TimerFunction enqueue_time;
-#endif
     std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
 
-    // Obtain lock on map
-    map_lock.wait();
-
-    // Add to map
-    txn_map[txn_id] = txn;
-
-    // Release lock on map
-    map_lock.signal();
+    txn_map.insert_or_assign(txn_id, txn);
 
     // Build the future
     BladeClient::ClientFuture future(txn->result, txn->result_available,
                           txn->sem, txn->error_code, txn->mem_for_read_ptr,
                           txn->mem_size);
 
-    // Obtain lock on send queue
-    queue_lock.wait();
-
     // Add builder to send queue
-    send_queue.push(std::move(builder));
+    while (!send_queue.push(builder)) {
+    }
 
-    // Release lock on send queue
-    queue_lock.signal();
+#ifdef PERF_LOG
+    TimerFunction sem_time;
+#endif
     // Alert that the queue has been updated
     queue_semaphore.signal();
 
 #ifdef PERF_LOG
-    LOG<PERF>("TCPClient::enqueue_message enqueue time (us): ",
-            enqueue_time.getUsElapsed());
+    LOG<PERF>("TCPClient::enqueue_message semaphore signal time (us): ",
+            sem_time.getUsElapsed());
 #endif
     return future;
 }

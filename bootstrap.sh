@@ -4,8 +4,7 @@ git submodule update
 
 # compile libcuckoo
 cd third_party/libcuckoo
-autoreconf -fis
-./configure
+cmake .
 make -j 10
 
 # compile sparsehash
@@ -17,7 +16,15 @@ make -j 10
 cd ../flatbuffers
 cmake -G "Unix Makefiles"
 make -j 10
-cd ../..
+
+# download eigen
+cd ../
+if [ ! -d "eigen_source" ]; then
+  sh get_eigen.sh
+fi
+cd ..
+
+
 
 # download test file for benchmark
 cd ./benchmarks
