@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -65,38 +66,63 @@ void TCPClient::connect(const std::string& address,
         LOG<INFO>("Client has previously connnected");
         return;
     }
-    // Create socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        throw cirrus::ConnectionException("Error when creating socket.");
-    }
-    int opt = 1;
-    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
-        throw cirrus::ConnectionException("Error setting socket options.");
-    }
-
-    struct sockaddr_in serv_addr;
-
-    // Set the type of address being used, assuming ip v4
-    serv_addr.sin_family = AF_INET;
-    if (inet_pton(AF_INET, address.c_str(), &serv_addr.sin_addr) != 1) {
-        throw cirrus::ConnectionException("Address family invalid or invalid "
-            "IP address passed in");
-    }
-    // Convert port from string to int
-    int port = stoi(port_string, nullptr);
-
-    // Save the port in the info
-    serv_addr.sin_port = htons(port);
-
-    LOG<INFO>("Connecting to server");
-    // Connect to the server
-    if (::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        throw cirrus::ConnectionException("Client could "
-                                          "not connect to server.");
-    }
-
+    port_string_ = port_string;
+    address_ = address;
+    open_additional_cxns(1);
     receiver_thread = new std::thread(&TCPClient::process_received, this);
     sender_thread   = new std::thread(&TCPClient::process_send, this);
+}
+
+/**
+ * Opens connections to the remote object store. Must be called after connect.
+ * @param num_additional the number of additional connections to open.
+ */
+void TCPClient::open_additional_cxns(uint64_t num_additional) {
+    if (!has_connected) {
+        throw std::runtime_error("Must be called after connect()");
+    }
+    for (uint64_t i = 0; i < num_additional; i++) {
+        // Create socket
+        int sock;
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            throw cirrus::ConnectionException("Error when creating socket.");
+        }
+        sockets_lock.wait();
+        sockets.push_back(sock);
+        sockets_lock.signal();
+        struct pollfd to_add;
+        to_add.fd = sock;
+        to_add.events = POLLIN;
+
+        pollfds_lock.wait();
+        pollfds.push_back(to_add);
+        pollfds_lock.signal();
+        int opt = 1;
+        if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+            throw cirrus::ConnectionException("Error setting socket options.");
+        }
+
+        struct sockaddr_in serv_addr;
+
+        // Set the type of address being used, assuming ip v4
+        serv_addr.sin_family = AF_INET;
+        if (inet_pton(AF_INET, address_.c_str(), &serv_addr.sin_addr) != 1) {
+            throw cirrus::ConnectionException("Address family invalid or "
+                "invalid IP address passed in");
+        }
+        // Convert port from string to int
+        int port = stoi(port_string_, nullptr);
+
+        // Save the port in the info
+        serv_addr.sin_port = htons(port);
+
+        // Connect to the server
+        if (::connect(sock, (struct sockaddr *)&serv_addr,
+            sizeof(serv_addr)) < 0) {
+            throw cirrus::ConnectionException("Client could "
+                                              "not connect to server.");
+        }
+    }
 }
 
 /**
@@ -254,11 +280,15 @@ bool TCPClient::remove(ObjectID oid) {
 }
 
 /**
-  * Loop run by the thread that processes incoming messages. Contains all
-  * logic for acting upon the incoming messages, which includes copying
-  * serialized objects and notifying futures.
-  */
-void TCPClient::process_received() {
+ * Given a socket, reads the full incoming ack and places it in an std::vector
+ * which is then returned in an std::shared_ptr.
+ * @param sock the file descriptor of the socket that the incoming message
+ * is on.
+ * @return an std::shared_ptr<std::vector<char>>. The char vector contains the
+ * message that was just read from the server.
+ */
+std::shared_ptr<std::vector<char>>
+TCPClient::get_message_from_server(int sock) {
     /**
       * Message format
       * |---------------------------------------------------
@@ -266,162 +296,214 @@ void TCPClient::process_received() {
       * |---------------------------------------------------
       */
 
-    while (1) {
-        // Must be shared as it will be used in the custom deleter of another
-        // shared_ptr.
-        std::shared_ptr<std::vector<char>> buffer =
-            std::make_shared<std::vector<char>>();
-        // Reserve the size of a 32 bit int
-        int current_buf_size = sizeof(uint32_t);
-        buffer->reserve(current_buf_size);
-        int bytes_read = 0;  // XXX shouldn't this be an unsigned int?
+    // Must be shared as it will be used in the custom deleter of another
+    // shared_ptr.
+    std::shared_ptr<std::vector<char>> buffer =
+        std::make_shared<std::vector<char>>(sizeof(uint32_t));
 
+    uint64_t current_buf_size = sizeof(uint32_t);
+    uint64_t bytes_read = 0;
+    while (bytes_read < sizeof(uint32_t)) {
+        int retval = read(sock, buffer->data() + bytes_read,
+                          sizeof(uint32_t) - bytes_read);
+
+        if (retval < 0) {
+            char *info = strerror(errno);
+            LOG<ERROR>(info);
+            if (errno == EINTR && terminate_threads == true) {
+                std::shared_ptr<std::vector<char>> ret;
+                return ret;
+            } else {
+                LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
+                    retval);
+                throw cirrus::Exception("Issue in reading socket. "
+                    "Full size not read. Socket may have been closed.");
+            }
+        }
+
+        bytes_read += retval;
+        LOG<INFO>("Client read ", bytes_read, " bytes of 4");
+    }
+    // Convert to host byte order
+    uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
+                                                            buffer->data());
+    uint32_t incoming_size = ntohl(*incoming_size_ptr);
+
+    LOG<INFO>("Size of incoming message received from server: ",
+              incoming_size);
+
+#ifdef PERF_LOG
+    TimerFunction receive_msg_time;
+#endif
+
+    // Resize the buffer to be larger if necessary
+    if (incoming_size > current_buf_size) {
+        // We use reserve() in place of resize() as it does not initialize
+        // the memory that it allocates. This is safe, but
+        // buffer.capacity() must be used to find the length of the buffer
+        // rather than buffer.size()
+        buffer->reserve(incoming_size);
+    }
+
+    // read in main message
+
+    read_all(sock, buffer->data(), incoming_size);
+
+#ifdef PERF_LOG
+    double receive_mbps = bytes_read / (1024 * 1024.0) /
+        (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
+    LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
+            receive_msg_time.getUsElapsed(),
+            " bw (MB/s): ", receive_mbps);
+#endif
+
+    LOG<INFO>("Received full message from server");
+    return buffer;
+}
+
+/**
+ * Given a socket number, obtains the full message on that socket and processes
+ * it.
+ */
+void TCPClient::process_message(int sock) {
+    // Get the full message from the server and place it into a vector
+    std::shared_ptr<std::vector<char>> buffer = get_message_from_server(sock);
+    // If failure due to termination, return
+    if (buffer.get() == nullptr) {
+        return;
+    }
+
+    // Extract the flatbuffer from the receiving buffer
+    auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer->data());
+    TxnID txn_id = ack->txnid();
+
+#ifdef PERF_LOG
+    TimerFunction map_time;
+#endif
+    // obtain lock on map
+    map_lock.wait();
+
+    // find pair for this item in the map
+    auto txn_pair = txn_map.find(txn_id);
+
+    // ensure that the id really exists, error otherwise
+    if (txn_pair == txn_map.end()) {
+        LOG<ERROR>("The client received an unknown txn_id: ", txn_id);
+        throw cirrus::Exception("Client error when processing "
+                                 "Messages. txn_id received was invalid.");
+    }
+
+    // get the struct
+    std::shared_ptr<struct txn_info> txn = txn_pair->second;
+
+    // remove from map
+    txn_map.erase(txn_pair);
+
+    // release lock
+    map_lock.signal();
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::process_received map time (us): ",
+            map_time.getUsElapsed());
+#endif
+
+    // Save the error code so that the future can read it
+    *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
+    LOG<INFO>("Error code read is: ", *(txn->error_code));
+    // Process the ack
+    switch (ack->message_type()) {
+        case message::TCPBladeMessage::Message_WriteAck:
+            {
+                // just put state in the struct, check for errors
+                *(txn->result) = ack->message_as_WriteAck()->success();
+                break;
+            }
+        case message::TCPBladeMessage::Message_ReadAck:
+            {
+                /* Service the read request by sending the serialized object
+                 to the client */
+                LOG<INFO>("Client processing ReadAck");
+                // copy the data from the ReadAck into the given pointer
+                *(txn->result) = ack->message_as_ReadAck()->success();
+                LOG<INFO>("Client wrote success");
+                // fb here stands for flatbuffer. This is the
+                // flatbuffer vector representation of the data.
+                // This operation returns a pointer to the vector
+                auto data_fb_vector = ack->message_as_ReadAck()->data();
+                *(txn->mem_size) = data_fb_vector->size();
+
+                // data_fb_vector->Data() returns a pointer to the raw data.
+                // This data lives inside of the std::vector buffer,
+                // which was created with a call to std::make_shared.
+
+                // Here we pass an std::shared_ptr pointer to the raw memory
+                // to the future (via the txn info struct)
+                // while tying the lifetime of the buffer to
+                // the lifetime of the pointer. This ensures that when no
+                // references to the data exist, the buffer containing
+                // the data is deleted.
+                *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
+                    reinterpret_cast<const char*>(data_fb_vector->Data()),
+                    read_op_deleter(buffer));
+                LOG<INFO>("Client has pointer to vector");
+                break;
+            }
+        case message::TCPBladeMessage::Message_RemoveAck:
+            {
+                // put the result in the struct
+                *(txn->result) = ack->message_as_RemoveAck()->success();
+                break;
+            }
+        default:
+            LOG<ERROR>("Unknown message", " type:", ack->message_type());
+            exit(-1);
+            break;
+    }
+    // Update the semaphore/CV so other know it is ready
+    *(txn->result_available) = true;
+    txn->sem->signal();
+    LOG<INFO>("client done processing message");
+}
+
+/**
+  * Loop run by the thread that processes incoming messages. When a socket
+  * has a new message, calls the process_message method to process it.
+  */
+void TCPClient::process_received() {
+    while (1) {
         // Read in the size of the next message from the network
         LOG<INFO>("client waiting for message from server");
-        bytes_read = 0;
-        while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
-            int retval = read(sock, buffer->data() + bytes_read,
-                              sizeof(uint32_t) - bytes_read);
+        pollfds_lock.wait();
+        int poll_status = poll(pollfds.data(), pollfds.size(), 0);
 
-            if (retval < 0) {
-                char *info = strerror(errno);
-                LOG<ERROR>(info);
-                if (errno == EINTR && terminate_threads == true) {
-                    return;
+        LOG<INFO>("Poll returned with status: ", poll_status);
+        if (terminate_threads) {
+            return;
+        }
+        if (poll_status == -1) {
+            throw cirrus::ConnectionException("Client error calling poll.");
+        } else if (poll_status == 0) {
+            LOG<INFO>(timeout, " milliseconds elapsed without contact.");
+        } else {
+            // there is at least one pending event, find it.
+            for (uint64_t i = 0; i < pollfds.size(); i++) {
+                struct pollfd& curr_fd = pollfds.at(i);
+                if (curr_fd.revents != POLLIN) {
+                    LOG<ERROR>("Non read event on socket: ", curr_fd.fd);
+                    if (curr_fd.revents & POLLHUP) {
+                        LOG<INFO>("Connection was closed by server");
+                        LOG<INFO>("Closing socket: ", curr_fd.fd);
+                        close(curr_fd.fd);
+                        throw cirrus::ConnectionException("Server closed a "
+                            "socket");
+                    }
                 } else {
-                    LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
-                        retval);
-                    throw cirrus::Exception("Issue in reading socket. "
-                        "Full size not read. Socket may have been closed.");
+                    LOG<INFO>("New message to process on socket: ", curr_fd.fd);
+                    // Toggle it to be ignored on future calls to poll
+                    process_message(curr_fd.fd);
                 }
             }
-
-            bytes_read += retval;
-            LOG<INFO>("Client read ", bytes_read, " bytes of 4");
         }
-        // Convert to host byte order
-        uint32_t *incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                                buffer->data());
-        int incoming_size = ntohl(*incoming_size_ptr);
-
-        LOG<INFO>("Size of incoming message received from server: ",
-                  incoming_size);
-
-#ifdef PERF_LOG
-        TimerFunction receive_msg_time;
-#endif
-        // Resize the buffer to be larger if necessary
-        if (incoming_size > current_buf_size) {
-            // We use reserve() in place of resize() as it does not initialize
-            // the memory that it allocates. This is safe, but
-            // buffer.capacity() must be used to find the length of the buffer
-            // rather than buffer.size()
-            buffer->reserve(incoming_size);
-        }
-
-        // read in main message
-
-        read_all(sock, buffer->data(), incoming_size);
-
-#ifdef PERF_LOG
-        double receive_mbps = bytes_read / (1024 * 1024.0) /
-            (receive_msg_time.getUsElapsed() / 1000.0 / 1000.0);
-        LOG<PERF>("TCPClient::process_received rcv msg time (us): ",
-                receive_msg_time.getUsElapsed(),
-                " bw (MB/s): ", receive_mbps);
-#endif
-
-        LOG<INFO>("Received full message from server");
-
-        // Extract the flatbuffer from the receiving buffer
-        auto ack = message::TCPBladeMessage::GetTCPBladeMessage(buffer->data());
-        TxnID txn_id = ack->txnid();
-
-#ifdef PERF_LOG
-        TimerFunction map_time;
-#endif
-        // obtain lock on map
-        map_lock.wait();
-
-        // find pair for this item in the map
-        auto txn_pair = txn_map.find(txn_id);
-
-        // ensure that the id really exists, error otherwise
-        if (txn_pair == txn_map.end()) {
-            LOG<ERROR>("The client received an unknown txn_id: ", txn_id);
-            throw cirrus::Exception("Client error when processing "
-                                     "Messages. txn_id received was invalid.");
-        }
-
-        // get the struct
-        std::shared_ptr<struct txn_info> txn = txn_pair->second;
-
-        // remove from map
-        txn_map.erase(txn_pair);
-
-        // release lock
-        map_lock.signal();
-#ifdef PERF_LOG
-        LOG<PERF>("TCPClient::process_received map time (us): ",
-                map_time.getUsElapsed());
-#endif
-
-        // Save the error code so that the future can read it
-        *(txn->error_code) = static_cast<cirrus::ErrorCodes>(ack->error_code());
-        LOG<INFO>("Error code read is: ", *(txn->error_code));
-        // Process the ack
-        switch (ack->message_type()) {
-            case message::TCPBladeMessage::Message_WriteAck:
-                {
-                    // just put state in the struct, check for errors
-                    *(txn->result) = ack->message_as_WriteAck()->success();
-                    break;
-                }
-            case message::TCPBladeMessage::Message_ReadAck:
-                {
-                    /* Service the read request by sending the serialized object
-                     to the client */
-                    LOG<INFO>("Client processing ReadAck");
-                    // copy the data from the ReadAck into the given pointer
-                    *(txn->result) = ack->message_as_ReadAck()->success();
-                    LOG<INFO>("Client wrote success");
-                    // fb here stands for flatbuffer. This is the
-                    // flatbuffer vector representation of the data.
-                    // This operation returns a pointer to the vector
-                    auto data_fb_vector = ack->message_as_ReadAck()->data();
-                    *(txn->mem_size) = data_fb_vector->size();
-
-                    // data_fb_vector->Data() returns a pointer to the raw data.
-                    // This data lives inside of the std::vector buffer,
-                    // which was created with a call to std::make_shared.
-
-                    // Here we pass an std::shared_ptr pointer to the raw memory
-                    // to the future (via the txn info struct)
-                    // while tying the lifetime of the buffer to
-                    // the lifetime of the pointer. This ensures that when no
-                    // references to the data exist, the buffer containing
-                    // the data is deleted.
-                    *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
-                        reinterpret_cast<const char*>(data_fb_vector->Data()),
-                        read_op_deleter(buffer));
-                    LOG<INFO>("Client has pointer to vector");
-                    break;
-                }
-            case message::TCPBladeMessage::Message_RemoveAck:
-                {
-                    // put the result in the struct
-                    *(txn->result) = ack->message_as_RemoveAck()->success();
-                    break;
-                }
-            default:
-                LOG<ERROR>("Unknown message", " type:", ack->message_type());
-                exit(-1);
-                break;
-        }
-        // Update the semaphore/CV so other know it is ready
-        *(txn->result_available) = true;
-        txn->sem->signal();
-        LOG<INFO>("client done processing message");
+        pollfds_lock.signal();
     }
 }
 
@@ -486,6 +568,7 @@ ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
   */
 void TCPClient::process_send() {
     // Wait until there are messages to send
+    int socket_index = 0;
     while (1) {
         queue_semaphore.wait();
         queue_lock.wait();
@@ -510,6 +593,11 @@ void TCPClient::process_send() {
         LOG<INFO>("Client sending size: ", message_size);
         // Convert size to network order and send
 
+        // select the socket that this request will be sent on
+        sockets_lock.wait();
+        int sock = sockets.at(socket_index);
+        socket_index = (socket_index + 1) % sockets.size();
+        sockets_lock.signal();
         uint32_t network_order_size = htonl(message_size);
         if (send_all(sock, &network_order_size, sizeof(uint32_t), 0)
                 != sizeof(uint32_t)) {

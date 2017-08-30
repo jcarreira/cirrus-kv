@@ -11,9 +11,9 @@ noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = tcpservermain
 
 libserver_a_SOURCES = TCPServer.cpp
-libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) \
+libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
                        -I$(top_srcdir)/third_party/flatbuffers/include \
-                       -I$(top_srcdir)/src
+                       -isystem $(top_srcdir)/third_party/libcuckoo/
 
 if USE_RDMA
 bin_PROGRAMS += bladepoolmain bladeallocmain allocmain controllermain \
@@ -26,7 +26,9 @@ endif
 
 LDFLAGS  = -pthread
 LDADD    = $(DEFAULT_LIB)
-CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src
+CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src \
+           -isystem $(top_srcdir)/third_party/libcuckoo/ \
+           -I$(top_srcdir)/third_party/flatbuffers/include
 
 bladepoolmain_DEPENDENCIES = libserver.a
 bladepoolmain_SOURCES  = bladepoolmain.cpp

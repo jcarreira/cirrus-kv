@@ -66,11 +66,68 @@ void test_async() {
     }
 }
 
+/**
+ * Tests multiple concurrent puts and gets. It first puts N items, then ensures
+ * all N were successful. It then gets N items, and ensures each value matches.
+ * @param N the number of puts and gets to perform.
+ */
+template <int N>
+void test_async_N() {
+    cirrus::TCPClient client;
+    client.connect(IP, port);
+    std::vector<cirrus::BladeClient::ClientFuture> put_futures;
+    std::vector<cirrus::BladeClient::ClientFuture> get_futures;
+    client.open_additional_cxns(3);
+    cirrus::serializer_simple<int> serializer;
+    int i;
+    for (i = 0; i < N; i++) {
+        int val = i;
+        cirrus::WriteUnitTemplate<int> w(serializer, val);
+        put_futures.push_back(client.write_async(i, w));
+    }
+    // Check the success of each put operation
+    for (i = 0; i < N; i++) {
+        if (!put_futures[i].get()) {
+            throw std::runtime_error("Error during an async put.");
+        }
+    }
+    std::cout << "BEGINNING READS" << std::endl;
+    for (i = 0; i < N; i++) {
+        auto pair = client.read_sync(i);
+        const int val = *(reinterpret_cast<const int*>(pair.first.get()));
+
+        if (val != i) {
+            std::cout << "Expected " << i << "but got " << val << std::endl;
+            throw std::runtime_error("Wrong value returned test_async_N");
+        }
+    }
+
+    for (i = 0; i < N; i++) {
+        get_futures.push_back(client.read_async(i));
+    }
+    // check the value of each get
+    for (i = 0; i < N; i++) {
+        bool success = get_futures[i].get();
+        if (!success) {
+            throw std::runtime_error("Error during an async read");
+        }
+        const int ret_value = *(reinterpret_cast<const int*>(
+            get_futures[i].getDataPair().first.get()));
+
+        if (ret_value != i) {
+            std::cout << "Expected " << i << " but got " << ret_value
+                << std::endl;
+            throw std::runtime_error("Wrong value returned in test_async_N");
+        }
+    }
+}
+
 auto main(int argc, char *argv[]) -> int {
     IP = cirrus::test_internal::ParseIP(argc, argv);
     std::cout << "Test Starting." << std::endl;
     test_sync();
     test_async();
+    test_async_N<100>();
     std::cout << "Test successful." << std::endl;
     return 0;
 }
