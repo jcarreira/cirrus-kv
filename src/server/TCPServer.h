@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <string>
 #include "server/Server.h"
 #include "server/MemoryBackend.h"
 

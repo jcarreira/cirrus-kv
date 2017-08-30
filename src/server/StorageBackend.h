@@ -11,18 +11,18 @@
 namespace cirrus {
 
 class MemSlice {
-public:
-    MemSlice(const std::string& data) {
+ public:
+    explicit MemSlice(const std::string& data) {
         // make sure data_ has enough size
         data_.resize(data.size() / sizeof(int8_t));
-        
+
         // copy contents over
         std::memcpy(data_.data(), data.data(), data.size());
     }
 
     MemSlice(const std::vector<int8_t>& data) : data_(data) {
     }
-
+    
     operator std::string() const {
         std::string s;
         // make sure s has the right size
@@ -36,7 +36,7 @@ public:
 
         return s;
     }
-    
+
     operator std::vector<int8_t>() const {
         return data_;
     }
@@ -45,7 +45,7 @@ public:
         return data_.size() * sizeof(int8_t);
     }
 
-private:
+ private:
     std::vector<int8_t> data_;
 };
 

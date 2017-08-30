@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <cstdint>
 
 #include "MemoryBackend.h"
 #include "NVStorageBackend.h"
@@ -419,8 +420,10 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     // storing the serialized object
-
+                    std::vector<int8_t> data(data_fb->begin(),
+                            data_fb->end());
                     mem->put(oid, data);
+
                     curr_size += data_fb->size();
                 }
 

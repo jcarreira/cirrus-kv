@@ -8,8 +8,6 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
 
-using namespace rocksdb;
-
 namespace cirrus {
 
 /**
@@ -29,10 +27,9 @@ class NVStorageBackend : public StorageBackend {
 
  private:
     std::string path;  //< path to raw device
-    
-    DB* db;           //< rocksdb handler 
-    Options options;  //< rocksdb options
 
+    rocksdb::DB* db;           //< rocksdb handler
+    rocksdb::Options options;  //< rocksdb options
 };
 
 }  // namespace cirrus

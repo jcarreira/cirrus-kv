@@ -29,7 +29,7 @@ auto main(int argc, char *argv[]) -> int {
     switch (argc) {
         case 3:
             {
-                if (strcmp(argv[2], "Memory") && strcmp(argv[2],"Storage")) {
+                if (strcmp(argv[2], "Memory") && strcmp(argv[2], "Storage")) {
                     throw std::runtime_error("Wrong backend type");
                 }
                 backend_type = argv[2];
@@ -49,8 +49,8 @@ auto main(int argc, char *argv[]) -> int {
         default:
             print_arguments();
             throw std::runtime_error("Wrong number of arguments");
-    };
-    
+    }
+
     // Instantiate the server
     cirrus::LOG<cirrus::INFO>(
             "Starting TCPServer in port: ", port,
