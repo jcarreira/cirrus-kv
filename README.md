@@ -25,7 +25,7 @@ It has been tested with the following environment:
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint && sudo apt-get install libsnappy-dev && sudo apt-get install zlib1g-dev && sudo apt-get install libbz2-dev
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake libsnappy-dev zlib1g-dev libbz2-dev && sudo pip install cpplint
 
 Make sure the compilation is done with g++-6. *update-alternatives* can be used:
 
