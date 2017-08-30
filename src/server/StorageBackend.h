@@ -6,6 +6,8 @@
 #include <cstring>
 #include <string>
 
+#include "utils/logging.h"
+
 namespace cirrus {
 
 class MemSlice {
@@ -25,15 +27,22 @@ public:
         std::string s;
         // make sure s has the right size
         uint64_t size = data_.size() * sizeof(int8_t);
+
+        LOG<INFO>("Resizing string with size: ", size);
         s.resize(size);
 
-        s.assign(s.data(), data_.size() * sizeof(int8_t));
+        s.assign(reinterpret_cast<const char*>(data_.data()),
+                data_.size() * sizeof(int8_t));
 
         return s;
     }
     
     operator std::vector<int8_t>() const {
         return data_;
+    }
+
+    uint64_t size() const {
+        return data_.size() * sizeof(int8_t);
     }
 
 private:
@@ -71,7 +80,7 @@ class StorageBackend {
       * @param data Memory to copy the object to
       * @return bool Indicates success (true) or failure (false)
       */
-    virtual MemSlice get(uint64_t oid) = 0;
+    virtual MemSlice get(uint64_t oid) const = 0;
 
     /**
       * Delete object

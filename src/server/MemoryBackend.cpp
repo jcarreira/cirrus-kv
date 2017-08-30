@@ -16,7 +16,7 @@ bool MemoryBackend::exists(uint64_t oid) const {
     return store.find(oid) != store.end();
 }
 
-MemSlice MemoryBackend::get(uint64_t oid) {
+MemSlice MemoryBackend::get(uint64_t oid) const {
     auto it = store.find(oid);
     if (it == store.end()) {
         throw std::runtime_error("Error");

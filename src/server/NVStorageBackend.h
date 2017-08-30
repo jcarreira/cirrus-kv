@@ -23,7 +23,7 @@ class NVStorageBackend : public StorageBackend {
     void init();
     bool put(uint64_t oid, const MemSlice& data) override;
     bool exists(uint64_t oid) const override;
-    MemSlice get(uint64_t oid) override;
+    MemSlice get(uint64_t oid) const override;
     bool delet(uint64_t oid) override;
     uint64_t size(uint64_t oid) const override;
 

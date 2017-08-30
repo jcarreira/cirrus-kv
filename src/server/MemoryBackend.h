@@ -18,12 +18,14 @@ class MemoryBackend : public StorageBackend {
      void init();
      bool put(uint64_t oid, const MemSlice& data) override;
      bool exists(uint64_t oid) const override;
-     MemSlice get(uint64_t oid) override;
+     MemSlice get(uint64_t oid) const override;
      bool delet(uint64_t oid) override;
      uint64_t size(uint64_t oid) const override;
 
  private:
-     std::map<uint64_t, std::vector<int8_t>> store;
+     // make this mutable because std::map
+     // doesn't play well with const
+     mutable std::map<uint64_t, std::vector<int8_t>> store;
 };
 
 }  // namespace cirrus

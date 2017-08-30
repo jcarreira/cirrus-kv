@@ -1,16 +1,16 @@
 AUTOMAKE_OPTIONS = foreign serial-tests
 SUBDIRS = src tests benchmarks
 
-TESTS = ./tests/test_client_TCP.py ./tests/test_mem_exhaustion_TCP.py \
-		./tests/test_store_simple_TCP.py ./tests/test_cache_manager_TCP.py \
-		./tests/test_iterator_TCP.py ./tests/test_store_TCP.py \
-    ./tests/test_mt_TCP.py ./tests/test_mult_clients_TCP.py
+TESTS = ./tests/test_client_TCP.py \
+	./tests/test_store_simple_TCP.py ./tests/test_cache_manager_TCP.py \
+	./tests/test_iterator_TCP.py ./tests/test_store_TCP.py \
+        ./tests/test_mt_TCP.py ./tests/test_mult_clients_TCP.py
 
 if USE_RDMA
 TESTS += ./tests/test_client_RDMA.py ./tests/test_mem_exhaustion_RDMA.py  \
-		 ./tests/test_store_simple_RDMA.py ./tests/test_cache_manager_RDMA.py \
-		 ./tests/test_iterator_RDMA.py ./tests/test_store_RDMA.py \
-     ./tests/test_mt_RDMA.py ./tests/test_mult_clients_RDMA.py
+	./tests/test_store_simple_RDMA.py ./tests/test_cache_manager_RDMA.py \
+	./tests/test_iterator_RDMA.py ./tests/test_store_RDMA.py \
+        ./tests/test_mt_RDMA.py ./tests/test_mult_clients_RDMA.py
 endif
 
 
