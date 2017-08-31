@@ -9,9 +9,19 @@
 
 namespace graphs {
 
-void deleteKCoreNeighbor(int id, std::set<int> neighbors) {
-    //iterate through the set of neighbors
-    //for each item i in neighbors, remove id from i's neighbors
+/**
+ * For all of the neighbors n, deletes id from n's list of neighbors
+ * @param cm CacheManager used to access Vertex objects
+ * @param id the vertex that should be deleted from neighbors' neighbors
+ * @param neighbors set of vertices that id should be deleted from 
+ */
+
+void deleteKCoreNeighbor(cirrus::CacheManager<Vertex>& cm,
+        int id, std::set<int> neighbors) {
+    for (int n : neighbors) {
+        Vertex v = cm.get(n);
+        v.deleteTempNeighbor(id);
+    }
 }
 /**
  * Returns the k-core of the inputted graph. Graphs must be undirected.

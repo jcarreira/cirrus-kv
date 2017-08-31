@@ -4,7 +4,8 @@ namespace graphs {
 
 Vertex::Vertex(int id, const std::vector<int>& neighbors,
         const std::vector<double>& distToNeighbors) :
-    id(id), prev(-1), seen(false), dist(std::numeric_limits<double>::infinity())
+    id(id), prev(-1), processed(false),
+    onFringe(false), dist(std::numeric_limits<double>::infinity())
 {
     setNeighbors(neighbors, distToNeighbors);
 }
@@ -68,6 +69,26 @@ double Vertex::getDistToNeighbor(int id) {
 
 void Vertex::setPrev(int p) {
     prev = p;
+}
+
+int Vertex::getPrev() {
+    return prev;
+}
+
+void Vertex::setOnFringe(bool val) {
+    onFringe = val;
+}
+
+bool Vertex::getOnFringe() {
+    return onFringe;
+}
+
+void Vertex::setProcessed(bool val) {
+    processed = val;
+}
+
+int Vertex::getProcessed() {
+    return processed;
 }
 
 }
