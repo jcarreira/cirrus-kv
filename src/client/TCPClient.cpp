@@ -272,7 +272,7 @@ TCPClient::read_sync(ObjectID oid) {
   * Reads a set of objects corresponding from the remote server.
   * @param ids the ids of the objects the user wishes to read to local memory.
   * @return An std pair containing a shared pointer to the buffer that the
-  * serialized objects read from the server resides in as well as the size of
+  * serialized objects read from the server reside in as well as the size of
   * the buffer.
   */
 std::pair<std::shared_ptr<const char>, unsigned int>

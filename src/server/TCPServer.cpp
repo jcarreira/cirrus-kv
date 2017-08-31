@@ -525,7 +525,7 @@ bool TCPServer::process(int sock) {
 
                 if (success) {
                     int8_t* mem;
-                    // build the flatbuffer vector with the righ size
+                    // build the flatbuffer vector with the right size
                     data_fb_vector =
                         builder.CreateUninitializedVector(data_size, &mem);
                     // for each oid to be transfered

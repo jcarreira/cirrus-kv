@@ -194,7 +194,6 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
  * Gets many objects from the remote store at once. These items will be written
  * into the c style array pointed to by data.
  * @param oids list of Object ids to be retrieved from server
- * @param data a pointer to a c style array that will be filled from the
  * remote store.
  */
 template<class T>
@@ -206,6 +205,8 @@ std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_2(
     const uint32_t* ptr =
                         reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
     uint32_t num_oids = *ptr++;
+
+    assert (num_oids == oids.size());
 
     std::vector<T> res;
     res.reserve(num_oids);
