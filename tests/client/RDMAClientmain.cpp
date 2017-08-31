@@ -141,7 +141,7 @@ void test_async() {
     cirrus::WriteUnitTemplate<int> w(serializer, message);
     auto future = client.write_async(1, w);
     std::cout << "write async complete" << std::endl;
-    
+
     if (!future.get()) {
         throw std::runtime_error("Error during async write.");
     }
