@@ -1041,7 +1041,7 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
     if (mem != nullptr) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->prepare(con_ctx_.gen_ctx_);
-        op_info = new RDMAClient::RDMAOpInfo(id_, []() -> void {});
+        op_info = new RDMAClient::RDMAOpInfo(id_);
 
     } else {
         mem = new RDMAMem(data, length);
