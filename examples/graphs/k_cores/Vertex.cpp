@@ -3,7 +3,7 @@
 namespace graphs {
 
 Vertex::Vertex(int id, const std::vector<int>& neighbors) :
-    id(id)
+    id(id), seen(false), k(-1)
 {
     setNeighbors(neighbors);
 }
@@ -16,6 +16,7 @@ void Vertex::setNeighbors(const std::vector<int>& v) {
 
 void Vertex::addNeighbor(int id) {
     neighbors[numNeighbors] = id;
+    tempNeighbors.insert(id);
     numNeighbors += 1;
 }
 

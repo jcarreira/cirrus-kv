@@ -26,7 +26,6 @@ public:
     void setK(int val);
     void setSeen(bool val);
     bool getSeen();
-    std::vector<int> getTemp();
 private:
     int neighbors[1000];
     std::vector<int> tempNeighbors; //< to keep track of degree in the alg
