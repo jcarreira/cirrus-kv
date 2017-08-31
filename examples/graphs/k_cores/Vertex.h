@@ -20,14 +20,20 @@ public:
     int getId() const;
     bool hasNeighbor(int id) const;
 
-    void deleteNeighbor(int id);
+    void deleteTempNeighbor(int id);
+    std::vector<int> getTempNeighbors();
+    int numTempNeighbors();
     void setK(int val);
+    void setSeen(bool val);
+    bool getSeen();
+    std::vector<int> getTemp();
 private:
     int neighbors[1000];
-    std::vector<int> kCoreNeighbors;
+    std::vector<int> tempNeighbors; //< to keep track of degree in the alg
     int id;
     int numNeighbors;
-    int k;
+    int k; //< maximum core number
+    bool seen; //< true if the vertex has been processed by the alg
 };
 
 } // graphs

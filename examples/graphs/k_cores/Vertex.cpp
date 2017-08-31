@@ -44,4 +44,25 @@ void Vertex::setK(int val) {
     k = val;
 }
 
+void Vertex::deleteTempNeighbor(int id) {
+    tempNeighbors.erase(std::remove(tempNeighbors.begin(),
+        tempNeighbors.end(), id), tempNeighbors.end());
+}
+
+int Vertex::numTempNeighbors() {
+    return tempNeighbors.size();
+}
+
+void Vertex::setSeen(bool val) {
+    seen = val;
+}
+
+bool Vertex::getSeen() {
+    return seen;
+}
+
+std::vector<int> Vertex::getTempNeighbors() {
+    return tempNeighbors;
+}
+
 }
