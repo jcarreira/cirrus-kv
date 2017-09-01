@@ -208,16 +208,10 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
                             std::make_unique<flatbuffers::FlatBufferBuilder>(
                             initial_buffer_size);
 
-    uint64_t size = oids.size() * sizeof(ObjectID);
+    //uint64_t size = oids.size() * sizeof(ObjectID);
     // Create and send write request
     // Pointer to the vector inside of the flatbuffer to write to
-    int8_t *mem;
-    auto data_fb_vector = builder->CreateUninitializedVector(size, &mem);
-
-    uint32_t* ptr = reinterpret_cast<uint32_t*>(mem);
-    for (uint32_t i = 0; i < oids.size(); ++i) {
-        *ptr++ = htonl(oids[i]);
-    }
+    auto data_fb_vector = builder->CreateVector(oids);
 
     auto msg_contents = message::TCPBladeMessage::CreateReadBulk(*builder,
                                                               oids.size(),

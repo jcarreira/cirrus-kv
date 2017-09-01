@@ -24,7 +24,7 @@ table ReadAck{
 
 table ReadBulk{
   num_oids:ulong;
-  data:[byte];
+  data:[ulong];
 }
 
 table ReadBulkAck{

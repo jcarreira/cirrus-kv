@@ -6,6 +6,7 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"

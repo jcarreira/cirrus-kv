@@ -492,10 +492,7 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing read bulk request");
                 // number of objects to be transfered
                 uint32_t num_oids = msg->message_as_ReadBulk()->num_oids();
-
-                auto data_fb = msg->message_as_ReadBulk()->data();
-                const uint32_t* oids_ptr =
-                           reinterpret_cast<const uint32_t*>(data_fb->data());
+                auto data_fb_oids = msg->message_as_ReadBulk()->data();
 
                 // first we figure out the total size to send back
                 uint32_t data_size = 0;
@@ -504,8 +501,7 @@ bool TCPServer::process(int sock) {
                 std::vector<std::vector<int8_t>*> oids_data;
                 oids_data.reserve(num_oids);
 
-                for (uint32_t i = 0; i < num_oids; ++i) {
-                    uint32_t oid = ntohl(*oids_ptr++);
+                for (const auto& oid : *data_fb_oids) {
                     auto entry_itr = store.find(oid);
                     if (entry_itr == store.end()) {
                         success = false;
@@ -544,8 +540,8 @@ bool TCPServer::process(int sock) {
                                 reinterpret_cast<char*>(mem) + size);
                     }
                 } else {
-                    std::vector<int8_t> data;
-                    data_fb_vector = builder.CreateVector(data);
+                    data_fb_vector = builder.CreateVector(
+                            std::vector<int8_t>());
                 }
 
                 LOG<INFO>("Server building readbulk response");
