@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include "common/Serializer.h"
+//#include "common/Serializer.h"
 
 namespace graphs {
 
@@ -31,6 +31,7 @@ public:
      */
 
     std::set<int> getNeighbors() const;
+    std::set<std::pair<int, double>> getNeighborsAndEdges() const;
     uint64_t getNeighborsSize() const;
     
     /**
@@ -60,12 +61,6 @@ public:
     double getDistToNeighbor(int id);
 
     /*
-     * Deserializer routines
-     */
-
-    static Vertex deserializer(const void* data, unsigned int size);
-
-    /*
      * Get and set the previous vertex
      */
 
@@ -86,8 +81,13 @@ public:
     bool getProcessed() const;
     void setProcessed(bool val);
 
+    /*
+     * Deserializer
+     */
+
+    Vertex Vertex::deserializer(const void* data, unsigned int size); 
 private:
-    std::set<pair(int, double)> neighbors; //<set of (neighbor id, edge dist)
+    std::set<std::pair<int, double>> neighbors; //<set of (neighbor id, edge dist)
     int id;
     int prev; //< the previous vertex
     double dist; //< the distance from the source to this vertex
@@ -119,7 +119,7 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
         *double_ptr++ = v.getDist();
 	for (const auto& n : v.getNeighbors()) {
             *double_ptr++ = n.second;
-
+        }
         uint32_t* ptr = reinterpret_cast<uint32_t*>(double_ptr);
         *ptr++ = htonl(v.getId());
 
@@ -135,7 +135,6 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
     }
  private:
 };
-
 
 
 } // graphs

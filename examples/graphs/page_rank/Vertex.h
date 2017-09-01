@@ -18,7 +18,7 @@ class Vertex {
         Vertex(int id, const std::vector<int>& neighbors);
 
         /**
-          * Add and set neighbrs of this vertex
+          * Add and set neighbors of this vertex
           */
         void addNeighbor(int id);
         void setNeighbors(const std::vector<int>& neighbors);
@@ -35,7 +35,7 @@ class Vertex {
         bool hasNeighbor(int id) const;
 
         /**
-          * get and set the id of this vertex
+          * Get and set the id of this vertex
           */
         int getId() const;
         void setId(int id);

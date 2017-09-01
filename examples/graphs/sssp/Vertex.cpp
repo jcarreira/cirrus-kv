@@ -1,16 +1,16 @@
-#include <examples/graphs/sssp/Vertex.h>
+#include "Vertex.h"
 #include <arpa/inet.h>
-
+#include <limits>
 namespace graphs {
 
 Vertex::Vertex(int id) :
-    id(id), prev(-1), processed(false), onFringe(false),
+    id(id), prev(0), processed(false), onFringe(false),
     dist(std::numeric_limits<double>::infinity()) {
 }
 
 Vertex::Vertex(int id, const std::vector<int>& neighbors,
         const std::vector<double>& distToNeighbors) :
-    id(id), prev(-1), processed(false), onFringe(false),
+    id(id), prev(0), processed(false), onFringe(false),
     dist(std::numeric_limits<double>::infinity()) {
     setNeighbors(neighbors, distToNeighbors);
 }
@@ -27,10 +27,18 @@ void Vertex::setNeighbors(const std::vector<int>& v,
 }
 
 void Vertex::addNeighbor(int id, double distance) {
-    neighbors.insert(pair(id, distance));
+    std::pair<int, double> p(id, distance);
+    neighbors.insert(p);
 }
 
-std::set<pair(int, double)> Vertex::getNeighbors() const {
+std::set<int> Vertex::getNeighbors() const {
+    std::set<int> n;
+    for (const auto& i : neighbors) {
+        n.insert(i.first);
+    }
+}
+
+std::set<std::pair<int, double>> Vertex::getNeighborsAndEdges() const {
     return neighbors;
 }
 
@@ -47,10 +55,10 @@ void Vertex::setId(int i) {
 }
 
 bool Vertex::hasNeighbor(int id) const {
-    return neighbors.find(id) != neighbors.end();
+    return getNeighbors().find(id) != getNeighbors().end();
 }
 
-int Vertex::getDist() const {
+double Vertex::getDist() const {
     return dist;
 }
 
@@ -60,16 +68,10 @@ void Vertex::setDist(double d) {
 
 double Vertex::getDistToNeighbor(int id) {
     for (const auto& n : neighbors) {
-        if (n.first == id)
+        if (n.first == id) {
             return n.second;
         }
     }
-    return -1.0;
-}
-
-Vertex Vertex::deserializer(const void* data, unsigned int size) {
-    Vertex v;
-    return v;
 }
 
 int Vertex::getPrev() const {
@@ -88,12 +90,17 @@ void Vertex::setOnFringe(bool val) {
     onFringe = val;
 }
 
-int Vertex::getProcessed() const {
+bool Vertex::getProcessed() const {
     return processed;
 }
 
 void Vertex::setProcessed(bool val) {
     processed = val;
+}
+
+Vertex Vertex::deserializer(const void* data, unsigned int size) {
+    Vertex v;
+    return v;
 }
 
 } // namespace graphs
