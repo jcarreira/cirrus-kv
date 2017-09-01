@@ -72,9 +72,10 @@ void print_stats_zipf(std::ostream& out, uint64_t msg_sent, uint64_t elapsed_us,
   */
 void test_iops(std::ofstream& outfile) {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 
@@ -233,9 +234,10 @@ class zipf_distribution {
   */
 void test_iops_zipf(std::ofstream& outfile) {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, &client,
-            cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+            serializer,
             cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                 sizeof(cirrus::Dummy<SIZE>)>);
 

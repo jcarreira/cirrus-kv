@@ -52,10 +52,10 @@ void process(const std::string& s, std::map<std::string, uint64_t> *counts) {
  */
 uint64_t setup() {
     cirrus::TCPClient client;
-
+    cirrus::string_serializer_simple serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::string>
         store(IP, PORT, &client,
-            cirrus::string_serializer_simple,
+            serializer,
             cirrus::string_deserializer_simple);
 
     std::ifstream file("benchmarks/very_big.txt");
@@ -100,9 +100,10 @@ void print_stats(std::ostream& out, uint64_t elapsed_us, uint64_t msg_sent,
   */
 void test_iteration_store(std::ofstream& outfile, uint64_t highest_id) {
     cirrus::TCPClient client;
+    cirrus::string_serializer_simple serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::string>
         store(IP, PORT, &client,
-            cirrus::string_serializer_simple,
+            serializer,
             cirrus::string_deserializer_simple);
 
 
@@ -132,9 +133,10 @@ void test_iteration_store(std::ofstream& outfile, uint64_t highest_id) {
   */
 void test_iteration_cache(std::ofstream& outfile, uint64_t highest_id) {
     cirrus::TCPClient client;
+    cirrus::string_serializer_simple serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<std::string>
         store(IP, PORT, &client,
-            cirrus::string_serializer_simple,
+            serializer,
             cirrus::string_deserializer_simple);
 
     cirrus::LRAddedEvictionPolicy policy(100);
