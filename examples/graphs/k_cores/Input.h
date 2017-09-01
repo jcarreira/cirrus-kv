@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_
-#define EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_
+#ifndef EXAMPLES_GRAPHS_K_CORES_INPUT_H_
+#define EXAMPLES_GRAPHS_K_CORES_INPUT_H_
 
 #include <vector>
 #include <string>
@@ -11,4 +11,4 @@ std::vector<Vertex> readGraph(const std::string& fname);
 
 }  // graphs
 
-#endif  // EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_
+#endif  // EXAMPLES_GRAPHS_K_CORES_INPUT_H_

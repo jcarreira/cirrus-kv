@@ -1,4 +1,4 @@
-#include <examples/graphs/page_rank/Input.h>
+#include <examples/graphs/sssp/Input.h>
 #include <fstream>
 
 namespace graphs {

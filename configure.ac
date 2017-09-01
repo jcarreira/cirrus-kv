@@ -68,6 +68,8 @@ AC_CONFIG_FILES([Makefile
                  examples/graphs/Makefile
                  examples/graphs/page_rank/Makefile
                  examples/graphs/wcc/Makefile
+		 examples/graphs/k_cores/Makefile
+		 examples/graphs/sssp/Makefile
                  benchmarks/Makefile])
 
 

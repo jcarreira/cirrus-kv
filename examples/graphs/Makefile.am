@@ -1,5 +1,5 @@
 include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = page_rank wcc
+SUBDIRS = page_rank wcc k_cores sssp
 
