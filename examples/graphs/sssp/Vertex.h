@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-//#include "common/Serializer.h"
+#include "common/Serializer.h"
 
 namespace graphs {
 
@@ -85,7 +85,7 @@ public:
      * Deserializer
      */
 
-    Vertex Vertex::deserializer(const void* data, unsigned int size); 
+    static Vertex deserializer(const void* data, unsigned int size); 
 private:
     std::set<std::pair<int, double>> neighbors; //<set of (neighbor id, edge dist)
     int id;
@@ -97,10 +97,11 @@ private:
 
 /** Format:
  * dist (double)
- * processed (bool)
- * onFringe (bool)
  * id (uint32_t)
- * prev(uint32_t)
+ * prev (uint32_t)
+ * processed (uint32_t), where 1 represents true
+ * onFringe (uint32_t), where 1 represents true
+ * n (uint32_t), number of neighbors
  * n (neighbor id, edge dist) (uint32_t, double)
  */
 
@@ -109,7 +110,8 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
     uint64_t size(const Vertex& v) const override {
         uint64_t size = sizeof(uint32_t) * 2 +
             sizeof(double) +
-	    sizeof(bool) * 2 +
+	    //sizeof(bool) * 2 +
+	    sizeof(uint32_t) * 3 +
             sizeof(uint32_t) * v.getNeighborsSize() +
 	    sizeof(double) * v.getNeighborsSize();  // neighbors
         return size;
@@ -117,20 +119,29 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
     void serialize(const Vertex& v, void* mem) const override {
         double* double_ptr = reinterpret_cast<double*>(mem);
         *double_ptr++ = v.getDist();
-	for (const auto& n : v.getNeighbors()) {
-            *double_ptr++ = n.second;
-        }
+        
         uint32_t* ptr = reinterpret_cast<uint32_t*>(double_ptr);
         *ptr++ = htonl(v.getId());
+	*ptr++ = htonl(v.getPrev());
 
-        for (const auto& n : v.getNeighbors()) {
-            *ptr++ = htonl(n.first);
-        }
         if (v.getProcessed()) {
-	    *ptr++ = 1;
+	    *ptr++ = htonl(1);
+	} else {
+	    *ptr++ = htonl(0);
 	}
 	if (v.getOnFringe()) {
-	    *ptr++ = 1;
+	    *ptr++ = htonl(1);
+	} else {
+	    *ptr++ = htonl(0);
+	}
+
+	*ptr++ = htonl(v.getNeighborsSize());
+
+	for (const std::pair<int, double>& n : v.getNeighborsAndEdges()) {
+	    *ptr++ = htonl(n.first);
+	    double_ptr = reinterpret_cast<double*>(ptr);
+	    *double_ptr++ = n.second;
+	    ptr = reinterpret_cast<uint32_t*>(double_ptr);
 	}
     }
  private:

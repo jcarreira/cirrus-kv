@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "Vertex.h"
-//#include "cache_manager/CacheManager.h"
+#include "cache_manager/CacheManager.h"
 
 namespace graphs {
 

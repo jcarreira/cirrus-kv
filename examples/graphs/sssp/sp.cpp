@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "Running SSSP" << std::endl;
-    graphs::sssp(cm, vertices.size(), 0);
+    graphs::SSSP(cm, vertices.size(), 0);
 
     std::cout << "SSSP completed" << std::endl;
 }

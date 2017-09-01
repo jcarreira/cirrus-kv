@@ -36,7 +36,9 @@ std::vector<Vertex> readGraph(const std::string& fname) {
         for (int i = 0; i < num_edges_per_vertex; ++i) {
             int neigh_id;
             infile >> neigh_id;
-            v.addNeighbor(neigh_id);
+	    double neigh_dist;
+	    infile >> neigh_dist;
+            v.addNeighbor(neigh_id, neigh_dist);
         }
         vertices.push_back(v);
     }

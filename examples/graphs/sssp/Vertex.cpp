@@ -4,14 +4,16 @@
 namespace graphs {
 
 Vertex::Vertex(int id) :
-    id(id), prev(0), processed(false), onFringe(false),
-    dist(std::numeric_limits<double>::infinity()) {
+    id(id), prev(0),
+    dist(std::numeric_limits<double>::infinity()),
+    processed(false), onFringe(false) {
 }
 
 Vertex::Vertex(int id, const std::vector<int>& neighbors,
         const std::vector<double>& distToNeighbors) :
-    id(id), prev(0), processed(false), onFringe(false),
-    dist(std::numeric_limits<double>::infinity()) {
+    id(id), prev(0),
+    dist(std::numeric_limits<double>::infinity()),
+    processed(false), onFringe(false) {
     setNeighbors(neighbors, distToNeighbors);
 }
 
@@ -21,7 +23,7 @@ void Vertex::setNeighbors(const std::vector<int>& v,
         // throw an exception
     }
 
-    for (int i = 0; i < v.size(); i ++) {
+    for (uint32_t i = 0; i < v.size(); i++) {
         addNeighbor(v[i], dist[i]);
     }
 }
@@ -36,6 +38,7 @@ std::set<int> Vertex::getNeighbors() const {
     for (const auto& i : neighbors) {
         n.insert(i.first);
     }
+    return n;
 }
 
 std::set<std::pair<int, double>> Vertex::getNeighborsAndEdges() const {
@@ -72,6 +75,7 @@ double Vertex::getDistToNeighbor(int id) {
             return n.second;
         }
     }
+    return -1.0;
 }
 
 int Vertex::getPrev() const {
@@ -99,7 +103,38 @@ void Vertex::setProcessed(bool val) {
 }
 
 Vertex Vertex::deserializer(const void* data, unsigned int size) {
+    const double* double_ptr = reinterpret_cast<const double*>(data);
     Vertex v;
+    v.setDist(*double_ptr++);
+
+    std::cout << "deserialized with dist: " << v.getDist() << std::endl;
+
+    std::cout << "size: " << size << std::endl;
+
+    const uint32_t* ptr = reinterpret_cast<const uint32_t*>(double_ptr);
+    v.setId(ntohl(*ptr++));
+    v.setPrev(ntohl(*ptr++));
+
+    if (ntohl(*ptr++) == 1) {
+        v.setProcessed(true);
+    } else {
+        v.setProcessed(false);
+    }
+    if (ntohl(*ptr++) == 1) {
+        v.setOnFringe(true);
+    } else {
+        v.setOnFringe(false);
+    }
+
+    uint32_t n = ntohl (*ptr++);
+    for (uint32_t i = 0; i < n; i++) {
+        uint32_t neigh_id = ntohl(*ptr++);
+	double_ptr = reinterpret_cast<const double*>(ptr);
+	double neigh_dist = *double_ptr++;
+	v.addNeighbor(neigh_id, neigh_dist);
+	ptr = reinterpret_cast<const uint32_t*>(double_ptr);
+    }
+    
     return v;
 }
 

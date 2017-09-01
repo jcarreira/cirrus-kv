@@ -14,7 +14,8 @@ namespace graphs {
 
 void SSSP(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
         unsigned int start) {
-    auto cmp = [](int v1, int v2)
+    std::cout << "Num vertices: " << num_vertices << std::endl;
+    auto cmp = [&cm](int v1, int v2)
         { return cm.get(v1).getDist() < cm.get(v2).getDist(); };
 
     // fringe
@@ -26,7 +27,8 @@ void SSSP(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
         int v_num = pq.top();
         pq.pop();
         Vertex v = cm.get(v_num);
-        for (Vertex n : v.getNeighbors()) {
+        for (int neigh_id : v.getNeighbors()) {
+	    Vertex n = cm.get(neigh_id);
             if (!n.getOnFringe()) { // if not in the fringe
                 pq.push(n.getId());
             } else if (!n.getProcessed()) { // if the vertex hasn't been seen yet
