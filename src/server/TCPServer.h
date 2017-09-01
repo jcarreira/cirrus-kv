@@ -16,7 +16,9 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, uint64_t max_fds = 100);
+    explicit TCPServer(int port, uint64_t pool_size_,
+            uint64_t max_fds = 100,
+            const std::string& coordinator_ip = "");
     ~TCPServer() = default;
 
     virtual void init();
@@ -31,6 +33,9 @@ class TCPServer : public Server {
     bool read_from_client(std::vector<char>&, int, uint64_t&);
 
     bool testRemove(struct pollfd x);
+
+    int connect_coordinator(const std::string& ip);
+    void get_list_servers(int coord_sock);
 
     /** The port that the server is listening on. */
     int port_;
@@ -66,6 +71,10 @@ class TCPServer : public Server {
      * remaining items shifted.
      */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
+
+    std::string coordinator_ip;  //< IP of the coordinator (port assumed known)
+
+    int coord_sock;
 };
 
 }  // namespace cirrus

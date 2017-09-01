@@ -7,6 +7,12 @@ const int port = 12345;
 const int max_fds = 100;
 static const uint64_t GB = (1024*1024*1024);
 
+void print_arguments() {
+    std::cout
+        << "Error: ./tcpservermain [pool_size] [coordinator_ip]"
+        << std::endl;
+}
+
 /**
  * Starts a TCP based key value store server. Accepts the pool size as
  * a command line argument. This specifies how large a memory pool will be
@@ -14,6 +20,8 @@ static const uint64_t GB = (1024*1024*1024);
  */
 auto main(int argc, char *argv[]) -> int {
     uint64_t pool_size;
+    std::string coordinator_ip;
+
     // Parse arguments
     if (argc == 1) {
         // Default of 10 gigabytes
@@ -24,13 +32,16 @@ auto main(int argc, char *argv[]) -> int {
             std::cout << "Pool size in invalid format." << std::endl;
             return -1;
         }
+    } else if (argc == 3) {
+        coordinator_ip = argv[2];
+        cirrus::LOG<cirrus::INFO>("Coordinator at: ", coordinator_ip);
     } else {
-        std::cout << "Error: ./tcpservermain [pool_size]" << std::endl;
+        print_arguments();
         return -1;
     }
     // Instantiate the server
     cirrus::LOG<cirrus::INFO>("Starting TCPServer in port: ", port);
-    cirrus::TCPServer server(port, pool_size, max_fds);
+    cirrus::TCPServer server(port, pool_size, max_fds, coordinator_ip);
     // Initialize the server
     server.init();
     // Loop the server and listen for clients. Act on requests
