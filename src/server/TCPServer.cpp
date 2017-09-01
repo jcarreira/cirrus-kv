@@ -321,6 +321,14 @@ bool TCPServer::read_from_client(
     return true;
 }
 
+int64_t checksum(const std::vector<int8_t>& data) {
+    int64_t sum = 0;
+    for (const auto& d : data) {
+        sum += d;
+    }
+    return sum;
+}
+
 /**
  * Process the message incoming on a particular socket. Reads in the message
  * from the socket, extracts the flatbuffer, and then acts depending on
@@ -398,11 +406,10 @@ bool TCPServer::process(int sock) {
 #ifdef PERF_LOG
                 TimerFunction write_time;
 #endif
-                LOG<INFO>("Server processing write request.");
-
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
+                LOG<INFO>("Server processing write request to oid: .", oid);
 
                 // update current used size
                 // XXX maybe tracking this size should be done by the backend
@@ -425,6 +432,7 @@ bool TCPServer::process(int sock) {
                     // storing the serialized object
                     std::vector<int8_t> data(data_fb->begin(),
                             data_fb->end());
+                    LOG<INFO>("Object checksum: ", checksum(data));
                     mem->put(oid, data);
 
                     curr_size += data_fb->size();
@@ -459,8 +467,9 @@ bool TCPServer::process(int sock) {
                  to the client */
                 LOG<INFO>("Processing read request");
                 ObjectID oid = msg->message_as_Read()->oid();
+
                 LOG<INFO>("Server extracted oid");
-                LOG<INFO>("Got pair from store");
+
                 // If the oid is not on the server, this operation has failed
 
                 if (!mem->exists(oid)) {
@@ -471,8 +480,12 @@ bool TCPServer::process(int sock) {
 
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
+                    //XXX Getting the item twice is inefficient
+                    LOG<INFO>("Object checksum: ", checksum(mem->get(oid)));
+
                     fb_vector = builder.CreateVector(
                             std::vector<int8_t>(mem->get(oid)));
+
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
