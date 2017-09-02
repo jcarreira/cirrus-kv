@@ -6,7 +6,7 @@ bin_PROGRAMS =  exhaustion test_store_v2 test_mt test_mult_clients \
                 test_store_bulk
 
 LIBS         = -lclient -lauthentication -lutils -lcommon -levictionpolicies \
-			   $(LIBRDMACM) $(LIBIBVERBS)
+		$(LIBRDMACM) $(LIBIBVERBS)
 
 LINCLUDES    =  -L$(top_srcdir)/src/utils/ \
 		-L$(top_srcdir)/src/authentication \

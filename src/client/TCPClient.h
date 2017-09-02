@@ -15,14 +15,18 @@
 #include <thread>
 #include <queue>
 #include <utility>
-#include <map>
 #include <atomic>
+#include <unordered_map>
 #include "common/schemas/TCPBladeMessage_generated.h"
+#include "libcuckoo/cuckoohash_map.hh"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
 #include "common/Serializer.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
+#include <boost/lockfree/queue.hpp>
+
+#define SEND_QUEUE_SIZE 10000
 
 namespace cirrus {
 
@@ -115,7 +119,7 @@ class TCPClient : public BladeClient {
     ssize_t read_all(int sock, void* data, size_t len);
 
     ClientFuture enqueue_message(
-                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        flatbuffers::FlatBufferBuilder* builder,
                         const int txn_id);
     void process_received();
     void process_send();
@@ -133,17 +137,19 @@ class TCPClient : public BladeClient {
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
       */
-    std::map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+    cuckoohash_map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
+    boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
+        boost::lockfree::capacity<SEND_QUEUE_SIZE>> send_queue;
 
     /**
      * Queue of FlatBufferBuilders that are ready for reuse for writes.
      */
-    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> reuse_queue;
+    std::queue<flatbuffers::FlatBufferBuilder*> reuse_queue;
 
     /** Max number of flatbuffer builders in reuse_queue. */
     const unsigned int reuse_max = 5;

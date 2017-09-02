@@ -146,12 +146,19 @@ void test_async() {
         throw std::runtime_error("Error during async write.");
     }
 
+    auto ret_pair = client.read_sync(1);
+    const int sync_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
+    if (sync_val != message) {
+        std::cout << "Received: " << sync_val << std::endl;
+        throw std::runtime_error("Improper value placed by put async");
+    }
+
     auto read_future = client.read_async(1);
 
     if (!read_future.get()) {
         throw std::runtime_error("Error during async write.");
     }
-    auto ret_pair = read_future.getDataPair();
+    ret_pair = read_future.getDataPair();
 
     const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
     std::cout << ret_val << " returned from server" << std::endl;
@@ -223,6 +230,8 @@ auto main(int argc, char *argv[]) -> int {
     test_2_clients();
     test_performance();
     test_async();
+    std::cout << "test async complete" << std::endl;
     test_async_N<10>();
+    std::cout << "test async n complete" << std::endl;
     return 0;
 }

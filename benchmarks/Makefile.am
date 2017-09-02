@@ -3,7 +3,8 @@ include $(top_srcdir)/common.mk
 AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
-                cache_benchmark 1_2 outstanding_requests
+                cache_benchmark 1_2 outstanding_requests store_bandwidth \
+                cache_latency cache_iops iterator_v2
 
 LIBS         = 	-lclient -lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
@@ -32,6 +33,14 @@ throughput_SOURCES  = throughput.cpp
 
 iterator_benchmark_SOURCES  = iterator_benchmark.cpp
 
+iterator_v2_SOURCES = iterator_v2.cpp
+
 cache_benchmark_SOURCES  = cache_benchmark.cpp
+
+cache_latency_SOURCES = cache_latency.cpp
+
+cache_iops_SOURCES = cache_iops.cpp
+
+store_bandwidth_SOURCES = store_bandwidth.cpp
 
 outstanding_requests_SOURCES  = outstanding_requests.cpp

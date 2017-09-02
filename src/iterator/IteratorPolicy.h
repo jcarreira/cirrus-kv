@@ -33,9 +33,9 @@ class IteratorPolicy {
 
     virtual void increment() = 0;
 
-    virtual uint64_t getState() = 0;
+    virtual uint64_t getState() const = 0;
 
-    virtual std::unique_ptr<IteratorPolicy> clone() = 0;
+    virtual std::unique_ptr<IteratorPolicy> clone() const = 0;
 };
 
 }  // namespace cirrus

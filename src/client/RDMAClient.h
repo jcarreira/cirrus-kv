@@ -111,7 +111,6 @@ class RDMAClient : public BladeClient {
                 result = std::make_shared<bool>();
                 result_available = std::make_shared<bool>(false);
                 op_sem = std::make_shared<cirrus::PosixSemaphore>();
-                error_code = std::make_shared<cirrus::ErrorCodes>();
             }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
@@ -121,9 +120,7 @@ class RDMAClient : public BladeClient {
                 if (fn == nullptr)
                     throw std::runtime_error("BUG");
                 result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>();
-                *result_available = false;
-                error_code = std::make_shared<cirrus::ErrorCodes>();
+                result_available = std::make_shared<bool>(false);
             }
 
         /**
@@ -138,6 +135,7 @@ class RDMAClient : public BladeClient {
             *result = true;
         }
 
+        char *data = nullptr;
         struct rdma_cm_id* id;
         /** Pointer to the semaphore for the operation. */
         std::shared_ptr<cirrus::Lock> op_sem;
@@ -146,7 +144,8 @@ class RDMAClient : public BladeClient {
         /** Pointer to operation completion. */
         std::shared_ptr<bool> result_available;
         /** Pointer to error code. Will always be okay. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code;
+        std::shared_ptr<cirrus::ErrorCodes> error_code =
+            std::make_shared<cirrus::ErrorCodes>(cirrus::ErrorCodes::kOk);
         /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };
@@ -316,15 +315,16 @@ class RDMAClient : public BladeClient {
     bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
-    RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
+    void write_rdma_async(struct rdma_cm_id *id, uint64_t size,
+            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&,
+            RDMAOpInfo* op_info);
     bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
-    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size,
+    void read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
-            std::function<void()> apply_fn = []() -> void {});
+            RDMAOpInfo* op_info);
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
