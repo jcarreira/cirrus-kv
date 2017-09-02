@@ -5,48 +5,105 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <cassert>
 
 #include "utils/logging.h"
 
+#include "flatbuffers/flatbuffers.h"
+
 namespace cirrus {
 
+/** This class is used to manage the data
+  * that moves between the TCP server all the way down to the
+  * memory and storage backends
+  * The goal here is to minimize number of copies
+  */
 class MemSlice {
  public:
+    /**
+      * Construct a mem slice from a std::string
+      * we copy the string into a new vector
+      */
     explicit MemSlice(const std::string& data) {
-        // make sure data_ has enough size
-        data_.resize(data.size() / sizeof(int8_t));
+        fromString = true;
+        dataStdVector_ = new std::vector<int8_t>(data.size());
 
         // copy contents over
-        std::memcpy(data_.data(), data.data(), data.size());
+        std::memcpy(const_cast<void*>(
+                    reinterpret_cast<const void*>(dataStdVector_->data())),
+                data.data(), data.size());
     }
 
-    MemSlice(const std::vector<int8_t>& data) : data_(data) {
+    MemSlice(const std::vector<int8_t>* data) : 
+        dataStdVector_(data), dataFbVector_(nullptr), fromString(false)
+    {}
+
+    MemSlice(const flatbuffers::Vector<int8_t>* data) :
+        dataStdVector_(nullptr), dataFbVector_(data), fromString(false)
+    {}
+
+    ~MemSlice() {
+        /**
+          * We have to free this vector if we built this slice from a string
+          */
+        if (fromString)
+            delete dataStdVector_;
     }
-    
-    operator std::string() const {
-        std::string s;
+   
+    /** Translate MemSlice to a string
+      */ 
+    std::string toString() const {
         // make sure s has the right size
-        uint64_t size = data_.size() * sizeof(int8_t);
+        uint64_t size = 0;
+        
+        if (dataStdVector_) {
+            size = dataStdVector_->size() * sizeof(int8_t);
+        } else {
+            size = dataFbVector_->size() * sizeof(int8_t);
+        }
 
         LOG<INFO>("Resizing string with size: ", size);
+        
+        std::string s;
         s.resize(size);
 
-        s.assign(reinterpret_cast<const char*>(data_.data()),
-                data_.size() * sizeof(int8_t));
+        if (dataStdVector_) {
+            s.assign(reinterpret_cast<const char*>(dataStdVector_->data()),
+                    size);
+        } else {
+            s.assign(reinterpret_cast<const char*>(dataFbVector_->data()),
+                    size);
+        }
 
         return s;
     }
 
-    operator std::vector<int8_t>() const {
-        return data_;
+    uint64_t size() const {
+        if (dataStdVector_) {
+            return dataStdVector_->size() * sizeof(int8_t);
+        } else {
+            assert(dataFbVector_);
+            return dataFbVector_->size() * sizeof(int8_t);
+        }
     }
 
-    uint64_t size() const {
-        return data_.size() * sizeof(int8_t);
+    /** Return contents of slice in vector form
+      */
+    std::vector<int8_t> get() const {
+        if (dataStdVector_) {
+            return *dataStdVector_;
+        } else {
+            assert(dataFbVector_);
+            return std::vector<int8_t>(dataFbVector_->begin(),
+                    dataFbVector_->end());
+        }
     }
 
  private:
-    std::vector<int8_t> data_;
+    const std::vector<int8_t>* dataStdVector_;
+    const flatbuffers::Vector<int8_t>* dataFbVector_;
+
+    bool fromString;  //< indicates whether slice contents came from string
 };
 
 /**

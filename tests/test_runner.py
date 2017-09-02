@@ -7,8 +7,7 @@ import shutil
 import os
 
 # Change this to change the ip that the client connects to
-ip = "127.0.0.1"
-half_gig = str(512) # in MB
+half_gig = "512" # in MB
         
 storage_path = "/tmp/cirrus_storage"
 
@@ -20,6 +19,9 @@ def remove_nonvolatile_storage(storage_path):
 def use_storage():
     ret = os.getenv('CIRRUS_TEST_STORAGE')
     return ret == "1"
+
+def get_test_ip():
+    return os.getenv('CIRRUS_SERVER_TEST_IP', "127.0.0.1")
 
 # A function that will launch a test of a given name and return its exit
 # status. Will automatically start and kill the server before and after
@@ -34,11 +36,13 @@ def runTestTCP(testPath):
     time.sleep(1)
 
     if use_storage():
+        print("Using storage backend")
         remove_nonvolatile_storage(storage_path);
         server = subprocess.Popen(
                 ["./src/server/tcpservermain", half_gig,
                  "Storage", storage_path])
     else:
+        print("Using memory backend")
         server = subprocess.Popen(["./src/server/tcpservermain"])
 
     # Sleep to give server time to start
@@ -46,7 +50,8 @@ def runTestTCP(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", get_test_ip()],
+                             stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -65,14 +70,17 @@ def runTestRDMA(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/bladeallocmain", half_gig])
+
+    gig = 2 * half_gig
+    server = subprocess.Popen(["./src/server/bladeallocmain", gig])
 
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--rdma", get_test_ip()],
+                             stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -96,7 +104,8 @@ def runExhaustionTCP(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--tcp", ip], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--tcp", get_test_ip()],
+                             stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:
@@ -119,7 +128,8 @@ def runExhaustionRDMA(testPath):
     time.sleep(2)
     print("Sleep finished, launching client.")
 
-    child = subprocess.Popen([testPath, "--rdma", ip], stdout=subprocess.PIPE)
+    child = subprocess.Popen([testPath, "--rdma", get_test_ip()],
+                             stdout=subprocess.PIPE)
 
     # Print the output from the child
     for line in child.stdout:

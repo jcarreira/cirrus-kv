@@ -29,11 +29,10 @@ void NVStorageBackend::init() {
 }
 
 bool NVStorageBackend::put(uint64_t oid, const MemSlice& data) {
-    std::string st = data;
     LOG<INFO>("Putting in rocksdb. oid: ", oid,
             " with size: ", data.size());
     rocksdb::Status s = db->Put(rocksdb::WriteOptions(),
-            std::to_string(oid), st);
+            std::to_string(oid), data.toString());
 
     if (!s.ok()) {
         throw std::runtime_error("Error in put in rocksdb");

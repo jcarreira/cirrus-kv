@@ -8,7 +8,7 @@ namespace cirrus {
 void MemoryBackend::init() {}
 
 bool MemoryBackend::put(uint64_t oid, const MemSlice& data) {
-    store[oid] = data;
+    store[oid] = data.get();
     return true;
 }
 
@@ -23,7 +23,7 @@ MemSlice MemoryBackend::get(uint64_t oid) const {
                 "MemoryBackend get() called on nonexistent id");
     }
 
-    return it->second;
+    return &it->second;
 }
 
 bool MemoryBackend::delet(uint64_t oid) {

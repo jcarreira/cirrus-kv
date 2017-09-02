@@ -430,10 +430,7 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     // storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(),
-                            data_fb->end());
-                    LOG<INFO>("Object checksum: ", checksum(data));
-                    mem->put(oid, data);
+                    mem->put(oid, MemSlice(data_fb));
 
                     curr_size += data_fb->size();
                 }
@@ -481,10 +478,10 @@ bool TCPServer::process(int sock) {
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
                     //XXX Getting the item twice is inefficient
-                    LOG<INFO>("Object checksum: ", checksum(mem->get(oid)));
+                    //LOG<INFO>("Object checksum: ", checksum(mem->get(oid)));
 
                     fb_vector = builder.CreateVector(
-                            std::vector<int8_t>(mem->get(oid)));
+                            std::vector<int8_t>(mem->get(oid).get()));
 
                 } else {
                     std::vector<int8_t> data;

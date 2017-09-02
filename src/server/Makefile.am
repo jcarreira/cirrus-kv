@@ -28,7 +28,8 @@ endif
 
 LDFLAGS  = -pthread
 LDADD    = $(DEFAULT_LIB)
-CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src
+CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src \
+           -I$(top_srcdir)/third_party/flatbuffers/include
 
 bladepoolmain_DEPENDENCIES = libserver.a
 bladepoolmain_SOURCES  = bladepoolmain.cpp
