@@ -1,6 +1,7 @@
 #ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 #define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
 #include <utility>
@@ -45,7 +46,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     void removeBulk(ObjectID first, ObjectID last) override;
 
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
-    std::vector<T> get_bulk_2(const std::vector<ObjectID>& oids) override;
+    std::vector<T> get_bulk_fast(const std::vector<ObjectID>& oids) override;
     void put_bulk(ObjectID start, ObjectID last, T* data);
 
     void printStats() const noexcept override;
@@ -198,7 +199,7 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
  * remote store.
  */
 template<class T>
-std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_2(
+std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
                                             const std::vector<ObjectID>& oids) {
     std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
         client->read_sync_bulk(oids);
@@ -214,9 +215,10 @@ std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_2(
 
     const char* mem = reinterpret_cast<const char*>(ptr);
     for (uint32_t i = 0; i < num_oids; ++i) {
-        uint32_t size = *reinterpret_cast<const uint32_t*>(mem);
+        uint32_t size = ntohl(*reinterpret_cast<const uint32_t*>(mem));
         mem += sizeof(uint32_t);
         res.push_back(deserializer(mem, size));
+        mem += size;
     }
     return res;
 }

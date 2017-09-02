@@ -208,7 +208,6 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
                             std::make_unique<flatbuffers::FlatBufferBuilder>(
                             initial_buffer_size);
 
-    //uint64_t size = oids.size() * sizeof(ObjectID);
     // Create and send write request
     // Pointer to the vector inside of the flatbuffer to write to
     auto data_fb_vector = builder->CreateVector(oids);
@@ -461,6 +460,17 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client has pointer to vector");
                     break;
                 }
+            case message::TCPBladeMessage::Message_ReadBulkAck:
+                {
+                    *(txn->result) = ack->message_as_ReadBulkAck()->success();
+                    auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
+                    *(txn->mem_size) = data_fb_vector->size();
+                    
+                    *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
+                        reinterpret_cast<const char*>(data_fb_vector->Data()),
+                        read_op_deleter(buffer));
+                    break;
+                }
             case message::TCPBladeMessage::Message_RemoveAck:
                 {
                     // put the result in the struct
@@ -468,8 +478,8 @@ void TCPClient::process_received() {
                     break;
                 }
             default:
-                LOG<ERROR>("Unknown message", " type:", ack->message_type());
-                exit(-1);
+                throw cirrus::Exception("Unknown message type:" +
+                                        std::to_string(ack->message_type()));
                 break;
         }
         // Update the semaphore/CV so other know it is ready

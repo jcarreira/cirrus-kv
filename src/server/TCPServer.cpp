@@ -495,7 +495,7 @@ bool TCPServer::process(int sock) {
                 auto data_fb_oids = msg->message_as_ReadBulk()->data();
 
                 // first we figure out the total size to send back
-                uint32_t data_size = 0;
+                uint32_t data_size = sizeof(uint32_t);  //< size of main header
                 // in this vector we store pointers to the objects contents
                 // to avoid the O(log n) lookup later
                 std::vector<std::vector<int8_t>*> oids_data;
@@ -509,7 +509,7 @@ bool TCPServer::process(int sock) {
                         LOG<ERROR>("Oid ", oid, " does not exist on server");
                         break;
                     }
-                    // size of an header saying size of object
+                    // size of an header containing size of object
                     data_size += sizeof(uint32_t);
                     // size of the data
                     data_size += entry_itr->second.size();

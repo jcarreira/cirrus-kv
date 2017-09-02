@@ -2,7 +2,8 @@ include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
 bin_PROGRAMS =  exhaustion test_store_v2 test_mt test_mult_clients \
-		test_cache_manager test_iterator test_fullblade_store
+		test_cache_manager test_iterator test_fullblade_store \
+                test_store_bulk
 
 LIBS         = -lclient -lauthentication -lutils -lcommon -levictionpolicies \
 			   $(LIBRDMACM) $(LIBIBVERBS)
@@ -33,3 +34,5 @@ exhaustion_SOURCES	      = mem_exhaustion.cpp
 test_cache_manager_SOURCES    = test_cache_manager.cpp
 
 test_iterator_SOURCES         = test_iterator.cpp
+
+test_store_bulk_SOURCES       = test_store_bulk.cpp
