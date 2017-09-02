@@ -1,9 +1,13 @@
-#include "Vertex.h"
+#include <examples/graphs/k_cores/Vertex.h>
+#include <arpa/inet.h>
 
 namespace graphs {
 
+Vertex::Vertex(int id) :
+    id(id), k(-1), seen(false) {}
+	
 Vertex::Vertex(int id, const std::vector<int>& neighbors) :
-    id(id), seen(false), k(-1)
+    id(id), k(-1), seen(false)
 {
     setNeighbors(neighbors);
 }
@@ -15,55 +19,86 @@ void Vertex::setNeighbors(const std::vector<int>& v) {
 }
 
 void Vertex::addNeighbor(int id) {
-    neighbors[numNeighbors] = id;
+    neighbors.insert(id);
     tempNeighbors.insert(id);
-    numNeighbors += 1;
 }
 
-std::set<int> Vertex::getNeighbors() {
-    std::set<int> n;
-    for (int i = 0; i < numNeighbors; i++) {
-        n.insert(neighbors[i]);
+std::set<int> Vertex::getNeighbors() const {
+    return neighbors;
+}
+
+int Vertex::getNeighborsSize() const {
+    return neighbors.size();
+}
+
+bool Vertex::hasNeighbor(int id) const {
+    return neighbors.find(id) != neighbors.end();
+}
+
+Vertex Vertex::deserializer(const void* data, unsigned int size) {
+    const double* double_ptr = reinterpret_cast<const double*>(data);
+
+    Vertex v;
+    //v.setCurrProb(*double_ptr++);
+    //v.setNextProb(*double_ptr++);
+
+    //std::cout << "deserialized with currProb: " << v.getCurrProb()
+    //    << " nextProb: " << v.getNextProb()
+    //    << std::endl;
+
+    const uint32_t* ptr = reinterpret_cast<const uint32_t*>(double_ptr);
+    v.setId(ntohl(*ptr++));
+    uint32_t n = ntohl(*ptr++);
+
+    uint32_t expected_size = 2 * sizeof(double) + sizeof(uint32_t) * (2 + n);
+
+    if (size != expected_size) {
+        throw std::runtime_error("Incorrect size: "
+                + std::to_string(size) +
+                + " expected: " + std::to_string(expected_size));
     }
-    return n;
+
+    for (uint32_t i = 0; i < n; ++i) {
+        v.addNeighbor(ntohl(*ptr++));
+    }
+    return v;
 }
 
 int Vertex::getId() const {
     return id;
 }
 
-bool Vertex::hasNeighbor(int id) const {
-    for (int i = 0; i < numNeighbors; i++) {
-        if (neighbors[i] == id) {
-            return true;
-        }
-    }
-    return false;
+void Vertex::setId(int i) {
+    id = i;
+}
+
+void Vertex::deleteTempNeighbor(int id) {
+    std::set<int>::iterator it = tempNeighbors.find(id);
+    tempNeighbors.erase(it, tempNeighbors.end());
+}
+
+std::set<int> Vertex::getTempNeighbors() const {
+    return tempNeighbors;
+}
+
+int Vertex::getTempNeighborsSize() const {
+    return tempNeighbors.size();
+}
+
+int Vertex::getK() const {
+    return k;
 }
 
 void Vertex::setK(int val) {
     k = val;
 }
 
-void Vertex::deleteTempNeighbor(int id) {
-    tempNeighbors.erase(std::remove(tempNeighbors.begin(),
-        tempNeighbors.end(), id), tempNeighbors.end());
-}
-
-int Vertex::numTempNeighbors() {
-    return tempNeighbors.size();
+bool Vertex::getSeen() const {
+    return seen;
 }
 
 void Vertex::setSeen(bool val) {
     seen = val;
-}
-
-bool Vertex::getSeen() {
-    return seen;
-}
-
-std::vector<int> Vertex::getTempNeighbors() {
-    return tempNeighbors;
 }
 
 }

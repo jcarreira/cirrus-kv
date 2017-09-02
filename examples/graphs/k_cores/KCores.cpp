@@ -36,11 +36,12 @@ void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices) {
     while (processed.size() != num_vertices) {
         cirrus::CirrusIterable<Vertex> iter(&cm, 40, 0, num_vertices - 1);
         for (const auto& curr : iter) {
-            if (!curr.getSeen() && curr.getTempNeighbors().size() < k) {
-                curr.setK(k);
-                processed.insert(curr.getId());
-                curr.setSeen(true);
-                deleteKCoreNeighbor(curr.getId(), curr.getNeighbors());
+	    Vertex v = cm.get(curr.getId());
+            if (!curr.getSeen() && curr.getTempNeighborsSize() < k) {
+                v.setK(k);
+                processed.insert(v.getId());
+                v.setSeen(true);
+                deleteKCoreNeighbor(cm, v.getId(), v.getNeighbors());
             }
         }
         k++;
