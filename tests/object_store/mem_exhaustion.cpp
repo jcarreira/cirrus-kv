@@ -15,12 +15,14 @@ static const uint64_t MILLION = 1000000;
 bool use_rdma_client;
 
 /**
- * This test aims to ensure that when the remote server no longer has room to fulfill
- * all allocations it notifies the client, which will then throw an error message.
- * This test assumes that the server does not have enough room to store one million
- * objects of one MB each (1 TB). This test also ensures that the allocation error does
- * not crash the server as in order for notification of failure to reach the client,
- * the server must have been running to send the message.
+ * This test aims to ensure that when the remote server no longer has
+ * room to fulfill all allocations it notifies the client, which will
+ * then throw an error message.
+ * This test assumes that the server does not have enough room to store
+ * one million objects of one MB each (1 TB). This test also ensures
+ * that the allocation error does not crash the server as in order
+ * for notification of failure to reach the client, the server must
+ * have been running to send the message.
  */
 void test_exhaustion() {
     std::unique_ptr<cirrus::BladeClient> client =

@@ -17,6 +17,10 @@ cd ../flatbuffers
 cmake -G "Unix Makefiles"
 make -j 10
 
+# rocksdb
+cd ../rocksdb
+make -j 10 static_lib
+
 # download eigen
 cd ../
 if [ ! -d "eigen_source" ]; then
