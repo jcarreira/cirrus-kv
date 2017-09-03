@@ -25,5 +25,8 @@ check_style:
 benchmark: all
 	./benchmarks/run_benchmarks.py
 
+example: all
+	./examples/run_examples.py
+
 docs:
 	doxygen ./docs/Doxyfile
