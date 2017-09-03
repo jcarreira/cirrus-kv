@@ -30,7 +30,7 @@ void test_store_bulk_transfers() {
     }
 
     store.put_bulk(0, 100, ids.data());
-    
+
     cirrus::ObjectID* mem = new cirrus::ObjectID[ids.size()];
     memset(mem, 0, ids.size() * sizeof(cirrus::ObjectID));
 
@@ -48,7 +48,7 @@ void test_store_bulk_transfers() {
     tf.reset();
     auto data = store.get_bulk_fast(ids);
     std::cout << "Bulk-fastelapsed (us): " << tf.getUsElapsed() << std::endl;
-    
+
     for (cirrus::ObjectID i = 0; i < ids.size(); ++i) {
         if (data[i] != i) {
             throw std::runtime_error("Wrong data received with get_bulk2");

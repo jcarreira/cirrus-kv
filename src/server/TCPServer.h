@@ -43,8 +43,6 @@ class TCPServer : public Server {
     int port_;
     /** The fd for the socket the server listens for incoming requests on. */
     int server_sock_ = 0;
-    /** The map the server uses to map ObjectIDs to byte vectors. */
-    std::map<uint64_t, std::vector<int8_t>> store;
 
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;

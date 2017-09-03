@@ -210,7 +210,7 @@ std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
                         reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
     uint32_t num_oids = *ptr++;
 
-    assert (num_oids == oids.size());
+    assert(num_oids == oids.size());
 
     std::vector<T> res;
     res.reserve(num_oids);

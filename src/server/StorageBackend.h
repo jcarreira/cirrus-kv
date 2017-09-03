@@ -34,11 +34,11 @@ class MemSlice {
                 data.data(), data.size());
     }
 
-    MemSlice(const std::vector<int8_t>* data) : 
+    MemSlice(const std::vector<int8_t>* data) :
         dataStdVector_(data), dataFbVector_(nullptr), fromString(false)
     {}
 
-    MemSlice(const flatbuffers::Vector<int8_t>* data) :
+    explicit MemSlice(const flatbuffers::Vector<int8_t>* data) :
         dataStdVector_(nullptr), dataFbVector_(data), fromString(false)
     {}
 
@@ -49,13 +49,13 @@ class MemSlice {
         if (fromString)
             delete dataStdVector_;
     }
-   
+
     /** Translate MemSlice to a string
       */ 
     std::string toString() const {
         // make sure s has the right size
         uint64_t size = 0;
-        
+
         if (dataStdVector_) {
             size = dataStdVector_->size() * sizeof(int8_t);
         } else {
@@ -63,7 +63,7 @@ class MemSlice {
         }
 
         LOG<INFO>("Resizing string with size: ", size);
-        
+
         std::string s;
         s.resize(size);
 

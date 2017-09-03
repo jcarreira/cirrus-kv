@@ -205,9 +205,7 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder =
-                            std::make_unique<flatbuffers::FlatBufferBuilder>(
-                            initial_buffer_size);
+    auto builder = new flatbuffers::FlatBufferBuilder(initial_buffer_size);
 
     // Create and send write request
     // Pointer to the vector inside of the flatbuffer to write to
@@ -230,7 +228,7 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
     LOG<PERF>("TCPClient::read_async_bulk time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(std::move(builder), txn_id);
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -458,7 +456,7 @@ void TCPClient::process_received() {
                     *(txn->result) = ack->message_as_ReadBulkAck()->success();
                     auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
                     *(txn->mem_size) = data_fb_vector->size();
-                    
+
                     *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
