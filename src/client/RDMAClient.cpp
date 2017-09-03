@@ -85,6 +85,15 @@ BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
     return readToLocalAsync(loc, data);
 }
 
+BladeClient::ClientFuture RDMAClient::read_async_bulk(
+                                   std::vector<ObjectID> /* oids*/ ) {
+    BladeLocation loc;
+
+    throw std::runtime_error("Not implemented");
+
+    return readToLocalAsync(loc, nullptr);
+}
+
 /**
   * Writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
@@ -138,6 +147,20 @@ RDMAClient::read_sync(ObjectID oid) {
         throw cirrus::NoSuchIDException("Requested ObjectID "
                                         "does not exist remotely.");
     }
+}
+
+/**
+  * Reads a set of objects from the remote server.
+  * @param ids the ids of the objects the user wishes to read to local memory.
+  * @return An std pair containing a shared pointer to the buffer that the
+  * serialized objects read from the server resides in as well as the size of
+  * the buffer.
+  */
+std::pair<std::shared_ptr<const char>, unsigned int> RDMAClient::read_sync_bulk(
+        const std::vector<ObjectID>& /* ids */) {
+    throw std::runtime_error("Not implemented");
+
+    return std::make_pair(nullptr, 0);
 }
 
 /**

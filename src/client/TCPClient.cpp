@@ -196,6 +196,42 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
 }
 
 /**
+ * Asynchronously reads a set of objects from the remote server.
+ * @param oids the ids of the objects the user wishes to read to local memory.
+ * @return A ClientFuture containing information about the operation.
+ */
+BladeClient::ClientFuture TCPClient::read_async_bulk(
+                                               std::vector<ObjectID> oids) {
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
+    auto builder = new flatbuffers::FlatBufferBuilder(initial_buffer_size);
+
+    // Create and send write request
+    // Pointer to the vector inside of the flatbuffer to write to
+    auto data_fb_vector = builder->CreateVector(oids);
+
+    auto msg_contents = message::TCPBladeMessage::CreateReadBulk(*builder,
+                                                              oids.size(),
+                                                              data_fb_vector);
+    const int txn_id = curr_txn_id++;
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                     *builder,
+                                     txn_id,
+                                     0,
+                                     message::TCPBladeMessage::Message_ReadBulk,
+                                     msg_contents.Union());
+
+    builder->Finish(msg);
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::read_async_bulk time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
+    return enqueue_message(builder, txn_id);
+}
+
+/**
   * Writes an object to remote storage under id.
   * @param id the id of the object the user wishes to write to remote memory.
   * @param w a WriteUnit containing a serializer and the object to be serialized
@@ -221,6 +257,21 @@ TCPClient::read_sync(ObjectID oid) {
     LOG<INFO>("Call to read_sync.");
     BladeClient::ClientFuture future = read_async(oid);
     LOG<INFO>("Returned from read_async.");
+    return future.getDataPair();
+}
+
+/**
+  * Reads a set of objects corresponding from the remote server.
+  * @param ids the ids of the objects the user wishes to read to local memory.
+  * @return An std pair containing a shared pointer to the buffer that the
+  * serialized objects read from the server reside in as well as the size of
+  * the buffer.
+  */
+std::pair<std::shared_ptr<const char>, unsigned int>
+TCPClient::read_sync_bulk(const std::vector<ObjectID>& oids) {
+    LOG<INFO>("Call to read_sync_bulk.");
+    BladeClient::ClientFuture future = read_async_bulk(oids);
+    LOG<INFO>("Returned from read_async_bulk.");
     return future.getDataPair();
 }
 
@@ -400,6 +451,17 @@ void TCPClient::process_received() {
                     LOG<INFO>("Client has pointer to vector");
                     break;
                 }
+            case message::TCPBladeMessage::Message_ReadBulkAck:
+                {
+                    *(txn->result) = ack->message_as_ReadBulkAck()->success();
+                    auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
+                    *(txn->mem_size) = data_fb_vector->size();
+
+                    *(txn->mem_for_read_ptr) = std::shared_ptr<const char>(
+                        reinterpret_cast<const char*>(data_fb_vector->Data()),
+                        read_op_deleter(buffer));
+                    break;
+                }
             case message::TCPBladeMessage::Message_RemoveAck:
                 {
                     // put the result in the struct
@@ -407,8 +469,8 @@ void TCPClient::process_received() {
                     break;
                 }
             default:
-                LOG<ERROR>("Unknown message", " type:", ack->message_type());
-                exit(-1);
+                throw cirrus::Exception("Unknown message type:" +
+                                        std::to_string(ack->message_type()));
                 break;
         }
         // Update the semaphore/CV so other know it is ready

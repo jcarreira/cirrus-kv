@@ -80,6 +80,7 @@ class ObjectStore {
         const T& obj) = 0;
 
     virtual void get_bulk(ObjectID start, ObjectID last, T* data) = 0;
+    virtual std::vector<T> get_bulk_fast(const std::vector<ObjectID>&) = 0;
     virtual void put_bulk(ObjectID start, ObjectID last, T* data) = 0;
 };
 

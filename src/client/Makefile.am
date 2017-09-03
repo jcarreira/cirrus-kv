@@ -16,4 +16,4 @@ noinst_LIBRARIES = libclient.a
 libclient_a_SOURCES = $(SOURCES)
 libclient_a_CPPFLAGS = -ggdb -I$(top_srcdir) -I$(top_srcdir)/src \
 		       -I$(top_srcdir)/third_party/flatbuffers/include \
-			   -isystem $(top_srcdir)/third_party/libcuckoo
+			-isystem $(top_srcdir)/third_party/libcuckoo

@@ -1,11 +1,13 @@
 #ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 #define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
 #include <utility>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -44,7 +46,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     void removeBulk(ObjectID first, ObjectID last) override;
 
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
-    void put_bulk(ObjectID start, ObjectID last, T* data) override;
+    std::vector<T> get_bulk_fast(const std::vector<ObjectID>& oids) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data);
 
     void printStats() const noexcept override;
 
@@ -165,7 +168,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
  * Gets many objects from the remote store at once. These items will be written
  * into the c style array pointed to by data.
  * @param start the first objectID that should be pulled from the store.
- * @param the last objectID that should be pulled from the store.
+ * @param last the last objectID that should be pulled from the store.
  * @param data a pointer to a c style array that will be filled from the
  * remote store.
  */
@@ -183,24 +186,43 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
     for (int i = 0; i < numObjects; i++) {
         futures[i] = get_async(start + i);
     }
-    std::vector<bool> done(numObjects, false);
-    int total_done = 0;
 
     // Wait for each item to complete
-    while (total_done != numObjects) {
-        for (int i = 0; i < numObjects; i++) {
-            // Check status if not already completed
-            if (!done[i]) {
-                bool ret = futures[i].try_wait();
-                // Copy object and mark true if it completed.
-                if (ret) {
-                    done[i] = true;
-                    data[i] = futures[i].get();
-                    total_done++;
-                }
-            }
-        }
+    for (int i = 0; i < numObjects; i++) {
+        futures[i].wait();
+        data[i] = futures[i].get();
     }
+}
+
+/**
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param oids list of Object ids to be retrieved from server
+ * remote store.
+ */
+template<class T>
+std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
+                                            const std::vector<ObjectID>& oids) {
+    std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
+        client->read_sync_bulk(oids);
+
+    const uint32_t* ptr =
+                        reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
+    uint32_t num_oids = *ptr++;
+
+    assert(num_oids == oids.size());
+
+    std::vector<T> res;
+    res.reserve(num_oids);
+
+    const char* mem = reinterpret_cast<const char*>(ptr);
+    for (uint32_t i = 0; i < num_oids; ++i) {
+        uint32_t size = ntohl(*reinterpret_cast<const uint32_t*>(mem));
+        mem += sizeof(uint32_t);
+        res.push_back(deserializer(mem, size));
+        mem += size;
+    }
+    return res;
 }
 
 /**

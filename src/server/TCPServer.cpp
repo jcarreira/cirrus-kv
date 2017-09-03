@@ -409,7 +409,7 @@ bool TCPServer::process(int sock) {
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
-                LOG<INFO>("Server processing write request to oid: .", oid);
+                LOG<INFO>("Server processing WRITE request to oid: .", oid);
 
                 // update current used size
                 // XXX maybe tracking this size should be done by the backend
@@ -462,10 +462,10 @@ bool TCPServer::process(int sock) {
 #endif
                 /* Service the read request by sending the serialized object
                  to the client */
-                LOG<INFO>("Processing read request");
+                LOG<INFO>("Processing READ request");
                 ObjectID oid = msg->message_as_Read()->oid();
 
-                LOG<INFO>("Server extracted oid");
+                LOG<INFO>("Server extracted oid: ", oid);
 
                 // If the oid is not on the server, this operation has failed
 
@@ -477,9 +477,7 @@ bool TCPServer::process(int sock) {
 
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
-                    //XXX Getting the item twice is inefficient
-                    //LOG<INFO>("Object checksum: ", checksum(mem->get(oid)));
-
+                    // XXX Getting the item twice is inefficient
                     fb_vector = builder.CreateVector(
                             std::vector<int8_t>(mem->get(oid).get()));
 
@@ -510,8 +508,92 @@ bool TCPServer::process(int sock) {
 #endif
                 break;
             }
+        case message::TCPBladeMessage::Message_ReadBulk:
+            {
+                /** Read Bulk operation
+                  * We assume objects do not change size during this operation
+                  * Warning: No atomicity guarantees
+                  */
+#ifdef PERF_LOG
+                TimerFunction read_time;
+#endif
+                LOG<INFO>("Processing READ BULK request");
+                // number of objects to be transfered
+                uint32_t num_oids = msg->message_as_ReadBulk()->num_oids();
+                auto data_fb_oids = msg->message_as_ReadBulk()->data();
+
+                // first we figure out the total size to send back
+                uint32_t data_size = sizeof(uint32_t);  //< size of main header
+                for (const auto& oid : *data_fb_oids) {
+                    if (!mem->exists(oid)) {
+                        success = false;
+                        error_code = cirrus::ErrorCodes::kNoSuchIDException;
+                        LOG<ERROR>("Oid ", oid, " does not exist on server");
+                        break;
+                    }
+
+                    // size of an header containing size of object
+                    data_size += sizeof(uint32_t);
+                    // size of the data
+                    data_size += mem->size(oid);
+                }
+
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_fb_vector;
+
+                if (success) {
+                    int8_t* raw_mem;
+                    // build the flatbuffer vector with the right size
+                    data_fb_vector =
+                        builder.CreateUninitializedVector(data_size, &raw_mem);
+                    // for each oid to be transfered
+                    // we copy the size of the object
+                    // and the content to the buffer
+                    *reinterpret_cast<uint32_t*>(raw_mem) = num_oids;
+                    raw_mem += sizeof(uint32_t);
+                    for (uint32_t i = 0; i < num_oids; ++i) {
+                        auto oid = *(data_fb_oids->begin() + i);
+
+                        auto oid_data = mem->get(oid).get();
+                        uint32_t size = oid_data.size();
+                        uint32_t* data_ptr =
+                                         reinterpret_cast<uint32_t*>(raw_mem);
+                        *data_ptr++ = htonl(size);
+
+                        raw_mem = reinterpret_cast<int8_t*>(data_ptr);
+                        std::memcpy(raw_mem, oid_data.data(), size);
+                        raw_mem = reinterpret_cast<int8_t*>(
+                                reinterpret_cast<char*>(raw_mem) + size);
+                    }
+                } else {
+                    data_fb_vector = builder.CreateVector(
+                            std::vector<int8_t>());
+                }
+
+                LOG<INFO>("Server building readbulk response");
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateReadBulkAck(builder,
+                                                      success, data_fb_vector);
+                auto ack_msg =
+                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                  txn_id,
+                                  static_cast<int64_t>(error_code),
+                                  message::TCPBladeMessage::Message_ReadBulkAck,
+                                  ack.Union());
+                builder.Finish(ack_msg);
+                LOG<INFO>("Server done building response");
+#ifdef PERF_LOG
+                double read_mbps = data_size / (1024.0 * 1024) /
+                    (read_time.getUsElapsed() / 1000000.0);
+                LOG<PERF>("TCPServer::process readbulk time (us): ",
+                        read_time.getUsElapsed(),
+                        " bw (MB/s): ", read_mbps,
+                        " size: ", entry_itr->second.size());
+#endif
+                break;
+            }
         case message::TCPBladeMessage::Message_Remove:
             {
+                LOG<INFO>("Processing REMOVE request");
                 ObjectID oid = msg->message_as_Remove()->oid();
 
                 success = false;
