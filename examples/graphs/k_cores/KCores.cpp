@@ -21,6 +21,7 @@ void deleteKCoreNeighbor(cirrus::CacheManager<Vertex>& cm,
     for (int n : neighbors) {
         Vertex v = cm.get(n);
         v.deleteTempNeighbor(id);
+	cm.put(n, v);
     }
 }
 /**
@@ -33,15 +34,16 @@ void deleteKCoreNeighbor(cirrus::CacheManager<Vertex>& cm,
 void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices) {
     int k = 1;
     std::set<int> processed;
-    while (processed.size() != num_vertices) {
+    while (processed.size() < num_vertices) {
         cirrus::CirrusIterable<Vertex> iter(&cm, 40, 0, num_vertices - 1);
         for (const auto& curr : iter) {
 	    Vertex v = cm.get(curr.getId());
-            if (!curr.getSeen() && curr.getTempNeighborsSize() < k) {
-                v.setK(k);
+            if (curr.getSeen() != 1 && curr.getTempNeighborsSize() < k) {
+                v.setK(k-1);
                 processed.insert(v.getId());
                 v.setSeen(true);
                 deleteKCoreNeighbor(cm, v.getId(), v.getNeighbors());
+		cm.put(curr.getId(), v);
             }
         }
         k++;

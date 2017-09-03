@@ -36,11 +36,13 @@ void SSSP(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
                 if (newDist < n.getDist()) {
                     n.setDist(newDist);
                     n.setPrev(v_num);
+		    cm.put(neigh_id, n);
                 }
                 pq.push(n.getId());
             }
         }
         v.setProcessed(true);
+	cm.put(v_num, v);
     }
 
 }

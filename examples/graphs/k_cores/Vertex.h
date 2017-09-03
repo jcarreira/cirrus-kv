@@ -53,49 +53,62 @@ public:
      * Utility methods for temp neighbors used in the kcores algorithm
      * temp neighbors keep track of the degree of the vertex in the algorithm
      */
+    void addTempNeighbor(int id);
     void deleteTempNeighbor(int id);
     std::set<int> getTempNeighbors() const;
     void setTempNeighbors(std::set<int> n);
     int getTempNeighborsSize() const;
     int getK() const;
     void setK(int val);
-    bool getSeen() const;
-    void setSeen(bool val);
+    int getSeen() const;
+    void setSeen(int val);
+
+    /**
+     * Print some things about the Vertex
+     */
+
+    void print() const;
 private:
     std::set<int> neighbors;
     std::set<int> tempNeighbors; //< to keep track of degree in the alg
     int id;
     int k; //< maximum core number
-    bool seen; //< true if the vertex has been processed by the alg
+    int seen; //< 1 if the vertex has been processed by the alg
 };
 
 /** Format:
-  * p_curr (double)
-  * p_next (double)
   * id (uint32_t)
+  * k (uint32_t)
+  * seen (uint32_t)
   * n neighbors (uint32_t)
   * neighbors list (n * uint32_t)
+  * t tempNeighbors (uint32_t)
+  * tempNeighbors list (t * uint32_t)
   */
 class VertexSerializer : public cirrus::Serializer<Vertex> {
  public:
     uint64_t size(const Vertex& v) const override {
-        uint64_t size = sizeof(uint32_t) * 2 +
-            sizeof(double) * 2 +
-            sizeof(uint32_t) * v.getNeighbors().size();  // neighbors
+        uint64_t size = sizeof(uint32_t) * 3 + //id, k , seen
+	    sizeof(uint32_t) * (v.getNeighborsSize() + 1) + //neighbors
+	    sizeof(uint32_t) * (v.getTempNeighborsSize() + 1); //tempNeighbors
         return size;
     }
     void serialize(const Vertex& v, void* mem) const override {
-        double* double_ptr = reinterpret_cast<double*>(mem);
-        //*double_ptr++ = v.getCurrProb();
-        //*double_ptr++ = v.getNextProb();
+        uint32_t* ptr = reinterpret_cast<uint32_t*>(mem);
 
-        uint32_t* ptr = reinterpret_cast<uint32_t*>(double_ptr);
         *ptr++ = htonl(v.getId());
-        *ptr++ = htonl(v.getNeighbors().size());
+	*ptr++ = htonl(v.getK());
+	*ptr++ = htonl(v.getSeen());
+        *ptr++ = htonl(v.getNeighborsSize());
 
         for (const auto& n : v.getNeighbors()) {
             *ptr++ = htonl(n);
         }
+
+	*ptr++ = htonl(v.getTempNeighborsSize());
+	for (const auto& n : v.getTempNeighbors()) {
+	    *ptr++ = htonl(n);
+	}
     }
  private:
 };

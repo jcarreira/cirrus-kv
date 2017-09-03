@@ -47,6 +47,11 @@ int main(int argc, char** argv) {
     std::cout << "Running KCores" << std::endl;
     graphs::k_cores(cm, vertices.size());
 
+    for (unsigned int i = 0; i < vertices.size(); i++) {
+	graphs::Vertex v = cm.get(i);
+	v.print();
+    }
+
     std::cout << "KCores completed" << std::endl;
 }
 
