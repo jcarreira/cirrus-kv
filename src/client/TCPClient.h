@@ -118,7 +118,7 @@ class TCPClient : public BladeClient {
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
       */
-    cuckoohash_map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+    cuckoohash_map<TxnID, struct txn_info> txn_map;
 
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send

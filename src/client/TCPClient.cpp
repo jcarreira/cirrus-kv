@@ -393,7 +393,7 @@ void TCPClient::process_received() {
         // obtain lock on map
 
         // find pair for this item in the map
-        std::shared_ptr<struct txn_info> txn;
+        struct txn_info txn;
         try {
             txn = txn_map.find(txn_id);
         } catch(const std::out_of_range& e) {
@@ -411,15 +411,15 @@ void TCPClient::process_received() {
 #endif
 
         // Save the error code so that the future can read it
-        txn->fd->error_code =
+        txn.fd->error_code =
             static_cast<cirrus::ErrorCodes>(ack->error_code());
-        LOG<INFO>("Error code read is: ", txn->fd->error_code);
+        LOG<INFO>("Error code read is: ", txn.fd->error_code);
         // Process the ack
         switch (ack->message_type()) {
             case message::TCPBladeMessage::Message_WriteAck:
                 {
                     // just put state in the struct, check for errors
-                    txn->fd->result = ack->message_as_WriteAck()->success();
+                    txn.fd->result = ack->message_as_WriteAck()->success();
                     break;
                 }
             case message::TCPBladeMessage::Message_ReadAck:
@@ -428,13 +428,13 @@ void TCPClient::process_received() {
                      to the client */
                     LOG<INFO>("Client processing ReadAck");
                     // copy the data from the ReadAck into the given pointer
-                    txn->fd->result = ack->message_as_ReadAck()->success();
+                    txn.fd->result = ack->message_as_ReadAck()->success();
                     LOG<INFO>("Client wrote success");
                     // fb here stands for flatbuffer. This is the
                     // flatbuffer vector representation of the data.
                     // This operation returns a pointer to the vector
                     auto data_fb_vector = ack->message_as_ReadAck()->data();
-                    txn->fd->data_size = data_fb_vector->size();
+                    txn.fd->data_size = data_fb_vector->size();
 
                     // data_fb_vector->Data() returns a pointer to the raw data.
                     // This data lives inside of the std::vector buffer,
@@ -446,7 +446,7 @@ void TCPClient::process_received() {
                     // the lifetime of the pointer. This ensures that when no
                     // references to the data exist, the buffer containing
                     // the data is deleted.
-                    *(txn->fd->data_ptr) = std::shared_ptr<const char>(
+                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
@@ -454,11 +454,11 @@ void TCPClient::process_received() {
                 }
             case message::TCPBladeMessage::Message_ReadBulkAck:
                 {
-                    txn->fd->result = ack->message_as_ReadBulkAck()->success();
+                    txn.fd->result = ack->message_as_ReadBulkAck()->success();
                     auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
-                    txn->fd->data_size = data_fb_vector->size();
+                    txn.fd->data_size = data_fb_vector->size();
 
-                    *(txn->fd->data_ptr) = std::shared_ptr<const char>(
+                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     break;
@@ -466,7 +466,7 @@ void TCPClient::process_received() {
             case message::TCPBladeMessage::Message_RemoveAck:
                 {
                     // put the result in the struct
-                    txn->fd->result = ack->message_as_RemoveAck()->success();
+                    txn.fd->result = ack->message_as_RemoveAck()->success();
                     break;
                 }
             default:
@@ -475,8 +475,8 @@ void TCPClient::process_received() {
                 break;
         }
         // Update the semaphore/CV so other know it is ready
-        txn->fd->result_available = true;
-        txn->fd->sem->signal();
+        txn.fd->result_available = true;
+        txn.fd->sem->signal();
         LOG<INFO>("client done processing message");
     }
 }
@@ -621,12 +621,12 @@ void TCPClient::process_send() {
 BladeClient::ClientFuture TCPClient::enqueue_message(
             flatbuffers::FlatBufferBuilder* builder,
             const int txn_id) {
-    std::shared_ptr<struct txn_info> txn = std::make_shared<struct txn_info>();
+    struct txn_info txn;
 
     txn_map.insert_or_assign(txn_id, txn);
 
     // Build the future
-    BladeClient::ClientFuture future(txn->fd);
+    BladeClient::ClientFuture future(txn.fd);
 
     // Add builder to send queue
     while (!send_queue.push(builder)) {
