@@ -71,36 +71,37 @@ public:
      * Get and set if the vertex is on the fringe
      */
 
-    bool getOnFringe() const;
-    void setOnFringe(bool val);
+    int getOnFringe() const;
+    void setOnFringe(int val);
 
     /*
      * Get and set if the vertex has been processed
      */
 
-    bool getProcessed() const;
-    void setProcessed(bool val);
+    int getProcessed() const;
+    void setProcessed(int val);
 
     /*
      * Deserializer
      */
 
-    static Vertex deserializer(const void* data, unsigned int size); 
+    static Vertex deserializer(const void* data, unsigned int size);
+    void print() const;
 private:
     std::set<std::pair<int, double>> neighbors; //<set of (neighbor id, edge dist)
     int id;
     int prev; //< the previous vertex
     double dist; //< the distance from the source to this vertex
-    bool processed; //< if the algorithm has explored this vertex or not
-    bool onFringe; //< if the vertex is on the fringe
+    int processed; //< if the algorithm has explored this vertex or not
+    int onFringe; //< if the vertex is on the fringe
 };
 
 /** Format:
  * dist (double)
  * id (uint32_t)
  * prev (uint32_t)
- * processed (uint32_t), where 1 represents true
- * onFringe (uint32_t), where 1 represents true
+ * processed (uint32_t)
+ * onFringe (uint32_t)
  * n (uint32_t), number of neighbors
  * n (neighbor id, edge dist) (uint32_t, double)
  */
@@ -108,10 +109,8 @@ private:
 class VertexSerializer : public cirrus::Serializer<Vertex> {
  public:
     uint64_t size(const Vertex& v) const override {
-        uint64_t size = sizeof(uint32_t) * 2 +
+        uint64_t size = sizeof(uint32_t) * 5 +
             sizeof(double) +
-	    //sizeof(bool) * 2 +
-	    sizeof(uint32_t) * 3 +
             sizeof(uint32_t) * v.getNeighborsSize() +
 	    sizeof(double) * v.getNeighborsSize();  // neighbors
         return size;
@@ -123,17 +122,8 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
         uint32_t* ptr = reinterpret_cast<uint32_t*>(double_ptr);
         *ptr++ = htonl(v.getId());
 	*ptr++ = htonl(v.getPrev());
-
-        if (v.getProcessed()) {
-	    *ptr++ = htonl(1);
-	} else {
-	    *ptr++ = htonl(0);
-	}
-	if (v.getOnFringe()) {
-	    *ptr++ = htonl(1);
-	} else {
-	    *ptr++ = htonl(0);
-	}
+	*ptr++ = htonl(v.getProcessed());
+	*ptr++ = htonl(v.getOnFringe());
 
 	*ptr++ = htonl(v.getNeighborsSize());
 

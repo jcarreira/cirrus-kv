@@ -86,19 +86,19 @@ void Vertex::setPrev(int p) {
     prev = p;
 }
 
-bool Vertex::getOnFringe() const {
+int Vertex::getOnFringe() const {
     return onFringe;
 }
 
-void Vertex::setOnFringe(bool val) {
+void Vertex::setOnFringe(int val) {
     onFringe = val;
 }
 
-bool Vertex::getProcessed() const {
+int Vertex::getProcessed() const {
     return processed;
 }
 
-void Vertex::setProcessed(bool val) {
+void Vertex::setProcessed(int val) {
     processed = val;
 }
 
@@ -114,17 +114,8 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
     const uint32_t* ptr = reinterpret_cast<const uint32_t*>(double_ptr);
     v.setId(ntohl(*ptr++));
     v.setPrev(ntohl(*ptr++));
-
-    if (ntohl(*ptr++) == 1) {
-        v.setProcessed(true);
-    } else {
-        v.setProcessed(false);
-    }
-    if (ntohl(*ptr++) == 1) {
-        v.setOnFringe(true);
-    } else {
-        v.setOnFringe(false);
-    }
+    v.setProcessed(ntohl(*ptr++));
+    v.setOnFringe(ntohl(*ptr++));
 
     uint32_t n = ntohl (*ptr++);
     for (uint32_t i = 0; i < n; i++) {
@@ -136,6 +127,12 @@ Vertex Vertex::deserializer(const void* data, unsigned int size) {
     }
     
     return v;
+}
+
+void Vertex::print() const {
+    std::cout << "Vertex ID: " << id << std::endl;
+    std::cout << "Prev: " << prev << ", Dist: " << dist << std::endl;
+
 }
 
 } // namespace graphs

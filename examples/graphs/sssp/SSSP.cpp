@@ -20,28 +20,34 @@ void SSSP(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices,
 
     // fringe
     std::priority_queue<int, std::vector<int>, decltype(cmp)> pq(cmp);
-
+    Vertex v = cm.get(start);
+    v.setDist(0);
+    cm.put(start, v);
     pq.push(start);
 
     while (!pq.empty()) {
         int v_num = pq.top();
         pq.pop();
-        Vertex v = cm.get(v_num);
+        v = cm.get(v_num);
         for (int neigh_id : v.getNeighbors()) {
 	    Vertex n = cm.get(neigh_id);
-            if (!n.getOnFringe()) { // if not in the fringe
+            if (n.getOnFringe() == 0) { // if not in the fringe
                 pq.push(n.getId());
-            } else if (!n.getProcessed()) { // if the vertex hasn't been seen yet
-                double newDist = v.getDist() + v.getDistToNeighbor(n.getId());
+		n.setOnFringe(1);
+		n.setDist(v.getDist() + v.getDistToNeighbor(n.getId()));
+		n.setPrev(v.getId());
+		cm.put(neigh_id, n);
+            } else if (n.getProcessed() == 0) { // if vertex hasn't been seen
+		double newDist = v.getDist() + v.getDistToNeighbor(n.getId());
                 if (newDist < n.getDist()) {
-                    n.setDist(newDist);
+		    n.setDist(newDist);
                     n.setPrev(v_num);
 		    cm.put(neigh_id, n);
                 }
                 pq.push(n.getId());
             }
         }
-        v.setProcessed(true);
+        v.setProcessed(1);
 	cm.put(v_num, v);
     }
 

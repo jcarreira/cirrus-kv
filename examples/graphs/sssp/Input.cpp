@@ -6,10 +6,17 @@ namespace graphs {
 /** Graphs must be in the format:
   number of vertices
   number of edges
-  number of edges per vertex
-  edge for vertex 0
+  number of edges k0 for vertex 0
+  edge1 for vertex 0
+  dist to this edge
+  edge2 for vertex 0
   ...
-  edge for vertex n - 1
+  edgek for vertex 0
+  number of edges k1 for vertex 1
+  edge1 for vertex 1
+  edge2 for vertex 1
+  ...
+  edgek for vertex n - 1
  **/
 std::vector<Vertex> readGraph(const std::string& fname) {
     std::ifstream infile(fname.c_str());
@@ -41,6 +48,16 @@ std::vector<Vertex> readGraph(const std::string& fname) {
             v.addNeighbor(neigh_id, neigh_dist);
         }
         vertices.push_back(v);
+    }
+
+    for (int i = 0; i < num_vertices; i++) {
+        Vertex v = vertices[i];
+	std::cout << "Vertex ID: " << v.getId() << std::endl;
+	std::cout << "Neighbors:" << std::endl;
+	for (int i : v.getNeighbors()) {
+	    std::cout << "ID: " << i << std::endl;
+	    std::cout << "Dist: " << v.getDistToNeighbor(i) << std::endl;
+	}
     }
     return vertices;
 }

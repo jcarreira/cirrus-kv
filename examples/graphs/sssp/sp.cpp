@@ -48,5 +48,9 @@ int main(int argc, char** argv) {
     graphs::SSSP(cm, vertices.size(), 0);
 
     std::cout << "SSSP completed" << std::endl;
+
+    for (uint64_t i = 0; i < vertices.size(); i++) {
+        cm.get(i).print();
+    }
 }
 

@@ -7,7 +7,8 @@ import time
 # NOTE: all pathnames start from the top directory where make benchmark is run
 
 examples = [["./examples/graphs/page_rank/pr", "examples/graphs/data/graph_1"],
-        ["./examples/graphs/k_cores/kc", "examples/graphs/data/graph_4"]]
+        ["./examples/graphs/k_cores/kc", "examples/graphs/data/graph_4"],
+        ["./examples/graphs/sssp/sp", "examples/graphs/data/graph_5_dist"]]
 
 server_name =  ["./src/server/tcpservermain"]
 
