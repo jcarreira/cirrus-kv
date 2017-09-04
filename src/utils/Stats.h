@@ -23,9 +23,11 @@ class Stats {
     int getCount() const;
 
     void reserve(uint64_t);
+
+    void print() const;
+
  private:
     mutable std::vector<double> data;
-
 
     double sum = 0;
     double sq_sum = 0;
