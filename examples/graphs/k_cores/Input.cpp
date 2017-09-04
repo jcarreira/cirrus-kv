@@ -25,11 +25,12 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     infile >> num_edges;
 
     vertices.reserve(num_vertices);
-    int num_edges_per_vertex = -1;
-    infile >> num_edges_per_vertex;
 
     for (int j = 0; j < num_vertices; ++j) {
-        Vertex v(j);  // new vertex
+        int num_edges_per_vertex = -1;
+        infile >> num_edges_per_vertex;
+
+	Vertex v(j);  // new vertex
         
 	// read neighbors for new vertex
         for (int i = 0; i < num_edges_per_vertex; ++i) {

@@ -41,10 +41,8 @@ void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices) {
 	    changed = false;
 	    for (unsigned int i = 0; i < num_vertices; i ++) {
 	        Vertex v = cm.get(i);
-	        std::cout << "Curr Vertex ID: " << i << std::endl;
-	        std::cout << "Curr seen: " << v.getSeen() << std::endl;
-                if (v.getSeen() != 1 && v.getTempNeighborsSize() < k) {
-                    changed = true;
+		if (v.getSeen() != 1 && v.getTempNeighborsSize() < k) {
+		    changed = true;
 		    v.setK(k-1);
                     processed.insert(v.getId());
                     v.setSeen(1);
