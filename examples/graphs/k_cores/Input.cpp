@@ -25,14 +25,13 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     infile >> num_edges;
 
     vertices.reserve(num_vertices);
+    int num_edges_per_vertex = -1;
+    infile >> num_edges_per_vertex;
 
     for (int j = 0; j < num_vertices; ++j) {
-        int num_edges_per_vertex = -1;
-        infile >> num_edges_per_vertex;
-
         Vertex v(j);  // new vertex
-
-        // read neighbors for new vertex
+        
+	// read neighbors for new vertex
         for (int i = 0; i < num_edges_per_vertex; ++i) {
             int neigh_id;
             infile >> neigh_id;
@@ -40,6 +39,15 @@ std::vector<Vertex> readGraph(const std::string& fname) {
         }
         vertices.push_back(v);
     }
+
+    for (Vertex v : vertices) {
+        std::cout << "Vertex ID: " << v.getId() << std::endl;
+	std::cout << "Neighbors:" << std::endl;
+	for (int i : v.getNeighbors()) {
+	   std::cout << i << std::endl;
+	}
+    }
+
     return vertices;
 }
 

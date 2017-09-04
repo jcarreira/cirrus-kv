@@ -35,17 +35,24 @@ void k_cores(cirrus::CacheManager<Vertex>& cm, unsigned int num_vertices) {
     int k = 1;
     std::set<int> processed;
     while (processed.size() < num_vertices) {
-        cirrus::CirrusIterable<Vertex> iter(&cm, 40, 0, num_vertices - 1);
-        for (const auto& curr : iter) {
-	    Vertex v = cm.get(curr.getId());
-            if (curr.getSeen() != 1 && curr.getTempNeighborsSize() < k) {
-                v.setK(k-1);
-                processed.insert(v.getId());
-                v.setSeen(true);
-                deleteKCoreNeighbor(cm, v.getId(), v.getNeighbors());
-		cm.put(curr.getId(), v);
+        //cirrus::CirrusIterable<Vertex> iter(&cm, 40, 0, num_vertices - 1);
+        bool changed = true;
+	while (changed) {
+	    changed = false;
+	    for (unsigned int i = 0; i < num_vertices; i ++) {
+	        Vertex v = cm.get(i);
+	        std::cout << "Curr Vertex ID: " << i << std::endl;
+	        std::cout << "Curr seen: " << v.getSeen() << std::endl;
+                if (v.getSeen() != 1 && v.getTempNeighborsSize() < k) {
+                    changed = true;
+		    v.setK(k-1);
+                    processed.insert(v.getId());
+                    v.setSeen(1);
+                    deleteKCoreNeighbor(cm, v.getId(), v.getNeighbors());
+		    cm.put(i, v);
+                }
             }
-        }
+	}
         k++;
     }
 }

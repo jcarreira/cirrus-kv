@@ -7,7 +7,7 @@ import time
 # NOTE: all pathnames start from the top directory where make benchmark is run
 
 examples = [["./examples/graphs/page_rank/pr", "examples/graphs/data/graph_1"],
-        ["./examples/graphs/k_cores/kc", "examples/graphs/data/graph_1"]]
+        ["./examples/graphs/k_cores/kc", "examples/graphs/data/graph_4"]]
 
 server_name =  ["./src/server/tcpservermain"]
 
@@ -25,10 +25,10 @@ for example in examples:
     sys.stdout.write("Example " + example[0] + "...")
     child = subprocess.Popen(example, stdout=subprocess.PIPE)
 
-    # Uncomment below two lines to print the benchmark's output
+    # Uncomment below two lines to print the example's output
 
-    # for line in child.stdout:
-    #     print(line.decode(), end='')
+    for line in child.stdout:
+        print(line.decode(), end='')
 
     streamdata = child.communicate()[0]
     rc = child.returncode

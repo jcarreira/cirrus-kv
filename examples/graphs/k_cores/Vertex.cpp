@@ -81,6 +81,11 @@ void Vertex::addTempNeighbor(int id) {
 void Vertex::deleteTempNeighbor(int id) {
     std::set<int>::iterator it = tempNeighbors.find(id);
     tempNeighbors.erase(it, tempNeighbors.end());
+    for (auto it = tempNeighbors.begin(); it != tempNeighbors.end();) 
+        if (*it % 2 == 1)
+            it = tempNeighbors.erase(it);
+	else
+            ++it;
 }
 
 std::set<int> Vertex::getTempNeighbors() const {
