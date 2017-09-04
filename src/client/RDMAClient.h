@@ -52,6 +52,82 @@ struct GeneralContext {
     struct ibv_qp_init_attr qp_attr;
     std::thread* cq_poller_thread;
 };
+    
+/**
+ * A struct representing a portion of RDMA memory.
+ */
+struct RDMAMem {
+    RDMAMem() = default;
+
+    RDMAMem(const void* addr, uint64_t size,
+            ibv_mr* m = nullptr) :
+        addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m),
+        used_(true) {}
+
+    ~RDMAMem() {
+        if (registered_ && !cleared_) {
+            clear();
+        }
+    }
+
+    /**
+     * Registers the RDMA memory
+     * @param gctx the GeneralContext for all connections
+     * @return Whether memory was successfully registered
+     */
+    bool prepare(GeneralContext gctx) {
+        LOG<INFO>("prepare()");
+        // we don't register more than once
+        if (registered_) {
+            LOG<INFO>("already registered");
+            return true;
+        }
+
+        mr = ibv_reg_mr(gctx.pd,
+                reinterpret_cast<void*>(addr_),
+                size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+        if (mr == nullptr) {
+            if (errno == EINVAL) {
+                LOG<ERROR>("EINVAL from ibv_reg_mr");
+            } else if (errno == ENOMEM) {
+                LOG<ERROR>("ENOMEM from ibv_reg_mr");
+            } else {
+                LOG<ERROR>("ibv_reg_mr failed, are you trying to write "
+                        "from a string literal?");
+            }
+        }
+        if (mr) {
+            registered_ = true;
+        }
+        return mr != nullptr;
+    }
+
+    /**
+     * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
+     * @return Whether memory was successfully cleared.
+     */
+    bool clear() {
+        if (registered_ == false)
+            throw std::runtime_error("Not registered");
+
+        int ret = ibv_dereg_mr(mr);
+
+        cleared_ = true;
+
+        return ret == 0;
+    }
+
+    bool isUsed() const {
+        return used_;
+    }
+
+    uint64_t addr_ = 0; //< Address of the memory */
+    uint64_t size_ = 0; //< Size of the memory */
+    struct ibv_mr *mr = 0; //< Pointer to ibv_mr for this memory */
+    bool registered_ = false; //< If the memory is registered. */
+    bool cleared_    = false; //< If the memory is cleared. */
+    bool used_       = false;  //< Indicates whether this RDMAMem is used
+};
 
 /**
   * An RDMA based client that inherits from BladeClient.
@@ -80,7 +156,6 @@ class RDMAClient : public BladeClient {
      * during call to connect.
      */
     unsigned int seed;
-    struct RDMAMem;
 
     /**
       * A class that stores a size and allocation record.
@@ -192,83 +267,13 @@ class RDMAClient : public BladeClient {
         bool setup_done = false;
     };
 
-    /**
-      * A struct representing a portion of RDMA memory.
-      */
-    struct RDMAMem {
-        RDMAMem(const void* addr = nullptr, uint64_t size = 0,
-                ibv_mr* m = nullptr) :
-            addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m) {}
-
-        ~RDMAMem() {
-            if (registered_ && !cleared_) {
-                clear();
-            }
-        }
-
-        /**
-          * Registers the RDMA memory
-          * @param gctx the GeneralContext for all connections
-          * @return Whether memory was successfully registered
-          */
-        bool prepare(GeneralContext gctx) {
-            LOG<INFO>("prepare()");
-            // we don't register more than once
-            if (registered_) {
-                LOG<INFO>("already registered");
-                return true;
-            }
-
-            mr = ibv_reg_mr(gctx.pd,
-                    reinterpret_cast<void*>(addr_),
-                    size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-            if (mr == nullptr) {
-                if (errno == EINVAL) {
-                    LOG<ERROR>("EINVAL from ibv_reg_mr");
-                } else if (errno == ENOMEM) {
-                    LOG<ERROR>("ENOMEM from ibv_reg_mr");
-                } else {
-                    LOG<ERROR>("ibv_reg_mr failed, are you trying to write "
-                                   "from a string literal?");
-                }
-            }
-            if (mr) {
-                registered_ = true;
-            }
-            return mr != nullptr;
-        }
-
-        /**
-          * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
-          * @return Whether memory was successfully cleared.
-          */
-        bool clear() {
-            if (registered_ == false)
-                throw std::runtime_error("Not registered");
-
-            int ret = ibv_dereg_mr(mr);
-
-            cleared_ = true;
-
-            return ret == 0;
-        }
-
-        // we should have a smart pointer around this mr
-        uint64_t addr_; /**< Address of the memory */
-        uint64_t size_; /**< Size of the memory */
-        struct ibv_mr *mr; /**< Pointer to ibv_mr for this memory */
-        bool registered_ = false; /**< If the memory is registered. */
-        bool cleared_ = false; /**< If the memory is cleared. */
-    };
-
-
     bool readToLocal(BladeLocation loc, void*);
 
     BladeClient::ClientFuture readToLocalAsync(BladeLocation loc,
             void* ptr);
 
     bool writeRemote(const void* data, BladeLocation loc,
-        RDMAMem* mem = nullptr);
+        RDMAMem mem = RDMAMem());
     BladeClient::ClientFuture writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
@@ -288,19 +293,19 @@ class RDMAClient : public BladeClient {
             const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length,
             const void* data,
-            RDMAMem* mem = nullptr);
+            RDMAMem mem = RDMAMem());
     bool rdma_write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
-            uint64_t length, const void* data, RDMAMem* mem = nullptr);
+            uint64_t length, const void* data, RDMAMem mem = RDMAMem());
 
     // XXX We may not need a shared ptr here
     // reads
     BladeClient::ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset, uint64_t length, void *data,
-        RDMAMem* mem = nullptr);
+        RDMAMem mem = RDMAMem());
 
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
-            uint64_t length, void *data, RDMAMem* reg = nullptr);
+            uint64_t length, void *data, RDMAMem reg = RDMAMem());
 
     void alloc_rdma_memory(ConnectionContext *ctx);
 
