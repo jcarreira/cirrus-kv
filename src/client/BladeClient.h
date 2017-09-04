@@ -46,6 +46,7 @@ class BladeClient {
     class ClientFuture {
      public:
         explicit ClientFuture(std::shared_ptr<FutureData> fd);
+        ClientFuture() = default;
         void wait();
 
         bool try_wait();
