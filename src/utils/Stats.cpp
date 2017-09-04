@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <cassert>
+#include <iostream>
 
 namespace cirrus {
 
@@ -66,6 +67,16 @@ double Stats::max() const {
 
 void Stats::reserve(uint64_t n) {
     data.reserve(n);
+}
+
+void Stats::print() const {
+    std::cout
+        << "Max: " << max()
+        << " Min: " << min()
+        << " Avg: " << avg()
+        << " Sd: " << sd()
+        << " Count: " << getCount()
+        << std::endl;
 }
 
 }  // namespace cirrus

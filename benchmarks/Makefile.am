@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
                 cache_benchmark 1_2 outstanding_requests store_bandwidth \
-                cache_latency cache_iops iterator_v2
+                cache_latency cache_iops iterator_v2 boost_external_mem
 
 LIBS         = 	-lclient -lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
@@ -44,3 +44,7 @@ cache_iops_SOURCES = cache_iops.cpp
 store_bandwidth_SOURCES = store_bandwidth.cpp
 
 outstanding_requests_SOURCES  = outstanding_requests.cpp
+
+boost_external_mem_SOURCES  = boost_external_mem.cpp
+
+

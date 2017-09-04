@@ -106,22 +106,22 @@ class RDMAClient : public BladeClient {
         RDMAOpInfo(struct rdma_cm_id* id_,
                 std::function<void(void)> fn = []() -> void {}) :
             id(id_), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>(false);
-                op_sem = std::make_shared<cirrus::PosixSemaphore>();
-            }
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+            fd = std::make_shared<FutureData>();
+        }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
-                   std::shared_ptr<cirrus::Lock> op_sem,
+                std::shared_ptr<cirrus::Lock> op_sem,
                 std::function<void(void)> fn = []() -> void {}) :
-            id(id_), op_sem(op_sem), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>(false);
-            }
+            id(id_), apply_fn(fn) {
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+
+            fd = std::make_shared<FutureData>();
+            fd->sem = op_sem;
+        }
+
 
         /**
          * Apply the given function on completion. Mark the operation as
@@ -131,21 +131,17 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applying fn");
             apply_fn();
             LOG<INFO>("Applied fn");
-            *result_available = true;
-            *result = true;
+            fd->result_available = true;
+            fd->result = true;
         }
 
-        char *data = nullptr;
+        char* data = nullptr;
         struct rdma_cm_id* id;
-        /** Pointer to the semaphore for the operation. */
-        std::shared_ptr<cirrus::Lock> op_sem;
-        /** Pointer to the boolean success of the operation. */
-        std::shared_ptr<bool> result;
-        /** Pointer to operation completion. */
-        std::shared_ptr<bool> result_available;
-        /** Pointer to error code. Will always be okay. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code =
-            std::make_shared<cirrus::ErrorCodes>(cirrus::ErrorCodes::kOk);
+
+        /**
+          * Data to be sent up to the client
+          */
+        std::shared_ptr<FutureData> fd;
         /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };

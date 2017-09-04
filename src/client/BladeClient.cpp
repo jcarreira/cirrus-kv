@@ -11,6 +11,17 @@ namespace cirrus {
 
 using ObjectID = uint64_t;
 
+FutureData::FutureData(
+            bool result,
+            bool result_available,
+            cirrus::ErrorCodes error_code,
+            std::shared_ptr<std::shared_ptr<const char>> data_ptr,
+            uint64_t data_size) :
+    result(result), result_available(result_available),
+    error_code(error_code), data_ptr(data_ptr), data_size(data_size) {
+    sem = std::make_shared<cirrus::SpinLock>();
+}
+
 /**
  * Constructor for ClientFuture.
  * @param result a std::shared_ptr that points to a boolean indicating
@@ -26,23 +37,16 @@ using ObjectID = uint64_t;
  * @param data_size the length of the buffer used to receive data from the
  * store.
  */
-BladeClient::ClientFuture::ClientFuture(std::shared_ptr<bool> result,
-               std::shared_ptr<bool> result_available,
-               std::shared_ptr<cirrus::Lock> sem,
-               std::shared_ptr<cirrus::ErrorCodes> error_code,
-               std::shared_ptr<std::shared_ptr<const char>> data_ptr,
-               std::shared_ptr<uint64_t> data_size):
-    result(result), result_available(result_available),
-    sem(sem), error_code(error_code), data_ptr(data_ptr),
-    data_size(data_size) {}
+BladeClient::ClientFuture::ClientFuture(std::shared_ptr<FutureData> fd) :
+    fd(fd) {}
 
 /**
  * Waits until the result the future is monitoring is available.
  */
 void BladeClient::ClientFuture::wait() {
-    while (!*result_available) {
+    while (!fd->result_available) {
         LOG<INFO>("Result not available, waiting.");
-        sem->wait();
+        fd->sem->wait();
     }
 }
 
@@ -51,8 +55,8 @@ void BladeClient::ClientFuture::wait() {
  * @return Returns true if the result is available, false otherwise.
  */
 bool BladeClient::ClientFuture::try_wait() {
-    if (!*result_available) {
-        return sem->trywait();
+    if (!fd->result_available) {
+        return fd->sem->trywait();
     } else {
         return true;
     }
@@ -67,10 +71,10 @@ bool BladeClient::ClientFuture::get() {
     LOG<INFO>("Waiting for result.");
     wait();
     LOG<INFO>("Result is available.");
-    LOG<INFO>("Error code is: ", *error_code);
+    LOG<INFO>("Error code is: ", fd->error_code);
 
     // Check the error code enum. Throw exception if one happened on server.
-    switch (*error_code) {
+    switch (fd->error_code) {
       case cirrus::ErrorCodes::kOk: {
         break;
       }
@@ -89,7 +93,7 @@ bool BladeClient::ClientFuture::get() {
         throw cirrus::Exception("Unrecognized error code during get().");
       }
     }
-    return *result;
+    return fd->result;
 }
 
 /**
@@ -101,10 +105,10 @@ std::pair<std::shared_ptr<const char>, unsigned int>
 BladeClient::ClientFuture::getDataPair() {
     // Wait until result is available and throw exception if necessary
     get();
-    if (data_ptr.get() == nullptr) {
+    if (fd->data_ptr.get() == nullptr) {
         throw cirrus::Exception("getData called on a non read future");
     }
-    return std::make_pair(*data_ptr, *data_size);
+    return std::make_pair(*fd->data_ptr, fd->data_size);
 }
 
 
