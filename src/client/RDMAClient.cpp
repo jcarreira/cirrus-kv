@@ -433,15 +433,15 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
     // TODO(Tyler): Remove the checks that the lock exists?
     switch (wc->opcode) {
         case IBV_WC_RECV:
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             break;
         case IBV_WC_RDMA_READ:
         case IBV_WC_RDMA_WRITE:
             assert(outstanding_send_wr > 0);
             outstanding_send_wr--;
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             if (op_info->data != nullptr) {
                 delete[] op_info->data;
             }
@@ -449,8 +449,8 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
         case IBV_WC_SEND:
             assert(outstanding_send_wr > 0);
             outstanding_send_wr--;
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             break;
         default:
             LOG<ERROR>("Unknown opcode");
@@ -483,7 +483,7 @@ bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
     }
 
     // wait for SEND completion
-    op_info->op_sem->wait();
+    op_info->fd->sem->wait();
 
     LOG<INFO>("Sent is done. Waiting for receive");
 
@@ -547,7 +547,6 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     LOG<INFO>("RDMAClient:: write_rdma_async");
 
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
-    auto wait_sem = op_info->op_sem;
     write_rdma_async(id, size, remote_addr, peer_rkey, mem, op_info);
     LOG<INFO>("RDMAClient:: waiting");
 
@@ -557,7 +556,7 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     {
         TimerFunction tf("waiting semaphore", true);
-        wait_sem->wait();
+        op_info->fd->sem->wait();
     }
 
     return true;
@@ -653,8 +652,6 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
     // This will be freed in poll_cq
     auto op_info = new RDMAClient::RDMAOpInfo(id);
-    auto wait_sem = op_info->op_sem;
-    auto result_available = op_info->result_available;
     read_rdma_async(id, size,
         remote_addr, peer_rkey, mem, op_info);
 
@@ -662,8 +659,8 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     {
         TimerFunction tf("read_rdma_async wait for lock", true);
-        while (!*result_available) {
-            wait_sem->wait();
+        while (!op_info->fd->result_available) {
+            op_info->fd->sem->wait();
         }
     }
 }
@@ -953,13 +950,9 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
         throw cirrus::Exception("Message being sent is over RDMA max size.");
     // This will be freed in poll_cq
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
-    // These are to fill fields in the future. They are unused as this is a
-    // write operation.
-    std::shared_ptr<std::shared_ptr<const char>> dummy_ptr;
-    std::shared_ptr<uint64_t> dummy_size_ptr;
-    BladeClient::ClientFuture ret(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code,
-                        dummy_ptr, dummy_size_ptr);
+
+    BladeClient::ClientFuture ret(op_info->fd);
+
     if (mem) {
         mem->addr_ = reinterpret_cast<uint64_t>(data);
         mem->size_ = length;
@@ -1081,10 +1074,7 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
                 reinterpret_cast<const char*>(data),
                 std::default_delete<const char[]>());
 
-    BladeClient::ClientFuture ret = BladeClient::ClientFuture(op_info->result,
-        op_info->result_available,
-        op_info->op_sem, op_info->error_code,
-        buffer_ptr, std::make_shared<uint64_t>(length));
+    BladeClient::ClientFuture ret = BladeClient::ClientFuture(op_info->fd);
     read_rdma_async(id_, length,
             alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
             *mem, op_info);
