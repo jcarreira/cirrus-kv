@@ -11,7 +11,8 @@ DEFAULT_LIB = -L. -lserver \
 noinst_LIBRARIES = libserver.a
 bin_PROGRAMS = tcpservermain
 
-libserver_a_SOURCES = TCPServer.cpp MemoryBackend.cpp
+libserver_a_SOURCES = TCPServer.cpp MemoryBackend.cpp \
+			MemoryBackend.cpp NVStorageBackend.cpp
 libserver_a_CPPFLAGS = -ggdb -I$(top_srcdir) \
                        -I$(top_srcdir)/third_party/flatbuffers/include \
                        -isystem $(top_srcdir)/third_party/rocksdb/include \
@@ -23,7 +24,7 @@ bin_PROGRAMS += bladepoolmain bladeallocmain allocmain controllermain \
 libserver_a_SOURCES += RDMAServer.cpp BladePoolServer.cpp \
                       ConnectionContext.cpp \
                       ResourceAllocator.cpp BladeAllocServer.cpp \
-                      BladeObjectStore.cpp MemoryBackend.cpp NVStorageBackend.cpp
+                      BladeObjectStore.cpp
 endif
 
 LDFLAGS  = -pthread
