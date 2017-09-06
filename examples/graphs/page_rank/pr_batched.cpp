@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
     // read vertices from file
     std::vector<graphs::Vertex> vertices = graphs::readGraph(argv[1]);
-    cirrus::CIRRUS_LOG<cirrus::INFO>("Read ", vertices.size(), " vertices");
+    cirrus::LOG<cirrus::INFO>("Read ", vertices.size(), " vertices");
 
     VVSerializer vvs(batch_size);
     VVDeserializer vvds(batch_size);
