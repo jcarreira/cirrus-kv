@@ -7,6 +7,7 @@ import shutil
 import os
 
 # Change this to change the ip that the client connects to
+MB = (1024 * 1024)
 half_gig = "512" # in MB
         
 storage_path = "/tmp/cirrus_storage"
@@ -29,9 +30,8 @@ def get_test_ip():
 # NOTE: all pathnames start from the top directory where make check is run
 def runTestTCP(testPath):
 
-
     # Launch the server in the background
-    print("Starting server.")
+    print("Running test", testPath)
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
 
@@ -47,7 +47,7 @@ def runTestTCP(testPath):
 
     # Sleep to give server time to start
     print("Started server, sleeping.")
-    time.sleep(2)
+    time.sleep(3)
     print("Sleep finished, launching client.")
 
     child = subprocess.Popen([testPath, "--tcp", get_test_ip()],
@@ -55,7 +55,7 @@ def runTestTCP(testPath):
 
     # Print the output from the child
     for line in child.stdout:
-        print(line.decode(), end='')
+        print(line.decode(), end = '')
 
     streamdata = child.communicate()[0]
     rc = child.returncode
@@ -67,7 +67,7 @@ def runTestTCP(testPath):
 
 def runTestRDMA(testPath):
     # Launch the server in the background
-    print("Starting server.")
+    print("Running test", testPath)
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
 
@@ -94,11 +94,12 @@ def runTestRDMA(testPath):
 
 def runExhaustionTCP(testPath):
     # Launch the server in the background
-    print("Starting server.")
+    print("Running test", testPath)
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    # 2 * 1024 * 1024 is the max pool. 2MB
-    server = subprocess.Popen(["./src/server/tcpservermain", "2097152"])
+    
+    limit_size = 20
+    server = subprocess.Popen(["./src/server/tcpservermain", str(limit_size)])
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)
@@ -122,7 +123,9 @@ def runExhaustionRDMA(testPath):
     print("Starting server.")
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
-    server = subprocess.Popen(["./src/server/bladeallocmain", "2097152"])
+
+    limit_size = 20
+    server = subprocess.Popen(["./src/server/bladeallocmain", str(limit_size)])
     # Sleep to give server time to start
     print("Started server, sleeping.")
     time.sleep(2)

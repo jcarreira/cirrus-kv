@@ -446,7 +446,7 @@ void TCPClient::process_received() {
                     // the lifetime of the pointer. This ensures that when no
                     // references to the data exist, the buffer containing
                     // the data is deleted.
-                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
+                    txn.fd->data_ptr = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
@@ -458,7 +458,7 @@ void TCPClient::process_received() {
                     auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
                     txn.fd->data_size = data_fb_vector->size();
 
-                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
+                    txn.fd->data_ptr = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     break;

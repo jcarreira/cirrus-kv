@@ -529,7 +529,7 @@ void test_cache_put_local_copy() {
 auto main(int argc, char *argv[]) -> int {
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
-    std::cout << "test starting" << std::endl;
+    std::cout << "CacheManager test starting" << std::endl;
     test_cache_manager_simple();
     test_array();
     test_cache_put_local_copy();
@@ -583,6 +583,6 @@ auto main(int argc, char *argv[]) -> int {
 
     test_linear_prefetch();
     test_custom_prefetch();
-    std::cout << "test successful" << std::endl;
+    std::cout << "Test successful" << std::endl;
     return 0;
 }

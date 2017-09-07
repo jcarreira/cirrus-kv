@@ -20,7 +20,7 @@ struct FutureData {
             bool result = false,
             bool result_available = false,
             cirrus::ErrorCodes error_code = cirrus::ErrorCodes(),
-            std::shared_ptr<std::shared_ptr<const char>> data_ptr = nullptr,
+            std::shared_ptr<const char> data_ptr = nullptr,
             uint64_t data_size = 0);
 
      /** Pointer to the result. */
@@ -31,8 +31,8 @@ struct FutureData {
      std::shared_ptr<cirrus::Lock> sem;
      /** Any errors thrown. */
      cirrus::ErrorCodes error_code;
-     /** Pointer to a pointer to any mem for a read, if any. */
-     std::shared_ptr<std::shared_ptr<const char>> data_ptr;
+     /** Pointer to any mem for a read, if any. */
+     std::shared_ptr<const char> data_ptr;
      /** Size of the memory block for a read. */
      uint64_t data_size;
 };

@@ -74,6 +74,8 @@ void test_exhaustion_remove() {
 }
 
 auto main(int argc, char *argv[]) -> int {
+    std::cout << "Runing exhaustion test" << std::endl;
+
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
     test_exhaustion_remove();

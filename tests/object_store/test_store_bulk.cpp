@@ -18,11 +18,12 @@ void test_store_bulk_transfers() {
         cirrus::test_internal::GetClient(use_rdma_client);
     cirrus::serializer_simple<cirrus::ObjectID> serializer;
 
-    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::ObjectID> store(IP, PORT,
-                        client.get(),
-                        serializer,
-                        cirrus::deserializer_simple<cirrus::ObjectID,
-                        sizeof(cirrus::ObjectID)>);
+    cirrus::ostore::FullBladeObjectStoreTempl<cirrus::ObjectID> store(
+            IP, PORT,
+            client.get(),
+            serializer,
+            cirrus::deserializer_simple<cirrus::ObjectID,
+                                        sizeof(cirrus::ObjectID)>);
 
     std::vector<cirrus::ObjectID> ids;
     for (cirrus::ObjectID oid = 0; oid < 100; oid++) {
