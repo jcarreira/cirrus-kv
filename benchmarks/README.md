@@ -1,6 +1,7 @@
 Benchmark Results
 ==================================
 
+~~~~
 ./benchmarks/throughput
 
 get cache throughput 128 test
@@ -45,3 +46,4 @@ MB/s: 142.794466
 put store throughput 51200 test
 msg/s: 9354.186934
 MB/s: 456.747409
+~~~~
