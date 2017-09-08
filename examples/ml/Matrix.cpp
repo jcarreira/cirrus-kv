@@ -73,13 +73,13 @@ void Matrix::check_values() const {
     }
 }
 double Matrix::checksum() const {
-    return crc32(data.get(), rows() * cols() * sizeof(double));
+    return crc32(data.get(), rows * cols * sizeof(double));
 }
 
 void Matrix::print() const {
-    for (uint64_t i = 0; i < rows(); ++i) {
-        for (uint64_t j = 0; j < cols(); ++j) {
-            double val = data.get()[i * cols() + j];
+    for (uint64_t i = 0; i < rows; ++i) {
+        for (uint64_t j = 0; j < cols; ++j) {
+            double val = data.get()[i * cols + j];
             std::cout << val << " ";
         }
     }

@@ -76,7 +76,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
     int samples_id = 0;
     int labels_id  = 0;
     int gradient_id = GRADIENT_BASE + worker;
-    uint64_t count = 0;
+    uint64_t version = 0;
     while (1) {
         // maybe we can wait a few iterations to get the model
         std::shared_ptr<double> samples;
@@ -137,13 +137,6 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
         first_time = false;
 
-        //std::cout << "[WORKER] "
-        //    << "Building and printing dataset"
-        //    << " with checksums: "
-        //    << checksum(samples, batch_size) << " "
-        //    << checksum(labels, samples_per_batch)
-        //    << "\n";
-
         // Big hack. Shame on me
         //auto now = get_time_us();
         std::shared_ptr<double> l(new double[samples_per_batch],
@@ -157,15 +150,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         dataset.print();
 #endif
 
-        //std::cout << "[WORKER] "
-        //    << "Worker task checking dataset with csum: " << dataset.checksum()
-        //    << "\n";
-
         dataset.check_values();
-
-        //std::cout << "[WORKER] "
-        //    << "Worker task computing gradient"
-        //    << "\n";
 
         // compute mini batch gradient
         std::unique_ptr<ModelGradient> gradient;
@@ -176,21 +161,13 @@ void LogisticTask::run(const Configuration& config, int worker) {
             std::cout << "There was an error here" << std::endl;
             exit(-1);
         }
-        gradient->setCount(count++);
-
-        //std::cout << "[WORKER] "
-        //    << "Checking and Printing gradient: "
-        //    << "\n";
+        gradient->setVersion(version++);
 
 #ifdef DEBUG
         gradient->check_values();
         gradient->print();
 #endif
 
-        //std::cout << "[WORKER] "
-        //    << "Worker task storing gradient at id: "
-        //    << gradient_id
-        //    << "\n";
         try {
             auto smg = *dynamic_cast<SoftmaxGradient*>(gradient.get());
             gradient_store.put(
@@ -201,29 +178,15 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
             exit(-1);
         }
-        //std::cout << "[WORKER] "
-        //    << "Worker task stored gradient at id: " << gradient_id
-        //    << " at time: " << get_time_us()
-        //    << " with count: " << gradient->getCount()
-        //    << "\n";
 
         // move to next batch of samples
         samples_id++;
         labels_id++;
-        //samples_iter++;
-        //labels_iter++;
 
         // Wrap around
         if (samples_id == static_cast<int>(num_batches)) {
             samples_id = labels_id = 0;
         }
-#if 0
-        if (samples_iter == s_iter.end()) {
-            samples_id = labels_id = 0;
-            samples_iter = s_iter.begin();
-            labels_iter = l_iter.begin();
-        }
-#endif
     }
 }
 
@@ -288,10 +251,6 @@ void PSTask::run(const Configuration& config) {
         // once model is updated publish it
         for (int worker = 0; worker < static_cast<int>(nworkers); ++worker) {
             int gradient_id = GRADIENT_BASE + worker;
-            //std::cout << "[PS] "
-            //    << "PS task checking gradient id: "
-            //    << gradient_id
-            //    << std::endl;
 
             // get gradient from store
             SoftmaxGradient gradient(nclasses, MODEL_GRAD_SIZE);
@@ -315,34 +274,12 @@ void PSTask::run(const Configuration& config) {
 
             first_time = false;
 
-            //std::cout << "[PS] "
-            //    << "PS task received gradient with #count: "
-            //    << gradient.getCount()
-            //    << " from worker: " << worker
-            //    << "\n";
-
             // check if this is a gradient we haven't used before
-            if (gradient.getCount() > gradientCounts[worker]) {
-                //std::cout << "[PS] "
-                //    << "PS task received new gradient: "
-                //    << gradient.getCount()
-                //    << std::endl;
-
-                // if it's new
-                gradientCounts[worker] = gradient.getCount();
-
-                // do a gradient step and update model
-                //std::cout << "[PS] "
-                //    << "Updating model"
-                //    << " with csum: " << model.checksum()
-                //    << std::endl;
+            if (gradient.getVersion() > gradientCounts[worker]) {
+                gradientCounts[worker] = gradient.getVersion();
 
                 model.sgd_update(config.get_learning_rate(), &gradient);
 
-                //std::cout << "[PS] "
-                //    << "Publishing model at: " << get_time_us()
-                //    << "\n";
-                // publish the model back to the store so workers can use it
                 model_store.put(MODEL_BASE, model);
             }
         }

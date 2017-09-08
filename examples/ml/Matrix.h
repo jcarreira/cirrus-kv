@@ -37,18 +37,6 @@ class Matrix {
     Matrix T() const;
 
     /**
-      * Returns number of rows of the matrix
-      * @returns Number of rows
-      */
-    uint64_t rows() const;
-
-    /**
-      * Returns number of columns of the matrix
-      * @returns Number of columns
-      */
-    uint64_t cols() const;
-
-    /**
       * Returns size (in bytes) of the matrix contents
       * @returns Size (bytes) of the matrix contents
       */

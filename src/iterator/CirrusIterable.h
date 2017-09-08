@@ -429,7 +429,6 @@ T CirrusIterable<T>::Iterator::operator*() {
         LOG<INFO>("Prefetching oid: ", oid);
         cm->prefetch(oid);
     }
-    auto elapsed = tf.getNsElapsed();
 
     auto ret = cm->get(policy->dereference());
     return ret;

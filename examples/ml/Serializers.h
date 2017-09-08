@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 #include <LRModel.h>
+#include <SoftmaxModel.h>
 
 #include "common/Serializer.h"
 
