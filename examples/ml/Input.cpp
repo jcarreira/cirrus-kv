@@ -76,6 +76,8 @@ Dataset Input::read_input_criteo(const std::string& samples_input_file,
     // we transfer ownership of the samples and labels here
     Dataset ds(samples, labels, samples_entries, n_cols);
 
+    delete[] samples;
+
     return ds;
 }
 
@@ -178,7 +180,7 @@ std::vector<std::vector<double>> Input::read_mnist_csv(
     std::vector<std::vector<double>> samples;
 
     std::string line;
-    char str[STR_SIZE];
+    char str[STR_SIZE + 1] = {0};
     while (getline(fin, line)) {
         assert(line.size() < STR_SIZE);
         strncpy(str, line.c_str(), STR_SIZE);

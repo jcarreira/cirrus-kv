@@ -26,6 +26,7 @@ class MemSlice {
       */
     explicit MemSlice(const std::string& data) {
         fromString = true;
+        dataFbVector_ = nullptr;
         dataStdVector_ = new std::vector<int8_t>(data.size());
 
         // copy contents over

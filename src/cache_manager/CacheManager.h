@@ -39,7 +39,7 @@ class CacheManager {
                  cirrus::EvictionPolicy *eviction_policy,
                  uint64_t cache_size, bool defer_writes = false);
     T get(ObjectID oid);
-    void put(ObjectID oid, T obj);
+    void put(ObjectID oid, const T& obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
     void removeBulk(ObjectID first, ObjectID last);
@@ -297,7 +297,7 @@ T CacheManager<T>::get(ObjectID oid) {
   * @see FullBladeObjectstore
   */
 template<class T>
-void CacheManager<T>::put(ObjectID oid, T obj) {
+void CacheManager<T>::put(ObjectID oid, const T& obj) {
     std::vector<ObjectID> to_remove = eviction_policy->put(oid);
     evict_vector(to_remove);
 

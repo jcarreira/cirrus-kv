@@ -66,6 +66,11 @@ std::unique_ptr<Model> LRModel::copy() const {
 void LRModel::sgd_update(double learning_rate,
         const ModelGradient* gradient) {
     const LRGradient* grad = dynamic_cast<const LRGradient*>(gradient);
+
+    if (grad == nullptr) {
+        throw std::runtime_error("Error in dynamic cast");
+    }
+
     for (uint64_t i = 0; i < d; ++i) {
        weights[i] += learning_rate * grad->weights[i];
     }

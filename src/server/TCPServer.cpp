@@ -63,16 +63,10 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
   * incoming connections.
   */
 void TCPServer::init() {
-    struct sockaddr_in serv_addr;
-
     server_sock_ = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock_ < 0) {
         throw cirrus::ConnectionException("Server error creating socket");
     }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port_);
 
     LOG<INFO>("Created socket in TCPServer");
 
@@ -124,6 +118,12 @@ void TCPServer::init() {
         }
         throw cirrus::ConnectionException("Error forcing port binding");
     }
+    
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(port_);
+    std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 
     int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr),
             sizeof(serv_addr));

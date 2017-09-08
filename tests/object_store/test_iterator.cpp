@@ -33,7 +33,7 @@ class ReversePolicy : public cirrus::IteratorPolicy {
     /**
      * Default constructor.
      */
-    ReversePolicy() {}
+    ReversePolicy() : first(0), last(0), read_ahead(0), current_id(0) {}
     /**
      * Copy constructor, used by clone method.
      */

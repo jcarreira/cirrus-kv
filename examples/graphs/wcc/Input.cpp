@@ -27,6 +27,10 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     infile >> num_vertices;
     infile >> num_edges;
 
+    if (num_vertices < 0 || num_edges < 0) {
+        throw std::runtime_error("Wrong input values");
+    }
+
     vertices.reserve(num_vertices);
 
     for (int j = 0; j < num_vertices; ++j) {

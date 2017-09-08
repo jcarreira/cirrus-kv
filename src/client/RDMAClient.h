@@ -68,7 +68,7 @@ struct RDMAMem {
      * @param gctx the GeneralContext for all connections
      * @return Whether memory was successfully registered
      */
-    bool prepare(GeneralContext gctx) {
+    bool prepare(const GeneralContext& gctx) {
         LOG<INFO>("prepare()");
         // we don't register more than once
         if (registered_) {
@@ -346,7 +346,7 @@ class RDMAClient : public BladeClient {
     struct rdma_cm_id *id_;
     struct rdma_event_channel *ec_;
 
-    int timeout_ms_;
+    int timeout_ms_ = 0;
 
     ConnectionContext con_ctx_;
 
