@@ -120,7 +120,7 @@ class Configuration {
     std::string samples_path;  //< path to dataset samples
     std::string labels_path;   //< path to dataset labels
 
-    Configuration::ModelType model_type;  //< type of the model
+    Configuration::ModelType model_type = UNKNOWN;  //< type of the model
 
     uint64_t limit_cols = 0;   //< max number of columns to read from dataset input
     bool normalize = false;    //< whether to normalize the dataset

@@ -344,7 +344,7 @@ class RDMAClient : public BladeClient {
     int post_receive(struct rdma_cm_id *id);
 
     struct rdma_cm_id *id_;
-    struct rdma_event_channel *ec_;
+    struct rdma_event_channel *ec_ = nullptr;
 
     int timeout_ms_ = 0;
 

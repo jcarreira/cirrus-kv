@@ -10,6 +10,7 @@
 class ModelGradient {
  public:
      ModelGradient() : version(0) {}
+     virtual ~ModelGradient() = default;
 
      /**
        * Serialize gradient
@@ -63,8 +64,12 @@ class LRGradient : public ModelGradient {
 
     virtual ~LRGradient() = default;
 
-    explicit LRGradient(int d);
+    LRGradient(LRGradient&& data);
     explicit LRGradient(const std::vector<double>& data);
+    explicit LRGradient(int d);
+    
+    LRGradient& operator=(LRGradient&& other);
+
     void loadSerialized(const void*);
     void serialize(void*) const override;
     uint64_t getSerializedSize() const override;

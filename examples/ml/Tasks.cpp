@@ -310,7 +310,8 @@ void PSTask::run(const Configuration& config) {
             // get gradient from store
             LRGradient gradient(MODEL_GRAD_SIZE);
             try {
-                gradient = gradient_store.get(GRADIENT_BASE + gradient_id);
+                gradient = std::move(
+                        gradient_store.get(GRADIENT_BASE + gradient_id));
             } catch(const cirrus::NoSuchIDException& e) {
                 if (!first_time) {
                     std::cout
