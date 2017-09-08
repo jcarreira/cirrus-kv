@@ -458,6 +458,7 @@ auto main(int argc, char *argv[]) -> int {
     test_remove_bulk();
     std::cout << "test shared client" << std::endl;
     test_shared_client();
+    std::cout << "test variable sizes" << std::endl;
     test_variable_sizes();
     std::cout << "Test Successful." << std::endl;
 

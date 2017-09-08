@@ -55,7 +55,7 @@ class BladeClient {
 
         std::pair<std::shared_ptr<const char>, unsigned int> getDataPair();
 
-     private:
+     protected:
          std::shared_ptr<FutureData> fd;
     };
 

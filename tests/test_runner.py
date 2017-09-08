@@ -8,7 +8,7 @@ import os
 
 # Change this to change the ip that the client connects to
 MB = (1024 * 1024)
-half_gig = "512" # in MB
+half_gig = 512 # in MB
         
 storage_path = "/tmp/cirrus_storage"
 
@@ -39,7 +39,7 @@ def runTestTCP(testPath):
         print("Using storage backend")
         remove_nonvolatile_storage(storage_path);
         server = subprocess.Popen(
-                ["./src/server/tcpservermain", half_gig,
+                ["./src/server/tcpservermain", str(half_gig),
                  "Storage", storage_path])
     else:
         print("Using memory backend")
@@ -71,8 +71,8 @@ def runTestRDMA(testPath):
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
 
-    gig = 2 * half_gig
-    server = subprocess.Popen(["./src/server/bladeallocmain", gig])
+    size = 20 * half_gig
+    server = subprocess.Popen(["./src/server/bladeallocmain", str(size)])
 
     # Sleep to give server time to start
     print("Started server, sleeping.")
