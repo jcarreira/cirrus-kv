@@ -28,8 +28,8 @@ class NVStorageBackend : public StorageBackend {
  private:
     std::string path;  //< path to raw device
 
-    rocksdb::DB* db;           //< rocksdb handler
-    rocksdb::Options options;  //< rocksdb options
+    rocksdb::DB* db = nullptr;  //< rocksdb handler
+    rocksdb::Options options;   //< rocksdb options
 };
 
 }  // namespace cirrus
