@@ -1,5 +1,5 @@
-#ifndef WEAKLY_CC_H
-#define WEAKLY_CC_H
+#ifndef EXAMPLES_GRAPHS_WCC_WCC_H_
+#define EXAMPLES_GRAPHS_WCC_WCC_H_
 
 #include <algorithm>
 #include <vector>
@@ -31,4 +31,4 @@ void make_undirected(std::vector<Vertex>& vertices);
 
 }  // namespace graphs
 
-#endif
+#endif  // EXAMPLES_GRAPHS_WCC_WCC_H_

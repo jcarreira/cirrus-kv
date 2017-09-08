@@ -1,30 +1,42 @@
-#include <ModelGradient.h>
+#include <examples/ml/ModelGradient.h>
 #include <iostream>
+#include <algorithm>
 #include "utils/Log.h"
 
-LRGradient::LRGradient(int d) {
-    weights.resize(d);
-    count = 0;
+LRGradient::LRGradient(LRGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
 }
 
 LRGradient::LRGradient(const std::vector<double>& data) :
     weights(data) {
 }
 
-void LRGradient::loadSerialized(const void* mem) {
-    //std::cout << "LRGradient::loadSerialized" << "\n";
+LRGradient::LRGradient(int d) {
+    weights.resize(d);
+    version = 0;
+}
 
-    //cirrus::LOG<cirrus::INFO>(
-    //        "LRGradient::loadSerialized size: ", weights.size());
-    count = *reinterpret_cast<const uint32_t*>(mem);
+LRGradient& LRGradient::operator=(LRGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
+    return *this;
+}
+
+void LRGradient::loadSerialized(const void* mem) {
+    version = *reinterpret_cast<const uint32_t*>(mem);
     mem = reinterpret_cast<const void*>(
             (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
     const double* data = reinterpret_cast<const double*>(mem);
     std::copy(data, data + weights.size(), weights.begin());
 }
 
+/** Format:
+  * version (uint32_t)
+  * vector of weights (double * n)
+  */
 void LRGradient::serialize(void* mem) const {
-    *reinterpret_cast<uint32_t*>(mem) = count;
+    *reinterpret_cast<uint32_t*>(mem) = version;
     mem = reinterpret_cast<void*>(
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
     double* data = reinterpret_cast<double*>(mem);
@@ -37,7 +49,7 @@ uint64_t LRGradient::getSerializedSize() const {
 }
 
 void LRGradient::print() const {
-    std::cout << "Printing LRGradient. count: " << count << std::endl;
+    std::cout << "Printing LRGradient. version: " << version << std::endl;
     for (const auto &v : weights) {
         std::cout << v << " ";
     }

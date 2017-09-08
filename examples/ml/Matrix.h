@@ -1,5 +1,5 @@
-#ifndef SRC_MATRIX_H_
-#define SRC_MATRIX_H_
+#ifndef EXAMPLES_ML_MATRIX_H_
+#define EXAMPLES_ML_MATRIX_H_
 
 #include <cstring>
 #include <iostream>
@@ -71,10 +71,10 @@ class Matrix {
     void print() const;
 
  public:
-    uint64_t r;  //< number of rows of matrix
-    uint64_t c;  //< number of columns of matrix
+    uint64_t rows;   //< number of rows of matrix
+    uint64_t cols;   //< number of columns of matrix
     std::shared_ptr<const double> data;  //< pointer to matrix contents
     mutable std::shared_ptr<Matrix> cached_data;  //< cache for the transpose
 };
 
-#endif  // SRC_MATRIX_H_
+#endif  // EXAMPLES_ML_MATRIX_H_

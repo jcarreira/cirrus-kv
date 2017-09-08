@@ -1,5 +1,5 @@
-#ifndef _SOFTMAX_MODEL_H_
-#define _SOFTMAX_MODEL_H_
+#ifndef EXAMPLES_ML_SOFTMAXMODEL_H_
+#define EXAMPLES_ML_SOFTMAXMODEL_H_
 
 #include <Model.h>
 #include <utility>
@@ -108,4 +108,4 @@ class SoftmaxModel : public Model {
     std::vector<std::vector<double>> weights;  //< model weights
 };
 
-#endif  // _SOFTMAX_MODEL_H_
+#endif  // EXAMPLES_ML_SOFTMAXMODEL_H_

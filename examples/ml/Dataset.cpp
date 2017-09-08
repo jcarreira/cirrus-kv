@@ -3,7 +3,7 @@
   * where each sample is a vector of doubles and the labels are also doubles
   */
 
-#include <Dataset.h>
+#include <examples/ml/Dataset.h>
 #include <algorithm>
 #include <Utils.h>
 #include <Checksum.h>
@@ -28,11 +28,11 @@ Dataset::Dataset(const double* samples,
 }
 
 uint64_t Dataset::num_features() const {
-    return samples_.cols();
+    return samples_.cols;
 }
 
 uint64_t Dataset::num_samples() const {
-    return samples_.rows();
+    return samples_.rows;
 }
 
 void Dataset::check_values() const {

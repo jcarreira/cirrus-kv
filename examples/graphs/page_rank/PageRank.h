@@ -1,5 +1,5 @@
-#ifndef PAGE_RANK_H
-#define PAGE_RANK_H
+#ifndef EXAMPLES_GRAPHS_PAGE_RANK_PAGERANK_H_
+#define EXAMPLES_GRAPHS_PAGE_RANK_PAGERANK_H_
 
 #include <vector>
 #include "Vertex.h"
@@ -20,4 +20,4 @@ void pageRank(cirrus::CacheManager<Vertex>& cm,
 
 }  // namespace graphs
 
-#endif
+#endif  // EXAMPLES_GRAPHS_PAGE_RANK_PAGERANK_H_

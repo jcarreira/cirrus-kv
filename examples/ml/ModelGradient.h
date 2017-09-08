@@ -1,5 +1,5 @@
-#ifndef _MODEL_GRADIENT_H_
-#define _MODEL_GRADIENT_H_
+#ifndef EXAMPLES_ML_MODELGRADIENT_H_
+#define EXAMPLES_ML_MODELGRADIENT_H_
 
 #include <cstdint>
 #include <vector>
@@ -9,7 +9,8 @@
   */
 class ModelGradient {
  public:
-     ModelGradient() = default;
+     ModelGradient() : version(0) {}
+     virtual ~ModelGradient() = default;
 
      /**
        * Serialize gradient
@@ -37,15 +38,15 @@ class ModelGradient {
      /**
        * Set gradient version
        */
-     virtual void setCount(uint64_t c) {
-         count = c;
+     virtual void setVersion(uint64_t v) {
+         version = v;
      }
 
      /**
        * Get version of gradient
        */
-     virtual uint64_t getCount() const {
-         return count;
+     virtual uint64_t getVersion() const {
+         return version;
      }
 
      /**
@@ -54,15 +55,21 @@ class ModelGradient {
      virtual void check_values() const = 0;
 
  protected:
-     uint64_t count;  //< this gradient's version
+     uint64_t version = 0;  //< this gradient's version
 };
 
 class LRGradient : public ModelGradient {
  public:
     friend class LRModel;
 
-    explicit LRGradient(int d);
+    virtual ~LRGradient() = default;
+
+    LRGradient(LRGradient&& data);
     explicit LRGradient(const std::vector<double>& data);
+    explicit LRGradient(int d);
+
+    LRGradient& operator=(LRGradient&& other);
+
     void loadSerialized(const void*);
     void serialize(void*) const override;
     uint64_t getSerializedSize() const override;
@@ -76,6 +83,8 @@ class LRGradient : public ModelGradient {
 class SoftmaxGradient : public ModelGradient {
  public:
     friend class SoftmaxModel;
+
+    virtual ~SoftmaxGradient() = default;
 
     SoftmaxGradient(uint64_t nclasses, uint64_t d);
     explicit SoftmaxGradient(const std::vector<std::vector<double>>&);
@@ -91,4 +100,4 @@ class SoftmaxGradient : public ModelGradient {
     std::vector<std::vector<double>> weights;  //< weights for softmax gradient
 };
 
-#endif  // _MODEL_GRADIENT_H_
+#endif  // EXAMPLES_ML_MODELGRADIENT_H_

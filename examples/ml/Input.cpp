@@ -5,7 +5,7 @@
   * Note: this code is still pretty slow reading datasets
   */
 
-#include <Input.h>
+#include <examples/ml/Input.h>
 #include <Utils.h>
 
 #include <string>
@@ -76,6 +76,8 @@ Dataset Input::read_input_criteo(const std::string& samples_input_file,
     // we transfer ownership of the samples and labels here
     Dataset ds(samples, labels, samples_entries, n_cols);
 
+    delete[] samples;
+
     return ds;
 }
 
@@ -124,10 +126,6 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
             /*
              * We have the line, now split it into features
              */ 
-
-            //std::cout << "[INPUT] "
-            //    << "Parsing line: " << line << std::endl;
-
             assert(line.size() < STR_SIZE);
             strncpy(str, line.c_str(), STR_SIZE);
             char* s = str;
@@ -140,14 +138,12 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
                 k++;
                 if (limit_cols && k == limit_cols)
                     break;
-                //std::cout << "[INPUT] sample index: " << sample.size() << std::endl;
             }
 
+            // we assume first column is label
             double label = sample.front();
-            // first value is the label
             sample.erase(sample.begin());
 
-            //std::cout << "[INPUT] Parsed label: " << label << std::endl;
             thread_labels.push_back(label);
             thread_samples.push_back(sample);
         }
@@ -188,7 +184,7 @@ std::vector<std::vector<double>> Input::read_mnist_csv(
     std::vector<std::vector<double>> samples;
 
     std::string line;
-    char str[STR_SIZE];
+    char str[STR_SIZE + 1] = {0};
     while (getline(fin, line)) {
         assert(line.size() < STR_SIZE);
         strncpy(str, line.c_str(), STR_SIZE);
@@ -291,13 +287,12 @@ Dataset Input::read_input_csv(const std::string& input_file,
         if (i % REPORT_LINES == 0) {
             std::cout << "Read: " << i << " lines." << std::endl;
         }
-        //std::cout << "Pushing line: " << line << std::endl;
     }
 
     while (1) {
         usleep(100);
         input_mutex.lock();
-        if (lines.size() == 0) {
+        if (lines.empty()) {
             input_mutex.unlock();
             break;
         }
@@ -327,11 +322,6 @@ Dataset Input::read_input_csv(const std::string& input_file,
     
     std::cout << "Printing first sample after normalization" << std::endl;
     print_sample(samples[0]);
-
-    //std::cout << "Printing label" << std::endl;
-    //for (unsigned int i = 0; i < samples.size(); ++i) {
-    //    std::cout << labels[i] << "\n";
-    //}
 
     // we transfer ownership of the samples and labels here
     return Dataset(samples, labels);

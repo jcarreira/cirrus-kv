@@ -1,5 +1,5 @@
-#ifndef _TASKS_H_
-#define _TASKS_H_
+#ifndef EXAMPLES_ML_TASKS_H_
+#define EXAMPLES_ML_TASKS_H_
 
 #include <Configuration.h>
 #include <string>
@@ -128,4 +128,4 @@ class LoadingTask {
      uint64_t nworkers;
 };
 
-#endif  // _TASKS_H_
+#endif  // EXAMPLES_ML_TASKS_H_

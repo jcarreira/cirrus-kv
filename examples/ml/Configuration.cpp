@@ -1,4 +1,4 @@
-#include <Configuration.h>
+#include <examples/ml/Configuration.h>
 
 #include <fstream>
 #include <iostream>
@@ -112,7 +112,7 @@ std::string Configuration::get_samples_path() const {
 std::string Configuration::get_labels_path() const {
     if (labels_path == "")
         throw std::runtime_error("labels path not loaded");
-    if (input_path != "double_binary")
+    if (input_type != "double_binary")
         throw std::runtime_error("mismatch between paths and input type");
     return labels_path;
 }
@@ -171,6 +171,9 @@ uint64_t Configuration::get_num_classes() const {
   * Get the maximum number of features/columns to read from each sample
   */
 uint64_t Configuration::get_limit_cols() const {
+    if (limit_cols == 0) {
+        throw std::runtime_error("num_classes not loaded");
+    }
     return limit_cols;
 }
 

@@ -11,13 +11,9 @@
 #include <time.h>
 #include <iostream>
 #include <string>
-#include <thread>
-#include <memory>
-#include <cstring>
-#include <atomic>
+#include <vector>
 #include <utility>
-#include <random>
-#include <cassert>
+#include <stdexcept>
 
 #include "common/ThreadPinning.h"
 #include "common/Exception.h"
@@ -53,6 +49,90 @@ struct GeneralContext {
 };
 
 /**
+ * A struct representing a portion of RDMA memory.
+ */
+struct RDMAMem {
+    RDMAMem() : default_(true) {}
+
+    RDMAMem(const void* addr, uint64_t size,
+            ibv_mr* m = nullptr) :
+        addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m),
+        default_(false) {}
+
+    ~RDMAMem() {
+        // Note: the application developer has to call clear()
+    }
+
+    /**
+     * Registers the RDMA memory
+     * @param gctx the GeneralContext for all connections
+     * @return Whether memory was successfully registered
+     */
+    bool prepare(const GeneralContext& gctx) {
+        LOG<INFO>("prepare()");
+        // we don't register more than once
+        if (registered_) {
+            LOG<INFO>("already registered");
+            return true;
+        }
+
+        LOG<INFO>("prepare:: ibv_reg_mr()", addr_,
+                "length: ", size_);
+        mr = ibv_reg_mr(gctx.pd,
+                reinterpret_cast<void*>(addr_),
+                size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+        if (mr == nullptr) {
+            if (errno == EINVAL) {
+                LOG<ERROR>("EINVAL from ibv_reg_mr");
+            } else if (errno == ENOMEM) {
+                LOG<ERROR>("ENOMEM from ibv_reg_mr");
+            } else {
+                LOG<ERROR>("ibv_reg_mr failed, are you trying to write "
+                        "from a string literal?");
+            }
+            throw std::runtime_error("Error in prepare()");
+        }
+        if (mr) {
+            registered_ = true;
+        }
+        return mr != nullptr;
+    }
+
+    /**
+     * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
+     * @return Whether memory was successfully cleared.
+     */
+    bool clear() {
+        if (registered_ == false)
+            throw std::runtime_error("Not registered");
+
+        LOG<INFO>("prepare:: ibv_dereg_mr()", addr_,
+                "length: ", size_);
+
+        int ret = ibv_dereg_mr(mr);
+
+        cleared_ = true;
+
+        return ret == 0;
+    }
+
+    bool isDefault() const {
+        return default_;
+    }
+
+    uint64_t addr_ = 0;  //< Address of the memory */
+    uint64_t size_ = 0;  //< Size of the memory */
+    struct ibv_mr *mr = 0;  //< Pointer to ibv_mr for this memory */
+    bool registered_ = false;  //< If the memory is registered. */
+    bool cleared_    = false;  //< If the memory is cleared. */
+
+    // Indicates whether this RDMAMem was constructed by default
+    // (because user did not provide one)
+    // If so, we will have to setup a proper one at some point
+    bool default_    = false;
+};
+
+/**
   * An RDMA based client that inherits from BladeClient.
   */
 class RDMAClient : public BladeClient {
@@ -61,11 +141,15 @@ class RDMAClient : public BladeClient {
     bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(ObjectID oid)
         override;
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
+        const std::vector<ObjectID>& ids) override;
 
     BladeClient::ClientFuture write_async(ObjectID oid,
         const WriteUnit& w) override;
 
     BladeClient::ClientFuture read_async(ObjectID oid) override;
+    BladeClient::ClientFuture read_async_bulk(
+                                           std::vector<ObjectID> oids) override;
 
     bool remove(ObjectID id) override;
 
@@ -75,7 +159,6 @@ class RDMAClient : public BladeClient {
      * during call to connect.
      */
     unsigned int seed;
-    struct RDMAMem;
 
     /**
       * A class that stores a size and allocation record.
@@ -101,25 +184,22 @@ class RDMAClient : public BladeClient {
         RDMAOpInfo(struct rdma_cm_id* id_,
                 std::function<void(void)> fn = []() -> void {}) :
             id(id_), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>(false);
-                op_sem = std::make_shared<cirrus::PosixSemaphore>();
-                error_code = std::make_shared<cirrus::ErrorCodes>();
-            }
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+            fd = std::make_shared<FutureData>();
+        }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
-                   std::shared_ptr<cirrus::Lock> op_sem,
+                std::shared_ptr<cirrus::Lock> op_sem,
                 std::function<void(void)> fn = []() -> void {}) :
-            id(id_), op_sem(op_sem), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>();
-                *result_available = false;
-                error_code = std::make_shared<cirrus::ErrorCodes>();
-            }
+            id(id_), apply_fn(fn) {
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+
+            fd = std::make_shared<FutureData>();
+            fd->sem = op_sem;
+        }
+
 
         /**
          * Apply the given function on completion. Mark the operation as
@@ -129,19 +209,18 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applying fn");
             apply_fn();
             LOG<INFO>("Applied fn");
-            *result_available = true;
-            *result = true;
+            fd->result_available = true;
+            fd->result = true;
         }
 
+        // ptr to data. Delete'd for RDMA_WRITEs
+        char* data = nullptr;
         struct rdma_cm_id* id;
-        /** Pointer to the semaphore for the operation. */
-        std::shared_ptr<cirrus::Lock> op_sem;
-        /** Pointer to the boolean success of the operation. */
-        std::shared_ptr<bool> result;
-        /** Pointer to operation completion. */
-        std::shared_ptr<bool> result_available;
-        /** Pointer to error code. Will always be okay. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code;
+
+        /**
+          * Data to be sent up to the client
+          */
+        std::shared_ptr<FutureData> fd;
         /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };
@@ -188,83 +267,13 @@ class RDMAClient : public BladeClient {
         bool setup_done = false;
     };
 
-    /**
-      * A struct representing a portion of RDMA memory.
-      */
-    struct RDMAMem {
-        RDMAMem(const void* addr = nullptr, uint64_t size = 0,
-                ibv_mr* m = nullptr) :
-            addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m) {}
-
-        ~RDMAMem() {
-            if (registered_ && !cleared_) {
-                clear();
-            }
-        }
-
-        /**
-          * Registers the RDMA memory
-          * @param gctx the GeneralContext for all connections
-          * @return Whether memory was successfully registered
-          */
-        bool prepare(GeneralContext gctx) {
-            LOG<INFO>("prepare()");
-            // we don't register more than once
-            if (registered_) {
-                LOG<INFO>("already registered");
-                return true;
-            }
-
-            mr = ibv_reg_mr(gctx.pd,
-                    reinterpret_cast<void*>(addr_),
-                    size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-            if (mr == nullptr) {
-                if (errno == EINVAL) {
-                    LOG<ERROR>("EINVAL from ibv_reg_mr");
-                } else if (errno == ENOMEM) {
-                    LOG<ERROR>("ENOMEM from ibv_reg_mr");
-                } else {
-                    LOG<ERROR>("ibv_reg_mr failed, are you trying to write "
-                                   "from a string literal?");
-                }
-            }
-            if (mr) {
-                registered_ = true;
-            }
-            return mr != nullptr;
-        }
-
-        /**
-          * Clears the RDMA memory. Calls ibv_dereg_mr() on RDMAMem.mr .
-          * @return Whether memory was successfully cleared.
-          */
-        bool clear() {
-            if (registered_ == false)
-                throw std::runtime_error("Not registered");
-
-            int ret = ibv_dereg_mr(mr);
-
-            cleared_ = true;
-
-            return ret == 0;
-        }
-
-        // we should have a smart pointer around this mr
-        uint64_t addr_; /**< Address of the memory */
-        uint64_t size_; /**< Size of the memory */
-        struct ibv_mr *mr; /**< Pointer to ibv_mr for this memory */
-        bool registered_ = false; /**< If the memory is registered. */
-        bool cleared_ = false; /**< If the memory is cleared. */
-    };
-
-
     bool readToLocal(BladeLocation loc, void*);
 
     BladeClient::ClientFuture readToLocalAsync(BladeLocation loc,
             void* ptr);
 
     bool writeRemote(const void* data, BladeLocation loc,
-        RDMAMem* mem = nullptr);
+        RDMAMem mem = RDMAMem());
     BladeClient::ClientFuture writeRemoteAsync(const void *data,
             BladeLocation loc);
     bool insertObjectLocation(ObjectID id,
@@ -284,19 +293,19 @@ class RDMAClient : public BladeClient {
             const AllocationRecord& alloc_rec,
             uint64_t offset, uint64_t length,
             const void* data,
-            RDMAMem* mem = nullptr);
+            RDMAMem mem = RDMAMem());
     bool rdma_write_sync(const AllocationRecord& alloc_rec, uint64_t offset,
-            uint64_t length, const void* data, RDMAMem* mem = nullptr);
+            uint64_t length, const void* data, RDMAMem mem = RDMAMem());
 
     // XXX We may not need a shared ptr here
     // reads
     BladeClient::ClientFuture rdma_read_async(
         const AllocationRecord& alloc_rec,
         uint64_t offset, uint64_t length, void *data,
-        RDMAMem* mem = nullptr);
+        RDMAMem mem = RDMAMem());
 
     bool rdma_read_sync(const AllocationRecord& alloc_rec, uint64_t offset,
-            uint64_t length, void *data, RDMAMem* reg = nullptr);
+            uint64_t length, void *data, RDMAMem reg = RDMAMem());
 
     void alloc_rdma_memory(ConnectionContext *ctx);
 
@@ -311,15 +320,16 @@ class RDMAClient : public BladeClient {
     bool send_receive_message_sync(rdma_cm_id*, uint64_t size);
 
     // RDMA (write/read)
-    RDMAOpInfo* write_rdma_async(struct rdma_cm_id *id, uint64_t size,
-            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
+    void write_rdma_async(struct rdma_cm_id *id, uint64_t size,
+            uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&,
+            RDMAOpInfo* op_info);
     bool write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem&);
 
-    RDMAOpInfo* read_rdma_async(struct rdma_cm_id *id, uint64_t size,
+    void read_rdma_async(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem,
-            std::function<void()> apply_fn = []() -> void {});
+            RDMAOpInfo* op_info);
     void read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
             uint64_t remote_addr, uint64_t peer_rkey,
             const RDMAMem& mem);
@@ -334,9 +344,9 @@ class RDMAClient : public BladeClient {
     int post_receive(struct rdma_cm_id *id);
 
     struct rdma_cm_id *id_;
-    struct rdma_event_channel *ec_;
+    struct rdma_event_channel *ec_ = nullptr;
 
-    int timeout_ms_;
+    int timeout_ms_ = 0;
 
     ConnectionContext con_ctx_;
 

@@ -116,13 +116,10 @@ void test_performance() {
         cirrus::TimerFunction tf("Timing read", true);
         auto ret_pair = client.read_sync(0);
 
-        std::cout << "Length: " << ret_pair.second << std::endl;
-
         auto d2 =
             *(reinterpret_cast<const cirrus::Dummy<size>*>(
                 ret_pair.first.get()));
 
-        std::cout << "Returned id: " << d2.id << std::endl;
         if (d2.id != 42) {
             throw std::runtime_error("Returned value does not match");
         }
@@ -146,12 +143,19 @@ void test_async() {
         throw std::runtime_error("Error during async write.");
     }
 
+    auto ret_pair = client.read_sync(1);
+    const int sync_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
+    if (sync_val != message) {
+        std::cout << "Received: " << sync_val << std::endl;
+        throw std::runtime_error("Improper value placed by put async");
+    }
+
     auto read_future = client.read_async(1);
 
     if (!read_future.get()) {
         throw std::runtime_error("Error during async write.");
     }
-    auto ret_pair = read_future.getDataPair();
+    ret_pair = read_future.getDataPair();
 
     const int ret_val = *(reinterpret_cast<const int*>(ret_pair.first.get()));
     std::cout << ret_val << " returned from server" << std::endl;
@@ -224,5 +228,6 @@ auto main(int argc, char *argv[]) -> int {
     test_performance();
     test_async();
     test_async_N<10>();
+    std::cout << "Tests successful" << std::endl;
     return 0;
 }

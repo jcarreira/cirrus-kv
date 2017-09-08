@@ -1,5 +1,5 @@
-#ifndef _ML_UTILS_H_
-#define _ML_UTILS_H_
+#ifndef EXAMPLES_ML_MLUTILS_H_
+#define EXAMPLES_ML_MLUTILS_H_
 
 namespace mlutils {
 
@@ -21,4 +21,4 @@ double log_aux(double x);
 
 }  // namespace mlutils
 
-#endif  // _ML_UTILS_H_
+#endif  // EXAMPLES_ML_MLUTILS_H_

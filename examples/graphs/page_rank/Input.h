@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_
+#define EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_
 
 #include <vector>
 #include <string>
@@ -11,4 +11,4 @@ std::vector<Vertex> readGraph(const std::string& fname);
 
 }  // graphs
 
-#endif  // _UTILS_H_
+#endif  // EXAMPLES_GRAPHS_PAGE_RANK_INPUT_H_

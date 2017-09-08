@@ -1,4 +1,4 @@
-#include "Input.h"
+#include <examples/graphs/wcc/Input.h>
 #include <fstream>
 
 namespace graphs {
@@ -26,6 +26,10 @@ std::vector<Vertex> readGraph(const std::string& fname) {
     int num_edges = -1;
     infile >> num_vertices;
     infile >> num_edges;
+
+    if (num_vertices < 0 || num_edges < 0) {
+        throw std::runtime_error("Wrong input values");
+    }
 
     vertices.reserve(num_vertices);
 

@@ -45,10 +45,13 @@ class TCPClient : public BladeClient {
     bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
+        const std::vector<ObjectID>& ids) override;
 
 
     ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
     ClientFuture read_async(ObjectID oid) override;
+    ClientFuture read_async_bulk(std::vector<ObjectID> oids) override;
 
     bool remove(ObjectID id) override;
 
@@ -59,29 +62,10 @@ class TCPClient : public BladeClient {
       * transactions.
       */
     struct txn_info {
-        /** result of the transaction */
-        std::shared_ptr<bool> result;
-        /** Boolean indicating whether transaction is complete */
-        std::shared_ptr<bool> result_available;
-        /** Error code if any were thrown on the server. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code;
-        /** Semaphore for the transaction. */
-        std::shared_ptr<cirrus::SpinLock> sem;
-
-        /** Pointer to shared ptr that points to any mem allocated for reads. */
-        std::shared_ptr<std::shared_ptr<const char>> mem_for_read_ptr;
-
-        /** Pointer to size of mem for read. */
-        std::shared_ptr<uint64_t> mem_size;
+        std::shared_ptr<FutureData> fd;
 
         txn_info() {
-            result = std::make_shared<bool>();
-            result_available = std::make_shared<bool>();
-            *result_available = false;
-            sem = std::make_shared<cirrus::SpinLock>();
-            error_code = std::make_shared<cirrus::ErrorCodes>();
-            mem_for_read_ptr = std::make_shared<std::shared_ptr<const char>>();
-            mem_size = std::make_shared<uint64_t>(0);
+            fd = std::make_shared<FutureData>();
         }
     };
 
@@ -134,7 +118,7 @@ class TCPClient : public BladeClient {
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
       */
-    cuckoohash_map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+    cuckoohash_map<TxnID, struct txn_info> txn_map;
 
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send
@@ -161,9 +145,9 @@ class TCPClient : public BladeClient {
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */
-    std::thread* receiver_thread;
+    std::thread* receiver_thread = nullptr;
     /** Thread that runs the sending loop. */
-    std::thread* sender_thread;
+    std::thread* sender_thread = nullptr;
 
     /**
      * Bool that the process_send and process_received threads check.

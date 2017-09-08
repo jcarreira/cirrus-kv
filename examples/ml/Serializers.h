@@ -1,12 +1,11 @@
-#ifndef _SERIALIZERS_H_
-#define _SERIALIZERS_H_
+#ifndef EXAMPLES_ML_SERIALIZERS_H_
+#define EXAMPLES_ML_SERIALIZERS_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <memory>
 #include <utility>
-#include <arpa/inet.h>
 #include <LRModel.h>
-#include <SoftmaxModel.h>
 
 #include "common/Serializer.h"
 
@@ -144,7 +143,7 @@ class lr_gradient_serializer : public cirrus::Serializer<LRGradient> {
 
     uint64_t size(const LRGradient& g) const override;
     void serialize(const LRGradient& g, void* mem) const override;
-    
+ 
  private:
     uint64_t n;             //< size of the model
     std::string name;  //< name associated with this serializer
@@ -163,7 +162,6 @@ class lr_gradient_deserializer {
  private:
     uint64_t n;  //< size of the gradient
 };
-
 
 /*************************************************************************
   ************************************************************************
@@ -242,4 +240,4 @@ class sm_model_deserializer {
     std::string name;   //< name associated with this serializer
 };
 
-#endif  // _SERIALIZERS_H_
+#endif  // EXAMPLES_ML_SERIALIZERS_H_

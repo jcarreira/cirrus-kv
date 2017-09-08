@@ -1,4 +1,4 @@
-#include "Input.h"
+#include <examples/graphs/page_rank/Input.h>
 #include <fstream>
 
 namespace graphs {

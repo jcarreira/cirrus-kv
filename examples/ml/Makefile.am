@@ -9,8 +9,12 @@ CXX = mpic++
 bin_PROGRAMS = parameter_server two_clients_test bug_regression \
                parameter_server_softmax
 
-LIBS         =  -lclient -lauthentication -lutils -lmpi -lrdmacm \
-	        -libverbs -levictionpolicies
+LIBS         =  -lclient -lauthentication -lutils -lmpi \
+		-levictionpolicies
+
+if USE_RDMA
+LIBS += -lrdmacm -libverbs
+endif
 
 LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/client/ \
@@ -21,7 +25,7 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -pthread
-CPPFLAGS = -ggdb -O3 -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
            -I$(TOP_DIR)/third_party/eigen_source \
@@ -34,13 +38,14 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               Tasks.cpp
 
-CPP_SOURCES2 = Input.cpp Utils.cpp \
+CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp 
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
-parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp $(CPP_SOURCES2)
+parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
+				$(CPP_SOURCES_SOFTMAX)
 two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
 bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)

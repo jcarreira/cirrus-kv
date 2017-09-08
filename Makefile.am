@@ -2,9 +2,10 @@ AUTOMAKE_OPTIONS = foreign serial-tests
 SUBDIRS = src tests benchmarks examples
 
 TESTS = ./tests/test_client_TCP.py ./tests/test_mem_exhaustion_TCP.py \
-		./tests/test_store_simple_TCP.py ./tests/test_cache_manager_TCP.py \
-		./tests/test_iterator_TCP.py ./tests/test_store_TCP.py \
-		./tests/test_mt_TCP.py ./tests/test_mult_clients_TCP.py
+	./tests/test_store_simple_TCP.py ./tests/test_cache_manager_TCP.py \
+	./tests/test_iterator_TCP.py ./tests/test_store_TCP.py \
+	./tests/test_mt_TCP.py ./tests/test_mult_clients_TCP.py \
+	./tests/test_bulk_transfer_TCP.py
 
 if USE_RDMA
 TESTS += ./tests/test_client_RDMA.py ./tests/test_mem_exhaustion_RDMA.py  \

@@ -63,8 +63,6 @@ class c_array_deserializer{
 
         // cast the pointer
         const T* ptr = reinterpret_cast<const T*>(data);
-        char* alloc = new char[size];
-        memset(alloc, 0, size);
 
         auto ret_ptr = std::shared_ptr<T>(new T[numslots],
                 std::default_delete< T[]>());
@@ -148,7 +146,8 @@ void run_loading_task(const Configuration& config) {
         << std::endl;
 
     // We put in batches of N samples
-    for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {
+    for (unsigned int i = 0;
+            i < dataset.num_samples() / samples_per_batch; ++i) {
         std::cout << "[LOADER] "
             << "Building samples batch" << std::endl;
         /**
@@ -191,7 +190,7 @@ void run_loading_task(const Configuration& config) {
     }
 
     std::cout << "[LOADER] "
-        << "Trying to get sample with id: " << 0
+        << "Trying to get samples batch with id: " << 0
         << std::endl;
 
     auto sample = samples_store.get(0);

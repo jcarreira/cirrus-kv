@@ -30,6 +30,8 @@ std::atomic<std::uint64_t> total_puts = {0};
  * These clients each use their own local store and client instances.
  */
 void test_multiple_clients() {
+    std::cout << "Multiple clients test" << std::endl;
+
     cirrus::TimerFunction tf("connect time", true);
 
     std::thread* threads[N_THREADS];
@@ -72,7 +74,7 @@ void test_multiple_clients() {
     for (int i = 0; i < N_THREADS; ++i)
         threads[i]->join();
 
-    std::cout << "Total puts: " << total_puts << std::endl;
+    std::cout << "Test successful" << std::endl;
 }
 
 auto main(int argc, char *argv[]) -> int {

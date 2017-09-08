@@ -1,4 +1,4 @@
-#include "Vertex.h"
+#include <examples/graphs/page_rank/Vertex.h>
 #include <arpa/inet.h>
 
 namespace graphs {

@@ -1,5 +1,5 @@
-#ifndef SRC_DATASET_H_
-#define SRC_DATASET_H_
+#ifndef EXAMPLES_ML_DATASET_H_
+#define EXAMPLES_ML_DATASET_H_
 
 #include <vector>
 #include <cstdint>
@@ -85,5 +85,4 @@ class Dataset {
     std::shared_ptr<const double> labels_;  //< vector of labels
 };
 
-#endif  // SRC_DATASET_H_
-
+#endif  // EXAMPLES_ML_DATASET_H_

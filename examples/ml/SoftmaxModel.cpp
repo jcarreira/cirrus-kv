@@ -1,7 +1,8 @@
-#include <SoftmaxModel.h>
+#include <examples/ml/SoftmaxModel.h>
 #include <Utils.h>
 #include <Eigen/Dense>
 #include <cmath>
+#include <algorithm>
 #include <Checksum.h>
 
 SoftmaxModel::SoftmaxModel(uint64_t classes, uint64_t d) :
@@ -121,6 +122,11 @@ void SoftmaxModel::sgd_update(
         double learning_rate, const ModelGradient* gradient) {
     const SoftmaxGradient* grad =
         dynamic_cast<const SoftmaxGradient*>(gradient);
+
+    if (grad == nullptr) {
+        throw std::runtime_error("Error in dynamic cast");
+    }
+
     for (uint64_t i = 0; i < d; ++i) {
         for (uint64_t j = 0; j < nclasses; ++j) {
             weights[i][j] -= learning_rate * grad->weights[i][j];
@@ -137,20 +143,15 @@ std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
             double* labels,
             uint64_t labels_size,
             double epsilon) const {
-    assert(labels_size == m.rows());
+    assert(labels_size == m.rows);
 
     const double* m_data = reinterpret_cast<const double*>(m.data.get());
-    Eigen::MatrixXd dataset(m.rows(), m.cols());
-    for (unsigned int row = 0; row < m.rows(); ++row) {
-        for (unsigned int col = 0; col < m.cols(); ++col) {
-            dataset(row, col) = m_data[row * m.cols() + col];
+    Eigen::MatrixXd dataset(m.rows, m.cols);
+    for (unsigned int row = 0; row < m.rows; ++row) {
+        for (unsigned int col = 0; col < m.cols; ++col) {
+            dataset(row, col) = m_data[row * m.cols + col];
         }
     }
-
-    //std::cout << "minibatch_grad"
-    //    << " weights.size(): " << weights.size()
-    //    << " weights[0].size(): " << weights[0].size()
-    //    << std::endl;
 
     Eigen::MatrixXd W(dataset.cols(), nclasses);
     for (unsigned int d = 0; d < dataset.cols(); ++d) {
@@ -229,10 +230,10 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
     const Matrix& m = data.samples_;
     // XXX Fix, there is some code repetition here
     const double* m_data = reinterpret_cast<const double*>(m.data.get());
-    Eigen::MatrixXd dataset(m.rows(), m.cols());
-    for (unsigned int row = 0; row < m.rows(); ++row) {
-        for (unsigned int col = 0; col < m.cols(); ++col) {
-            dataset(row, col) = m_data[row * m.cols() + col];
+    Eigen::MatrixXd dataset(m.rows, m.cols);
+    for (unsigned int row = 0; row < m.rows; ++row) {
+        for (unsigned int col = 0; col < m.cols; ++col) {
+            dataset(row, col) = m_data[row * m.cols + col];
         }
     }
 
@@ -270,10 +271,7 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
 
     for (unsigned int i = 0; i < dataset.rows(); ++i) {
         double class_i = reinterpret_cast<const double*>(data.labels_.get())[i];
-        //std::cout << "Correct class: " << class_i << std::endl;
         for (int c = 0; c < probs.cols(); ++c) {
-            //std::cout << "class: " << c << std::endl;
-            //std::cout << "prob class: " << probs(i, c) << std::endl;
             // if there is a different class with higher probability
             // we count it as wrong
             if (probs(i, c) > probs(i, class_i)) {

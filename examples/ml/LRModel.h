@@ -1,5 +1,5 @@
-#ifndef _LRMODEL_H_
-#define _LRMODEL_H_
+#ifndef EXAMPLES_ML_LRMODEL_H_
+#define EXAMPLES_ML_LRMODEL_H_
 
 #include <vector>
 #include <utility>
@@ -81,7 +81,8 @@ class LRModel : public Model {
      * Compute a minibatch gradient
      * @param rank MPI worker rank
      * @param dataset Dataset to learn on
-     * @param labels Labels of the samples (size matches dataset)
+     * @param labels Labels of the samples
+     * @param labels_size Size of the labels array
      * @param epsilon L2 Regularization rate
      * @return Newly computed gradient
      */
@@ -131,4 +132,4 @@ class LRModel : public Model {
     uint64_t d;                   //< size of the model
 };
 
-#endif  // _LRMODEL_H_
+#endif  // EXAMPLES_ML_LRMODEL_H_

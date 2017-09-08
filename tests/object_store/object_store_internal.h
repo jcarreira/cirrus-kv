@@ -136,6 +136,37 @@ T deserializer_simple(const void* data, unsigned int /* size */) {
     return ret;
 }
 
+/**
+ * Serializes std::string by copying the c_str into the designated buffer.
+ */
+class string_serializer_simple : public cirrus::Serializer<std::string>{
+ public:
+    uint64_t size(const std::string& v) const override {
+        return v.size() + 1;
+    }
+
+    /**
+     * Function that actually performs the serialization.
+     * @param mem pointer to the buffer to write into
+     * @param v the string to be serialized
+     */
+    void serialize(const std::string& v, void *mem) const override {
+        auto length = v.size() + 1;
+        std::unique_ptr<char[]> ptr(new char[length]);
+        std::memcpy(mem, v.c_str(), length);
+        return;
+    }
+};
+
+
+/* Takes a pointer to raw mem passed in and returns as object. */
+std::string string_deserializer_simple(const void* data,
+    unsigned int /* size */) {
+    const char *ptr = reinterpret_cast<const char*>(data);
+    std::string ret(ptr);
+    return ret;
+}
+
 namespace test_internal {
 /**
  * Given a boolean indicating whether or not to return an RDMA client, returns

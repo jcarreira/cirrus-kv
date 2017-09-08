@@ -1,6 +1,6 @@
 namespace cirrus.message.TCPBladeMessage;
 
-union Message { Write, WriteAck, Read, ReadAck, Remove, RemoveAck }
+union Message { Write, WriteAck, Read, ReadAck, ReadBulk, ReadBulkAck, Remove, RemoveAck }
 
 table Write{
   oid:ulong;
@@ -18,6 +18,16 @@ table Read{
 
 table ReadAck{
   oid:ulong;
+  success:byte;
+  data:[byte];
+}
+
+table ReadBulk{
+  num_oids:ulong;
+  data:[ulong];
+}
+
+table ReadBulkAck{
   success:byte;
   data:[byte];
 }
