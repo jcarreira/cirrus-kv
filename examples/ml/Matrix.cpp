@@ -46,14 +46,6 @@ Matrix Matrix::T() const {
         return *cached_data;
     }
 
-    // const double* data_start = reinterpret_cast<const double*>(data.get());
-
-    // double* res = new double[rows * cols];
-    // for (uint64_t l = 0; l < rows; ++l) {
-    //     for (uint64_t c = 0; c < cols; ++c) {
-    //         res[c * rows + l] = data_start[l * cols + c];
-    //     }
-    // }
     cached_data.reset(new Matrix(data.get(), cols, rows));
 
     return *cached_data;
