@@ -9,6 +9,7 @@
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
+#include "iterator/CirrusIterable.h"
 
 // TODO(Tyler): Remove hardcoded IP and PORT
 static const uint64_t MB = (1024 * 1024);
@@ -44,9 +45,8 @@ void os_test_throughput(uint64_t numRuns, bool get = false) {
     // warm up
     store.put(0, *array);
 
-    uint64_t end;
-    uint64_t i = 0;
     cirrus::TimerFunction start;
+    uint64_t i = 0;
     for (; i < numRuns; ++i) {
         if (get) {
             store.get(0);
@@ -54,15 +54,20 @@ void os_test_throughput(uint64_t numRuns, bool get = false) {
             store.put(0, *array);
         }
     }
-    end = start.getUsElapsed();
+
+    uint64_t end = start.getUsElapsed();
 
     std::ofstream outfile;
-    std::string filename = "throughput_" + io_type + "_" + std::to_string(SIZE) + "_store.log";
+    std::string filename =
+        "throughput_" + io_type + "_" + std::to_string(SIZE) + "_store.log";
     outfile.open(filename);
-    outfile << io_type << " store throughput " + std::to_string(SIZE) << std::endl;
-    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << std::fixed << "MB/s: " << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
-            << std::endl;
+    outfile << io_type << " store throughput " + std::to_string(SIZE)
+        << std::endl;
+    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)
+        << std::endl;
+    outfile << std::fixed << "MB/s: "
+        << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
+        << std::endl;
 
     outfile.close();
 }
@@ -79,7 +84,8 @@ void cm_test_throughput(uint64_t numRuns, bool get = false) {
 
     const int cache_size = 1000;;
     cirrus::LRAddedEvictionPolicy policy(cache_size);
-    cirrus::CacheManager<std::array<char, SIZE>> cm(&store, &policy, cache_size);
+    cirrus::CacheManager<std::array<char, SIZE>>
+        cm(&store, &policy, cache_size);
 
     std::string io_type = get ? "get" : "put";
 
@@ -92,9 +98,8 @@ void cm_test_throughput(uint64_t numRuns, bool get = false) {
     // warm up
     store.put(0, *array);
 
-    uint64_t end;
-    uint64_t i = 0;
     cirrus::TimerFunction start;
+    uint64_t i = 0;
     for (; i < numRuns; ++i) {
         if (get) {
             cm.get(0);
@@ -102,19 +107,69 @@ void cm_test_throughput(uint64_t numRuns, bool get = false) {
             cm.put(0, *array);
         }
     }
-    end = start.getUsElapsed();
+    uint64_t end = start.getUsElapsed();
 
     std::ofstream outfile;
-    std::string filename = "throughput_" + io_type + "_" + std::to_string(SIZE) + "_cache.log";
+    std::string filename =
+        "throughput_" + io_type + "_" + std::to_string(SIZE) + "_cache.log";
     outfile.open(filename);
-    outfile << io_type << " cache throughput " + std::to_string(SIZE) << std::endl;
-    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)  << std::endl;
-    outfile << std::fixed << "MB/s: " << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
-            << std::endl;
+    outfile << io_type << " cache throughput " + std::to_string(SIZE)
+        << std::endl;
+    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)
+        << std::endl;
+    outfile << std::fixed << "MB/s: "
+        << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
+        << std::endl;
 
     outfile.close();
 }
 
+template <uint64_t SIZE>
+void iterator_throughput(uint64_t iterations, uint64_t read_ahead) {
+    cirrus::TCPClient client;
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
+        store(IP, PORT, &client,
+                serializer,
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
+
+    const int cache_size = 1000;;
+    cirrus::LRAddedEvictionPolicy policy(cache_size);
+    cirrus::CacheManager<std::array<char, SIZE>>
+        cm(&store, &policy, cache_size);
+    cirrus::CirrusIterable<std::array<char, SIZE>>
+        iter(&cm, read_ahead, 0, iterations - 1);
+
+    std::cout
+        << "Test iterator throughput with size: "
+        << SIZE << std::endl;
+    std::unique_ptr<std::array<char, SIZE>> array =
+        std::make_unique<std::array<char, SIZE>>();
+
+    for (uint64_t i = 0; i < iterations; ++i)
+        store.put(i, *array);
+
+    cirrus::TimerFunction start;
+    for (__attribute__((unused)) const auto& obj : iter) {
+    }
+
+    uint64_t end = start.getUsElapsed();
+
+    std::ofstream outfile;
+    std::string filename =
+        "throughput_" + std::to_string(SIZE) + "_iterator.log";
+    outfile.open(filename);
+    outfile << "iterator throughput " + std::to_string(SIZE)
+        << std::endl;
+    outfile << std::fixed << "MB/s: "
+        << (iterations * sizeof(*array)) / (end * 1.0 / MILLION) / MB
+        << std::endl;
+
+    outfile.close();
+}
+
+// Slightly larger object cause a segfault because objects live on the stack
 auto main() -> int {
     uint64_t num_runs = 20000;
     std::cout << "Starting throughput benchmark of object store" << std::endl;
@@ -122,31 +177,30 @@ auto main() -> int {
     os_test_throughput<4    * 1024>(num_runs);               // 4K
     os_test_throughput<50   * 1024>(num_runs);               // 50K
     os_test_throughput<1024 * 1024>(num_runs / 20);          // 1MB, total 1 gig
-    //os_test_throughput<10   * 1024 * 1024>(num_runs / 100);  // 10MB, total 2 gig
-    //os_test_throughput<50   * 1024 * 1024>(num_runs / 100);  // 50MB
-    //os_test_throughput<100  * 1024 * 1024>(50);              // 100MB, total 5 gig
 
     os_test_throughput<128>(num_runs, true);                // 128B
     os_test_throughput<4    * 1024>(num_runs, true);        // 4K
     os_test_throughput<50   * 1024>(num_runs, true);        // 50K
-    // Objects larger than this cause a segfault, likely as the store does not
-    // return by reference, and the object is placed on the stack
-    // os_test_throughput_get<1024 * 1024>(num_runs / 20);        // 1MB, total 1 gig
-    
+
     std::cout << "Starting throughput benchmark of cache manager" << std::endl;
     cm_test_throughput<128>(num_runs);                       // 128B
     cm_test_throughput<4    * 1024>(num_runs);               // 4K
     cm_test_throughput<50   * 1024>(num_runs);               // 50K
     cm_test_throughput<1024 * 1024>(num_runs / 20);          // 1MB, total 1 gig
-    //cm_test_throughput<10   * 1024 * 1024>(num_runs / 100);  // 10MB, total 2 gig
-    //cm_test_throughput<50   * 1024 * 1024>(num_runs / 100);  // 50MB
-    //cm_test_throughput<100  * 1024 * 1024>(50);              // 100MB, total 5 gig
 
     cm_test_throughput<128>(num_runs, true);                // 128B
     cm_test_throughput<4    * 1024>(num_runs, true);        // 4K
     cm_test_throughput<50   * 1024>(num_runs, true);        // 50K
-    
-    std::cout << "Starting throughput benchmark of cache manager with iterator" << std::endl;
+
+    std::cout
+        << "Starting throughput benchmark of cache manager with iterator"
+        << std::endl;
+    uint64_t iterations = 10000;
+    uint64_t read_ahead = 10;
+    iterator_throughput<128>(iterations, read_ahead);               // 128B
+    iterator_throughput<4    * 1024>(iterations, read_ahead);       // 4K
+    iterator_throughput<50   * 1024>(iterations, read_ahead);       // 50K
+    iterator_throughput<1024 * 1024>(iterations / 20, read_ahead);  // 1MB
     return 0;
 }
 
