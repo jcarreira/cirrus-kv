@@ -44,7 +44,6 @@ TCPClient::~TCPClient() {
 
     if (sender_thread) {
         LOG<INFO>("Terminating sender thread");
-        //queue_semaphore.signal();  // unblock sender thread
         sender_thread->join();
         delete sender_thread;
     }
@@ -541,8 +540,6 @@ ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
 void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
-        //queue_semaphore.wait();
-
 #pragma     GCC diagnostic ignored "-Wuninitialized"
         flatbuffers::FlatBufferBuilder* builder;
         while (1) {
@@ -637,7 +634,6 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     TimerFunction sem_time;
 #endif
     // Alert that the queue has been updated
-    //queue_semaphore.signal();
 
 #ifdef PERF_LOG
     LOG<PERF>("TCPClient::enqueue_message semaphore signal time (us): ",
