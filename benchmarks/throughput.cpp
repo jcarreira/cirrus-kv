@@ -46,8 +46,7 @@ void os_test_throughput(uint64_t numRuns, bool get = false) {
     store.put(0, *array);
 
     cirrus::TimerFunction start;
-    uint64_t i = 0;
-    for (; i < numRuns; ++i) {
+    for (uint64_t i = 0; i < numRuns; ++i) {
         if (get) {
             store.get(0);
         } else {
@@ -63,7 +62,7 @@ void os_test_throughput(uint64_t numRuns, bool get = false) {
     outfile.open(filename);
     outfile << io_type << " store throughput " + std::to_string(SIZE)
         << std::endl;
-    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)
+    outfile << std::fixed << "msg/s: " << numRuns / (end * 1.0 / MILLION)
         << std::endl;
     outfile << std::fixed << "MB/s: "
         << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
@@ -99,8 +98,7 @@ void cm_test_throughput(uint64_t numRuns, bool get = false) {
     store.put(0, *array);
 
     cirrus::TimerFunction start;
-    uint64_t i = 0;
-    for (; i < numRuns; ++i) {
+    for (uint64_t i = 0; i < numRuns; ++i) {
         if (get) {
             cm.get(0);
         } else {
