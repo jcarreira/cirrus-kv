@@ -18,6 +18,8 @@
 namespace cirrus {
 using ObjectID = uint64_t;
 
+const uint64_t HIGH_PEND = 50;
+
 /**
  * A class that manages the cache and interfaces with the store.
  */
@@ -453,7 +455,7 @@ void CacheManager<T>::evict(ObjectID oid) {
 
             // Clean the pending writes map if too full by
             // removing all operations that have completed
-            if (pending_writes.size() > 50) {
+            if (pending_writes.size() > HIGH_PEND) {
                 for (auto it = pending_writes.begin();
                     it != pending_writes.end(); it++) {
                     auto future = it->second;

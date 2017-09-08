@@ -512,8 +512,11 @@ void test_bulk_nonexistent() {
 void test_deferred_writes() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
-    cirrus::ostore::FullBladeObjectStoreTempl<int> store(IP, PORT, client.get(),
-            cirrus::serializer_simple<int>,
+
+    cirrus::serializer_simple<int> serializer;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(
+            IP, PORT, client.get(),
+            serializer,
             cirrus::deserializer_simple<int, sizeof(int)>);
 
     cirrus::LRAddedEvictionPolicy policy(2);
