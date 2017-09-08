@@ -88,6 +88,7 @@ void TCPClient::connect(const std::string& address,
 
     // Save the port in the info
     serv_addr.sin_port = htons(port);
+    std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 
     LOG<INFO>("Connecting to server");
     // Connect to the server

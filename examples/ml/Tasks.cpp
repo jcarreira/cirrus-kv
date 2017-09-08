@@ -207,9 +207,12 @@ void LogisticTask::run(const Configuration& config, int worker) {
             << "\n";
 #endif
         try {
-            auto lrg = *dynamic_cast<LRGradient*>(gradient.get());
+            auto lrg = dynamic_cast<LRGradient*>(gradient.get());
+            if (lrg == nullptr) {
+                throw std::runtime_error("Wrong dynamic cast");
+            }
             gradient_store.put(
-                    GRADIENT_BASE + gradient_id, lrg);
+                    GRADIENT_BASE + gradient_id, *lrg);
         } catch(...) {
             std::cout << "[WORKER] "
                 << "Worker task error doing put of gradient"

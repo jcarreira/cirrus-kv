@@ -553,10 +553,6 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     write_rdma_async(id, size, remote_addr, peer_rkey, mem, op_info);
     LOG<INFO>("RDMAClient:: waiting");
 
-    if (nullptr == op_info) {
-        throw std::runtime_error("Error writing rdma async");
-    }
-
     {
         TimerFunction tf("waiting semaphore", true);
         op_info->fd->sem->wait();

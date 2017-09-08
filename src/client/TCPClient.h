@@ -145,9 +145,9 @@ class TCPClient : public BladeClient {
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */
-    std::thread* receiver_thread;
+    std::thread* receiver_thread = nullptr;
     /** Thread that runs the sending loop. */
-    std::thread* sender_thread;
+    std::thread* sender_thread = nullptr;
 
     /**
      * Bool that the process_send and process_received threads check.
