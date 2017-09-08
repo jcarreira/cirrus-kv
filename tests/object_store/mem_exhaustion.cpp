@@ -15,19 +15,22 @@ static const uint64_t MILLION = 1000000;
 bool use_rdma_client;
 
 /**
- * This test aims to ensure that when the remote server no longer has room to fulfill
- * all allocations it notifies the client, which will then throw an error message.
- * This test assumes that the server does not have enough room to store one million
- * objects of one MB each (1 TB). This test also ensures that the allocation error does
- * not crash the server as in order for notification of failure to reach the client,
- * the server must have been running to send the message.
+ * This test aims to ensure that when the remote server no longer has
+ * room to fulfill all allocations it notifies the client, which will
+ * then throw an error message.
+ * This test assumes that the server does not have enough room to store
+ * one million objects of one MB each (1 TB). This test also ensures
+ * that the allocation error does not crash the server as in order
+ * for notification of failure to reach the client, the server must
+ * have been running to send the message.
  */
 void test_exhaustion() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                     sizeof(cirrus::Dummy<SIZE>)>);
     struct cirrus::Dummy<SIZE> d(42);
@@ -45,9 +48,10 @@ void test_exhaustion() {
 void test_exhaustion_remove() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
+    cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
     cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
         store(IP, PORT, client.get(),
-                cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                serializer,
                 cirrus::deserializer_simple<cirrus::Dummy<SIZE>, SIZE>);
     struct cirrus::Dummy<SIZE> d(42);
 
@@ -70,6 +74,8 @@ void test_exhaustion_remove() {
 }
 
 auto main(int argc, char *argv[]) -> int {
+    std::cout << "Runing exhaustion test" << std::endl;
+
     use_rdma_client = cirrus::test_internal::ParseMode(argc, argv);
     IP = cirrus::test_internal::ParseIP(argc, argv);
     test_exhaustion_remove();

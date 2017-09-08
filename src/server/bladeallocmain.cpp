@@ -4,7 +4,8 @@
 #include "BladeAllocServer.h"
 #include "utils/logging.h"
 
-static const uint64_t GB = (1024*1024*1024);
+static const uint64_t MB = (1024 * 1024);
+static const uint64_t GB = (1024 * MB);
 
 static const int PORT = 12345;
 
@@ -40,6 +41,7 @@ auto main(int argc, char *argv[]) -> int {
             std::cout << "Pool size in invalid format." << std::endl;
             return -1;
         }
+        pool_size *= MB;
     } else {
         std::cout << "Error: ./bladeallocmain [pool_size]" << std::endl;
         return -1;

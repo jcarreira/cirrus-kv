@@ -1,11 +1,13 @@
 #ifndef SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 #define SRC_OBJECT_STORE_FULLBLADEOBJECTSTORE_H_
 
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
 #include <utility>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -13,6 +15,7 @@
 #include "utils/CirrusTime.h"
 #include "utils/logging.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
 
 namespace cirrus {
 namespace ostore {
@@ -28,8 +31,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     FullBladeObjectStoreTempl(const std::string& bladeIP,
                               const std::string& port,
                               BladeClient *client,
-                              std::function<std::pair<std::unique_ptr<char[]>,
-                              unsigned int>(const T&)> serializer,
+                              const Serializer<T>& serializer,
                               std::function<T(const void*, unsigned int)>
                               deserializer);
 
@@ -44,7 +46,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     void removeBulk(ObjectID first, ObjectID last) override;
 
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
-    void put_bulk(ObjectID start, ObjectID last, T* data) override;
+    std::vector<T> get_bulk_fast(const std::vector<ObjectID>& oids) override;
+    void put_bulk(ObjectID start, ObjectID last, T* data);
 
     void printStats() const noexcept override;
 
@@ -58,12 +61,9 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
 // TODO(Tyler): Change the serializer/deserializer to
 //  be references/pointers?
     /**
-      * A function that takes an object and serializes it. Returns a pointer
-      * to the buffer containing the serialized object as well as the size of
-      * the buffer.
+      * A cirrus::Serializer used for all write operations.
       */
-    std::function<std::pair<std::unique_ptr<char[]>,
-                                unsigned int>(const T&)> serializer;
+    const Serializer<T>& serializer;
 
     /**
       * A function that reads the buffer passed in and deserializes it,
@@ -89,8 +89,7 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
         const std::string& bladeIP,
         const std::string& port,
         BladeClient* client,
-        std::function<std::pair<std::unique_ptr<char[]>,
-        unsigned int>(const T&)> serializer,
+        const Serializer<T>& serializer,
         std::function<T(const void*, unsigned int)> deserializer) :
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
@@ -111,6 +110,7 @@ T FullBladeObjectStoreTempl<T>::get(const ObjectID& id) const {
     // Deserialize the memory at ptr and return an object
 
     uint64_t length = ptr_pair.second;
+    // std::cout << "Deserializing object id: " << id << std::endl;
     T retval = deserializer(ptr.get(), length);
 
     return retval;
@@ -143,20 +143,8 @@ template<class T>
 bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
     // Approach: serialize object passed in, push it to id
 
-    // TODO(Tyler): This code in the body is duplicated in async. Pull it out?
-#ifdef PERF_LOG
-    TimerFunction serialize_time;
-#endif
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    uint64_t serialized_size = serializer_out.second;
-#ifdef PERF_LOG
-    LOG<PERF>("FullBladeObjectStoreTempl::put serialize time (ns): ",
-            serialize_time.getNsElapsed());
-#endif
-
-    return client->write_sync(id, serial_ptr.get(), serialized_size);
+    WriteUnitTemplate<T> w(serializer, obj);
+    return client->write_sync(id, w);
 }
 
 /**
@@ -168,21 +156,8 @@ bool FullBladeObjectStoreTempl<T>::put(const ObjectID& id, const T& obj) {
 template<class T>
 typename ObjectStore<T>::ObjectStorePutFuture
 FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
-    std::pair<std::unique_ptr<char[]>, unsigned int> serializer_out =
-                                                        serializer(obj);
-#ifdef PERF_LOG
-    TimerFunction serialize_time;
-#endif
-    std::unique_ptr<char[]> serial_ptr = std::move(serializer_out.first);
-    uint64_t serialized_size = serializer_out.second;
-#ifdef PERF_LOG
-    LOG<PERF>("FullBladeObjectStoreTempl::put_async serialize time (ns): ",
-            serialize_time.getNsElapsed());
-#endif
-
-    auto client_future = client->write_async(id,
-                                           serial_ptr.get(),
-                                           serialized_size);
+    WriteUnitTemplate<T> w(serializer, obj);
+    auto client_future = client->write_async(id, w);
 
     // Constructor takes a pointer to a client future
     return typename ObjectStore<T>::ObjectStorePutFuture(client_future);
@@ -192,7 +167,7 @@ FullBladeObjectStoreTempl<T>::put_async(const ObjectID& id, const T& obj) {
  * Gets many objects from the remote store at once. These items will be written
  * into the c style array pointed to by data.
  * @param start the first objectID that should be pulled from the store.
- * @param the last objectID that should be pulled from the store.
+ * @param last the last objectID that should be pulled from the store.
  * @param data a pointer to a c style array that will be filled from the
  * remote store.
  */
@@ -210,24 +185,43 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
     for (int i = 0; i < numObjects; i++) {
         futures[i] = get_async(start + i);
     }
-    std::vector<bool> done(numObjects, false);
-    int total_done = 0;
 
     // Wait for each item to complete
-    while (total_done != numObjects) {
-        for (int i = 0; i < numObjects; i++) {
-            // Check status if not already completed
-            if (!done[i]) {
-                bool ret = futures[i].try_wait();
-                // Copy object and mark true if it completed.
-                if (ret) {
-                    done[i] = true;
-                    data[i] = futures[i].get();
-                    total_done++;
-                }
-            }
-        }
+    for (int i = 0; i < numObjects; i++) {
+        futures[i].wait();
+        data[i] = futures[i].get();
     }
+}
+
+/**
+ * Gets many objects from the remote store at once. These items will be written
+ * into the c style array pointed to by data.
+ * @param oids list of Object ids to be retrieved from server
+ * remote store.
+ */
+template<class T>
+std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
+                                            const std::vector<ObjectID>& oids) {
+    std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
+        client->read_sync_bulk(oids);
+
+    const uint32_t* ptr =
+                        reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
+    uint32_t num_oids = *ptr++;
+
+    assert(num_oids == oids.size());
+
+    std::vector<T> res;
+    res.reserve(num_oids);
+
+    const char* mem = reinterpret_cast<const char*>(ptr);
+    for (uint32_t i = 0; i < num_oids; ++i) {
+        uint32_t size = ntohl(*reinterpret_cast<const uint32_t*>(mem));
+        mem += sizeof(uint32_t);
+        res.push_back(deserializer(mem, size));
+        mem += size;
+    }
+    return res;
 }
 
 /**

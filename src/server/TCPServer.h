@@ -4,7 +4,10 @@
 #include <poll.h>
 #include <vector>
 #include <map>
+#include <memory>
+#include <string>
 #include "server/Server.h"
+#include "server/MemoryBackend.h"
 
 namespace cirrus {
 
@@ -16,7 +19,11 @@ using ObjectID = uint64_t;
   */
 class TCPServer : public Server {
  public:
-    explicit TCPServer(int port, uint64_t pool_size_, uint64_t max_fds = 100);
+    explicit TCPServer(
+            int port, uint64_t pool_size_,
+            const std::string& backend = "Memory",
+            const std::string& storage_path = "/tmp/cirrus_storage/",
+            uint64_t max_fds = 100);
     ~TCPServer() = default;
 
     virtual void init();
@@ -36,8 +43,6 @@ class TCPServer : public Server {
     int port_;
     /** The fd for the socket the server listens for incoming requests on. */
     int server_sock_ = 0;
-    /** The map the server uses to map ObjectIDs to byte vectors. */
-    std::map<uint64_t, std::vector<int8_t>> store;
 
     /** Maximum number of bytes that can be stored in the pool. */
     uint64_t pool_size;
@@ -58,6 +63,7 @@ class TCPServer : public Server {
      * timing out.
      */
     int timeout = 60 * 1000 * 3;
+
     /**
      * Vector that serves as a wrapper for a c style array containing
      * struct pollfd objects. Used for calls to poll(). New structs are
@@ -66,6 +72,11 @@ class TCPServer : public Server {
      * remaining items shifted.
      */
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
+
+    /**
+      * Memory interface
+      */
+    std::unique_ptr<StorageBackend> mem;
 };
 
 }  // namespace cirrus

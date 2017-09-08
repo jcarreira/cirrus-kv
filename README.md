@@ -13,36 +13,45 @@ This library has been tested on Ubuntu >= 14.04 as well as MacOS 10.12.5. Additi
 
 It has been tested with the following environment:
 * Ubuntu 14.04
-* g++ 5.4 (needs C++17)
+* g++ 5.4
 * Boost
 * autotools
-* Mellanox OFED 3.4 (requires Mellanox drivers)
+* Mellanox OFED 3.4 (optional)
 * cmake
 * cpplint
+* snappy
+* bzip2
+* zlib
 
 You can install these with
 
-    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake && sudo pip install cpplint
-
-Make sure the compilation is done with g++-6. *update-alternatives* can be used:
-
-    $ sudo apt-get install g++-6
-    $ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 100
-    $ sudo update-alternatives --config g++ # choose g++-6
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool g++-6 libboost-all-dev cmake libsnappy-dev zlib1g-dev libbz2-dev && sudo pip install cpplint
 
 MacOS Requirements
 ============
-Building on MacOS has slightly different requirements than on linux. Namely, it requires the installation of gettext, which provides some of the macros used in the configure file. Otherwise, simply ensure that automake, autoconf, and a high enough version of gcc/g++ are installed. Additionally, make sure that xcode command line tools are installed, as this should provide make and other necessary programs. gcc/g++ can be installed using macports, and the `port select` command allows you to set the new version of gcc/g++ as the one you want to use. The remaining programs can be installed using homebrew. cpplint can still be installed via pip.
+Building on MacOS requires the installation of gettext, boost and wget. Please ensure that automake, autoconf, xcode command line tools, and gcc/g++ are installed. gcc/g++ can be installed using macports, and the `port select` command allows you to set the new version of gcc/g++ as the one you want to use. The remaining programs can be installed using homebrew. cpplint can be installed via pip.
 
-gettext can be installed as follows using homebrew. Read the warning before running the link command:
+gettext can be installed as follows using homebrew:
 
     $ brew install gettext
     $ brew link --force gettext
 
-To install gcc/g++ you may have to do:
+To install wget do:
+
+    $ brew install wget
+
+To install gcc/g++ do:
 
     $ port install gcc5
     $ port select --list gcc
+
+To install boost do:
+
+    $ sudo port install boost
+
+To install cpplint do:
+
+    $ pip install cpplint
 
 Building
 =========
@@ -69,6 +78,10 @@ To run benchmarks execute the following command from the top of the project dire
     $ make benchmark
 
 This will leave log files for each benchmark run in the top directory. To add additional benchmarks, modify the script `run_benchmarks.py`, located in the benchmarks directory. The benchmarks are currently set to run locally, but may be set to run using a remote server by manually changing the ip address in the benchmark files. However, this then makes it so that the benchmarks must be manually launched from the command line after starting the server remotely. Additionally, the log files will be left in the benchmarks directory.
+
+
+Benchmark Results (outdated)
+=============
 
 * Single node burst of 128 byte put (synchronous) - latencies
 ```

@@ -1,16 +1,32 @@
 #ifndef SRC_CLIENT_TCPCLIENT_H_
 #define SRC_CLIENT_TCPCLIENT_H_
 
+#include <unistd.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <vector>
+#include <algorithm>
+#include <memory>
+#include <iostream>
 #include <string>
 #include <thread>
 #include <queue>
 #include <utility>
-#include <map>
 #include <atomic>
-#include <vector>
+#include <unordered_map>
 #include "common/schemas/TCPBladeMessage_generated.h"
+#include "libcuckoo/cuckoohash_map.hh"
 #include "client/BladeClient.h"
 #include "common/Exception.h"
+#include "common/Serializer.h"
+#include "utils/logging.h"
+#include "utils/utils.h"
+#include <boost/lockfree/queue.hpp>
+
+#define SEND_QUEUE_SIZE 10000
 
 namespace cirrus {
 
@@ -26,13 +42,16 @@ class TCPClient : public BladeClient {
     void connect(const std::string& address,
         const std::string& port) override;
 
-    bool write_sync(ObjectID oid, const void* data, uint64_t size) override;
+    bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
+    std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
+        const std::vector<ObjectID>& ids) override;
 
-    ClientFuture write_async(ObjectID oid, const void* data,
-                                       uint64_t size) override;
+
+    ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
     ClientFuture read_async(ObjectID oid) override;
+    ClientFuture read_async_bulk(std::vector<ObjectID> oids) override;
 
     bool remove(ObjectID id) override;
 
@@ -43,29 +62,10 @@ class TCPClient : public BladeClient {
       * transactions.
       */
     struct txn_info {
-        /** result of the transaction */
-        std::shared_ptr<bool> result;
-        /** Boolean indicating whether transaction is complete */
-        std::shared_ptr<bool> result_available;
-        /** Error code if any were thrown on the server. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code;
-        /** Semaphore for the transaction. */
-        std::shared_ptr<cirrus::SpinLock> sem;
-
-        /** Pointer to shared ptr that points to any mem allocated for reads. */
-        std::shared_ptr<std::shared_ptr<const char>> mem_for_read_ptr;
-
-        /** Pointer to size of mem for read. */
-        std::shared_ptr<uint64_t> mem_size;
+        std::shared_ptr<FutureData> fd;
 
         txn_info() {
-            result = std::make_shared<bool>();
-            result_available = std::make_shared<bool>();
-            *result_available = false;
-            sem = std::make_shared<cirrus::SpinLock>();
-            error_code = std::make_shared<cirrus::ErrorCodes>();
-            mem_for_read_ptr = std::make_shared<std::shared_ptr<const char>>();
-            mem_size = std::make_shared<uint64_t>(0);
+            fd = std::make_shared<FutureData>();
         }
     };
 
@@ -100,7 +100,7 @@ class TCPClient : public BladeClient {
     ssize_t read_all(int sock, void* data, size_t len);
 
     ClientFuture enqueue_message(
-                        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder,
+                        flatbuffers::FlatBufferBuilder* builder,
                         const int txn_id);
     void process_received();
     void process_send();
@@ -118,17 +118,30 @@ class TCPClient : public BladeClient {
       * as well as data in a location that is accessible to the future
       * corresponding to the transaction.
       */
-    std::map<TxnID, std::shared_ptr<struct txn_info>> txn_map;
+    cuckoohash_map<TxnID, struct txn_info> txn_map;
+
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    std::queue<std::unique_ptr<flatbuffers::FlatBufferBuilder>> send_queue;
+    boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
+        boost::lockfree::capacity<SEND_QUEUE_SIZE>> send_queue;
+
+    /**
+     * Queue of FlatBufferBuilders that are ready for reuse for writes.
+     */
+    std::queue<flatbuffers::FlatBufferBuilder*> reuse_queue;
+
+    /** Max number of flatbuffer builders in reuse_queue. */
+    const unsigned int reuse_max = 5;
+
 
     /** Lock on the txn_map. */
     cirrus::SpinLock map_lock;
     /** Lock on the send_queue. */
     cirrus::SpinLock queue_lock;
+    /** Lock on the reuse_queue. */
+    cirrus::SpinLock reuse_lock;
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */

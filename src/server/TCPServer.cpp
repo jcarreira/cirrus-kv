@@ -11,6 +11,11 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <cstdint>
+
+#include "MemoryBackend.h"
+#include "NVStorageBackend.h"
+
 #include "utils/logging.h"
 #include "common/Exception.h"
 #include "common/schemas/TCPBladeMessage_generated.h"
@@ -26,19 +31,32 @@ static const int initial_buffer_size = 50;
   * Constructor for the server. Given a port and queue length, sets the values
   * of the variables.
   * @param port the port the server will listen on
-  * @param queue_len the length of the queue to make connections with the
-  * server.
+  * @param pool_size_ the number of bytes to have in the memory pool.
+  * @param backend the Type of backend: "Memory" or "Storage"
+  * @param storage_path Path to disk storage. Used when backend is "Storage"
   * @param max_fds_ the maximum number of clients that can be connected to the
   * server at the same time.
-  * @param pool_size_ the number of bytes to have in the memory pool.
   */
-TCPServer::TCPServer(int port, uint64_t pool_size_, uint64_t max_fds_) :
+TCPServer::TCPServer(int port, uint64_t pool_size_,
+                     const std::string& backend,
+                     const std::string& storage_path,
+                     uint64_t max_fds_) :
     port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
-        if (max_fds_ + 1 == 0) {
-            throw cirrus::Exception("Max_fds value too high, "
-                "overflow occurred.");
-        }
+    if (max_fds_ + 1 == 0) {
+        throw cirrus::Exception("Max_fds value too high, "
+            "overflow occurred.");
     }
+
+    if (backend == "Memory") {
+        mem = std::make_unique<MemoryBackend>();
+    } else if (backend == "Storage") {
+        mem = std::make_unique<NVStorageBackend>(storage_path);
+    } else {
+        throw std::runtime_error("Wrong backend option");
+    }
+
+    mem->init();  // initialize memory backend
+}
 
 /**
   * Initializer for the server. Sets up the socket it uses to listen for
@@ -303,6 +321,14 @@ bool TCPServer::read_from_client(
     return true;
 }
 
+int64_t checksum(const std::vector<int8_t>& data) {
+    int64_t sum = 0;
+    for (const auto& d : data) {
+        sum += d;
+    }
+    return sum;
+}
+
 /**
  * Process the message incoming on a particular socket. Reads in the message
  * from the socket, extracts the flatbuffer, and then acts depending on
@@ -327,10 +353,10 @@ bool TCPServer::process(int sock) {
 
     LOG<INFO>("Server received size from client");
     // Convert to host byte order
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(
-                                                            buffer.data());
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);
     LOG<INFO>("Server received incoming size of ", incoming_size);
+
     // Resize the buffer to be larger if necessary
 #ifdef PERF_LOG
     TimerFunction resize_time;
@@ -380,15 +406,15 @@ bool TCPServer::process(int sock) {
 #ifdef PERF_LOG
                 TimerFunction write_time;
 #endif
-                LOG<INFO>("Server processing write request.");
-
                 // first see if the object exists on the server.
                 // If so, overwrite it and account for the size change.
                 ObjectID oid = msg->message_as_Write()->oid();
+                LOG<INFO>("Server processing WRITE request to oid: .", oid);
 
-                auto entry_itr = store.find(oid);
-                if (entry_itr != store.end()) {
-                    curr_size -= entry_itr->second.size();
+                // update current used size
+                // XXX maybe tracking this size should be done by the backend
+                if (mem->exists(oid)) {
+                    curr_size -= mem->size(oid);
                 }
 
                 // Throw error if put would exceed size of the store
@@ -404,10 +430,9 @@ bool TCPServer::process(int sock) {
                 } else {
                     // Service the write request by
                     // storing the serialized object
-                    std::vector<int8_t> data(data_fb->begin(), data_fb->end());
-                    // Create entry in store mapping the data to the id
+                    mem->put(oid, MemSlice(data_fb));
+
                     curr_size += data_fb->size();
-                    store[oid] = data;
                 }
 
                 // Create and send ack
@@ -437,20 +462,25 @@ bool TCPServer::process(int sock) {
 #endif
                 /* Service the read request by sending the serialized object
                  to the client */
-                LOG<INFO>("Processing read request");
+                LOG<INFO>("Processing READ request");
                 ObjectID oid = msg->message_as_Read()->oid();
-                LOG<INFO>("Server extracted oid");
-                auto entry_itr = store.find(oid);
-                LOG<INFO>("Got pair from store");
+
+                LOG<INFO>("Server extracted oid: ", oid);
+
                 // If the oid is not on the server, this operation has failed
-                if (entry_itr == store.end()) {
+
+                if (!mem->exists(oid)) {
                     success = false;
                     error_code = cirrus::ErrorCodes::kNoSuchIDException;
                     LOG<ERROR>("Oid ", oid, " does not exist on server");
                 }
+
                 flatbuffers::Offset<flatbuffers::Vector<int8_t>> fb_vector;
                 if (success) {
-                    fb_vector = builder.CreateVector(entry_itr->second);
+                    // XXX Getting the item twice is inefficient
+                    fb_vector = builder.CreateVector(
+                            std::vector<int8_t>(mem->get(oid).get()));
+
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);
@@ -469,9 +499,92 @@ bool TCPServer::process(int sock) {
                 builder.Finish(ack_msg);
                 LOG<INFO>("Server done building response");
 #ifdef PERF_LOG
-                double read_mbps = entry_itr->second.size() / (1024.0 * 1024) /
+                double read_mbps = mem->size(oid) / (1024.0 * 1024) /
                     (read_time.getUsElapsed() / 1000000.0);
                 LOG<PERF>("TCPServer::process read time (us): ",
+                        read_time.getUsElapsed(),
+                        " bw (MB/s): ", read_mbps,
+                        " size: ", mem->size(oid));
+#endif
+                break;
+            }
+        case message::TCPBladeMessage::Message_ReadBulk:
+            {
+                /** Read Bulk operation
+                  * We assume objects do not change size during this operation
+                  * Warning: No atomicity guarantees
+                  */
+#ifdef PERF_LOG
+                TimerFunction read_time;
+#endif
+                LOG<INFO>("Processing READ BULK request");
+                // number of objects to be transfered
+                uint32_t num_oids = msg->message_as_ReadBulk()->num_oids();
+                auto data_fb_oids = msg->message_as_ReadBulk()->data();
+
+                // first we figure out the total size to send back
+                uint32_t data_size = sizeof(uint32_t);  //< size of main header
+                for (const auto& oid : *data_fb_oids) {
+                    if (!mem->exists(oid)) {
+                        success = false;
+                        error_code = cirrus::ErrorCodes::kNoSuchIDException;
+                        LOG<ERROR>("Oid ", oid, " does not exist on server");
+                        break;
+                    }
+
+                    // size of an header containing size of object
+                    data_size += sizeof(uint32_t);
+                    // size of the data
+                    data_size += mem->size(oid);
+                }
+
+                flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_fb_vector;
+
+                if (success) {
+                    int8_t* raw_mem;
+                    // build the flatbuffer vector with the right size
+                    data_fb_vector =
+                        builder.CreateUninitializedVector(data_size, &raw_mem);
+                    // for each oid to be transfered
+                    // we copy the size of the object
+                    // and the content to the buffer
+                    *reinterpret_cast<uint32_t*>(raw_mem) = num_oids;
+                    raw_mem += sizeof(uint32_t);
+                    for (uint32_t i = 0; i < num_oids; ++i) {
+                        auto oid = *(data_fb_oids->begin() + i);
+
+                        auto oid_data = mem->get(oid).get();
+                        uint32_t size = oid_data.size();
+                        uint32_t* data_ptr =
+                                         reinterpret_cast<uint32_t*>(raw_mem);
+                        *data_ptr++ = htonl(size);
+
+                        raw_mem = reinterpret_cast<int8_t*>(data_ptr);
+                        std::memcpy(raw_mem, oid_data.data(), size);
+                        raw_mem = reinterpret_cast<int8_t*>(
+                                reinterpret_cast<char*>(raw_mem) + size);
+                    }
+                } else {
+                    data_fb_vector = builder.CreateVector(
+                            std::vector<int8_t>());
+                }
+
+                LOG<INFO>("Server building readbulk response");
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateReadBulkAck(builder,
+                                                      success, data_fb_vector);
+                auto ack_msg =
+                    message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                  txn_id,
+                                  static_cast<int64_t>(error_code),
+                                  message::TCPBladeMessage::Message_ReadBulkAck,
+                                  ack.Union());
+                builder.Finish(ack_msg);
+                LOG<INFO>("Server done building response");
+#ifdef PERF_LOG
+                double read_mbps = data_size / (1024.0 * 1024) /
+                    (read_time.getUsElapsed() / 1000000.0);
+                LOG<PERF>("TCPServer::process readbulk time (us): ",
                         read_time.getUsElapsed(),
                         " bw (MB/s): ", read_mbps,
                         " size: ", entry_itr->second.size());
@@ -480,14 +593,14 @@ bool TCPServer::process(int sock) {
             }
         case message::TCPBladeMessage::Message_Remove:
             {
+                LOG<INFO>("Processing REMOVE request");
                 ObjectID oid = msg->message_as_Remove()->oid();
 
                 success = false;
-                auto entry_itr = store.find(oid);
                 // Remove the object if it exists on the server.
-                if (entry_itr != store.end()) {
-                    store.erase(entry_itr);
-                    curr_size -= entry_itr->second.size();
+                if (mem->exists(oid)) {
+                    curr_size -= mem->size(oid);
+                    mem->delet(oid);
                     success = true;
                 }
                 // Create and send ack

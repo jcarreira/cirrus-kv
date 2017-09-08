@@ -2,6 +2,7 @@
 #include <iostream>
 #include "client/TCPClient.h"
 #include "tests/object_store/object_store_internal.h"
+#include "common/Serializer.h"
 
 // TODO(Tyler): Remove hardcoded port
 const char port[] = "12345";
@@ -12,12 +13,14 @@ const char *IP;
  */
 void test_sync() {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<int> serializer;
+    std::cout << "Test Starting." << std::endl;
     client.connect(IP, port);
     std::cout << "Connected to server." << std::endl;
-
     int message = 42;
     std::cout << "message declared." << std::endl;
-    client.write_sync(1, &message, sizeof(int));
+    cirrus::WriteUnitTemplate<int> w(serializer, message);
+    client.write_sync(1, w);
     std::cout << "write sync complete" << std::endl;
 
     auto ptr_pair = client.read_sync(1);
@@ -34,10 +37,12 @@ void test_sync() {
  */
 void test_async() {
     cirrus::TCPClient client;
+    cirrus::serializer_simple<int> serializer;
     client.connect(IP, port);
 
     int message = 42;
-    auto future = client.write_async(1, &message, sizeof(int));
+    cirrus::WriteUnitTemplate<int> w(serializer, message);
+    auto future = client.write_async(1, w);
     std::cout << "write sync complete" << std::endl;
 
     if (!future.get()) {

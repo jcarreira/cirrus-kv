@@ -18,8 +18,8 @@ class ObjectStore {
      */
     class ObjectStorePutFuture {
      public:
-        explicit ObjectStorePutFuture(cirrus::BladeClient::ClientFuture
-                                          client_future);
+        explicit ObjectStorePutFuture(
+            cirrus::BladeClient::ClientFuture client_future);
         ObjectStorePutFuture() {}
         void wait();
 
@@ -42,7 +42,7 @@ class ObjectStore {
         ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
                             std::function<T(const void*, unsigned int)>
                                 deserializer);
-        ObjectStoreGetFuture() {}
+        ObjectStoreGetFuture() = default;
         void wait();
 
         bool try_wait();
@@ -80,6 +80,7 @@ class ObjectStore {
         const T& obj) = 0;
 
     virtual void get_bulk(ObjectID start, ObjectID last, T* data) = 0;
+    virtual std::vector<T> get_bulk_fast(const std::vector<ObjectID>&) = 0;
     virtual void put_bulk(ObjectID start, ObjectID last, T* data) = 0;
 };
 

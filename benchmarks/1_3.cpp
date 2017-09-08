@@ -51,9 +51,10 @@ void test_multiple_clients() {
     for (int i = 0; i < N_THREADS; ++i) {
         threads[i] = new std::thread([]() {
             cirrus::TCPClient client;
+            cirrus::serializer_simple<cirrus::Dummy<SIZE>> serializer;
             cirrus::ostore::FullBladeObjectStoreTempl<cirrus::Dummy<SIZE>>
                 store(IP, PORT, &client,
-                    cirrus::serializer_simple<cirrus::Dummy<SIZE>>,
+                    serializer,
                     cirrus::deserializer_simple<cirrus::Dummy<SIZE>,
                         sizeof(cirrus::Dummy<SIZE>)>);
             std::cout << "New thread connected." << std::endl;

@@ -64,6 +64,8 @@ class CirrusIterable {
         bool operator!=(const Iterator& it) const;
         bool operator==(const Iterator& it) const;
 
+        Iterator& operator=(const Iterator& other);
+
      private:
         /**
          * Pointer to CacheManager used for put, get, and prefetch.
@@ -147,14 +149,14 @@ class CirrusIterable {
          * Returns the value of current_id, which is indicative of the state
          * of the policy.
          */
-        uint64_t getState() override {
+        uint64_t getState() const override {
             return current_id;
         }
 
         /**
          * An implementation of the clone method from the template.
          */
-        std::unique_ptr<IteratorPolicy> clone() override {
+        std::unique_ptr<IteratorPolicy> clone() const override {
             return std::make_unique<OrderedPolicy>(*this);
         }
 
@@ -251,14 +253,14 @@ class CirrusIterable {
          * Returns the value of current_id, which is indicative of the state
          * of the policy.
          */
-        uint64_t getState() override {
+        uint64_t getState() const override {
             return current_index;
         }
 
         /**
          * An implementation of the clone method from the template.
          */
-        std::unique_ptr<IteratorPolicy> clone() override {
+        std::unique_ptr<IteratorPolicy> clone() const override {
             return std::make_unique<UnorderedPolicy>(*this);
         }
 
@@ -419,13 +421,17 @@ typename CirrusIterable<T>::Iterator CirrusIterable<T>::end() {
 template<class T>
 T CirrusIterable<T>::Iterator::operator*() {
     // Attempts to get the next readAhead items.
-    LOG<INFO>("Call to derefrence");
+    LOG<INFO>("Call to dereference");
+
+    TimerFunction tf;
     auto to_prefetch = policy->getPrefetchList();
     for (const auto& oid : to_prefetch) {
+        LOG<INFO>("Prefetching oid: ", oid);
         cm->prefetch(oid);
     }
 
-    return cm->get(policy->dereference());
+    auto ret = cm->get(policy->dereference());
+    return ret;
 }
 
 /**
@@ -473,6 +479,17 @@ template<class T>
 bool CirrusIterable<T>::Iterator::operator==(
                                  const CirrusIterable<T>::Iterator& it) const {
     return policy->getState() == it.policy->getState();
+}
+
+template<class T>
+typename CirrusIterable<T>::Iterator& CirrusIterable<T>::Iterator::operator=(
+                               const CirrusIterable<T>::Iterator& other) {
+    if (this != &other) {
+        cm = other.cm;
+        policy = other.policy->clone();
+    }
+
+    return *this;
 }
 
 }  // namespace cirrus
