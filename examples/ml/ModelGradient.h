@@ -67,7 +67,7 @@ class LRGradient : public ModelGradient {
     LRGradient(LRGradient&& data);
     explicit LRGradient(const std::vector<double>& data);
     explicit LRGradient(int d);
-    
+
     LRGradient& operator=(LRGradient&& other);
 
     void loadSerialized(const void*);
@@ -83,7 +83,7 @@ class LRGradient : public ModelGradient {
 class SoftmaxGradient : public ModelGradient {
  public:
     friend class SoftmaxModel;
-    
+
     virtual ~SoftmaxGradient() = default;
 
     SoftmaxGradient(uint64_t nclasses, uint64_t d);

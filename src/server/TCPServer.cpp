@@ -118,7 +118,7 @@ void TCPServer::init() {
         }
         throw cirrus::ConnectionException("Error forcing port binding");
     }
-    
+
     struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;

@@ -112,7 +112,7 @@ class MemSlice {
   */
 class StorageBackend {
  public:
-     virtual~ StorageBackend() = default;
+     virtual ~StorageBackend() = default;
 
     /**
       * Initialize backend

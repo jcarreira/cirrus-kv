@@ -181,7 +181,7 @@ auto main() -> int {
     uint64_t highest_id = setup();
     std::cout << highest_id << std::endl;
     test_iteration_store(outfile, highest_id);
-    
+
     try {
         test_iteration_cache(outfile, highest_id);
     } catch(cirrus::CacheCapacityException& e) {
