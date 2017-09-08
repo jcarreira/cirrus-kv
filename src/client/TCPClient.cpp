@@ -154,7 +154,6 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
                                         msg_contents.Union());
     builder->Finish(msg);
 
-
 #ifdef PERF_LOG
     LOG<PERF>("TCPClient::write_async time to build message (us): ",
             builder_timer.getUsElapsed());
