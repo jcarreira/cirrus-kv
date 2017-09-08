@@ -11,14 +11,8 @@
 #include <time.h>
 #include <iostream>
 #include <string>
-#include <thread>
-#include <memory>
-#include <cstring>
-#include <atomic>
-#include <utility>
-#include <random>
-#include <cassert>
 #include <vector>
+#include <stdexcept>
 
 #include "common/ThreadPinning.h"
 #include "common/Exception.h"
@@ -57,17 +51,15 @@ struct GeneralContext {
  * A struct representing a portion of RDMA memory.
  */
 struct RDMAMem {
-    RDMAMem() = default;
+    RDMAMem() : default_(true) {}
 
     RDMAMem(const void* addr, uint64_t size,
             ibv_mr* m = nullptr) :
         addr_(reinterpret_cast<uint64_t>(addr)), size_(size), mr(m),
-        used_(true) {}
+        default_(false) {}
 
     ~RDMAMem() {
-        if (registered_ && !cleared_) {
-            clear();
-        }
+        // Note: the application developer has to call clear()
     }
 
     /**
@@ -83,6 +75,8 @@ struct RDMAMem {
             return true;
         }
 
+        LOG<INFO>("prepare:: ibv_reg_mr()", addr_,
+                "length: ", size_);
         mr = ibv_reg_mr(gctx.pd,
                 reinterpret_cast<void*>(addr_),
                 size_, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
@@ -95,6 +89,7 @@ struct RDMAMem {
                 LOG<ERROR>("ibv_reg_mr failed, are you trying to write "
                         "from a string literal?");
             }
+            throw std::runtime_error("Error in prepare()");
         }
         if (mr) {
             registered_ = true;
@@ -109,6 +104,9 @@ struct RDMAMem {
     bool clear() {
         if (registered_ == false)
             throw std::runtime_error("Not registered");
+        
+        LOG<INFO>("prepare:: ibv_dereg_mr()", addr_,
+                "length: ", size_);
 
         int ret = ibv_dereg_mr(mr);
 
@@ -117,8 +115,8 @@ struct RDMAMem {
         return ret == 0;
     }
 
-    bool isUsed() const {
-        return used_;
+    bool isDefault() const {
+        return default_;
     }
 
     uint64_t addr_ = 0; //< Address of the memory */
@@ -126,7 +124,11 @@ struct RDMAMem {
     struct ibv_mr *mr = 0; //< Pointer to ibv_mr for this memory */
     bool registered_ = false; //< If the memory is registered. */
     bool cleared_    = false; //< If the memory is cleared. */
-    bool used_       = false;  //< Indicates whether this RDMAMem is used
+
+    // Indicates whether this RDMAMem was constructed by default
+    // (because user did not provide one)
+    // If so, we will have to setup a proper one at some point
+    bool default_    = false;
 };
 
 /**
@@ -181,22 +183,22 @@ class RDMAClient : public BladeClient {
         RDMAOpInfo(struct rdma_cm_id* id_,
                 std::function<void(void)> fn = []() -> void {}) :
             id(id_), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>(false);
-                op_sem = std::make_shared<cirrus::PosixSemaphore>();
-            }
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+            fd = std::make_shared<FutureData>();
+        }
 
         RDMAOpInfo(struct rdma_cm_id* id_,
-                   std::shared_ptr<cirrus::Lock> op_sem,
+                std::shared_ptr<cirrus::Lock> op_sem,
                 std::function<void(void)> fn = []() -> void {}) :
-            id(id_), op_sem(op_sem), apply_fn(fn) {
-                if (fn == nullptr)
-                    throw std::runtime_error("BUG");
-                result = std::make_shared<bool>();
-                result_available = std::make_shared<bool>(false);
-            }
+            id(id_), apply_fn(fn) {
+            if (fn == nullptr)
+                throw std::runtime_error("BUG");
+
+            fd = std::make_shared<FutureData>();
+            fd->sem = op_sem;
+        }
+
 
         /**
          * Apply the given function on completion. Mark the operation as
@@ -206,21 +208,18 @@ class RDMAClient : public BladeClient {
             LOG<INFO>("Applying fn");
             apply_fn();
             LOG<INFO>("Applied fn");
-            *result_available = true;
-            *result = true;
+            fd->result_available = true;
+            fd->result = true;
         }
-
-        char *data = nullptr;
+  
+        // ptr to data. Delete'd for RDMA_WRITEs
+        char* data = nullptr;
         struct rdma_cm_id* id;
-        /** Pointer to the semaphore for the operation. */
-        std::shared_ptr<cirrus::Lock> op_sem;
-        /** Pointer to the boolean success of the operation. */
-        std::shared_ptr<bool> result;
-        /** Pointer to operation completion. */
-        std::shared_ptr<bool> result_available;
-        /** Pointer to error code. Will always be okay. */
-        std::shared_ptr<cirrus::ErrorCodes> error_code =
-            std::make_shared<cirrus::ErrorCodes>(cirrus::ErrorCodes::kOk);
+
+        /**
+          * Data to be sent up to the client
+          */
+        std::shared_ptr<FutureData> fd;
         /** Function to apply when operation is complete. */
         std::function<void(void)> apply_fn;
     };

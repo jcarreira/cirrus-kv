@@ -223,7 +223,7 @@ bool RDMAClient::writeRemote(const void *data, BladeLocation loc,
         // TimerFunction tf("writeRemote", true);
         // LOG<INFO>("FullBladeObjectStoreTempl:: writing sync");
         rdma_write_sync(loc.allocRec, 0, loc.size, data,
-                mem.isUsed() ? mem : mm);
+                mem.isDefault() ? mm : mem);
     }
     return true;
 }
@@ -341,7 +341,7 @@ int RDMAClient::post_receive(struct rdma_cm_id *id) {
     wr.num_sge = 1;
 
     sge.addr = reinterpret_cast<uint64_t>(ctx->recv_msg);
-    sge.length = 1000;  // FIX
+    sge.length = 1000;  // XXX FIX
     sge.lkey = ctx->recv_msg_mr->lkey;
 
     return ibv_post_recv(id->qp, &wr, &bad_wr);
@@ -407,7 +407,7 @@ void* RDMAClient::poll_cq(ConnectionContext* ctx) {
                     "poll_cq: status is not IBV_WC_SUCCESS" << std::endl;
                 std::cerr << "wr_id: " << wc.wr_id << std::endl;
                 std::cerr << "status: " << wc.status << std::endl;
-                DIE("Leaving..");
+                throw std::runtime_error("Error in poll_cq");
             }
         }
     }
@@ -433,24 +433,26 @@ void RDMAClient::on_completion(struct ibv_wc *wc) {
     // TODO(Tyler): Remove the checks that the lock exists?
     switch (wc->opcode) {
         case IBV_WC_RECV:
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             break;
         case IBV_WC_RDMA_READ:
         case IBV_WC_RDMA_WRITE:
             assert(outstanding_send_wr > 0);
             outstanding_send_wr--;
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             if (op_info->data != nullptr) {
+                // free memory
+                // currently used only for RDMA_WRITEs
                 delete[] op_info->data;
             }
             break;
         case IBV_WC_SEND:
             assert(outstanding_send_wr > 0);
             outstanding_send_wr--;
-            if (op_info->op_sem)
-                op_info->op_sem->signal();
+            if (op_info->fd->sem)
+                op_info->fd->sem->signal();
             break;
         default:
             LOG<ERROR>("Unknown opcode");
@@ -483,7 +485,7 @@ bool RDMAClient::send_receive_message_sync(struct rdma_cm_id *id,
     }
 
     // wait for SEND completion
-    op_info->op_sem->wait();
+    op_info->fd->sem->wait();
 
     LOG<INFO>("Sent is done. Waiting for receive");
 
@@ -547,7 +549,6 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
     LOG<INFO>("RDMAClient:: write_rdma_async");
 
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
-    auto wait_sem = op_info->op_sem;
     write_rdma_async(id, size, remote_addr, peer_rkey, mem, op_info);
     LOG<INFO>("RDMAClient:: waiting");
 
@@ -557,7 +558,7 @@ bool RDMAClient::write_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     {
         TimerFunction tf("waiting semaphore", true);
-        wait_sem->wait();
+        op_info->fd->sem->wait();
     }
 
     return true;
@@ -600,11 +601,11 @@ bool RDMAClient::post_send(ibv_qp* qp, ibv_send_wr* wr, ibv_send_wr** bad_wr) {
   * operation. This function takes ownership of the pointer.
   */
 void RDMAClient::write_rdma_async(struct rdma_cm_id *id,
-                                                    uint64_t size,
-                                                    uint64_t remote_addr,
-                                                    uint64_t peer_rkey,
-                                                    const RDMAMem& mem,
-                                                    RDMAOpInfo* op_info) {
+                                  uint64_t size,
+                                  uint64_t remote_addr,
+                                  uint64_t peer_rkey,
+                                  const RDMAMem& mem,
+                                  RDMAOpInfo* op_info) {
 #if __GNUC__ >= 7
     [[maybe_unused]]
 #else
@@ -618,6 +619,7 @@ void RDMAClient::write_rdma_async(struct rdma_cm_id *id,
     memset(&wr, 0, sizeof(wr));
     memset(&sge, 0, sizeof(sge));
 
+    // store pointer here to be deleted later in poll
     op_info->data = reinterpret_cast<char*>(mem.addr_);
     wr.wr_id = reinterpret_cast<uint64_t>(op_info);
     wr.opcode = IBV_WR_RDMA_WRITE;
@@ -653,8 +655,6 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
         uint64_t remote_addr, uint64_t peer_rkey, const RDMAMem& mem) {
     // This will be freed in poll_cq
     auto op_info = new RDMAClient::RDMAOpInfo(id);
-    auto wait_sem = op_info->op_sem;
-    auto result_available = op_info->result_available;
     read_rdma_async(id, size,
         remote_addr, peer_rkey, mem, op_info);
 
@@ -662,8 +662,8 @@ void RDMAClient::read_rdma_sync(struct rdma_cm_id *id, uint64_t size,
 
     {
         TimerFunction tf("read_rdma_async wait for lock", true);
-        while (!*result_available) {
-            wait_sem->wait();
+        while (!op_info->fd->result_available) {
+            op_info->fd->sem->wait();
         }
     }
 }
@@ -898,12 +898,13 @@ bool RDMAClient::rdma_write_sync(const AllocationRecord& alloc_rec,
         " length: ", length,
         " offset: ", offset,
         " remote_addr: ", alloc_rec.remote_addr,
+        " local addr: ", reinterpret_cast<uint64_t>(data),
         " rkey: ", alloc_rec.peer_rkey);
 
     if (length > SEND_MSG_SIZE)
         return false;
 
-    if (mem.isUsed()) {
+    if (!mem.isDefault()) {
         {
             // TimerFunction tf("BladeClient::write_sync prepare", true);
             mem.addr_ = reinterpret_cast<uint64_t>(data);
@@ -953,14 +954,10 @@ BladeClient::ClientFuture RDMAClient::rdma_write_async(
         throw cirrus::Exception("Message being sent is over RDMA max size.");
     // This will be freed in poll_cq
     RDMAOpInfo* op_info = new RDMAClient::RDMAOpInfo(id_);
-    // These are to fill fields in the future. They are unused as this is a
-    // write operation.
-    std::shared_ptr<std::shared_ptr<const char>> dummy_ptr;
-    std::shared_ptr<uint64_t> dummy_size_ptr;
-    BladeClient::ClientFuture ret(op_info->result, op_info->result_available,
-                        op_info->op_sem, op_info->error_code,
-                        dummy_ptr, dummy_size_ptr);
-    if (mem.isUsed()) {
+
+    BladeClient::ClientFuture ret(op_info->fd);
+
+    if (!mem.isDefault()) {
         mem.addr_ = reinterpret_cast<uint64_t>(data);
         mem.size_ = length;
         mem.prepare(con_ctx_.gen_ctx_);
@@ -1008,7 +1005,7 @@ bool RDMAClient::rdma_read_sync(const AllocationRecord& alloc_rec,
         " remote_addr: ", alloc_rec.remote_addr,
         " rkey: ", alloc_rec.peer_rkey);
 
-    if (mem.isUsed()) {
+    if (!mem.isDefault()) {
         mem.addr_ = reinterpret_cast<uint64_t>(data);
         mem.size_ = length;
         mem.prepare(con_ctx_.gen_ctx_);
@@ -1017,6 +1014,8 @@ bool RDMAClient::rdma_read_sync(const AllocationRecord& alloc_rec,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, mem);
     } else {
+
+        // XXX fix this
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, default_recv_mem_);
@@ -1052,7 +1051,6 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
                 "max message size.");
     }
 
-
     LOG<INFO>("reading rdma",
         " length: ", length,
         " offset: ", offset,
@@ -1061,7 +1059,7 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
 
     RDMAClient::RDMAOpInfo* op_info;
 
-    if (mem.isUsed()) {
+    if (!mem.isDefault()) {
         mem.addr_ = reinterpret_cast<uint64_t>(data);
         mem.prepare(con_ctx_.gen_ctx_);
         op_info = new RDMAClient::RDMAOpInfo(id_);
@@ -1072,18 +1070,20 @@ BladeClient::ClientFuture RDMAClient::rdma_read_async(
         mem.addr_ = reinterpret_cast<uint64_t>(data);
         mem.prepare(con_ctx_.gen_ctx_);
 
-        op_info = new RDMAClient::RDMAOpInfo(id_);
+        // this RDMAMem needs to be deregistered
+        // (not owned by application)
+        op_info = new RDMAClient::RDMAOpInfo(id_,
+                [mem]() mutable -> void { mem.clear(); });
     }
 
-    std::shared_ptr<std::shared_ptr<const char>> buffer_ptr =
-        std::make_shared<std::shared_ptr<const char>>(
+    std::shared_ptr<const char> buffer_ptr =
+        std::shared_ptr<const char>(
                 reinterpret_cast<const char*>(data),
                 std::default_delete<const char[]>());
 
-    BladeClient::ClientFuture ret = BladeClient::ClientFuture(op_info->result,
-        op_info->result_available,
-        op_info->op_sem, op_info->error_code,
-        buffer_ptr, std::make_shared<uint64_t>(length));
+    op_info->fd->data_ptr = buffer_ptr;
+
+    BladeClient::ClientFuture ret = BladeClient::ClientFuture(op_info->fd);
     read_rdma_async(id_, length,
             alloc_rec.remote_addr + offset, alloc_rec.peer_rkey,
             mem, op_info);

@@ -42,7 +42,7 @@ class ObjectStore {
         ObjectStoreGetFuture(cirrus::BladeClient::ClientFuture client_future,
                             std::function<T(const void*, unsigned int)>
                                 deserializer);
-        ObjectStoreGetFuture() {}
+        ObjectStoreGetFuture() = default;
         void wait();
 
         bool try_wait();
