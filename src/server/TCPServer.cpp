@@ -587,7 +587,7 @@ bool TCPServer::process(int sock) {
                 LOG<PERF>("TCPServer::process readbulk time (us): ",
                         read_time.getUsElapsed(),
                         " bw (MB/s): ", read_mbps,
-                        " size: ", entry_itr->second.size());
+                        " size: ", data_size);
 #endif
                 break;
             }

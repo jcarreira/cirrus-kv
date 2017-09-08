@@ -44,7 +44,7 @@ TCPClient::~TCPClient() {
 
     if (sender_thread) {
         LOG<INFO>("Terminating sender thread");
-        queue_semaphore.signal();  // unblock sender thread
+        //queue_semaphore.signal();  // unblock sender thread
         sender_thread->join();
         delete sender_thread;
     }
@@ -369,7 +369,6 @@ void TCPClient::process_received() {
         }
 
         // read in main message
-
         read_all(sock, buffer->data(), incoming_size);
 
 #ifdef PERF_LOG
@@ -542,16 +541,19 @@ ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
 void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
-        queue_semaphore.wait();
+        //queue_semaphore.wait();
 
-        if (terminate_threads) {
-            return;
-        }
-
-#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma     GCC diagnostic ignored "-Wuninitialized"
         flatbuffers::FlatBufferBuilder* builder;
-        if (!send_queue.pop(builder)) {
-            continue;
+        while (1) {
+            if (terminate_threads) {
+                return;
+            }
+
+            LOG<INFO>("Checking queue");
+            if (send_queue.pop(builder)) {
+                break;
+            }
         }
 
         int message_size = builder->GetSize();
@@ -585,7 +587,7 @@ void TCPClient::process_send() {
         LOG<INFO>("message pair sent by client");
 
         // Release the lock so that the other thread may add to the send queue
-        queue_lock.signal();
+        //queue_lock.signal();
 
         // Add the builder to the queue if it is of the right type (a write)
         // And if not over capacity
@@ -635,7 +637,7 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     TimerFunction sem_time;
 #endif
     // Alert that the queue has been updated
-    queue_semaphore.signal();
+    //queue_semaphore.signal();
 
 #ifdef PERF_LOG
     LOG<PERF>("TCPClient::enqueue_message semaphore signal time (us): ",
