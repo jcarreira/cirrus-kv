@@ -10,6 +10,7 @@
 #include <atomic>
 #include <random>
 #include <cassert>
+#include <utility>
 
 #include "client/RDMAClient.h"
 #include "utils/utils.h"
@@ -1014,7 +1015,6 @@ bool RDMAClient::rdma_read_sync(const AllocationRecord& alloc_rec,
                 alloc_rec.remote_addr + offset,
                 alloc_rec.peer_rkey, mem);
     } else {
-
         // XXX fix this
         read_rdma_sync(id_, length,
                 alloc_rec.remote_addr + offset,

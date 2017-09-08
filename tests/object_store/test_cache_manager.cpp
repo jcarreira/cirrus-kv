@@ -505,6 +505,57 @@ void test_bulk_nonexistent() {
     cm.get_bulk(1492, 1501, ret_values.data());
 }
 
+/**
+ * This test ensures that when the deferred writes setting is specified
+ * objects are not written to the remote store until they are evicted.
+ */
+void test_deferred_writes() {
+    std::unique_ptr<cirrus::BladeClient> client =
+        cirrus::test_internal::GetClient(use_rdma_client);
+
+    cirrus::serializer_simple<int> serializer;
+    cirrus::ostore::FullBladeObjectStoreTempl<int> store(
+            IP, PORT, client.get(),
+            serializer,
+            cirrus::deserializer_simple<int, sizeof(int)>);
+
+    cirrus::LRAddedEvictionPolicy policy(2);
+    cirrus::CacheManager<int> cm(&store, &policy, 2, true);
+
+    // Ensure nothing exists at id 1
+    try {
+        store.remove(1);
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+    cm.put(1, 1);
+    try {
+        store.get(1);
+        throw std::runtime_error("Exception not thrown after attempting to "
+            "access item that should not be on remote store.");
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    cm.put(2, 2);
+
+    try {
+        store.get(1);
+        throw std::runtime_error("Exception not thrown after attempting to "
+            "access item that should not be on remote store.");
+    } catch (const cirrus::NoSuchIDException& e) {
+    }
+
+    cm.put(3, 3);
+    int i = store.get(1);
+
+    if (i != 1) {
+        throw std::runtime_error("Incorrect value returned");
+    }
+}
+
+/**
+ * This test ensures that calling the cache's put method updates the cache
+ * with the new copy of the object.
+ */
 void test_cache_put_local_copy() {
     std::unique_ptr<cirrus::BladeClient> client =
         cirrus::test_internal::GetClient(use_rdma_client);
@@ -581,7 +632,7 @@ auto main(int argc, char *argv[]) -> int {
         return -1;
     } catch (const cirrus::NoSuchIDException & e) {
     }
-
+    test_deferred_writes();
     test_linear_prefetch();
     test_custom_prefetch();
     std::cout << "Test successful" << std::endl;

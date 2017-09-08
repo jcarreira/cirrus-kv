@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <utility>
 #include <stdexcept>
 
 #include "common/ThreadPinning.h"
@@ -46,7 +47,7 @@ struct GeneralContext {
     struct ibv_qp_init_attr qp_attr;
     std::thread* cq_poller_thread;
 };
-    
+
 /**
  * A struct representing a portion of RDMA memory.
  */
@@ -104,7 +105,7 @@ struct RDMAMem {
     bool clear() {
         if (registered_ == false)
             throw std::runtime_error("Not registered");
-        
+
         LOG<INFO>("prepare:: ibv_dereg_mr()", addr_,
                 "length: ", size_);
 
@@ -119,11 +120,11 @@ struct RDMAMem {
         return default_;
     }
 
-    uint64_t addr_ = 0; //< Address of the memory */
-    uint64_t size_ = 0; //< Size of the memory */
-    struct ibv_mr *mr = 0; //< Pointer to ibv_mr for this memory */
-    bool registered_ = false; //< If the memory is registered. */
-    bool cleared_    = false; //< If the memory is cleared. */
+    uint64_t addr_ = 0;  //< Address of the memory */
+    uint64_t size_ = 0;  //< Size of the memory */
+    struct ibv_mr *mr = 0;  //< Pointer to ibv_mr for this memory */
+    bool registered_ = false;  //< If the memory is registered. */
+    bool cleared_    = false;  //< If the memory is cleared. */
 
     // Indicates whether this RDMAMem was constructed by default
     // (because user did not provide one)
@@ -211,7 +212,7 @@ class RDMAClient : public BladeClient {
             fd->result_available = true;
             fd->result = true;
         }
-  
+
         // ptr to data. Delete'd for RDMA_WRITEs
         char* data = nullptr;
         struct rdma_cm_id* id;

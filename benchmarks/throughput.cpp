@@ -113,7 +113,7 @@ void cm_test_throughput(uint64_t numRuns, bool get = false) {
     outfile.open(filename);
     outfile << io_type << " cache throughput " + std::to_string(SIZE)
         << std::endl;
-    outfile << std::fixed << "msg/s: " << i / (end * 1.0 / MILLION)
+    outfile << std::fixed << "msg/s: " << numRuns / (end * 1.0 / MILLION)
         << std::endl;
     outfile << std::fixed << "MB/s: "
         << (numRuns * sizeof(*array)) / (end * 1.0 / MILLION) / MB
@@ -167,6 +167,45 @@ void iterator_throughput(uint64_t iterations, uint64_t read_ahead) {
     outfile.close();
 }
 
+template <uint64_t SIZE>
+void deferred_throughput(uint64_t iterations) {
+    cirrus::TCPClient client;
+    cirrus::serializer_simple<std::array<char, SIZE>> serializer;
+    cirrus::ostore::FullBladeObjectStoreTempl<std::array<char, SIZE>>
+        store(IP, PORT, &client,
+                serializer,
+                cirrus::deserializer_simple<std::array<char, SIZE>,
+                    sizeof(std::array<char, SIZE>)>);
+
+    const int cache_size = 10000;;
+    cirrus::LRAddedEvictionPolicy policy(cache_size);
+    cirrus::CacheManager<std::array<char, SIZE>>
+        cm(&store, &policy, cache_size, true);
+
+    std::cout
+        << "Test deferred writes throughput with size: "
+        << SIZE << std::endl;
+    std::unique_ptr<std::array<char, SIZE>> array =
+        std::make_unique<std::array<char, SIZE>>();
+
+    cirrus::TimerFunction start;
+    for (uint64_t i = 0; i < iterations; ++i)
+        cm.put(i, *array);
+    uint64_t end = start.getUsElapsed();
+
+    std::ofstream outfile;
+    std::string filename =
+        "throughput_" + std::to_string(SIZE) + "_deferred.log";
+    outfile.open(filename);
+    outfile << "deferred throughput " + std::to_string(SIZE)
+        << std::endl;
+    outfile << std::fixed << "MB/s: "
+        << (iterations * sizeof(*array)) / (end * 1.0 / MILLION) / MB
+        << std::endl;
+
+    outfile.close();
+}
+
 // Slightly larger object cause a segfault because objects live on the stack
 auto main() -> int {
     uint64_t num_runs = 20000;
@@ -199,6 +238,16 @@ auto main() -> int {
     iterator_throughput<4    * 1024>(iterations, read_ahead);       // 4K
     iterator_throughput<50   * 1024>(iterations, read_ahead);       // 50K
     iterator_throughput<1024 * 1024>(iterations / 20, read_ahead);  // 1MB
+
+    iterations = 1000;
+    std::cout
+        << "Starting throughput benchmark of cache manager with"
+        << " deferred writes"
+        << std::endl;
+    deferred_throughput<128>(iterations);               // 128B
+    deferred_throughput<4    * 1024>(iterations);       // 4K
+    deferred_throughput<50   * 1024>(iterations);       // 50K
+    deferred_throughput<1024 * 1024>(iterations / 20);  // 1MB
     return 0;
 }
 
