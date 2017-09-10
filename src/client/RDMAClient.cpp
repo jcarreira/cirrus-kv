@@ -87,7 +87,17 @@ BladeClient::ClientFuture RDMAClient::read_async(ObjectID oid) {
 }
 
 BladeClient::ClientFuture RDMAClient::read_async_bulk(
-                                   std::vector<ObjectID> /* oids*/ ) {
+                                   const std::vector<ObjectID>& /* oids*/ ) {
+    BladeLocation loc;
+
+    throw std::runtime_error("Not implemented");
+
+    return readToLocalAsync(loc, nullptr);
+}
+
+BladeClient::ClientFuture RDMAClient::write_async_bulk(
+        const std::vector<ObjectID>& /* oids */,
+        const WriteUnits& /* w */) {
     BladeLocation loc;
 
     throw std::runtime_error("Not implemented");
@@ -162,6 +172,19 @@ std::pair<std::shared_ptr<const char>, unsigned int> RDMAClient::read_sync_bulk(
     throw std::runtime_error("Not implemented");
 
     return std::make_pair(nullptr, 0);
+}
+
+/**
+  * Writes a set of objects into the remote server
+  * @param ids the ids of the objects the user wishes to read to local memory
+  * @return A boolean indicating the success of the operation
+  */
+bool RDMAClient::write_sync_bulk(
+        const std::vector<ObjectID>& /* oids*/,
+        const WriteUnits& /* w */) {
+    throw std::runtime_error("Not implemented");
+
+    return true;
 }
 
 /**
