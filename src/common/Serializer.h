@@ -1,6 +1,8 @@
 #ifndef SRC_COMMON_SERIALIZER_H_
 #define SRC_COMMON_SERIALIZER_H_
 
+#include <arpa/inet.h>
+#include <vector>
 
 namespace cirrus {
 
@@ -47,6 +49,43 @@ class WriteUnitTemplate : public WriteUnit {
  private:
     const cirrus::Serializer<T>& serializer;
     const T& obj;
+};
+
+class WriteUnits {
+ public:
+    virtual uint64_t size() const = 0;
+    virtual void serialize(void *mem) const = 0;
+};
+
+template<class T>
+class WriteUnitsTemplate : public WriteUnits {
+ public:
+    WriteUnitsTemplate(const cirrus::Serializer<T>& serializer,
+            const std::vector<const T*>& objs) :
+        serializer(serializer), objs(objs) {}
+
+    void serialize(void *mem) const override {
+        char* ptr = reinterpret_cast<char*>(mem);
+        for (uint64_t i = 0; i < objs.size(); ++i) {
+            uint64_t object_size = serializer.size(*objs[i]);
+            *reinterpret_cast<uint64_t*>(ptr) = htonl(object_size);
+            ptr += sizeof(uint64_t);
+            serializer.serialize(*objs[i], ptr);
+            ptr += object_size;
+        }
+    }
+
+    uint64_t size() const override {
+        uint64_t total_size = 0;
+        for (uint64_t i = 0; i < objs.size(); ++i) {
+            total_size += serializer.size(*objs[i]) + sizeof(uint64_t);
+        }
+        return total_size;
+    }
+
+ private:
+    const cirrus::Serializer<T>& serializer;
+    const std::vector<const T*> objs;
 };
 
 }  // namespace cirrus

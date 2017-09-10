@@ -455,6 +455,75 @@ bool TCPServer::process(int sock) {
 #endif
                 break;
             }
+        case message::TCPBladeMessage::Message_WriteBulk:
+            {
+#ifdef PERF_LOG
+                TimerFunction write_time;
+#endif
+                // first see if the object exists on the server.
+                // If so, overwrite it and account for the size change.
+                uint64_t num_oids = msg->message_as_WriteBulk()->num_oids();
+                auto oids = msg->message_as_WriteBulk()->oids();
+                auto data_fb = msg->message_as_WriteBulk()->data();
+                LOG<INFO>("Server processing WRITE-BULK request");
+
+                assert(num_oids = oids->size());
+
+                const char* data_ptr =
+                    reinterpret_cast<const char*>(data_fb->data());
+                for (const auto& oid : *oids) {
+                    if (mem->exists(oid)) {
+                        curr_size -= mem->size(oid);
+                    }
+
+                    uint64_t obj_size =
+                        ntohl(*reinterpret_cast<const uint64_t*>(data_ptr));
+                    data_ptr += sizeof(uint64_t);
+
+                    // Throw error if put would exceed size of the store
+                    if (curr_size + obj_size > pool_size) {
+                        LOG<ERROR>("Put would go over capacity on server. ",
+                                "Current size: ", curr_size,
+                                " Incoming size: ", data_fb->size(),
+                                " Pool size: ", pool_size);
+                        error_code =
+                            cirrus::ErrorCodes::kServerMemoryErrorException;
+                        success = false;
+                        break;
+                    } else {
+                        // Service the write request by
+                        // storing the serialized object
+                        LOG<INFO>("Writing object with size: " , obj_size);
+                        const char* begin = data_ptr;
+                        const char* end = data_ptr + obj_size;
+                        mem->put(oid, MemSlice(begin, end));
+
+                        curr_size += obj_size;
+                    }
+
+                    data_ptr += obj_size;  // advance cursor
+                }
+
+                // Create and send ack
+                auto ack = message::TCPBladeMessage::CreateWriteBulkAck(builder,
+                                           success);
+                auto ack_msg =
+                     message::TCPBladeMessage::CreateTCPBladeMessage(builder,
+                                 txn_id,
+                                 static_cast<int64_t>(error_code),
+                                 message::TCPBladeMessage::Message_WriteBulkAck,
+                                 ack.Union());
+                builder.Finish(ack_msg);
+#ifdef PERF_LOG
+                double write_mbps = data_fb->size() / (1024.0 * 1024) /
+                    (write_time.getUsElapsed() / 1000000.0);
+                LOG<PERF>("TCPServer::process write-bulk time (us): ",
+                        write_time.getUsElapsed(),
+                        " bw (MB/s): ", write_mbps,
+                        " size: ", data_fb->size());
+#endif
+                break;
+            }
         case message::TCPBladeMessage::Message_Read:
             {
 #ifdef PERF_LOG
@@ -520,7 +589,7 @@ bool TCPServer::process(int sock) {
                 LOG<INFO>("Processing READ BULK request");
                 // number of objects to be transfered
                 uint32_t num_oids = msg->message_as_ReadBulk()->num_oids();
-                auto data_fb_oids = msg->message_as_ReadBulk()->data();
+                auto data_fb_oids = msg->message_as_ReadBulk()->oids();
 
                 // first we figure out the total size to send back
                 uint32_t data_size = sizeof(uint32_t);  //< size of main header
