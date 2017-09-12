@@ -8,10 +8,7 @@
 #include <map>
 #include <string>
 #include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <memory>
+#include <cassert>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -75,6 +72,9 @@ uint64_t setup() {
         }
     }
     file.close();
+
+    assert(i > 0);
+
     return i - 1;
 }
 
@@ -181,7 +181,12 @@ auto main() -> int {
     uint64_t highest_id = setup();
     std::cout << highest_id << std::endl;
     test_iteration_store(outfile, highest_id);
-    test_iteration_cache(outfile, highest_id);
+
+    try {
+        test_iteration_cache(outfile, highest_id);
+    } catch(cirrus::CacheCapacityException& e) {
+        return -1;
+    }
     outfile.close();
 
     return 0;

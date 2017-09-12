@@ -15,7 +15,7 @@ FutureData::FutureData(
             bool result,
             bool result_available,
             cirrus::ErrorCodes error_code,
-            std::shared_ptr<std::shared_ptr<const char>> data_ptr,
+            std::shared_ptr<const char> data_ptr,
             uint64_t data_size) :
     result(result), result_available(result_available),
     error_code(error_code), data_ptr(data_ptr), data_size(data_size) {
@@ -108,7 +108,7 @@ BladeClient::ClientFuture::getDataPair() {
     if (fd->data_ptr.get() == nullptr) {
         throw cirrus::Exception("getData called on a non read future");
     }
-    return std::make_pair(*fd->data_ptr, fd->data_size);
+    return std::make_pair(fd->data_ptr, fd->data_size);
 }
 
 

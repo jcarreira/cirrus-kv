@@ -3,13 +3,24 @@
 #include <algorithm>
 #include "utils/Log.h"
 
+LRGradient::LRGradient(LRGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
+}
+
+LRGradient::LRGradient(const std::vector<double>& data) :
+    weights(data) {
+}
+
 LRGradient::LRGradient(int d) {
     weights.resize(d);
     version = 0;
 }
 
-LRGradient::LRGradient(const std::vector<double>& data) :
-    weights(data) {
+LRGradient& LRGradient::operator=(LRGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
+    return *this;
 }
 
 void LRGradient::loadSerialized(const void* mem) {

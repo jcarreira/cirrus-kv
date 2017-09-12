@@ -9,7 +9,8 @@
   */
 class ModelGradient {
  public:
-     ModelGradient() = default;
+     ModelGradient() : version(0) {}
+     virtual ~ModelGradient() = default;
 
      /**
        * Serialize gradient
@@ -54,15 +55,21 @@ class ModelGradient {
      virtual void check_values() const = 0;
 
  protected:
-     uint64_t version;  //< this gradient's version
+     uint64_t version = 0;  //< this gradient's version
 };
 
 class LRGradient : public ModelGradient {
  public:
     friend class LRModel;
 
-    explicit LRGradient(int d);
+    virtual ~LRGradient() = default;
+
+    LRGradient(LRGradient&& data);
     explicit LRGradient(const std::vector<double>& data);
+    explicit LRGradient(int d);
+
+    LRGradient& operator=(LRGradient&& other);
+
     void loadSerialized(const void*);
     void serialize(void*) const override;
     uint64_t getSerializedSize() const override;
@@ -76,6 +83,8 @@ class LRGradient : public ModelGradient {
 class SoftmaxGradient : public ModelGradient {
  public:
     friend class SoftmaxModel;
+
+    virtual ~SoftmaxGradient() = default;
 
     SoftmaxGradient(uint64_t nclasses, uint64_t d);
     explicit SoftmaxGradient(const std::vector<std::vector<double>>&);

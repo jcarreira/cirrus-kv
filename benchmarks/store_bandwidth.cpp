@@ -26,7 +26,7 @@
 static const uint64_t KB = 1024;
 static const uint64_t MB = 1024 * KB;
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
+const char IP[] = "10.10.49.98";
 static const uint64_t MILLION = 1000000;
 static const uint64_t N_ITER = 1000;
 
@@ -141,7 +141,7 @@ void test_put_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
   * outstanding_target requests in flight.
   */
 template <uint64_t SIZE>
-void test_get_bandwidth(uint64_t outstanding_target, std::ofstream& outfile) {
+void test_get_bandwidth(uint64_t outstanding_target, std::ostream& outfile) {
     cirrus::TCPClient client;
     // TODO(Tyler): Open additional connections from client once
     // TCP Server parallelism is merged.
@@ -202,7 +202,10 @@ auto main() -> int {
     outfile.open("store_bandwidth.log");
 
     std::vector<uint64_t> outstanding_req = {1, 8, 16};
+        
+    test_get_bandwidth<1024 * KB>(16, std::cout);
 
+    return 0;
     for (const auto& outs : outstanding_req) {
         test_put_bandwidth<32>(outs, outfile);
         test_put_bandwidth<1 * KB>(outs, outfile);

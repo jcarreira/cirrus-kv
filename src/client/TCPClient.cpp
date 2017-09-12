@@ -88,6 +88,7 @@ void TCPClient::connect(const std::string& address,
 
     // Save the port in the info
     serv_addr.sin_port = htons(port);
+    std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 
     LOG<INFO>("Connecting to server");
     // Connect to the server
@@ -111,11 +112,7 @@ void TCPClient::connect(const std::string& address,
 BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
     const WriteUnit& w) {
 
-
-    // Create flatbuffer builder if none to reuse;
-
-    // Add the builder to the queue if it is of the right type (a write)
-    // And if not over capacity
+    // Create flatbuffer builder
     flatbuffers::FlatBufferBuilder* builder;
 
     LOG<INFO>("TCPClient::write_async oid: ", oid);
@@ -153,7 +150,6 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
                                         message::TCPBladeMessage::Message_Write,
                                         msg_contents.Union());
     builder->Finish(msg);
-
 
 #ifdef PERF_LOG
     LOG<PERF>("TCPClient::write_async time to build message (us): ",
@@ -201,7 +197,7 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
  * @return A ClientFuture containing information about the operation.
  */
 BladeClient::ClientFuture TCPClient::read_async_bulk(
-                                               std::vector<ObjectID> oids) {
+        const std::vector<ObjectID>& oids) {
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
@@ -232,20 +228,6 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
 }
 
 /**
-  * Writes an object to remote storage under id.
-  * @param id the id of the object the user wishes to write to remote memory.
-  * @param w a WriteUnit containing a serializer and the object to be serialized
-  * @return True if the object was successfully written to the server, false
-  * otherwise.
-  */
-bool TCPClient::write_sync(ObjectID oid, const WriteUnit& w) {
-    LOG<INFO>("Call to write_sync");
-    BladeClient::ClientFuture future = write_async(oid, w);
-    LOG<INFO>("returned from write async");
-    return future.get();
-}
-
-/**
   * Reads an object corresponding to ObjectID from the remote server.
   * @param id the id of the object the user wishes to read to local memory.
   * @return An std pair containing a shared pointer to the buffer that the
@@ -261,8 +243,8 @@ TCPClient::read_sync(ObjectID oid) {
 }
 
 /**
-  * Reads a set of objects corresponding from the remote server.
-  * @param ids the ids of the objects the user wishes to read to local memory.
+  * Reads a set of objects from the remote server.
+  * @param oids the ids of the objects the user wishes to read to local memory.
   * @return An std pair containing a shared pointer to the buffer that the
   * serialized objects read from the server reside in as well as the size of
   * the buffer.
@@ -273,6 +255,77 @@ TCPClient::read_sync_bulk(const std::vector<ObjectID>& oids) {
     BladeClient::ClientFuture future = read_async_bulk(oids);
     LOG<INFO>("Returned from read_async_bulk.");
     return future.getDataPair();
+}
+
+/**
+  * Writes an object to remote storage under id.
+  * @param id the id of the object the user wishes to write to remote memory.
+  * @param w a WriteUnit containing a serializer and the object to be serialized
+  * @return True if the object was successfully written to the server, false
+  * otherwise.
+  */
+bool TCPClient::write_sync(ObjectID oid, const WriteUnit& w) {
+    LOG<INFO>("Call to write_sync");
+    BladeClient::ClientFuture future = write_async(oid, w);
+    LOG<INFO>("returned from write_sync");
+    return future.get();
+}
+
+/**
+  * Writes a set of objects to the remote server.
+  * @param ids the ids of the objects the user wishes to read to local memory.
+  * @return True if all the objects were successfully written to the server,
+  * false otherwise.
+  */
+bool TCPClient::write_sync_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) {
+    LOG<INFO>("Call to write_sync_bulk");
+    BladeClient::ClientFuture future = write_async_bulk(oids, w);
+    LOG<INFO>("returned from write_sync_bulk");
+    return future.get();
+}
+
+/**
+ * Asynchronously writes a set of objects to the remote server.
+ * @param oids the ids of the objects the user wishes to write to remote memory.
+ * @return A ClientFuture containing information about the operation.
+ */
+BladeClient::ClientFuture TCPClient::write_async_bulk(
+                                             const std::vector<ObjectID>& oids,
+                                             const WriteUnits& w) {
+#ifdef PERF_LOG
+    TimerFunction builder_timer;
+#endif
+    auto w_size = w.size();
+    auto builder = new flatbuffers::FlatBufferBuilder(w_size +
+            sizeof(ObjectID) * oids.size() + 50);
+
+    int8_t* mem;
+    auto data_fb_vector = builder->CreateUninitializedVector(w_size, &mem);
+
+    w.serialize(mem);
+
+    auto oids_vector = builder->CreateVector(oids);
+    auto msg_contents = message::TCPBladeMessage::CreateWriteBulk(*builder,
+                                                              oids.size(),
+                                                              oids_vector,
+                                                              data_fb_vector);
+    const int txn_id = curr_txn_id++;
+    auto msg = message::TCPBladeMessage::CreateTCPBladeMessage(
+                                    *builder,
+                                    txn_id,
+                                    0,
+                                    message::TCPBladeMessage::Message_WriteBulk,
+                                    msg_contents.Union());
+
+    builder->Finish(msg);
+
+#ifdef PERF_LOG
+    LOG<PERF>("TCPClient::write_async_bulk time to build message (us): ",
+            builder_timer.getUsElapsed());
+#endif
+    return enqueue_message(builder, txn_id);
 }
 
 /**
@@ -422,6 +475,12 @@ void TCPClient::process_received() {
                     txn.fd->result = ack->message_as_WriteAck()->success();
                     break;
                 }
+            case message::TCPBladeMessage::Message_WriteBulkAck:
+                {
+                    // just put state in the struct, check for errors
+                    txn.fd->result = ack->message_as_WriteBulkAck()->success();
+                    break;
+                }
             case message::TCPBladeMessage::Message_ReadAck:
                 {
                     /* Service the read request by sending the serialized object
@@ -446,7 +505,7 @@ void TCPClient::process_received() {
                     // the lifetime of the pointer. This ensures that when no
                     // references to the data exist, the buffer containing
                     // the data is deleted.
-                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
+                    txn.fd->data_ptr = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     LOG<INFO>("Client has pointer to vector");
@@ -458,7 +517,7 @@ void TCPClient::process_received() {
                     auto data_fb_vector = ack->message_as_ReadBulkAck()->data();
                     txn.fd->data_size = data_fb_vector->size();
 
-                    *(txn.fd->data_ptr) = std::shared_ptr<const char>(
+                    txn.fd->data_ptr = std::shared_ptr<const char>(
                         reinterpret_cast<const char*>(data_fb_vector->Data()),
                         read_op_deleter(buffer));
                     break;

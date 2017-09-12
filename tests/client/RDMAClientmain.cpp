@@ -116,13 +116,10 @@ void test_performance() {
         cirrus::TimerFunction tf("Timing read", true);
         auto ret_pair = client.read_sync(0);
 
-        std::cout << "Length: " << ret_pair.second << std::endl;
-
         auto d2 =
             *(reinterpret_cast<const cirrus::Dummy<size>*>(
                 ret_pair.first.get()));
 
-        std::cout << "Returned id: " << d2.id << std::endl;
         if (d2.id != 42) {
             throw std::runtime_error("Returned value does not match");
         }
@@ -230,8 +227,7 @@ auto main(int argc, char *argv[]) -> int {
     test_2_clients();
     test_performance();
     test_async();
-    std::cout << "test async complete" << std::endl;
     test_async_N<10>();
-    std::cout << "test async n complete" << std::endl;
+    std::cout << "Tests successful" << std::endl;
     return 0;
 }

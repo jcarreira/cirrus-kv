@@ -42,16 +42,25 @@ class TCPClient : public BladeClient {
     void connect(const std::string& address,
         const std::string& port) override;
 
-    bool write_sync(ObjectID id, const WriteUnit& w) override;
+    // Read
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID oid) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
         const std::vector<ObjectID>& ids) override;
 
-
-    ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
     ClientFuture read_async(ObjectID oid) override;
-    ClientFuture read_async_bulk(std::vector<ObjectID> oids) override;
+    ClientFuture read_async_bulk(const std::vector<ObjectID>& oids) override;
+
+    // Write
+    bool write_sync(ObjectID id, const WriteUnit& w) override;
+    ClientFuture write_async(ObjectID oid, const WriteUnit& w) override;
+
+    bool write_sync_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) override;
+    BladeClient::ClientFuture write_async_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) override;
 
     bool remove(ObjectID id) override;
 
@@ -145,9 +154,9 @@ class TCPClient : public BladeClient {
     /** Semaphore for the send_queue. */
     cirrus::PosixSemaphore queue_semaphore;
     /** Thread that runs the receiving loop. */
-    std::thread* receiver_thread;
+    std::thread* receiver_thread = nullptr;
     /** Thread that runs the sending loop. */
-    std::thread* sender_thread;
+    std::thread* sender_thread = nullptr;
 
     /**
      * Bool that the process_send and process_received threads check.

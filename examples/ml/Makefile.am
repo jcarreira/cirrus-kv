@@ -8,8 +8,12 @@ CXX = mpic++
 
 bin_PROGRAMS = parameter_server two_clients_test bug_regression
 
-LIBS         =  -lclient -lauthentication -lutils -lmpi -lrdmacm \
-	        -libverbs -levictionpolicies
+LIBS         =  -lclient -lauthentication -lutils -lmpi \
+		-levictionpolicies
+
+if USE_RDMA
+LIBS += -lrdmacm -libverbs
+endif
 
 LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/client/ \

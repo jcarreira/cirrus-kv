@@ -14,6 +14,7 @@ namespace cirrus {
 class MemoryBackend : public StorageBackend {
  public:
      MemoryBackend() = default;
+     virtual ~MemoryBackend() = default;
 
      void init();
      bool put(uint64_t oid, const MemSlice& data) override;

@@ -103,16 +103,16 @@ class Configuration {
       */
     void parse_line(const std::string& line);
 
-    uint64_t n;          //< number of samples
-    uint64_t d;          //< number of sample features
-    uint64_t n_workers;  //< number of system workers
+    uint64_t n = 0;          //< number of samples
+    uint64_t d = 0;          //< number of sample features
+    uint64_t n_workers = 0;  //< number of system workers
 
-    uint64_t minibatch_size;  //< size of minibatch
-    double learning_rate;     //< sgd learning rate
-    double epsilon;           //< regularization rate
+    uint64_t minibatch_size = 0;  //< size of minibatch
+    double learning_rate = 0;     //< sgd learning rate
+    double epsilon = 0;           //< regularization rate
 
-    int prefetching;       //< whether to prefetch input data
-    uint64_t num_classes;  //< number of sample classes
+    int prefetching = 0;       //< whether to prefetch input data
+    uint64_t num_classes = 0;  //< number of sample classes
 
     std::string input_path;  //< path to dataset input
     std::string input_type;  //< dataset input format
@@ -120,12 +120,13 @@ class Configuration {
     std::string samples_path;  //< path to dataset samples
     std::string labels_path;   //< path to dataset labels
 
-    Configuration::ModelType model_type;  //< type of the model
+    Configuration::ModelType model_type = UNKNOWN;  //< type of the model
 
-    uint64_t limit_cols;  //< max number of columns to read from dataset input
-    bool normalize;       //< whether to normalize the dataset
+    // max number of columns to read from dataset input
+    uint64_t limit_cols = 0;
+    bool normalize = false;    //< whether to normalize the dataset
 
-    uint64_t num_samples;  //< number of training input samples
+    uint64_t num_samples = 0;  //< number of training input samples
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

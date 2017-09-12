@@ -86,7 +86,7 @@ class CirrusIterable {
         /**
          * Default constructor.
          */
-        OrderedPolicy() = default;
+        OrderedPolicy() : first(0), last(0), read_ahead(0), current_id(0) {}
         /**
          * Copy constructor, used by clone method.
          */
@@ -266,9 +266,9 @@ class CirrusIterable {
 
      private:
         /** How many items ahead to prefetch. */
-        uint64_t read_ahead;
+        uint64_t read_ahead = 0;
         /** The current position within the vector of ObjectIDs to return. */
-        uint64_t current_index;
+        uint64_t current_index = 0;
         /** Vector used to track the order to iterate in. */
         std::vector<ObjectID> id_vector;
     };
@@ -429,12 +429,8 @@ T CirrusIterable<T>::Iterator::operator*() {
         LOG<INFO>("Prefetching oid: ", oid);
         cm->prefetch(oid);
     }
-    auto elapsed = tf.getNsElapsed();
 
     auto ret = cm->get(policy->dereference());
-    std::cout << "operator* cm->get elapsed (ns): "
-        << tf.getNsElapsed() - elapsed << "\n";
-    std::cout << "operator* prefetch elapsed (ns): " << elapsed << "\n";
     return ret;
 }
 

@@ -86,6 +86,11 @@ void SoftmaxModel::sgd_update(
         double learning_rate, const ModelGradient* gradient) {
     const SoftmaxGradient* grad =
         dynamic_cast<const SoftmaxGradient*>(gradient);
+
+    if (grad == nullptr) {
+        throw std::runtime_error("Error in dynamic cast");
+    }
+
     for (uint64_t i = 0; i < d; ++i) {
         for (uint64_t j = 0; j < nclasses; ++j) {
             weights[i][j] -= learning_rate * grad->weights[i][j];

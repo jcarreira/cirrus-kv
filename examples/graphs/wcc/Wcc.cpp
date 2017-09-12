@@ -51,7 +51,7 @@ std::unique_ptr<int[]> weakly_cc(cirrus::CacheManager<Vertex>& cm,
     std::list<int> fringe;
 
     std::unique_ptr<int[]> ccs(new int[num_vertices]);
-    std::fill(ccs.get(), ccs.get() + sizeof(int) * num_vertices, -1);
+    std::fill(ccs.get(), ccs.get() + num_vertices, -1);
 
     int cc = 1;
     for (unsigned int i = 0; i < num_vertices; i ++) {
