@@ -69,9 +69,10 @@ void print_arguments() {
 int main(int argc, char*argv[]) {
     char* ip = nullptr;
     char* port = nullptr;
+    char* input_folder = nullptr;
     char c = 0;
 
-    while ((c = getopt(argc, argv, "i:p:")) != -1) {
+    while ((c = getopt(argc, argv, "i:p:f:")) != -1) {
         switch (c) {
             case 'i':
                 ip = optarg;
@@ -79,16 +80,20 @@ int main(int argc, char*argv[]) {
             case 'p':
                 port = optarg;
                 break;
+            case 'f':
+                input_file = optarg;
+                break;
         }
     }
 
-    if (ip == nullptr || port == nullptr) {
+    if (ip == nullptr || port == nullptr || input_file) {
         print_arguments();
         exit(-1);
     }
 
     std::cout << "Using ip: " << ip
-        << " and port: " << port
+        << " port: " << port
+        << " input_folder: " << input_folder
         << std::endl;
 
     StringSerializer ss;
