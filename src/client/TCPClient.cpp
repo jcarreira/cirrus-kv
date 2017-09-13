@@ -584,7 +584,6 @@ void TCPClient::process_send() {
         LOG<INFO>("message pair sent by client");
 
         // Release the lock so that the other thread may add to the send queue
-        //queue_lock.signal();
 
         // Add the builder to the queue if it is of the right type (a write)
         // And if not over capacity
