@@ -41,6 +41,8 @@ class TCPClient : public BladeClient {
     ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
+    void connect(const std::vector<std::string>& addresses,
+        const std::vector<std::string>& ports) override;
 
     // Read
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
@@ -133,7 +135,8 @@ class TCPClient : public BladeClient {
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
+    boost::lockfree::queue<
+        std::pair<uint64_t, flatbuffers::FlatBufferBuilder*>,
         boost::lockfree::capacity<SEND_QUEUE_SIZE>> send_queue;
 
     /**

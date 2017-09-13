@@ -35,6 +35,12 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
                               const Serializer<T>& serializer,
                               std::function<T(const void*, unsigned int)>
                               deserializer);
+    FullBladeObjectStoreTempl(const std::string& bladeIP,
+                              const std::string& port,
+                              BladeClient *client,
+                              const Serializer<T>& serializer,
+                              std::function<T(const void*, unsigned int)>
+                              deserializer);
 
     T get(const ObjectID& id) const override;
     bool put(const ObjectID& id, const T& obj) override;
