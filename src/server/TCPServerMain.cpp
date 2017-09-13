@@ -3,7 +3,7 @@
 #include "server/TCPServer.h"
 #include "utils/logging.h"
 
-const int port = 12345;
+int port = 12345;
 const int max_fds = 100;
 static const uint64_t MB = (1024 * 1024);
 static const uint64_t GB = (1024 * MB);
@@ -11,7 +11,7 @@ static const uint64_t GB = (1024 * MB);
 void print_arguments() {
     std::cout
         << "Error: ./tcpservermain"
-        << " [pool_size=10] [backend_type=Memory]"
+        << " [port=12345] [pool_size=10] [backend_type=Memory]"
         << std::endl
         << " pool_size in MB" << std::endl
         << std::endl;
@@ -28,18 +28,18 @@ auto main(int argc, char *argv[]) -> int {
     std::string storage_path = "/tmp/cirrus_storage";
 
     switch (argc) {
-        case 4:
+        case 5:
             {
                 storage_path = argv[3];
             }
-        case 3:
+        case 4:
             {
                 if (strcmp(argv[2], "Memory") && strcmp(argv[2], "Storage")) {
                     throw std::runtime_error("Wrong backend type");
                 }
                 backend_type = argv[2];
             }
-        case 2:
+        case 3:
             {
                 std::istringstream iss(argv[1]);
                 if (!(iss >> pool_size)) {
@@ -49,7 +49,8 @@ auto main(int argc, char *argv[]) -> int {
 
                 pool_size *= MB;
             }
-        case 1:
+        case 2:
+            port = std::stoi(argv[1]);
             break;
         default:
             print_arguments();

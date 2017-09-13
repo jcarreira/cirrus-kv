@@ -28,11 +28,20 @@ namespace cirrus {
 static const int initial_buffer_size = 50;
 
 /**
-  * Connects the client to the remote server.
+  * Connects the client to the remote server
   */
 void RDMAClient::connect(const std::string& host, const std::string& port) {
     seed = time(nullptr);
     connect_rdma_cm(host, port);
+}
+
+/**
+  * Connects the client to multiple remote servers
+  * NOTE: currently not supported
+  */
+void RDMAClient::connect(const std::vector<std::string>& /* hosts */,
+                         const std::vector<std::string>& /* ports */) {
+    seed = time(nullptr);
 }
 
 /**

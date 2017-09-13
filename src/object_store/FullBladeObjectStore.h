@@ -35,8 +35,8 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
                               const Serializer<T>& serializer,
                               std::function<T(const void*, unsigned int)>
                               deserializer);
-    FullBladeObjectStoreTempl(const std::string& bladeIP,
-                              const std::string& port,
+    FullBladeObjectStoreTempl(const std::vector<std::string>& bladesIP,
+                              const std::vector<std::string>& ports,
                               BladeClient *client,
                               const Serializer<T>& serializer,
                               std::function<T(const void*, unsigned int)>
@@ -107,6 +107,30 @@ FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
     ObjectStore<T>(), client(client),
     serializer(serializer), deserializer(deserializer) {
     client->connect(bladeIP, port);
+}
+
+/**
+  * Constructor for new object stores.
+  * @param bladesIP the ips of the remote servers.
+  * @param ports the ports to use to communicate with the remote servers
+  * @param serializer A function that takes an object and serializes it.
+  * Returns a pointer to the buffer containing the serialized object as
+  * well as the size of the buffer. All serialized objects should be the
+  * same length.
+  * @param deserializer A function that reads the buffer passed in and
+  * deserializes it, returning an object constructed from the information
+  * in the buffer.
+  */
+template<class T>
+FullBladeObjectStoreTempl<T>::FullBladeObjectStoreTempl(
+        const std::vector<std::string>& bladesIP,
+        const std::vector<std::string>& ports,
+        BladeClient* client,
+        const Serializer<T>& serializer,
+        std::function<T(const void*, unsigned int)> deserializer) :
+    ObjectStore<T>(), client(client),
+    serializer(serializer), deserializer(deserializer) {
+    client->connect(bladesIP, ports);
 }
 
 /**
