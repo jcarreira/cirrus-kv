@@ -111,13 +111,17 @@ class TCPClient : public BladeClient {
     ssize_t read_all(int sock, void* data, size_t len);
 
     ClientFuture enqueue_message(
-                        flatbuffers::FlatBufferBuilder* builder,
-                        const int txn_id);
+            uint64_t server_id,
+            flatbuffers::FlatBufferBuilder* builder,
+            const int txn_id);
+
+    uint64_t calcServer(ObjectID) const;
+
     void process_received();
     void process_send();
 
-    /** fd of the socket used to communicate w/ remote store */
-    int sock = 0;
+    /** fds of the sockets used to communicate w/ remote store */
+    std::vector<int> server_sockets;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
     std::atomic<std::uint64_t> curr_txn_id = {0};
 

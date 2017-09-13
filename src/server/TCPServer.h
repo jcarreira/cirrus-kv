@@ -71,7 +71,7 @@ class TCPServer : public Server {
      * When the vector reaches capacity, unused structs are removed and the
      * remaining items shifted.
      */
-    std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
+    std::vector<struct pollfd> fds(max_fds);
 
     /**
       * Memory interface
