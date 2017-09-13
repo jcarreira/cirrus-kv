@@ -37,7 +37,7 @@ class TCPServer : public Server {
     ssize_t read_all(int sock, void*, size_t len);
     bool read_from_client(std::vector<char>&, int, uint64_t&);
 
-    bool testRemove(struct pollfd x);
+    bool testRemove(pollfd x);
 
     /** The port that the server is listening on. */
     int port_;
@@ -51,7 +51,7 @@ class TCPServer : public Server {
     uint64_t curr_size = 0;
 
     /** Max number of sockets open at once. */
-    const uint64_t max_fds;
+    const uint64_t max_fds = 0;
 
     /**
      * Index that the next socket accepted should have in the
@@ -66,12 +66,12 @@ class TCPServer : public Server {
 
     /**
      * Vector that serves as a wrapper for a c style array containing
-     * struct pollfd objects. Used for calls to poll(). New structs are
+     * pollfd objects. Used for calls to poll(). New structs are
      * always inserted to the end of a continus range, indicated by curr_index.
      * When the vector reaches capacity, unused structs are removed and the
      * remaining items shifted.
      */
-    std::vector<struct pollfd> fds(max_fds);
+    std::vector<pollfd> fds = std::vector<pollfd>(max_fds);
 
     /**
       * Memory interface

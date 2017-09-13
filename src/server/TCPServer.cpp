@@ -138,18 +138,18 @@ void TCPServer::init() {
             + to_string(port_));
     }
 
-    fds.at(curr_index).fd = server_sock_;
+    fds[curr_index].fd = server_sock_;
     // Only listen for data to read
-    fds.at(curr_index++).events = POLLIN;
+    fds[curr_index++].events = POLLIN;
 }
 
 /**
  * Function passed into std::remove_if
- * @param x a struct pollfd being examined
+ * @param x a pollfd being examined
  * @return True if the struct should be removed. This is true if the fd is -1,
  * meaning that it is being ignored.
  */
-bool TCPServer::testRemove(struct pollfd x) {
+bool TCPServer::testRemove(pollfd x) {
     // If this pollfd will be removed, the index of the next location to insert
     // should be reduced by one correspondingly.
     if (x.fd == -1) {
@@ -177,7 +177,7 @@ void TCPServer::loop() {
         } else {
             // there is at least one pending event, find it.
             for (uint64_t i = 0; i < curr_index; i++) {
-                struct pollfd& curr_fd = fds.at(i);
+                pollfd& curr_fd = fds.at(i);
                 // Ignore the fd if we've said we don't care about it
                 if (curr_fd.fd == -1) {
                     continue;

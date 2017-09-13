@@ -97,7 +97,7 @@ void TCPClient::connectSingleServer(
 
     LOG<INFO>("Connecting to server");
     // Connect to the server
-    sockaddr* server_addr_ptr = reinterpret_cast<sockaddr*>(&serv_addr);
+    sockaddr* serv_addr_ptr = reinterpret_cast<sockaddr*>(&serv_addr);
     if (::connect(*sock, serv_addr_ptr, sizeof(serv_addr)) < 0) {
         throw cirrus::ConnectionException(
                 "Client could not connect to server."
@@ -125,9 +125,9 @@ void TCPClient::connect(const std::string& address,
     // reserve space for one socket
     sockets.resize(1);
 
-    connectSingleServer(address, port, &sockets[0]);
+    connectSingleServer(address, port_string, &sockets[0]);
 
-    receiver_thread = new std::thread(&TCPClient::process_received, this);
+    receiver_thread = new std::thread(&TCPClient::loop, this);
     sender_thread   = new std::thread(&TCPClient::process_send, this);
 }
 
@@ -138,8 +138,8 @@ void TCPClient::connect(const std::string& address,
   * @param port_string the port to connect to, represented as a string
   */
 void TCPClient::connect(const std::vector<std::string>& addresses,
-                        const std::vector<std::string>& ports_string) {
-    assert(addresses.size() == ports_string.size());
+                        const std::vector<std::string>& ports) {
+    assert(addresses.size() == ports.size());
 
     // Ignore any sigpipes received, they will show as an error during
     // the read/write regardless, and ignoring will allow them to be better
@@ -153,10 +153,10 @@ void TCPClient::connect(const std::vector<std::string>& addresses,
     sockets.resize(addresses.size());
 
     for (uint32_t i = 0; i < addresses.size(); ++i) {
-        connectSingleServer(address, port, &sockets[i]);
+        connectSingleServer(addresses[i], ports[i], &sockets[i]);
     }
 
-    receiver_thread = new std::thread(&TCPClient::process_received, this);
+    receiver_thread = new std::thread(&TCPClient::loop, this);
     sender_thread   = new std::thread(&TCPClient::process_send, this);
 }
 
@@ -282,7 +282,9 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
     LOG<PERF>("TCPClient::read_async_bulk time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(calcServer(oid), builder, txn_id);
+
+    // NOTE: We assume for now that all objects go to the same server
+    return enqueue_message(calcServer(oids[0]), builder, txn_id);
 }
 
 /**
@@ -383,7 +385,7 @@ BladeClient::ClientFuture TCPClient::write_async_bulk(
     LOG<PERF>("TCPClient::write_async_bulk time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(calcServer(oid), builder, txn_id);
+    return enqueue_message(calcServer(oids[0]), builder, txn_id);
 }
 
 /**
@@ -434,12 +436,12 @@ void TCPClient::loop() {
 
 
     while (1) {
-        if (terminate_thread == true) {
+        if (terminate_threads == true) {
             break; // terminate this thread
         }
 
         LOG<INFO>("Client calling poll");
-        int poll_status = int poll(fds.data(), last_pollfd, timeout);
+        int poll_status = poll(fds.data(), last_pollfd, timeout);
 
         if (poll_status == -1) {
             throw cirrus::ConnectionException("Client error calling poll");
@@ -478,7 +480,7 @@ void TCPClient::loop() {
   * logic for acting upon the incoming messages, which includes copying
   * serialized objects and notifying futures.
   */
-void TCPClient::process_received(int fd) {
+int TCPClient::process_received(int fd) {
     /**
      * Message format
      * |---------------------------------------------------
@@ -506,7 +508,7 @@ void TCPClient::process_received(int fd) {
             char *info = strerror(errno);
             LOG<ERROR>(info);
             if (errno == EINTR && terminate_threads == true) {
-                return;
+                return -1;
             } else {
                 LOG<ERROR>("Expected: ", sizeof(uint32_t), " but got ",
                         retval);
@@ -652,6 +654,8 @@ void TCPClient::process_received(int fd) {
     txn.fd->result_available = true;
     txn.fd->sem->signal();
     LOG<INFO>("client done processing message");
+
+    return 0;
 }
 
 /**
@@ -723,11 +727,13 @@ void TCPClient::process_send() {
         }
 
 #pragma GCC diagnostic ignored "-Wuninitialized"
-        flatbuffers::FlatBufferBuilder* builder;
-        if (!send_queue.pop(builder)) {
+        ToSendPair to_send;
+        if (!send_queue.pop(to_send)) {
             continue;
         }
 
+        flatbuffers::FlatBufferBuilder* builder = to_send.builder;
+        auto sock = sockets[to_send.server_id];
         int message_size = builder->GetSize();
 
         LOG<INFO>("Client sending size: ", message_size);
@@ -789,8 +795,7 @@ void TCPClient::process_send() {
   * to poor locality that can be beneficial
   * we may want to split the range of keys in bigger chunks instead
   */
-uint32_t TCPClient::calcServer(ObjectID id) const {
-
+uint64_t TCPClient::calcServer(ObjectID id) const {
     return id % sockets.size();
 }
 
@@ -814,7 +819,7 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
     BladeClient::ClientFuture future(txn.fd);
 
     // Add builder to send queue
-    while (!send_queue.push(builder)) {
+    while (!send_queue.push(ToSendPair{server_id, builder})) {
     }
 
 #ifdef PERF_LOG
