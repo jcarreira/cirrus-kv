@@ -11,7 +11,7 @@ Requirements
 
 This library has been tested on Ubuntu >= 14.04 as well as MacOS 10.12.5. Additional Mac requirements and instructions are listed below.
 
-It has been tested with the following environment:
+It has been tested with the following environment / dependencies:
 * Ubuntu 14.04
 * g++ 5.4
 * Boost
