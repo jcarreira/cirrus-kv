@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utils/Log.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
@@ -172,7 +173,7 @@ uint64_t Configuration::get_num_classes() const {
   */
 uint64_t Configuration::get_limit_cols() const {
     if (limit_cols == 0) {
-        throw std::runtime_error("num_classes not loaded");
+        cirrus::LOG<cirrus::INFO>("limit_cols not loaded");
     }
     return limit_cols;
 }
