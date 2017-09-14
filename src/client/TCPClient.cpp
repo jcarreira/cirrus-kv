@@ -214,7 +214,7 @@ BladeClient::ClientFuture TCPClient::write_async(ObjectID oid,
             builder_timer.getUsElapsed());
 #endif
 
-    return enqueue_message(calcServer(oid), builder, txn_id);
+    return enqueue_message(serverFromOid(oid), builder, txn_id);
 }
 
 /**
@@ -246,7 +246,7 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
     LOG<PERF>("TCPClient::read_async time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(calcServer(oid), builder, txn_id);
+    return enqueue_message(serverFromOid(oid), builder, txn_id);
 }
 
 /**
@@ -284,7 +284,7 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
 #endif
 
     // NOTE: We assume for now that all objects go to the same server
-    return enqueue_message(calcServer(oids[0]), builder, txn_id);
+    return enqueue_message(serverFromOid(oids[0]), builder, txn_id);
 }
 
 /**
@@ -385,7 +385,8 @@ BladeClient::ClientFuture TCPClient::write_async_bulk(
     LOG<PERF>("TCPClient::write_async_bulk time to build message (us): ",
             builder_timer.getUsElapsed());
 #endif
-    return enqueue_message(calcServer(oids[0]), builder, txn_id);
+    // NOTE: We assume for now that all objects go to the same server
+    return enqueue_message(serverFromOid(oids[0]), builder, txn_id);
 }
 
 /**
@@ -412,10 +413,14 @@ bool TCPClient::remove(ObjectID oid) {
     builder->Finish(msg);
 
     BladeClient::ClientFuture future = enqueue_message(
-            calcServer(oid),
+            serverFromOid(oid),
             builder,
             txn_id);
     return future.get();
+}
+    
+uint64_t TCPClient::numServers() const {
+    return sockets.size();
 }
 
 /** This function serves all reads from all the servers this client is
@@ -796,7 +801,7 @@ void TCPClient::process_send() {
   * to poor locality that can be beneficial
   * we may want to split the range of keys in bigger chunks instead
   */
-uint64_t TCPClient::calcServer(ObjectID id) const {
+uint64_t TCPClient::serverFromOid(ObjectID id) const {
     return id % sockets.size();
 }
 

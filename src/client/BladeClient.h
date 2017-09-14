@@ -89,6 +89,9 @@ class BladeClient {
             const WriteUnits& w) = 0;
 
     virtual bool remove(ObjectID id) = 0;
+        
+    virtual uint64_t numServers() const = 0;
+    virtual uint64_t serverFromOid(ObjectID id) const = 0;
 };
 
 }  // namespace cirrus

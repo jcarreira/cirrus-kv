@@ -65,6 +65,9 @@ class TCPClient : public BladeClient {
             const WriteUnits& w) override;
 
     bool remove(ObjectID id) override;
+    
+    uint64_t numServers() const override;
+    uint64_t serverFromOid(ObjectID) const override;
 
  private:
     /**
@@ -121,8 +124,6 @@ class TCPClient : public BladeClient {
             uint64_t server_id,
             flatbuffers::FlatBufferBuilder* builder,
             const int txn_id);
-
-    uint64_t calcServer(ObjectID) const;
 
     int process_received(int fd);
     void process_send();

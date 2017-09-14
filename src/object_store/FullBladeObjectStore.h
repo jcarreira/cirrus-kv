@@ -239,25 +239,33 @@ void FullBladeObjectStoreTempl<T>::get_bulk(ObjectID start,
 template<class T>
 std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
                                             const std::vector<ObjectID>& oids) {
-    std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
-        client->read_sync_bulk(oids);
 
-    const uint32_t* ptr =
-                        reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
-    uint32_t num_oids = *ptr++;
+    std::vector<std::vector<ObjectID>> oid_per_server;
+    oid_per_server.resize(client->numServers());
 
-    assert(num_oids == oids.size());
+    for (uint64_t i = 0; i < oids.size(); ++i) {
+        uint64_t server_id = client->serverFromOid(oids[i]);
+        oid_per_server[server_id].push_back(oids[i]);
+    }
 
     std::vector<T> res;
-    res.reserve(num_oids);
-
-    const char* mem = reinterpret_cast<const char*>(ptr);
-    for (uint32_t i = 0; i < num_oids; ++i) {
-        uint32_t size = ntohl(*reinterpret_cast<const uint32_t*>(mem));
-        mem += sizeof(uint32_t);
-        res.push_back(deserializer(mem, size));
-        mem += size;
+    res.reserve(oids.size());
+    for (uint64_t i = 0; i < oid_per_server.size(); ++i) {
+        std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
+            client->read_sync_bulk(oid_per_server[i]);
+    
+        const uint32_t* ptr =
+            reinterpret_cast<const uint32_t*>(ptr_pair.first.get());
+        const char* mem = reinterpret_cast<const char*>(ptr);
+    
+        for (uint32_t i = 0; i < oid_per_server[i].size(); ++i) {
+            uint32_t size = ntohl(*reinterpret_cast<const uint32_t*>(mem));
+            mem += sizeof(uint32_t);
+            res.push_back(deserializer(mem, size));
+            mem += size;
+        }
     }
+
     return res;
 }
 
@@ -313,11 +321,23 @@ template<class T>
 void FullBladeObjectStoreTempl<T>::put_bulk_fast(
         const std::vector<ObjectID>& oids,
         const std::vector<T>& data) {
-    std::vector<const T*> obj_ptrs(data.size());
-    std::transform(data.begin(), data.end(), obj_ptrs.begin(),
-            [](const T& o) { return &o; });
-    WriteUnitsTemplate<T> w(serializer, obj_ptrs);
-    client->write_sync_bulk(oids, w);
+
+    std::vector<std::vector<const T*>> obj_ptrs;
+    std::vector<std::vector<ObjectID>> oid_per_server;
+
+    obj_ptrs.resize(client->numServers());
+    oid_per_server.resize(client->numServers());
+
+    for (uint64_t i = 0; i < oids.size(); ++i) {
+        uint64_t server_id = client->serverFromOid(oids[i]);
+        obj_ptrs[server_id].push_back(&data[i]);
+        oid_per_server[server_id].push_back(oids[i]);
+    }
+
+    for (uint64_t i = 0; i < obj_ptrs.size(); ++i) {
+        WriteUnitsTemplate<T> w(serializer, obj_ptrs[i]);
+        client->write_sync_bulk(oid_per_server[i], w);
+    }
 }
 
 /**

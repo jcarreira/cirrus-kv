@@ -163,6 +163,9 @@ class RDMAClient : public BladeClient {
 
     bool remove(ObjectID id) override;
 
+    uint64_t numServers() const override;
+    uint64_t serverFromOid(ObjectID) const override;
+
  private:
     /**
      * The seed used for calls to rand_r. Set based on system time

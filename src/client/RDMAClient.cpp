@@ -214,6 +214,16 @@ bool RDMAClient::remove(ObjectID oid) {
     }
     return false;
 }
+    
+uint64_t RDMAClient::numServers() const {
+    throw std::runtime_error("Not supported");
+    return 0;
+}
+
+uint64_t RDMAClient::serverFromOid(ObjectID) const {
+    throw std::runtime_error("Not supported");
+    return 0;
+}
 
 /**
  * Reads an object to local memory from the remote store.
