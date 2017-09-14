@@ -1,7 +1,7 @@
+Setup Docker
+=============
 
-
-To install docker:
-(instructions from here https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/#install-using-the-repository)
+To install docker follow the instructions [1]:
 
 ~~~
 sudo apt-get update
@@ -43,13 +43,13 @@ To run cirrus (tcpservermain specifically) inside of a container:
 4. switch to the docker branch (it comments out some parts of compilation. Later this could be changed to compile only the server or only the client/tests to allow for more lean containers)
 5. run `sudo docker build -t cirrus_tcp_server`
 
-at this point, the docker image is created, and the tcp server can be launched via (i saw an error about configs here but it still ran fine):
+at this point, the docker image is created, and the tcp server can be launched via:
 
 ~~~
 sudo docker run --net=host -t -i cirrus_tcp_server
 ~~~
 
-the server can then be stopped via `sudo docker stop CONTAINER_NAME` (I’ve done this from another ssh session)
+the server can then be stopped via `sudo docker stop CONTAINER_NAME`
 
 With this setup the container shares an ip with the host, so multiple servers on one host would need to be differentiated via port.
 
@@ -69,3 +69,4 @@ CMD ["./src/server/tcpservermain"]
 ~~~
 
 
+[1] instructions from here https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/#install-using-the-repository
