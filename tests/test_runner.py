@@ -72,13 +72,13 @@ def runTestTCP(testPath):
 # the test.
 # This test is used to run multiple Cirrus servers
 # NOTE: all pathnames start from the top directory where make check is run
-def runTestShardsTCP(num_shards, testPath):
+def runTestShardedTCP(num_shards, testPath):
     # Launch the server in the background
     print("Running test", testPath, " with #shards: ", num_shards)
     # Sleep to give the server from the previous test time to close
     time.sleep(1)
 
-    serves = []
+    servers = []
 
     for i in range(0, num_shards):
         if use_storage():
@@ -105,7 +105,7 @@ def runTestShardsTCP(num_shards, testPath):
 
     child = subprocess.Popen([testPath, "--tcp",
                               get_test_ip(),
-                              "--shards", str(num_shards)],
+                              "--num_shards", str(num_shards)],
                               stdout=subprocess.PIPE)
 
     # Print the output from the child

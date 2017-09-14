@@ -351,7 +351,7 @@ bool TCPServer::process(int sock) {
         return false;
     }
 
-    LOG<INFO>("Server received size from client");
+    LOG<INFO>("Server in port: ", port_, " received size from client");
     // Convert to host byte order
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = ntohl(*incoming_size_ptr);

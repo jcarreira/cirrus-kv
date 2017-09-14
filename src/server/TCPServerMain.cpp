@@ -23,7 +23,7 @@ void print_arguments() {
  * available to the server. Pool size defaults to 10 GB if not specified.
  */
 auto main(int argc, char *argv[]) -> int {
-    uint64_t pool_size = 10 * GB;
+    uint64_t pool_size = 10 * MB;
     std::string backend_type = "Memory";
     std::string storage_path = "/tmp/cirrus_storage";
 
@@ -51,6 +51,11 @@ auto main(int argc, char *argv[]) -> int {
             }
         case 2:
             port = std::stoi(argv[1]);
+            break;
+        case 1:
+            port = 12345;
+            pool_size = 10 * MB;
+            backend_type = "Memory";
             break;
         default:
             print_arguments();

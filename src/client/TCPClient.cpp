@@ -736,7 +736,8 @@ void TCPClient::process_send() {
         auto sock = sockets[to_send.server_id];
         int message_size = builder->GetSize();
 
-        LOG<INFO>("Client sending size: ", message_size);
+        LOG<INFO>("Client sending size: ", message_size,
+                " to socket id: ", to_send.server_id);
         // Convert size to network order and send
 
         uint32_t network_order_size = htonl(message_size);
