@@ -63,21 +63,30 @@ class BladeClient {
 
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
-    virtual bool write_sync(ObjectID id,  const WriteUnit& w) = 0;
 
+    // Read
     virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
         ObjectID id) = 0;
     virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync_bulk(
         const std::vector<ObjectID>& ids) = 0;
 
-    virtual bool remove(ObjectID id) = 0;
+    virtual BladeClient::ClientFuture read_async(ObjectID oid) = 0;
+    virtual BladeClient::ClientFuture read_async_bulk(
+                                         const std::vector<ObjectID>& oids) = 0;
+
+    // Write
+    virtual bool write_sync(ObjectID id,  const WriteUnit& w) = 0;
+    virtual bool write_sync_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) = 0;
 
     virtual BladeClient::ClientFuture write_async(ObjectID oid,
         const WriteUnit& w) = 0;
+    virtual BladeClient::ClientFuture write_async_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) = 0;
 
-    virtual BladeClient::ClientFuture read_async(ObjectID oid) = 0;
-    virtual BladeClient::ClientFuture read_async_bulk(
-                                                std::vector<ObjectID> oids) = 0;
+    virtual bool remove(ObjectID id) = 0;
 };
 
 }  // namespace cirrus

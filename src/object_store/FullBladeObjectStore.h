@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <cassert>
+#include <algorithm>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -43,11 +44,17 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
             const ObjectID& id) override;
     typename ObjectStore<T>::ObjectStorePutFuture put_async(const ObjectID& id,
             const T& obj) override;
-    void removeBulk(ObjectID first, ObjectID last) override;
 
+    // Get
     void get_bulk(ObjectID start, ObjectID last, T* data) override;
     std::vector<T> get_bulk_fast(const std::vector<ObjectID>& oids) override;
+
+    // Put
     void put_bulk(ObjectID start, ObjectID last, T* data);
+    void put_bulk_fast(const std::vector<ObjectID>& oids,
+            const std::vector<T>& data);
+
+    void removeBulk(ObjectID first, ObjectID last) override;
 
     void printStats() const noexcept override;
 
@@ -227,7 +234,7 @@ std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
 /**
  * Puts many objects to the remote store at once.
  * @param start the objectID that should be assigned to the first object
- * @param the objectID that should be assigned to the last object
+ * @param last the objectID that should be assigned to the last object
  * @param data a pointer the first object in a c style array that will
  * be put to the remote store.
  */
@@ -264,6 +271,23 @@ void FullBladeObjectStoreTempl<T>::put_bulk(ObjectID start,
             }
         }
     }
+}
+
+/**
+ * Puts many objects to the remote store at once.
+ * This is a more efficient version of the put_bulk method
+ * @param oids The ids of the objects to write
+ * @param data The objects to be written
+ */
+template<class T>
+void FullBladeObjectStoreTempl<T>::put_bulk_fast(
+        const std::vector<ObjectID>& oids,
+        const std::vector<T>& data) {
+    std::vector<const T*> obj_ptrs(data.size());
+    std::transform(data.begin(), data.end(), obj_ptrs.begin(),
+            [](const T& o) { return &o; });
+    WriteUnitsTemplate<T> w(serializer, obj_ptrs);
+    client->write_sync_bulk(oids, w);
 }
 
 /**

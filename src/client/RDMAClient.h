@@ -149,7 +149,14 @@ class RDMAClient : public BladeClient {
 
     BladeClient::ClientFuture read_async(ObjectID oid) override;
     BladeClient::ClientFuture read_async_bulk(
-                                           std::vector<ObjectID> oids) override;
+                                    const std::vector<ObjectID> &oids) override;
+
+    bool write_sync_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) override;
+    BladeClient::ClientFuture write_async_bulk(
+            const std::vector<ObjectID>& oids,
+            const WriteUnits& w) override;
 
     bool remove(ObjectID id) override;
 
