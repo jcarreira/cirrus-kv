@@ -28,8 +28,6 @@ if [ ! -d "eigen_source" ]; then
 fi
 cd ..
 
-
-
 # download test file for benchmark
 cd ./benchmarks
 wget http://norvig.com/big.txt

@@ -99,4 +99,3 @@ class VertexSerializer : public cirrus::Serializer<Vertex> {
 }  // namespace graphs
 
 #endif  // EXAMPLES_GRAPHS_PAGE_RANK_VERTEX_H_
-

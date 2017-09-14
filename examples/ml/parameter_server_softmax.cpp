@@ -17,7 +17,7 @@
 #include "Input.h"
 #include "Utils.h"
 #include "Model.h"
-#include "LRModel.h"
+#include "SoftmaxModel.h"
 #include "ModelGradient.h"
 #include "Configuration.h"
 #include "Serializers.h"
@@ -29,12 +29,12 @@
 #include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "common/Exception.h"
-#include <Tasks.h>
+#include <Tasks_softmax.h>
 
 #define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
 
-#define MODEL_GRAD_SIZE 10
+#define MODEL_GRAD_SIZE (28*28)
 
 #define BILLION (1000000000ULL)
 
@@ -45,7 +45,7 @@
 int nworkers = 1;
 
 int num_classes = 2;
-int features_per_sample = 10;
+int features_per_sample = (28*28);
 int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
@@ -57,7 +57,7 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "10.10.49.95";
 
 static const uint32_t SIZE = 1;
 
@@ -77,21 +77,24 @@ void run_tasks(int rank, const Configuration& config) {
         sleep(8);
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                samples_per_batch, features_per_sample, nworkers,
+                num_classes);
         pt.run(config);
         sleep_forever();
     } else if (rank == 2) {
-        sleep(3);
+        sleep(1);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                samples_per_batch, features_per_sample, nworkers,
+                num_classes);
         lt.run(config);
         sleep_forever();
     } else if (rank == 3) {
         sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                samples_per_batch, features_per_sample, nworkers,
+                num_classes);
         et.run(config);
         sleep_forever();
     } else if (rank >= 4 && rank < 4 + nworkers) {
@@ -99,10 +102,11 @@ void run_tasks(int rank, const Configuration& config) {
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-        sleep(10);
+        sleep(20);
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                samples_per_batch, features_per_sample, nworkers,
+                num_classes);
         lt.run(config, rank - 4);
         sleep_forever();
 

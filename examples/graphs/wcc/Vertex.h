@@ -7,6 +7,7 @@
 #include <set>
 #include <memory>
 #include <utility>
+#include <arpa/inet.h>
 
 #include "common/Serializer.h"
 

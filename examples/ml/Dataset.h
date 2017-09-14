@@ -60,8 +60,8 @@ class Dataset {
       * Get pointer to label
       * @return point to label data index by input label
       */
-    const double* label(uint64_t label) const {
-        return labels_.get() + label;
+    const double* label(uint64_t label_index) const {
+        return labels_.get() + label_index;
     }
 
     /**

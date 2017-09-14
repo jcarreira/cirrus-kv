@@ -44,14 +44,24 @@ void SoftmaxModel::randomize() {
     }
 }
 
+/** Serialization Format:
+  * d (uint64_t)
+  * n_classes (uint64_t)
+  * d * nclasses weights (double)
+  */
 std::pair<std::unique_ptr<char[]>, uint64_t>
 SoftmaxModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
-    res.second = sizeof(double) * d * nclasses;
+
+    res.second = getSerializedSize();
     res.first.reset(new char[res.second]);
+    
+    uint64_t* uint_ptr = reinterpret_cast<uint64_t*>(res.first.get());
+    *uint_ptr++ = d;
+    *uint_ptr++ = nclasses;
 
     // copy contents from weights vector to the serialized buffer
-    double* w = reinterpret_cast<double*>(res.first.get());
+    double* w = reinterpret_cast<double*>(uint_ptr);
     for (uint64_t i = 0; i < d; ++i) {
         for (uint64_t j = 0; j < nclasses; ++j) {
             w[i * nclasses + j] = weights[i][j];
@@ -60,8 +70,30 @@ SoftmaxModel::serialize() const {
     return res;
 }
 
+void SoftmaxModel::serializeTo(void* mem) const {
+    uint64_t* uint_ptr = reinterpret_cast<uint64_t*>(mem);
+    *uint_ptr++ = d;
+    *uint_ptr++ = nclasses;
+
+    double* w = reinterpret_cast<double*>(uint_ptr);
+    for (uint64_t i = 0; i < d; ++i) {
+        for (uint64_t j = 0; j < nclasses; ++j) {
+            w[i * nclasses + j] = weights[i][j];
+        }
+    }
+}
+
 void SoftmaxModel::loadSerialized(const void* data) {
-    const double* w = reinterpret_cast<const double*>(data);
+    const uint64_t* uint_ptr = reinterpret_cast<const uint64_t*>(data);
+    uint64_t dim = *uint_ptr++;
+    uint64_t classes = *uint_ptr++;
+
+    weights.resize(dim);
+    for (auto& v : weights) {
+        v.resize(classes);
+    }
+
+    const double* w = reinterpret_cast<const double*>(uint_ptr);
 
     for (uint64_t i = 0; i < d; ++i) {
         std::copy(w + i * nclasses, w + (i + 1) * nclasses, weights[i].begin());
@@ -70,9 +102,13 @@ void SoftmaxModel::loadSerialized(const void* data) {
 
 std::unique_ptr<Model> SoftmaxModel::deserialize(void* data,
             uint64_t /* size */) const {
+    uint64_t* uint_ptr = reinterpret_cast<uint64_t*>(data);
+    uint64_t dim = *uint_ptr++;
+    uint64_t classes = *uint_ptr++;
+
     std::unique_ptr<SoftmaxModel> model =
         std::make_unique<SoftmaxModel>(
-                reinterpret_cast<double*>(data), nclasses, d);
+                reinterpret_cast<double*>(uint_ptr), classes, dim);
     return model;
 }
 
@@ -99,7 +135,7 @@ void SoftmaxModel::sgd_update(
 }
 
 uint64_t SoftmaxModel::getSerializedSize() const {
-    return nclasses * d * sizeof(double);
+    return sizeof(double) * d * nclasses + sizeof(uint64_t) * 2;
 }
 
 std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
@@ -260,6 +296,7 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
 
     std::cout
         << "Accuracy: " << (1.0 - (1.0 * count_wrong / dataset.rows()))
+        << " wrong: " << count_wrong << " samples: " << dataset.rows()
         << std::endl;
 
     // constant

@@ -6,7 +6,8 @@ AUTOMAKE_OPTIONS = foreign
 CXX = mpic++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server two_clients_test bug_regression
+bin_PROGRAMS = parameter_server two_clients_test bug_regression \
+               parameter_server_softmax
 
 LIBS         =  -lclient -lauthentication -lutils -lmpi \
 		-levictionpolicies
@@ -37,6 +38,14 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               Tasks.cpp
 
+CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
+              Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
+              ModelGradient.cpp MlUtils.cpp Configuration.cpp \
+              Checksum.cpp SoftmaxModel.cpp \
+              Tasks_softmax.cpp Serializers.cpp 
+
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
+parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
+				$(CPP_SOURCES_SOFTMAX)
 two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
 bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)

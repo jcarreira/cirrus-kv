@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 #include <LRModel.h>
+#include <SoftmaxModel.h>
 
 #include "common/Serializer.h"
 
@@ -134,7 +135,7 @@ class lr_model_deserializer {
 };
 
 /**
-  * LRModel serializer
+  * LRGradient serializer
   */
 class lr_gradient_serializer : public cirrus::Serializer<LRGradient> {
  public:
@@ -143,7 +144,7 @@ class lr_gradient_serializer : public cirrus::Serializer<LRGradient> {
 
     uint64_t size(const LRGradient& g) const override;
     void serialize(const LRGradient& g, void* mem) const override;
-
+ 
  private:
     uint64_t n;             //< size of the model
     std::string name;  //< name associated with this serializer
@@ -161,6 +162,83 @@ class lr_gradient_deserializer {
 
  private:
     uint64_t n;  //< size of the gradient
+};
+
+/*************************************************************************
+  ************************************************************************
+  * Softmax Serializers
+  ************************************************************************
+  ************************************************************************
+  */
+
+/**
+  * Softmax gradient serializer
+  */
+class sm_gradient_serializer : public cirrus::Serializer<SoftmaxGradient> {
+ public:
+    sm_gradient_serializer(uint64_t nclasses, uint64_t d,
+            const std::string& name = "") :
+        nclasses(nclasses), d(d), name(name) {}
+
+    uint64_t size(const SoftmaxGradient& g) const override;
+    void serialize(const SoftmaxGradient& g, void* mem) const override;
+
+ private:
+    uint64_t nclasses; //< size of the model
+    uint64_t d;        //< size of the model
+    std::string name;  //< name associated with this serializer
+};
+
+/**
+  * Softmax gradient deserializer
+  */
+class sm_gradient_deserializer {
+ public:
+    sm_gradient_deserializer(uint64_t nclasses, uint64_t d) :
+        nclasses(nclasses), d(d) {}
+
+    SoftmaxGradient
+    operator()(const void* data, unsigned int des_size);
+
+ private:
+    uint64_t nclasses;  //< number of classes
+    uint64_t d;         //< dimension
+};
+
+/**
+  * Softmax model serializer
+  */
+class sm_model_serializer : public cirrus::Serializer<SoftmaxModel> {
+ public:
+    explicit sm_model_serializer(uint64_t nclasses, uint64_t d,
+            const std::string& name = "") :
+        nclasses(nclasses), d(d), name(name) {}
+
+    uint64_t size(const SoftmaxModel& model) const override;
+    void serialize(const SoftmaxModel& model, void* mem) const override;
+
+ private:
+    uint64_t nclasses;  //< number of classes
+    uint64_t d;         //< size of the model
+    std::string name;   //< name associated with this serializer
+};
+
+/**
+  * SoftmaxModel deserializer
+  */
+class sm_model_deserializer {
+ public:
+    explicit sm_model_deserializer(uint64_t nclasses, uint64_t d,
+            const std::string& name = "") :
+        nclasses(nclasses), d(d), name(name) {}
+
+    SoftmaxModel
+    operator()(const void* data, unsigned int des_size);
+
+ private:
+    uint64_t nclasses;  //< number of classes
+    uint64_t d;         //< dimension
+    std::string name;   //< name associated with this serializer
 };
 
 #endif  // EXAMPLES_ML_SERIALIZERS_H_

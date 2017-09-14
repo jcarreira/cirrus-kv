@@ -549,7 +549,6 @@ bool TCPServer::process(int sock) {
                     // XXX Getting the item twice is inefficient
                     fb_vector = builder.CreateVector(
                             std::vector<int8_t>(mem->get(oid).get()));
-
                 } else {
                     std::vector<int8_t> data;
                     fb_vector = builder.CreateVector(data);

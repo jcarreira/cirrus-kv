@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utils/Log.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
@@ -104,7 +105,7 @@ std::string Configuration::get_input_path() const {
 std::string Configuration::get_samples_path() const {
     if (samples_path == "")
         throw std::runtime_error("samples path not loaded");
-    if (input_path != "double_binary")
+    if (input_type != "double_binary")
         throw std::runtime_error("mismatch between paths and input type");
     return samples_path;
 }
@@ -172,7 +173,7 @@ uint64_t Configuration::get_num_classes() const {
   */
 uint64_t Configuration::get_limit_cols() const {
     if (limit_cols == 0) {
-        throw std::runtime_error("num_classes not loaded");
+        cirrus::LOG<cirrus::INFO>("limit_cols not loaded");
     }
     return limit_cols;
 }
