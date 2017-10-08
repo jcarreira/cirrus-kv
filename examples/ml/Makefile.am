@@ -3,13 +3,14 @@ TOP_DIR = $(top_srcdir)/../../
 include $(TOP_DIR)/common.mk
 AUTOMAKE_OPTIONS = foreign
 
-CXX = mpic++
+CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server two_clients_test bug_regression \
-               parameter_server_softmax
+bin_PROGRAMS = parameter_server
+#two_clients_test bug_regression \
+#               parameter_server_softmax
 
-LIBS         =  -lclient -lauthentication -lutils -lmpi \
+LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies
 
 if USE_RDMA
@@ -24,8 +25,9 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/cache_manager
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -pthread
-CPPFLAGS = -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+LDFLAGS  = -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+CPPFLAGS = -static -static-libgcc -static-libstdc++ \
+           -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
            -I$(TOP_DIR)/third_party/eigen_source \

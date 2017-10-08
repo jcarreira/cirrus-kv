@@ -1,6 +1,7 @@
 #include <examples/ml/Utils.h>
 #include <time.h>
 
+#if 0
 void check_mpi_error(int err, std::string error) {
     if (err != MPI_SUCCESS) {
         if (error == "") {
@@ -10,6 +11,7 @@ void check_mpi_error(int err, std::string error) {
         }
     }
 }
+#endif
 
 uint64_t get_time_us() {
     struct timeval tv;
@@ -39,6 +41,7 @@ std::ifstream::pos_type filesize(const std::string& filename) {
     return in.tellg();
 }
 
+#if 0
 void init_mpi(int argc, char**argv) {
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
@@ -49,6 +52,7 @@ void init_mpi(int argc, char**argv) {
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 }
+#endif
 
 std::string hostname() {
     char name[200] = {0};

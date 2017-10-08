@@ -1,4 +1,4 @@
-#include <mpi.h>
+//#include <mpi.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
@@ -111,6 +111,7 @@ void run_tasks(int rank, const Configuration& config) {
     }
 }
 
+#if 0
 inline
 void init_mpi(int argc, char**argv) {
     int provided;
@@ -122,6 +123,7 @@ void init_mpi(int argc, char**argv) {
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 }
+#endif
 
 void print_arguments() {
     std::cout << "./parameter_server config_file nworkers rank" << std::endl;
@@ -138,7 +140,7 @@ int main(int argc, char** argv) {
 
     int rank = 0;
 
-    init_mpi(argc, argv);
+    //init_mpi(argc, argv);
     //int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     //err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     //check_mpi_error(err);
@@ -176,7 +178,7 @@ int main(int argc, char** argv) {
     // call the right task for this process
     run_tasks(rank, config);
 
-    MPI_Finalize();
+    //MPI_Finalize();
     std::cout << "Test successful" << std::endl;
 
     return 0;
