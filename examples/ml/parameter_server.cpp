@@ -124,7 +124,7 @@ void init_mpi(int argc, char**argv) {
 }
 
 void print_arguments() {
-    std::cout << "./parameter_server config_file [nworkers]" << std::endl;
+    std::cout << "./parameter_server config_file nworkers rank" << std::endl;
 }
 
 Configuration load_configuration(const std::string& config_path) {
@@ -136,14 +136,14 @@ Configuration load_configuration(const std::string& config_path) {
 int main(int argc, char** argv) {
     std::cout << "Starting parameter server" << std::endl;
 
-    int rank, nprocs;
+    int rank = 0;
 
     init_mpi(argc, argv);
-    int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    check_mpi_error(err);
+    //int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    //err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    //check_mpi_error(err);
 
-    if (argc != 2 && argc != 3) {
+    if (argc != 4) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
     }
@@ -154,13 +154,15 @@ int main(int argc, char** argv) {
         << " with rank: " << rank
         << std::endl;
 
-    if (argc == 3) {
-        nworkers = string_to<int>(argv[2]);
-        std::cout << "Running parameter server with: "
-            << nworkers << " workers"
-            << std::endl;
-    }
+    nworkers = string_to<int>(argv[2]);
+    std::cout << "Running parameter server with: "
+        << nworkers << " workers"
+        << std::endl;
 
+    rank = string_to<int>(argv[3]);
+    std::cout << "Running parameter server with: "
+        << rank << " rank"
+        << std::endl;
     auto config = load_configuration(argv[1]);
     config.print();
 
