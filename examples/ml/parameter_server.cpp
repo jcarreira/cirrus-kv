@@ -42,7 +42,7 @@
 #define MODEL_BASE (BILLION)
 #define GRADIENT_BASE (2 * BILLION)
 #define LABEL_BASE (3 * BILLION)
-int nworkers = 1;
+int nworkers = 2;
 
 int num_classes = 2;
 int features_per_sample = 10;
@@ -57,7 +57,7 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
+const char IP[] = "172.31.6.107";
 
 static const uint32_t SIZE = 1;
 
@@ -86,7 +86,6 @@ void run_tasks(int rank, const Configuration& config) {
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
-        sleep_forever();
     } else if (rank == 3) {
         sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,

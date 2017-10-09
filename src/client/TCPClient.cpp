@@ -97,6 +97,7 @@ void TCPClient::connect(const std::string& address,
                 "Client could not connect to server."
                 " Address: " + address + " port: " + port_string);
     }
+    LOG<INFO>("Connection successful");
 
     receiver_thread = new std::thread(&TCPClient::process_received, this);
     sender_thread   = new std::thread(&TCPClient::process_send, this);
@@ -628,7 +629,7 @@ void TCPClient::process_send() {
 #ifdef PERF_LOG
         TimerFunction send_time;
 #endif
-        LOG<INFO>("Client sending main message");
+        LOG<INFO>("Client sending main message with size: ", message_size);
         // Send main message
         if (send_all(sock, builder->GetBufferPointer(), message_size, 0)
                 != message_size) {
@@ -645,13 +646,14 @@ void TCPClient::process_send() {
         LOG<INFO>("message pair sent by client");
 
         // Release the lock so that the other thread may add to the send queue
-        queue_lock.signal();
+        //queue_lock.signal();
 
         // Add the builder to the queue if it is of the right type (a write)
         // And if not over capacity
         reuse_lock.wait();
 
         if (reuse_queue.size() < reuse_max) {
+	    LOG<INFO>("Reusing buffer");
             // Clean the builder and reuse if it is the right type
             auto message_type = message::TCPBladeMessage::GetTCPBladeMessage(
                 builder->GetBufferPointer())->message_type();
@@ -663,10 +665,12 @@ void TCPClient::process_send() {
                 delete builder;
             }
         } else {
+	    LOG<INFO>("Deleting buffer");
             delete builder;
         }
         reuse_lock.signal();
     }
+    LOG<INFO>("process_send done");
 }
 
 /**

@@ -212,7 +212,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 throw std::runtime_error("Wrong dynamic cast");
             }
             gradient_store.put(
-                    GRADIENT_BASE + gradient_id, *lrg);
+                    gradient_id, *lrg);
         } catch(...) {
             std::cout << "[WORKER] "
                 << "Worker task error doing put of gradient"
@@ -311,12 +311,13 @@ void PSTask::run(const Configuration& config) {
             LRGradient gradient(MODEL_GRAD_SIZE);
             try {
                 gradient = std::move(
-                        gradient_store.get(GRADIENT_BASE + gradient_id));
+                        gradient_store.get(gradient_id));
             } catch(const cirrus::NoSuchIDException& e) {
                 if (!first_time) {
                     std::cout
                         << "PS task not able to get gradient: "
-                        << std::to_string(GRADIENT_BASE + gradient_id)
+                        << std::to_string(gradient_id)
+                        << " gradient_id: " << gradient_id
                         << std::endl;
                 }
                 // this happens because the worker task
@@ -539,8 +540,8 @@ void LoadingTask::run(const Configuration& config) {
                 << " samples with size (bytes): " << sizeof(double) * batch_size
                 << std::endl;
             samples_store.put(SAMPLE_BASE + i, sample);
-            // std::cout << "[LOADER] "
-            //    << "Putting label" << std::endl;
+            std::cout << "[LOADER] "
+               << "Putting label" << std::endl;
             labels_store.put(LABEL_BASE + i, label);
         } catch(...) {
             std::cout << "[LOADER] "
