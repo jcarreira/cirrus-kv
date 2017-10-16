@@ -132,3 +132,14 @@ tar czvf cirrus_cov.tgz cov-int
 ~~~
 
 Upload file to coverity website
+
+Cirrus on Lambdas
+=============
+
+Checkout the cirrus_on_lambdas repo
+```
+cp ../cirrus/examples/ml/parameter_server .
+sh bundle.sh
+./update_lambda.sh
+./invoke_lambda.sh
+```
