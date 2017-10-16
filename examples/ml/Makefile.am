@@ -11,7 +11,7 @@ bin_PROGRAMS = parameter_server
 #               parameter_server_softmax
 
 LIBS         =  -lclient -lauthentication -lutils \
-		-levictionpolicies
+		-levictionpolicies -lhiredis
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -21,24 +21,27 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/client/ \
 	       -L$(TOP_DIR)/src/ \
 	       -L$(TOP_DIR)/src/authentication \
-	       -L$(TOP_DIR)/src/common \
-	       -L$(TOP_DIR)/src/cache_manager
+	       -L$(TOP_DIR)/src/common \ 
+	       -L$(TOP_DIR)/src/cache_manager \
+	       -L/home/ec2-user/cirrus/examples/ml/test_redis/hiredis
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
            -I$(TOP_DIR)/third_party/eigen_source \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
-           -I $(MPI_HOME)/include/
+           -I $(MPI_HOME)/include/ \
+           -I/home/ec2-user/cirrus/examples/ml/test_redis/ \
+           -I/home/ec2-user/cirrus/examples/ml/test_redis/hiredis
 
 CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
-              Tasks.cpp
+              Tasks.cpp /home/ec2-user/cirrus/examples/ml/test_redis/Redis.cpp
 
 CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \

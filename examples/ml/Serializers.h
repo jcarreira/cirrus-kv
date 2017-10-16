@@ -8,6 +8,8 @@
 #include <LRModel.h>
 #include <SoftmaxModel.h>
 
+#include <iostream>
+
 #include "common/Serializer.h"
 
 /**
@@ -72,6 +74,12 @@ class c_array_deserializer{
         unsigned int size = sizeof(T) * numslots;
 
         if (des_size != size) {
+            std::cout
+                    << "Wrong size received at c_array_deserializer)"
+                    << " size: " + std::to_string(des_size)
+                    << " expected: " + std::to_string(size)
+                    << " name: " + name
+                 << std::endl;
             throw std::runtime_error(
                  std::string("Wrong size received at c_array_deserializer)")
                     + " size: " + std::to_string(des_size)

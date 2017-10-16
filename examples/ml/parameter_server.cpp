@@ -1,4 +1,3 @@
-//#include <mpi.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <fstream>
@@ -31,22 +30,33 @@
 #include "common/Exception.h"
 #include <Tasks.h>
 
+#include "config.h"
+
+#ifdef USE_S3
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/PutObjectRequest.h>
+#endif
+
+
 #define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
 
 #define MODEL_GRAD_SIZE 10
 
 #define BILLION (1000000000ULL)
+#define MILLION (1000000ULL)
 
-#define SAMPLE_BASE 0
-#define MODEL_BASE (BILLION)
+#define SAMPLE_BASE   (0)
+#define MODEL_BASE    (1 * BILLION)
 #define GRADIENT_BASE (2 * BILLION)
-#define LABEL_BASE (3 * BILLION)
+#define LABEL_BASE    (3 * BILLION)
+#define START_BASE    (4 * BILLION)
 int nworkers = 2;
 
 int num_classes = 2;
 int features_per_sample = 10;
-int samples_per_batch = 100;
+int samples_per_batch = 8000;
 int batch_size = samples_per_batch * features_per_sample;
 
 void sleep_forever() {
@@ -76,20 +86,23 @@ void run_tasks(int rank, const Configuration& config) {
     } else if (rank == 1) {
         sleep(8);
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         pt.run(config);
         sleep_forever();
     } else if (rank == 2) {
         sleep(3);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
     } else if (rank == 3) {
         sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         et.run(config);
         sleep_forever();
@@ -100,7 +113,8 @@ void run_tasks(int rank, const Configuration& config) {
           */
         sleep(10);
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         lt.run(config, rank - 4);
         sleep_forever();
