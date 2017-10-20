@@ -84,7 +84,7 @@ void run_tasks(int rank, const Configuration& config) {
         // run_memory_task(config_path);
         sleep_forever();
     } else if (rank == 1) {
-        sleep(8);
+        //sleep(8);
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size,
@@ -92,14 +92,14 @@ void run_tasks(int rank, const Configuration& config) {
         pt.run(config);
         sleep_forever();
     } else if (rank == 2) {
-        sleep(3);
+        //sleep(3);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size,
                 samples_per_batch, features_per_sample, nworkers);
         lt.run(config);
     } else if (rank == 3) {
-        sleep(5);
+        //sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size,
@@ -111,7 +111,7 @@ void run_tasks(int rank, const Configuration& config) {
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-        sleep(10);
+        //sleep(10);
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size,
@@ -144,7 +144,11 @@ void print_arguments() {
 
 Configuration load_configuration(const std::string& config_path) {
     Configuration config;
+    std::cout << "Loading configuration"
+        << std::endl;
     config.read(config_path);
+    std::cout << "Configuration read"
+        << std::endl;
     return config;
 }
 
@@ -187,8 +191,16 @@ int main(int argc, char** argv) {
     samples_per_batch = config.get_minibatch_size();
     batch_size = samples_per_batch * features_per_sample;
     num_classes = config.get_num_classes();
+    
+    std::cout 
+        << "samples_per_batch: " << samples_per_batch
+        << " features_per_sample: " << features_per_sample
+        << " batch_size: " << batch_size
+        << std::endl;
 
     // call the right task for this process
+    std::cout << "Running task"
+        << std::endl;
     run_tasks(rank, config);
 
     //MPI_Finalize();

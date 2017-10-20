@@ -18,6 +18,7 @@ void Configuration::read(const std::string& path) {
     std::ifstream fin(path.c_str(), std::ifstream::in);
 
     if (!fin) {
+        std::cout << "Error opening config file: " << std::endl;
         throw std::runtime_error("Error opening config file: " + path);
     }
 

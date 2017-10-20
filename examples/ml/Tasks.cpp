@@ -19,49 +19,46 @@
 #include "Utils.h"
 
 //#define DEBUG
-#define READ_AHEAD (3)
+#define READ_AHEAD (6)
 
 #include "config.h"
 
 #ifdef USE_CIRRUS
 void MLTask::wait_for_start(int index, cirrus::TCPClient& client) {
-#else
-void MLTask::wait_for_start(int index, cirrus::TCPClient& /*client*/) {
-#endif
     std::cout << "wait_for_start index: " << index
         << std::endl;
 
-#ifdef USE_CIRRUS
     c_array_serializer<bool> start_counter_ser(1);
     c_array_deserializer<bool> start_counter_deser(1);
+    auto t = std::make_shared<bool>(true);
 
     std::cout << "Connecting to CIRRUS store : " << std::endl;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<bool>>
         start_store(IP, PORT, &client,
                       start_counter_ser, start_counter_deser);
 
-    auto t = std::make_shared<bool>(true);
-#endif
-
-
-#ifdef USE_CIRRUS
     std::cout << "Updating start index: " << index
         << std::endl;
     start_store.put(START_BASE + index, t);
-#endif
+    std::cout << "Updated start index: " << index << std::endl;
 
-    int num_waiting_tasks = 3;
+    int num_waiting_tasks = 4;
     while (1) {
         int i = 0;
         for (i = 0; i < num_waiting_tasks; ++i) {
-#ifdef USE_CIRRUS
-            auto is_done = start_store.get(START_BASE + i);
-            std::cout << "Checking " << i
-                      << " " << *is_done.get()
-                      << std::endl;
-            if (!*is_done.get())
+            std::cout << "Getting status" << std::endl;
+            
+            try {
+                auto is_done = start_store.get(START_BASE + i);
+                std::cout << "Checking " << i
+                    << " " << *is_done.get()
+                    << std::endl;
+                if (!*is_done.get())
+                    break;
+            } catch(const cirrus::NoSuchIDException& e) {
                 break;
-#endif
+            }
+
         }
         if (i == num_waiting_tasks)
             break;
@@ -69,6 +66,43 @@ void MLTask::wait_for_start(int index, cirrus::TCPClient& /*client*/) {
     std::cout << "Done waiting: " << index
         << std::endl;
 }
+#elif defined(USE_REDIS)
+void MLTask::wait_for_start(int index, auto r) {
+    std::cout << "wait_for_start index: " << index
+        << std::endl;
+
+    std::cout << "Updating start index: " << index
+        << std::endl;
+    char data = 1;
+    redis_put_binary_numid(r, START_BASE + index, &data, 1);
+    std::cout << "Updated start index: " << index << std::endl;
+
+    int num_waiting_tasks = 4;
+    while (1) {
+        int i = 0;
+        for (i = 0; i < num_waiting_tasks; ++i) {
+            std::cout << "Getting status i: " << i << std::endl;
+            int len;
+            char* data = redis_get_numid(r, START_BASE + i, &len);
+            std::cout << "redis returned data: " << data << std::endl;
+            if (data == nullptr) {
+                std::cout << "wait_for_start breaking" << std::endl;
+                break;
+            }
+            auto is_done = bool(data[0]);
+            std::cout << "is_done: " << is_done << std::endl;
+            free(data);
+            if (!is_done)
+                break;
+        }
+        std::cout << "wait_for_start i: " << i << std::endl;
+        if (i == num_waiting_tasks)
+            break;
+    }
+    std::cout << "Done waiting: " << index
+        << std::endl;
+}
+#endif
 
 void LogisticTask::run(const Configuration& config, int worker) {
     std::cout << "[WORKER] "
@@ -111,19 +145,19 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
     uint64_t num_batches = config.get_num_samples() /
         config.get_minibatch_size();
+    std::cout << "[WORKER] "
+        << "num_batches: " << num_batches << std::endl;
 #ifdef USE_CIRRUS
 
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client, cas_samples, cad_samples);
-    cirrus::LRAddedEvictionPolicy samples_policy(100);
+    cirrus::LRAddedEvictionPolicy samples_policy(6);
     cirrus::CacheManager<std::shared_ptr<double>> samples_cm(
-            &samples_store, &samples_policy, 100);
+            &samples_store, &samples_policy, 6);
     cirrus::CirrusIterable<std::shared_ptr<double>> s_iter(
           &samples_cm, READ_AHEAD, SAMPLE_BASE,
           SAMPLE_BASE + num_batches - 1);
-
-    wait_for_start(0, client);
 
     auto samples_iter = s_iter.begin();
 
@@ -133,14 +167,20 @@ void LogisticTask::run(const Configuration& config, int worker) {
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client,
                 cas_labels, cad_labels);
-    cirrus::LRAddedEvictionPolicy labels_policy(100);
+    cirrus::LRAddedEvictionPolicy labels_policy(6);
     cirrus::CacheManager<std::shared_ptr<double>> labels_cm(
-            &labels_store, &labels_policy, 100);
+            &labels_store, &labels_policy, 6);
     cirrus::CirrusIterable<std::shared_ptr<double>> l_iter(
             &labels_cm, READ_AHEAD, LABEL_BASE,
             LABEL_BASE + num_batches - 1);
     auto labels_iter = l_iter.begin();
 #elif defined(USE_REDIS)
+#endif
+
+#ifdef USE_CIRRUS    
+    wait_for_start(0, client);
+#elif defined(USE_REDIS)
+    wait_for_start(0, r);
 #endif
 
     bool first_time = true;
@@ -162,6 +202,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
 #endif
 
+            auto before_model = get_time_ns();
 #ifdef USE_CIRRUS
             model = model_store.get(MODEL_BASE);
 #elif defined(USE_REDIS)
@@ -170,6 +211,10 @@ void LogisticTask::run(const Configuration& config, int worker) {
             model = lmd(data, len);
             free(data);
 #endif
+            auto after_model = get_time_ns();
+            std::cout << "[WORKER] "
+                << "model get (ns): " << (after_model - before_model)
+                << "\n";
 
 #ifdef DEBUG
             std::cout << "[WORKER] "
@@ -180,21 +225,29 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
 #endif
 
-            // samples = samples_store.get(SAMPLE_BASE + samples_id);
-            auto now = get_time_ns();
+            auto before_samples = get_time_ns();
 
 #ifdef USE_CIRRUS
-            //std::cout << "[WORKER] getting iterator" << std::endl;
             samples = *samples_iter;
-            //std::cout << "[WORKER] received iterator data" << std::endl;
 #elif defined(USE_REDIS)
             int len_samples;
             data = redis_get_numid(r, SAMPLE_BASE + samples_id, &len_samples);
             samples = cad_samples(data, len_samples);
             free(data);
 #endif
-            std::cout << "Samples Elapsed (ns): "
-                << get_time_ns() - now << "\n";
+
+            uint64_t elapsed_ns = get_time_ns() - before_samples;
+            double bw = 1.0 * batch_size * sizeof(double) /
+                elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
+#ifdef USE_CIRRUS
+            std::cout << "Get Sample " << samples_id << " Elapsed (CIRRUS) "
+#elif defined(USE_REDIS)
+            std::cout << "Get Sample " << samples_id << " Elapsed (REDIS) "
+#endif
+                << " batch size: " << batch_size
+                << " ns: " << elapsed_ns
+                << " BW (MB/s): " << bw
+                << "\n";
 #ifdef DEBUG
             std::cout << "[WORKER] "
                 << "Worker task received training data with id: "
@@ -203,23 +256,19 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
 #endif
 
-            // labels = labels_store.get(LABEL_BASE + labels_id);
+            auto before_labels = get_time_ns();
 #ifdef USE_CIRRUS
             labels = *labels_iter;
 #elif defined(USE_REDIS)
-            //std::cout << "[WORKER] "
-            //    << "Getting labels1" << std::endl;
             int len_labels;
-            //std::cout << "[WORKER] "
-            //    << "Getting labels2" << std::endl;
             data = redis_get_numid(r, LABEL_BASE + labels_id, &len_labels);
-            //std::cout << "[WORKER] "
-            //    << "Getting labels3 " << len_labels << std::endl;
             labels = cad_labels(data, len_labels);
-            //std::cout << "[WORKER] "
-            //    << "Getting labels4" << std::endl;
             free(data);
 #endif
+            auto after_labels = get_time_ns();
+            std::cout << "[WORKER] "
+                << "labels get (ns): " << (after_labels - before_labels)
+                << "\n";
 
 #ifdef DEBUG
             std::cout << "[WORKER] "
@@ -334,7 +383,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         }
         std::cout << "[WORKER] "
             << "Worker task stored gradient at id: " << gradient_id
-            << " at time: " << get_time_us()
+            << " at time (us): " << get_time_us()
             << "\n";
 
         // move to next batch of samples
@@ -424,7 +473,6 @@ void PSTask::run(const Configuration& config) {
 #endif
     std::cout << "[PS] "
         << "PS model is here"
-        << " with csum: " << m.checksum()
         << std::endl;
 
     // we keep a version number for the gradient produced by each worker
@@ -432,8 +480,12 @@ void PSTask::run(const Configuration& config) {
     gradientVersions.resize(10);
 
     bool first_time = true;
-    
+
+#ifdef USE_CIRRUS    
     wait_for_start(1, client);
+#elif defined(USE_REDIS)
+    wait_for_start(1, r);
+#endif
 
     while (1) {
         // for every worker, check for a new gradient computed
@@ -441,12 +493,12 @@ void PSTask::run(const Configuration& config) {
         // once model is updated publish it
         for (int worker = 0; worker < static_cast<int>(nworkers); ++worker) {
             int gradient_id = GRADIENT_BASE + worker;
-#ifdef DEBUG
+//#ifdef DEBUG
             std::cout << "[PS] "
                 << "PS task checking gradient id: "
                 << gradient_id
                 << std::endl;
-#endif
+//#endif
 
             // get gradient from store
             LRGradient gradient(MODEL_GRAD_SIZE);
@@ -549,15 +601,17 @@ void ErrorTask::run(const Configuration& /* config */) {
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client, cas_labels, cad_labels);
+    
+    wait_for_start(2, client);
 #elif defined(USE_REDIS)
     auto r  = redis_connect(REDIS_IP, REDIS_PORT);
     if (r == NULL || r -> err) { 
        throw std::runtime_error("Error connecting to redis server");
     }
+    
+    wait_for_start(2, r);
 #endif
     
-    wait_for_start(2, client);
-
     bool first_time = true;
     while (1) {
         sleep(2);
@@ -627,14 +681,12 @@ void ErrorTask::run(const Configuration& /* config */) {
 
 #ifdef DEBUG
                 std::cout << "[ERROR_TASK] checking the dataset"
-                        << "\n";
-
+                          << "\n";
                 dataset.check_values();
 #endif
 
                 std::cout << "[ERROR_TASK] computing loss"
-                        << "\n";
-
+                          << "\n";
                 loss += model.calc_loss(dataset);
                 count++;
             }
@@ -664,10 +716,14 @@ void LoadingTask::run(const Configuration& config) {
 
     Input input;
 
+    //auto dataset = input.read_input_csv(
+    //        config.get_input_path(),
+    //        " ", 3,
+    //        config.get_limit_cols(), false);  // data is already normalized
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            " ", 3,
-            config.get_limit_cols(), false);  // data is already normalized
+            "\t", 3,
+            config.get_limit_cols(), true);  // data is already normalized
 
     dataset.check_values();
 #ifdef DEBUG
@@ -804,5 +860,11 @@ void LoadingTask::run(const Configuration& config) {
     }
 #endif
     std::cout << std::endl;
+   
+#ifdef USE_CIRRUS    
+    wait_for_start(3, client);
+#elif defined(USE_REDIS)
+    wait_for_start(3, r);
+#endif
 }
 

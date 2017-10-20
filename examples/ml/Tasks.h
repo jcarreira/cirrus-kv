@@ -5,6 +5,7 @@
 #include <string>
 
 #include <client/TCPClient.h>
+#include "config.h"
 
 class MLTask {
  public:
@@ -26,7 +27,12 @@ class MLTask {
        * Worker here is a value 0..nworkers - 1
        */
      void run(const Configuration& config, int worker);
-     void wait_for_start(int index, cirrus::TCPClient& client);
+
+#ifdef USE_CIRRUS
+    void wait_for_start(int index, cirrus::TCPClient& client);
+#elif defined(USE_REDIS)
+    void wait_for_start(int index, auto r);
+#endif
 
  protected:
      std::string IP;
