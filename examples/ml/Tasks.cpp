@@ -17,6 +17,7 @@
 #include "Checksum.h"
 #include "Input.h"
 #include "Utils.h"
+#include "Redis.h"
 
 //#define DEBUG
 #define READ_AHEAD (6)

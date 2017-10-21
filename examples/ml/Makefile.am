@@ -32,6 +32,7 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
            -I$(TOP_DIR)/third_party/eigen_source \
+           -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/ \
            -I/home/ec2-user/cirrus/examples/ml/test_redis/ \
