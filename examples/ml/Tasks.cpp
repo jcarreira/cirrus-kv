@@ -85,11 +85,11 @@ void MLTask::wait_for_start(int index, auto r) {
             std::cout << "Getting status i: " << i << std::endl;
             int len;
             char* data = redis_get_numid(r, START_BASE + i, &len);
-            std::cout << "redis returned data: " << data << std::endl;
             if (data == nullptr) {
                 std::cout << "wait_for_start breaking" << std::endl;
                 break;
             }
+            std::cout << "redis returned data: " << data << std::endl;
             auto is_done = bool(data[0]);
             std::cout << "is_done: " << is_done << std::endl;
             free(data);
@@ -510,6 +510,9 @@ void PSTask::run(const Configuration& config) {
 #elif defined(USE_REDIS)
 		int len_grad;
 		data = redis_get_numid(r, gradient_id, &len_grad);
+                if (data == nullptr) {
+                  throw cirrus::NoSuchIDException("");
+                }
 		gradient = lgd(data, len_grad);
 		free(data);
 #endif
@@ -689,6 +692,8 @@ void ErrorTask::run(const Configuration& /* config */) {
                 std::cout << "[ERROR_TASK] computing loss"
                           << "\n";
                 loss += model.calc_loss(dataset);
+                std::cout << "[ERROR_TASK] computed loss"
+                          << "\n";
                 count++;
             }
 
@@ -717,14 +722,14 @@ void LoadingTask::run(const Configuration& config) {
 
     Input input;
 
-    //auto dataset = input.read_input_csv(
-    //        config.get_input_path(),
-    //        " ", 3,
-    //        config.get_limit_cols(), false);  // data is already normalized
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            "\t", 3,
-            config.get_limit_cols(), true);  // data is already normalized
+            " ", 3,
+            config.get_limit_cols(), false);  // data is already normalized
+    //auto dataset = input.read_input_csv(
+    //        config.get_input_path(),
+    //        "\t", 3,
+    //        config.get_limit_cols(), true);  // data is already normalized
 
     dataset.check_values();
 #ifdef DEBUG

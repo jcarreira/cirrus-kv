@@ -136,6 +136,11 @@ extern "C" {
             std::cout << "[REDIS] "
                 << "redis get failed"
                 << std::endl;
+	    free(id_str);
+            std::cout << "[REDIS] "
+                << "redis return nullptr"
+                << std::endl;
+	    return nullptr;
         }
 
         free(id_str);
