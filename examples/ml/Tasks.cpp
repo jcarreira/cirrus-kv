@@ -43,7 +43,7 @@ void MLTask::wait_for_start(int index, cirrus::TCPClient& client) {
     start_store.put(START_BASE + index, t);
     std::cout << "Updated start index: " << index << std::endl;
 
-    int num_waiting_tasks = 4;
+    int num_waiting_tasks = 3;
     while (1) {
         int i = 0;
         for (i = 0; i < num_waiting_tasks; ++i) {
@@ -212,14 +212,29 @@ void LogisticTask::run(const Configuration& config, int worker) {
             model = model_store.get(MODEL_BASE);
 #elif defined(USE_REDIS)
             int len;
+            std::cout << "[WORKER] "
+                << "Worker task getting the model at id: "
+                << MODEL_BASE
+                << "\n";
             char* data = redis_get_numid(r, MODEL_BASE, &len);
+            if (data == nullptr) {
+                throw cirrus::NoSuchIDException("");
+            }
+            std::cout << "[WORKER] "
+                << "Worker task deserializing the model at id: "
+                << MODEL_BASE
+                << "\n";
             model = lmd(data, len);
+            std::cout << "[WORKER] "
+                << "Worker task freeing the model at id: "
+                << MODEL_BASE
+                << "\n";
             free(data);
 #endif
             auto after_model = get_time_ns();
             std::cout << "[WORKER] "
                 << "model get (ns): " << (after_model - before_model)
-                << "\n";
+                << std::endl;
 
 #ifdef DEBUG
             std::cout << "[WORKER] "
@@ -237,6 +252,9 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #elif defined(USE_REDIS)
             int len_samples;
             data = redis_get_numid(r, SAMPLE_BASE + batch_id, &len_samples);
+            if (data == nullptr) {
+                throw cirrus::NoSuchIDException("");
+            }
             samples = cad_samples(data, len_samples);
             free(data);
 #endif
@@ -267,6 +285,9 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #elif defined(USE_REDIS)
             int len_labels;
             data = redis_get_numid(r, LABEL_BASE + batch_id, &len_labels);
+            if (data == nullptr) {
+                throw cirrus::NoSuchIDException("");
+            }
             labels = cad_labels(data, len_labels);
             free(data);
 #endif
@@ -414,6 +435,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
 }
 
 void LogisticTaskPreloaded::get_data_samples(auto r, uint64_t left_id, uint64_t right_id, auto& samples, auto& labels) {
+        
+    std::cout << "get_data_samples" << std::endl;
 
     c_array_serializer<double> cas_samples(batch_size);
     c_array_deserializer<double> cad_samples(batch_size,
@@ -428,18 +451,24 @@ void LogisticTaskPreloaded::get_data_samples(auto r, uint64_t left_id, uint64_t 
     for (uint64_t i = left_id; i < right_id; ++i) {
         // get samples
         int len_samples;
+        std::cout << "Getting batch i: " << i << std::endl;
         char* data = redis_get_numid(r, SAMPLE_BASE + i, &len_samples);
         if (data == nullptr) {
             std::cout << "Sample batch " << i << " not found" << std::endl;
             i--;
             continue;
         }
+        std::cout << "Got batch i: " << i << std::endl;
         auto sample = cad_samples(data, len_samples);
-        samples[i] = sample;
+        std::cout << "Deserialized sample i: " << i << std::endl;
+        samples[i - left_id] = sample;
+        std::cout << "Assigned sample i: " << i << std::endl;
         free(data);
+        std::cout << "Freed dat i: " << i << std::endl;
         //--------------
         
         int len_labels;
+        std::cout << "Getting label i: " << i << std::endl;
         data = redis_get_numid(r, LABEL_BASE + i, &len_labels);
         if (data == nullptr) {
             std::cout << "Label batch " << i << " not found" << std::endl;
@@ -447,9 +476,10 @@ void LogisticTaskPreloaded::get_data_samples(auto r, uint64_t left_id, uint64_t 
             continue;
         }
         auto label = cad_labels(data, len_labels);
-        labels[i] = label;
+        labels[i - left_id] = label;
         free(data);
     }
+    std::cout << "get_data_samples done" << std::endl;
 }
 
 void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
@@ -482,11 +512,19 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     std::vector<std::shared_ptr<double>> labels_preloaded;
 
     wait_for_start(0, r);
-    std::cout << "[WORKER-PRELOADED] "
-        << "preloading data.."
-        << std::endl;
+    
     uint64_t left_id = (worker_id - 4) * (num_batches / nworkers);
     uint64_t right_id = (worker_id - 4 + 1) * (num_batches / nworkers);
+    std::cout << "[WORKER-PRELOADED] "
+        << "preloading data.."
+        << " left_id: " << left_id
+        << " right_id: " << right_id
+        << " num_batches: " << num_batches
+        << " nworkers: " << nworkers
+        << std::endl;
+    std::cout << "[WORKER-PRELOADED] "
+        << "preloading2 data.."
+        <<std::endl;
     get_data_samples(r, left_id, right_id, samples_preloaded, labels_preloaded);
     std::cout << "[WORKER-PRELOADED] "
         << "preloaded data"
@@ -501,24 +539,39 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
         // maybe we can wait a few iterations to get the model
         LRModel model(MODEL_GRAD_SIZE);
         try {
-#ifdef DEBUG
+
             std::cout << "[WORKER] "
                 << "Worker task getting the model at id: "
                 << MODEL_BASE
                 << "\n";
-#endif
 
             auto before_model = get_time_ns();
             // get model
             int len;
             char* data = redis_get_numid(r, MODEL_BASE, &len);
+            std::cout << "[WORKER] "
+                << "Worker task got the model at id: "
+                << MODEL_BASE
+                << " data: " << reinterpret_cast<uint64_t>(data)
+                << std::endl;
+            if (data == nullptr) {
+                throw cirrus::NoSuchIDException("");
+            }
+            std::cout << "[WORKER] "
+                << "Worker task deserializing the model at id: "
+                << MODEL_BASE
+                << std::endl;
             model = lmd(data, len);
+            std::cout << "[WORKER] "
+                << "Worker task freeing the model at id: "
+                << MODEL_BASE
+                << std::endl;
             free(data);
             //-----------
             auto after_model = get_time_ns();
             std::cout << "[WORKER] "
                 << "model get (ns): " << (after_model - before_model)
-                << "\n";
+                << std::endl;
 
 
         } catch(const cirrus::NoSuchIDException& e) {
@@ -541,8 +594,11 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
             continue;
         }
 
-        auto samples = samples_preloaded[batch_id];
-        auto labels = labels_preloaded[batch_id];
+	std::cout << "[WORKER] "
+		<< "Getting sample and label"
+		<< std::endl;
+        auto samples = samples_preloaded[batch_id - SAMPLE_BASE - left_id];
+        auto labels = labels_preloaded[batch_id - SAMPLE_BASE - left_id];
 
         first_time = false;
 
@@ -553,6 +609,9 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
         std::copy(labels.get(), labels.get() + samples_per_batch, l.get());
         // std::cout << "Elapsed: " << get_time_us() - now << "\n";
 
+	std::cout << "[WORKER] "
+		<< "Building dataset"
+		<< std::endl;
         Dataset dataset(samples.get(), l.get(),
                 samples_per_batch, features_per_sample);
 
@@ -725,7 +784,7 @@ void PSTask::run(const Configuration& config) {
                 }
                 // this happens because the worker task
                 // has not uploaded the gradient yet
-                worker--;
+                //worker--;
                 continue;
             }
 

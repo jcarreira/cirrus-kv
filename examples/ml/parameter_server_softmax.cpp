@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
     int rank = 2;
 
-    if (argc != 2 && argc != 3) {
+    if (argc != 4) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
     }
