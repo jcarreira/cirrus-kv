@@ -14,14 +14,99 @@
 #include "Checksum.h"
 #include "Input.h"
 #include "Utils.h"
+#include "Redis.h"
+
+#include <config.h>
 
 #define READ_AHEAD (3)
+
+uint64_t nclasses = 10;
+
+#ifdef USE_CIRRUS
+void MLTask::wait_for_start(int index, cirrus::TCPClient& client) {
+    std::cout << "wait_for_start index: " << index
+        << std::endl;
+
+    c_array_serializer<bool> start_counter_ser(1);
+    c_array_deserializer<bool> start_counter_deser(1);
+    auto t = std::make_shared<bool>(true);
+
+    std::cout << "Connecting to CIRRUS store : " << std::endl;
+    cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<bool>>
+        start_store(IP, PORT, &client,
+                      start_counter_ser, start_counter_deser);
+
+    std::cout << "Updating start index: " << index
+        << std::endl;
+    start_store.put(START_BASE + index, t);
+    std::cout << "Updated start index: " << index << std::endl;
+
+    int num_waiting_tasks = 4;
+    while (1) {
+        int i = 0;
+        for (i = 0; i < num_waiting_tasks; ++i) {
+            std::cout << "Getting status" << std::endl;
+            
+            try {
+                auto is_done = start_store.get(START_BASE + i);
+                std::cout << "Checking " << i
+                    << " " << *is_done.get()
+                    << std::endl;
+                if (!*is_done.get())
+                    break;
+            } catch(const cirrus::NoSuchIDException& e) {
+                break;
+            }
+
+        }
+        if (i == num_waiting_tasks)
+            break;
+    }
+    std::cout << "Done waiting: " << index
+        << std::endl;
+}
+#elif defined(USE_REDIS)
+void MLTask::wait_for_start(int index, auto r) {
+    std::cout << "wait_for_start index: " << index
+        << std::endl;
+
+    std::cout << "Updating start index: " << index
+        << std::endl;
+    char data = 1;
+    redis_put_binary_numid(r, START_BASE + index, &data, 1);
+    std::cout << "Updated start index: " << index << std::endl;
+
+    int num_waiting_tasks = 4;
+    while (1) {
+        int i = 0;
+        for (i = 0; i < num_waiting_tasks; ++i) {
+            std::cout << "Getting status i: " << i << std::endl;
+            int len;
+            char* data = redis_get_numid(r, START_BASE + i, &len);
+            if (data == nullptr) {
+                std::cout << "wait_for_start breaking" << std::endl;
+                break;
+            }
+            std::cout << "redis returned data: " << data << std::endl;
+            auto is_done = bool(data[0]);
+            std::cout << "is_done: " << is_done << std::endl;
+            free(data);
+            if (!is_done)
+                break;
+        }
+        std::cout << "wait_for_start i: " << i << std::endl;
+        if (i == num_waiting_tasks)
+            break;
+    }
+    std::cout << "Done waiting: " << index
+        << std::endl;
+}
+#endif
 
 void LogisticTask::run(const Configuration& config, int worker) {
     std::cout << "[WORKER] "
         << "Worker task connecting to store" << std::endl;
 
-    cirrus::TCPClient client;
     sm_gradient_serializer sgs(nclasses, MODEL_GRAD_SIZE);
     sm_gradient_deserializer sgd(nclasses, MODEL_GRAD_SIZE);
     sm_model_serializer sms(nclasses, MODEL_GRAD_SIZE);
@@ -33,6 +118,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
     c_array_deserializer<double> cad_labels(samples_per_batch,
             "worker labels_store", false);
 
+#ifdef USE_CIRRUS
+    cirrus::TCPClient client;
     // used to publish the gradient
     cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxGradient>
         gradient_store(IP, PORT, &client, sgs, sgd);
@@ -40,6 +127,18 @@ void LogisticTask::run(const Configuration& config, int worker) {
     // this is used to access the most up to date model
     cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
         model_store(IP, PORT, &client, sms, smd);
+#elif defined(USE_REDIS)
+    std::cout << "[WORKER] "
+        << "Worker task using REDIS" << std::endl;
+    auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+    if (r == NULL || r -> err) { 
+    std::cout << "[WORKER] "
+        << "Error connecting to REDIS" << std::endl;
+       throw std::runtime_error("Error connecting to redis server");
+    }
+#elif USE_S3
+#endif
+
 
     uint64_t num_batches = config.get_num_samples() /
         config.get_minibatch_size();
@@ -48,6 +147,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         << "batch_size: " << batch_size
         << std::endl;
 
+#ifdef USE_CIRRUS
     // this is used to access the training data sample
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client, cas_samples, cad_samples);
@@ -70,11 +170,18 @@ void LogisticTask::run(const Configuration& config, int worker) {
     //        &labels_cm, READ_AHEAD, LABEL_BASE,
     //        LABEL_BASE + num_batches - 1);
     //auto labels_iter = l_iter.begin();
+#elif defined(USE_REDIS)
+#endif
+
+#ifdef USE_CIRRUS    
+    wait_for_start(0, client);
+#elif defined(USE_REDIS)
+    wait_for_start(0, r);
+#endif
 
     bool first_time = true;
 
-    int samples_id = 0;
-    int labels_id  = 0;
+    int batch_id = 0;
     int gradient_id = GRADIENT_BASE + worker;
     uint64_t version = 0;
     while (1) {
@@ -87,7 +194,14 @@ void LogisticTask::run(const Configuration& config, int worker) {
             //    << "Worker task getting the model at id: "
             //    << MODEL_BASE
             //    << "\n";
+#ifdef USE_CIRRUS
             model = model_store.get(MODEL_BASE);
+#elif defined(USE_REDIS)
+            int len;
+            char* data = redis_get_numid(r, MODEL_BASE, &len);
+            model = smd(data, len);
+            free(data);
+#endif
 
             //std::cout << "[WORKER] "
             //    << "Worker task received model csum: " << model.checksum()
@@ -96,7 +210,14 @@ void LogisticTask::run(const Configuration& config, int worker) {
             //    << (SAMPLE_BASE + samples_id)
             //    << "\n";
 
-            samples = samples_store.get(SAMPLE_BASE + samples_id);
+#ifdef USE_CIRRUS
+            samples = *samples_iter;
+#elif defined(USE_REDIS)
+            int len_samples;
+            data = redis_get_numid(r, SAMPLE_BASE + batch_id, &len_samples);
+            samples = cad_samples(data, len_samples);
+            free(data);
+#endif
             //auto now = get_time_ns();
             //samples = *samples_iter;
             //std::cout << "Samples Elapsed (ns): " << get_time_ns() - now << "\n";
@@ -106,7 +227,14 @@ void LogisticTask::run(const Configuration& config, int worker) {
             //    << " and checksum: " << checksum(samples, batch_size)
             //    << "\n";
 
-            labels = labels_store.get(LABEL_BASE + labels_id);
+#ifdef USE_CIRRUS
+            labels = *labels_iter;
+#elif defined(USE_REDIS)
+            int len_labels;
+            data = redis_get_numid(r, LABEL_BASE + batch_id, &len_labels);
+            labels = cad_labels(data, len_labels);
+            free(data);
+#endif
             //labels = *labels_iter;
 
             //std::cout << "[WORKER] "
@@ -122,8 +250,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 // how many samples are there
 
                 // wrap around
-                samples_id = 0;
-                labels_id = 0;
+                batch_id = 0;
                 continue;
             }
             // this happens because the ps task
@@ -170,8 +297,15 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
         try {
             auto smg = *dynamic_cast<SoftmaxGradient*>(gradient.get());
+#ifdef USE_CIRRUS
             gradient_store.put(
-                    GRADIENT_BASE + gradient_id, smg);
+                    gradient_id, *smg);
+#elif defined(USE_REDIS)
+            char* data = new char[sgs.size(smg)];
+            sgs.serialize(smg, data);
+            redis_put_binary_numid(r, gradient_id, data, sgs.size(smg));
+            delete[] data;
+#endif
         } catch(...) {
             std::cout << "[WORKER] "
                 << "Worker task error doing put of gradient"
@@ -180,12 +314,11 @@ void LogisticTask::run(const Configuration& config, int worker) {
         }
 
         // move to next batch of samples
-        samples_id++;
-        labels_id++;
+        batch_id++;
 
         // Wrap around
-        if (samples_id == static_cast<int>(num_batches)) {
-            samples_id = labels_id = 0;
+        if (batch_id == static_cast<int>(num_batches)) {
+            batch_id = 0;
         }
     }
 }
@@ -207,12 +340,19 @@ void PSTask::run(const Configuration& config) {
     sm_gradient_serializer sgs(nclasses, MODEL_GRAD_SIZE);
     sm_gradient_deserializer sgd(nclasses, MODEL_GRAD_SIZE);
 
+#ifdef USE_CIRRUS
     cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
         model_store(IP, PORT, &client,
             sms, smd);
     cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxGradient>
         gradient_store(IP, PORT, &client,
                 sgs, sgd);
+#elif defined(USE_REDIS)
+    auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+    if (r == NULL || r -> err) { 
+       throw std::runtime_error("Error connecting to redis server");
+    }
+#endif
 
     std::cout << "[PS] "
         << "PS task initializing model" << std::endl;
@@ -227,23 +367,45 @@ void PSTask::run(const Configuration& config) {
         << " csum: " << model.checksum()
         << std::endl;
     // publish the model back to the store so workers can use it
+#ifdef USE_CIRRUS
     model_store.put(MODEL_BASE, model);
+#elif defined(USE_REDIS)
+    char* data = new char[sms.size(model)];
+    sms.serialize(model, data);
+    redis_put_binary_numid(r, MODEL_BASE, data, sms.size(model));
+    delete[] data;
+#endif
 
+#if 0
     std::cout << "[PS] "
         << "PS getting model"
         << " with id: " << MODEL_BASE
         << std::endl;
+#ifdef USE_CIRRUS
     auto m = model_store.get(MODEL_BASE);
+#elif defined(USE_REDIS)
+    int len_model;
+    data = redis_get_numid(r, MODEL_BASE, &len_model);
+    auto m = lmd(data, len_model);
+    free(data);
+#endif
     std::cout << "[PS] "
         << "PS model is here"
         << " with csum: " << m.checksum()
         << std::endl;
+#endif
 
     // we keep a version number for the gradient produced by each worker
     std::vector<unsigned int> gradientCounts;
     gradientCounts.resize(10);
 
     bool first_time = true;
+
+#ifdef USE_CIRRUS    
+    wait_for_start(1, client);
+#elif defined(USE_REDIS)
+    wait_for_start(1, r);
+#endif
 
     while (1) {
         // for every worker, check for a new gradient computed
@@ -255,7 +417,18 @@ void PSTask::run(const Configuration& config) {
             // get gradient from store
             SoftmaxGradient gradient(nclasses, MODEL_GRAD_SIZE);
             try {
-                gradient = gradient_store.get(GRADIENT_BASE + gradient_id);
+#ifdef USE_CIRRUS
+                gradient = std::move(
+                        gradient_store.get(gradient_id));
+#elif defined(USE_REDIS)
+		int len_grad;
+		data = redis_get_numid(r, gradient_id, &len_grad);
+                if (data == nullptr) {
+                  throw cirrus::NoSuchIDException("");
+                }
+		gradient = sgd(data, len_grad);
+		free(data);
+#endif
             } catch(const cirrus::NoSuchIDException& e) {
                 if (!first_time) {
                     std::cout
@@ -280,7 +453,14 @@ void PSTask::run(const Configuration& config) {
 
                 model.sgd_update(config.get_learning_rate(), &gradient);
 
+#ifdef USE_CIRRUS
                 model_store.put(MODEL_BASE, model);
+#elif defined(USE_REDIS)
+		char* data = new char[sms.size(model)];
+		sms.serialize(model, data);
+		redis_put_binary_numid(r, MODEL_BASE, data, sms.size(model));
+		delete[] data;
+#endif
             }
         }
     }
@@ -300,6 +480,7 @@ void ErrorTask::run(const Configuration& /* config */) {
     c_array_deserializer<double> cad_labels(samples_per_batch,
             "error labels_store", false);
 
+#ifdef USE_CIRRUS
     // this is used to access the most up to date model
     cirrus::ostore::FullBladeObjectStoreTempl<SoftmaxModel>
         model_store(IP, PORT, &client, sms, smd);
@@ -311,6 +492,15 @@ void ErrorTask::run(const Configuration& /* config */) {
     // this is used to access the training labels
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client, cas_labels, cad_labels);
+    wait_for_start(2, client);
+#elif defined(USE_REDIS)
+    auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+    if (r == NULL || r -> err) { 
+       throw std::runtime_error("Error connecting to redis server");
+    }
+    
+    wait_for_start(2, r);
+#endif
 
     bool first_time = true;
     while (1) {
@@ -323,7 +513,14 @@ void ErrorTask::run(const Configuration& /* config */) {
             //    << MODEL_BASE
             //    << "\n";
             SoftmaxModel model(nclasses, MODEL_GRAD_SIZE);
+#ifdef USE_CIRRUS
             model = model_store.get(MODEL_BASE);
+#elif defined(USE_REDIS)
+	    int len_model;
+	    char* data = redis_get_numid(r, MODEL_BASE, &len_model);
+	    model = smd(data, len_model);
+	    free(data);
+#endif
 
             //std::cout << "[ERROR_TASK] received the model with id: "
             //    << MODEL_BASE
@@ -340,8 +537,22 @@ void ErrorTask::run(const Configuration& /* config */) {
                 std::shared_ptr<double> labels;
 
                 try {
+#ifdef USE_CIRRUS
                     samples = samples_store.get(SAMPLE_BASE + i);
                     labels = labels_store.get(LABEL_BASE + i);
+#elif defined(USE_REDIS)
+		    int len_samples;
+		    data = redis_get_numid(r, SAMPLE_BASE + i, &len_samples);
+                    if (data == NULL) throw cirrus::NoSuchIDException("");
+		    samples = cad_samples(data, len_samples);
+		    free(data);
+		    
+                    int len_labels;
+		    data = redis_get_numid(r, LABEL_BASE + i, &len_labels);
+                    if (data == NULL) throw cirrus::NoSuchIDException("");
+		    labels = cad_labels(data, len_labels);
+		    free(data);
+#endif
                 } catch(const cirrus::NoSuchIDException& e) {
                     if (i == 0)
                         goto continue_point;  // no loss to be computed
@@ -394,7 +605,7 @@ continue_point:
   */
 void LoadingTask::run(const Configuration& config) {
     std::cout << "[LOADER] "
-        << "Read criteo input..."
+        << "Read input..."
         << std::endl;
 
     Input input;
@@ -404,13 +615,15 @@ void LoadingTask::run(const Configuration& config) {
             " ", 1,
             config.get_limit_cols(), true);  // data is already normalized
 
-    std::cout << "First 10 labels" << std::endl;
+    std::cout << "[LOADER] "
+        << "First 10 labels"
+        << std::endl;
     for (int i = 0; i < 10; ++i) {
         std::cout << "label: " << *dataset.label(i) << std::endl;
     }
 
-    dataset.check_values();
 #ifdef DEBUG
+    dataset.check_values();
     dataset.print();
 #endif
     
@@ -421,34 +634,40 @@ void LoadingTask::run(const Configuration& config) {
     c_array_deserializer<double> cad_labels(samples_per_batch,
             "loader labels_store", false);
 
+#ifdef USE_CIRRUS
     cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         samples_store(IP, PORT, &client, cas_samples, cad_samples);
     cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
         labels_store(IP, PORT, &client, cas_labels, cad_labels);
-
-    //std::cout << "[LOADER] "
-    //    << "Adding "
-    //    << dataset.num_samples()
-    //    << " samples in batches of size (samples*features): "
-    //    << batch_size
-    //    << std::endl;
+#elif defined(USE_REDIS)
+    std::cout << "[LOADER] "
+        << "Connectin to redis"
+        << std::endl;
+    auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+    if (r == NULL || r -> err) { 
+       throw std::runtime_error("Error connecting to redis server");
+    }
+#endif
 
     // We put in batches of N samples
     for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {
-        //std::cout << "[LOADER] "
-        //    << "Building samples batch" << std::endl;
+        std::cout << "[LOADER] "
+            << "Building samples batch" << std::endl;
         /** Build sample object
           */
         auto sample = std::shared_ptr<double>(
                 new double[batch_size],
                 std::default_delete<double[]>());
         // this memcpy can be avoided with some trickery
+        std::cout << "[LOADER] "
+            << "Memcpying: " << sizeof(double) * batch_size
+            << std::endl;
         std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
                 sizeof(double) * batch_size);
 
-        //std::cout << "[LOADER] "
-        //    << "Building labels batch" << std::endl;
+        std::cout << "[LOADER] "
+            << "Building labels batch" << std::endl;
         /**
           * Build label object
           */
@@ -460,11 +679,11 @@ void LoadingTask::run(const Configuration& config) {
                 sizeof(double) * samples_per_batch);
 
         try {
-            //std::cout << "[LOADER] "
-            //    << "Adding sample batch id: "
-            //    << (SAMPLE_BASE + i)
-            //    << " samples with size (bytes): " << sizeof(double) * batch_size
-            //    << std::endl;
+            std::cout << "[LOADER] "
+                << "Adding sample batch id: "
+                << (SAMPLE_BASE + i)
+                << " samples with size (bytes): " << sizeof(double) * batch_size
+                << std::endl;
 
             if (i == 0) {
                 std::cout << "[LOADER] "
@@ -473,10 +692,30 @@ void LoadingTask::run(const Configuration& config) {
                     << std::endl;
             }
 
+#ifdef USE_CIRRUS
             samples_store.put(SAMPLE_BASE + i, sample);
+#elif defined(USE_REDIS)
+            uint64_t len = cas_samples.size(sample);
+	    char* data = new char[len];
+            memset(data, 0, len);
+	    cas_samples.serialize(sample, data);
+	    redis_put_binary_numid(r, SAMPLE_BASE + i, data, cas_samples.size(sample));
+	    delete[] data;
+#endif
             // std::cout << "[LOADER] "
             //    << "Putting label" << std::endl;
+#ifdef USE_CIRRUS
             labels_store.put(LABEL_BASE + i, label);
+#elif defined(USE_REDIS)
+            std::cout << "[LOADER] "
+               << "Storing labels on REDIS with size: "
+               << cas_labels.size(label)
+               << std::endl;
+	    data = new char[cas_labels.size(label)];
+	    cas_labels.serialize(label, data);
+	    redis_put_binary_numid(r, LABEL_BASE + i, data, cas_labels.size(label));
+	    delete[] data;
+#endif
         } catch(...) {
             std::cout << "[LOADER] "
                 << "Caught exception" << std::endl;
@@ -488,7 +727,23 @@ void LoadingTask::run(const Configuration& config) {
         << "Trying to get sample with id: " << 0
         << std::endl;
 
+#ifdef USE_CIRRUS
     auto sample = samples_store.get(0);
+#elif defined(USE_REDIS)
+    int len_samples;
+    char* data = redis_get_numid(r, 0, &len_samples);
+    auto sample = cad_samples(data, len_samples);
+    free(data);
+    int len_label;
+
+    data = nullptr;
+    while (data == nullptr) {
+        data = redis_get_numid(r, LABEL_BASE, &len_label);
+    }
+    free(data);
+    std::cout << "[LOADER] "
+        << "Got label with size: " << len_label << std::endl;
+#endif
 
     std::cout << "[LOADER] "
         << "Got sample with id: " << 0
@@ -507,5 +762,11 @@ void LoadingTask::run(const Configuration& config) {
     }
 #endif
     std::cout << std::endl;
+
+#ifdef USE_CIRRUS    
+    wait_for_start(3, client);
+#elif defined(USE_REDIS)
+    wait_for_start(3, r);
+#endif
 }
 

@@ -191,8 +191,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
     bool first_time = true;
 
-    uint64_t samples_id = 0;
-    int labels_id  = 0;
+    uint64_t batch_id = 0;
     int gradient_id = GRADIENT_BASE + worker;
     uint64_t version = 0;
     while (1) {
@@ -227,7 +226,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "Worker task received model csum: " << model.checksum()
                 << std::endl
                 << "Worker task getting the training data with id: "
-                << (SAMPLE_BASE + samples_id)
+                << (SAMPLE_BASE + batch_id)
                 << "\n";
 #endif
 
@@ -237,7 +236,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
             samples = *samples_iter;
 #elif defined(USE_REDIS)
             int len_samples;
-            data = redis_get_numid(r, SAMPLE_BASE + samples_id, &len_samples);
+            data = redis_get_numid(r, SAMPLE_BASE + batch_id, &len_samples);
             samples = cad_samples(data, len_samples);
             free(data);
 #endif
@@ -246,9 +245,9 @@ void LogisticTask::run(const Configuration& config, int worker) {
             double bw = 1.0 * batch_size * sizeof(double) /
                 elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
 #ifdef USE_CIRRUS
-            std::cout << "Get Sample " << samples_id << " Elapsed (CIRRUS) "
+            std::cout << "Get Sample " << batch_id << " Elapsed (CIRRUS) "
 #elif defined(USE_REDIS)
-            std::cout << "Get Sample " << samples_id << " Elapsed (REDIS) "
+            std::cout << "Get Sample " << batch_id << " Elapsed (REDIS) "
 #endif
                 << " batch size: " << batch_size
                 << " ns: " << elapsed_ns
@@ -257,7 +256,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #ifdef DEBUG
             std::cout << "[WORKER] "
                 << "Worker task received training data with id: "
-                << (SAMPLE_BASE + samples_id)
+                << (SAMPLE_BASE + batch_id)
                 << " and checksum: " << checksum(samples, batch_size)
                 << "\n";
 #endif
@@ -267,7 +266,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
             labels = *labels_iter;
 #elif defined(USE_REDIS)
             int len_labels;
-            data = redis_get_numid(r, LABEL_BASE + labels_id, &len_labels);
+            data = redis_get_numid(r, LABEL_BASE + batch_id, &len_labels);
             labels = cad_labels(data, len_labels);
             free(data);
 #endif
@@ -279,7 +278,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #ifdef DEBUG
             std::cout << "[WORKER] "
                 << "Worker task received label data with id: "
-                << samples_id
+                << batch_id
                 << " and checksum: " << checksum(labels, samples_per_batch)
                 << "\n";
 #endif
@@ -294,8 +293,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 // how many samples are there
 
                 // wrap around
-                samples_id = 0;
-                labels_id = 0;
+                batch_id = 0;
                 continue;
             }
             // this happens because the ps task
@@ -398,18 +396,15 @@ void LogisticTask::run(const Configuration& config, int worker) {
             << "\n";
 
         // move to next batch of samples
-        samples_id++;
-        labels_id++;
+        batch_id++;
 #ifdef USE_CIRRUS
         samples_iter++;
         labels_iter++;
 #endif
 
         // Wrap around
-        //if (samples_iter == s_iter.end()) {
-        if (samples_id == SAMPLE_BASE + num_batches) {
-
-            samples_id = labels_id = 0;
+        if (batch_id == SAMPLE_BASE + num_batches) {
+            batch_id = 0;
 #ifdef USE_CIRRUS
             samples_iter = s_iter.begin();
             labels_iter = l_iter.begin();
@@ -662,6 +657,7 @@ void PSTask::run(const Configuration& config) {
     delete[] data;
 #endif
 
+#if 0
     std::cout << "[PS] "
         << "PS getting model"
         << " with id: " << MODEL_BASE
@@ -677,6 +673,7 @@ void PSTask::run(const Configuration& config) {
     std::cout << "[PS] "
         << "PS model is here"
         << std::endl;
+#endif
 
     // we keep a version number for the gradient produced by each worker
     std::vector<unsigned int> gradientVersions;

@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server
+bin_PROGRAMS = parameter_server parameter_server_softmax
 #two_clients_test bug_regression \
 #               parameter_server_softmax
 
@@ -48,7 +48,8 @@ CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
-              Tasks_softmax.cpp Serializers.cpp 
+              Tasks_softmax.cpp Serializers.cpp  \
+              /home/ec2-user/cirrus/examples/ml/test_redis/Redis.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
