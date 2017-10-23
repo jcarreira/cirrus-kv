@@ -89,19 +89,19 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         bool& terminate,
         uint64_t limit_cols) {
     uint64_t count_read = 0;
-    uint64_t read_at_a_time = 100;
+    uint64_t read_at_a_time = 1000;
 
     while (1) {
         if (terminate)
             break;
 
-        input_mutex.lock();
         std::vector<std::string> thread_lines;
 
         /**
           * Read up to read_at_a_time limes
           */
         std::cout << "Popping lines size: " << lines.size() << std::endl;
+        input_mutex.lock();
         while (lines.size() && thread_lines.size() < read_at_a_time) {
             thread_lines.push_back(lines.front());
             lines.pop();
@@ -176,7 +176,10 @@ void Input::print_sample(const std::vector<double>& sample) const {
 std::vector<std::vector<double>> Input::read_mnist_csv(
         const std::string& input_file,
         std::string delimiter) {
-    std::ifstream fin(input_file, std::ifstream::in);
+    
+
+    FILE* fin = fopen(input_file.c_str(), "r");
+    //std::ifstream fin(input_file, std::ifstream::in);
     if (!fin) {
         throw std::runtime_error("Can't open file: " + input_file);
     }
@@ -185,9 +188,10 @@ std::vector<std::vector<double>> Input::read_mnist_csv(
 
     std::string line;
     char str[STR_SIZE + 1] = {0};
-    while (getline(fin, line)) {
-        assert(line.size() < STR_SIZE);
-        strncpy(str, line.c_str(), STR_SIZE);
+    while (fgets(str, 1000000, fin) != NULL) {
+    //while (getline(fin, line)) {
+        //assert(line.size() < STR_SIZE);
+        //strncpy(str, line.c_str(), STR_SIZE);
         char* s = str;
 
         std::vector<double> sample;
@@ -245,9 +249,9 @@ Dataset Input::read_input_csv(const std::string& input_file,
     std::vector<std::vector<double>> samples;
     std::vector<double> labels;
 
-    std::queue<std::string> lines;
+    std::queue<std::string> lines[nthreads];
 
-    std::mutex input_mutex;   // mutex to protect queue of raw samples
+    std::mutex input_mutex[nthreads];   // mutex to protect queue of raw samples
     std::mutex output_mutex;  // mutex to protect queue of processed samples
     bool terminate = false;   // indicates when worker threads should terminate
     std::vector<std::thread*> threads;  // vector of worker threads
@@ -268,35 +272,62 @@ Dataset Input::read_input_csv(const std::string& input_file,
                             std::placeholders::_6,
                             std::placeholders::_7,
                             std::placeholders::_8),
-                    std::ref(input_mutex),
+                    std::ref(input_mutex[i]),
                     std::ref(output_mutex),
                     delimiter,
-                    std::ref(lines), std::ref(samples),
+                    std::ref(lines[i]), std::ref(samples),
                     std::ref(labels), std::ref(terminate),
                     limit_cols));
     }
 
-    uint64_t i = 0;
     std::string line;
-    while (getline(fin, line)) {
-        input_mutex.lock();
-        lines.push(line);
-        input_mutex.unlock();
-        ++i;
-
-        if (i % REPORT_LINES == 0) {
-            std::cout << "Read: " << i << " lines." << std::endl;
+    int batch_size = 100;
+    std::vector<std::string> input;
+    input.reserve(batch_size);
+    uint64_t count = 0;
+    uint64_t thread_index = 0;
+    while (1) {
+       int i;
+       for (i = 0; i < batch_size; ++i) {
+          if (!getline(fin, line)) {
+             break;
+          }
+          input[i] = line;
+       }
+       
+        input_mutex[thread_index].lock();
+        for (int j = 0; j < i; ++j) {
+           lines[thread_index].push(input[j]);
         }
+        input_mutex[thread_index].unlock();
+
+        count += i;
+        if (count % REPORT_LINES == 0) {
+            std::cout << "Read: " << count << " lines." << std::endl;
+        }
+
+        if (count > 1000000)
+           break;
+
+        if (i != batch_size) {
+           break;
+        }
+
+        thread_index = (thread_index + 1) % nthreads;
     }
 
     while (1) {
-        usleep(100);
-        input_mutex.lock();
-        if (lines.empty()) {
-            input_mutex.unlock();
-            break;
-        }
-        input_mutex.unlock();
+       usleep(100000);
+       for (thread_index = 0; thread_index < nthreads; ++thread_index) {
+           input_mutex[thread_index].lock();
+           if (!lines[thread_index].empty()) {
+	      input_mutex[thread_index].unlock();
+              break;
+           }
+	   input_mutex[thread_index].unlock();
+       }
+       if (thread_index == nthreads)
+          break;
     }
 
     terminate = true;

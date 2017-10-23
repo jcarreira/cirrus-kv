@@ -65,10 +65,10 @@ void Matrix::check_values() const {
 
             // this sanity check may break even though things are correct
             // though it might help catch bugs
-            if (val > 300 || val < -300) {
-                throw std::runtime_error("Matrix::check value: "
-                        + std::to_string(val) + " badly normalized");
-            }
+            //if (val > 300 || val < -300) {
+            //    throw std::runtime_error("Matrix::check value: "
+            //            + std::to_string(val) + " badly normalized");
+            //}
         }
     }
 }

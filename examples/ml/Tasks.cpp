@@ -927,8 +927,8 @@ void LoadingTask::run(const Configuration& config) {
     //        config.get_limit_cols(), false);  // data is already normalized
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            "\t", 3,
-            config.get_limit_cols(), true);  // data is already normalized
+            "\t", 10,
+            config.get_limit_cols(), true);
 
     dataset.check_values();
 #ifdef DEBUG

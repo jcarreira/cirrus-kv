@@ -136,9 +136,9 @@ Configuration load_configuration(const std::string& config_path) {
 int main(int argc, char** argv) {
     std::cout << "Starting parameter server" << std::endl;
 
-    int rank = 0;
+    int rank = 2;
 
-    if (argc != 4) {
+    if (argc != 2 && argc != 3) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
     }

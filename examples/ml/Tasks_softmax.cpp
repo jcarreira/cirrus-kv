@@ -212,6 +212,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
 #ifdef USE_CIRRUS
             samples = *samples_iter;
+            //samples = samples_store.get(SAMPLE_BASE + batch_id);
 #elif defined(USE_REDIS)
             int len_samples;
             data = redis_get_numid(r, SAMPLE_BASE + batch_id, &len_samples);
@@ -229,6 +230,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
 #ifdef USE_CIRRUS
             labels = *labels_iter;
+            //labels = labels_store.get(LABEL_BASE + batch_id);
 #elif defined(USE_REDIS)
             int len_labels;
             data = redis_get_numid(r, LABEL_BASE + batch_id, &len_labels);
@@ -612,8 +614,8 @@ void LoadingTask::run(const Configuration& config) {
 
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            " ", 1,
-            config.get_limit_cols(), true);  // data is already normalized
+            "\t", 30,
+            config.get_limit_cols(), true);
 
     std::cout << "[LOADER] "
         << "First 10 labels"
@@ -649,6 +651,13 @@ void LoadingTask::run(const Configuration& config) {
        throw std::runtime_error("Error connecting to redis server");
     }
 #endif
+
+    std::cout << "[LOADER] "
+        << "Adding "
+        << dataset.num_samples()
+        << " samples in batches of size (samples*features): "
+        << batch_size
+        << std::endl;
 
     // We put in batches of N samples
     for (unsigned int i = 0; i < dataset.num_samples() / samples_per_batch; ++i) {

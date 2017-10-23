@@ -67,7 +67,7 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "172.31.6.107";
+const char IP[] = "172.31.5.138"; // REDIS instance
 
 static const uint32_t SIZE = 1;
 
