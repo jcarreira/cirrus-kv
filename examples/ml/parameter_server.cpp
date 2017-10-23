@@ -87,23 +87,23 @@ void run_tasks(int rank, const Configuration& config) {
         //sleep(8);
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, rank);
         pt.run(config);
         sleep_forever();
     } else if (rank == 2) {
         //sleep(3);
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, rank);
         lt.run(config);
     } else if (rank == 3) {
         //sleep(5);
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, rank);
         et.run(config);
         sleep_forever();
     } else if (rank >= 4 && rank < 4 + nworkers) {
@@ -112,10 +112,18 @@ void run_tasks(int rank, const Configuration& config) {
           * Number of tasks is determined by the value of nworkers
           */
         //sleep(10);
+#ifdef PRELOAD_DATA
+        std::cout << "Launching preloaded task" << std::endl;
+        LogisticTaskPreloaded lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, rank);
+#else
         LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size,
-                samples_per_batch, features_per_sample, nworkers);
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, rank);
+#endif
         lt.run(config, rank - 4);
         sleep_forever();
 
