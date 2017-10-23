@@ -20,7 +20,10 @@ echo "Running MPI Support workers:${SUPPORT_WORKERS} Ml_workers:${ML_WORKERS}"
 
 (~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 0 2>&1 | tee output0)& 
 (~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 1 2>&1 | tee output1)&
-(~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 2 2>&1 | tee output2)&
+#(valgrind  --log-file=valgrind_output_1  --track-origins=yes   ~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 1 2>&1 | tee output1)&
+
+# we dont need the loader
+#(~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 2 2>&1 | tee output2)&
 (~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 3 2>&1 | tee output3)&
 (~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 4 2>&1 | tee output4)&
 (~/parameter_server ~/criteo_fbox.cfg ${ML_WORKERS} 5 2>&1 | tee output5)&

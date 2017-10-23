@@ -6,7 +6,7 @@ extern "C" {
 #include <string.h>
 #include "Redis.h"
 
-    //#define REDIS_DEBUG
+//#define REDIS_DEBUG
 
     redisContext* redis_connect(const char* hostname, int port) {
         struct timeval timeout = { 1, 500000 }; // 1.5 seconds
@@ -81,7 +81,7 @@ extern "C" {
         std::cout << "[REDIS] "
             << "redis put binary2 with sprintf" 
             << "id_str:-" << id_str
-            << "-"<<std::endl;
+            << "-" << std::endl;
 #endif
         redis_put_binary(c, id_str, s, size);
 #ifdef REDIS_DEBUG
@@ -130,20 +130,35 @@ extern "C" {
             std::cout << "[REDIS] "
                 << "redis got"
                 << "id : " << id_str
-                << " len: " << *len << std::endl;
+                << " len: " << *len
+                << std::endl;
 #endif
         } else {
+#ifdef REDIS_DEBUG
             std::cout << "[REDIS] "
                 << "redis get failed"
                 << std::endl;
+#endif
 	    free(id_str);
+#ifdef REDIS_DEBUG
             std::cout << "[REDIS] "
                 << "redis return nullptr"
                 << std::endl;
+#endif
 	    return nullptr;
         }
 
+#ifdef REDIS_DEBUG
+	std::cout << "[REDIS] "
+		<< "freeing id_str"
+		<< std::endl;
+#endif
         free(id_str);
+#ifdef REDIS_DEBUG
+	std::cout << "[REDIS] "
+		<< "return ret"
+		<< std::endl;
+#endif
         return ret;
     }
 

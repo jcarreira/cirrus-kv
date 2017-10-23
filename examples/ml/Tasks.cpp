@@ -400,10 +400,10 @@ void LogisticTask::run(const Configuration& config, int worker) {
             gradient_store.put(
                     gradient_id, *lrg);
 #elif defined(USE_REDIS)
-            char* data = new char[lgs.size(*lrg)];
-            lgs.serialize(*lrg, data);
-            redis_put_binary_numid(r, gradient_id, data, lgs.size(*lrg));
-            delete[] data;
+	    auto data = std::unique_ptr<char[]>(
+	        	    new char[lgs.size(*lrg)]);
+            lgs.serialize(*lrg, data.get());
+            redis_put_binary_numid(r, gradient_id, data.get(), lgs.size(*lrg));
 #endif
         } catch(...) {
             std::cout << "[WORKER] "
@@ -637,10 +637,10 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
                 throw std::runtime_error("Wrong dynamic cast");
             }
 #ifdef USE_REDIS
-            char* data = new char[lgs.size(*lrg)];
-            lgs.serialize(*lrg, data);
-            redis_put_binary_numid(r, gradient_id, data, lgs.size(*lrg));
-            delete[] data;
+	    auto data = std::unique_ptr<char[]>(
+	        	    new char[lgs.size(*lrg)]);
+            lgs.serialize(*lrg, data.get());
+            redis_put_binary_numid(r, gradient_id, data.get(), lgs.size(*lrg));
 #endif
         } catch(...) {
             std::cout << "[WORKER] "
@@ -673,8 +673,9 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
   */
 void PSTask::run(const Configuration& config) {
     std::cout << "[PS] "
-        << "PS connecting to store" << std::endl;
-    cirrus::TCPClient client;
+        << "PS connecting to store"
+        << std::endl;
+    config.print();
 
     lr_model_serializer lms(MODEL_GRAD_SIZE);
     lr_model_deserializer lmd(MODEL_GRAD_SIZE);
@@ -682,6 +683,7 @@ void PSTask::run(const Configuration& config) {
     lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
 
 #ifdef USE_CIRRUS
+    cirrus::TCPClient client;
     cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
         model_store(IP, PORT, &client,
             lms, lmd);
@@ -710,10 +712,12 @@ void PSTask::run(const Configuration& config) {
 #ifdef USE_CIRRUS
     model_store.put(MODEL_BASE, model);
 #elif defined(USE_REDIS)
-    char* data = new char[lms.size(model)];
-    lms.serialize(model, data);
-    redis_put_binary_numid(r, MODEL_BASE, data, lms.size(model));
-    delete[] data;
+    {
+       auto data = std::unique_ptr<char[]>(
+       	    new char[lms.size(model)]);
+       lms.serialize(model, data.get());
+       redis_put_binary_numid(r, MODEL_BASE, data.get(), lms.size(model));
+    }
 #endif
 
 #if 0
@@ -736,7 +740,7 @@ void PSTask::run(const Configuration& config) {
 
     // we keep a version number for the gradient produced by each worker
     std::vector<unsigned int> gradientVersions;
-    gradientVersions.resize(10);
+    gradientVersions.resize(nworkers);
 
     bool first_time = true;
 
@@ -767,7 +771,7 @@ void PSTask::run(const Configuration& config) {
                         gradient_store.get(gradient_id));
 #elif defined(USE_REDIS)
 		int len_grad;
-		data = redis_get_numid(r, gradient_id, &len_grad);
+		char* data = redis_get_numid(r, gradient_id, &len_grad);
                 if (data == nullptr) {
                   throw cirrus::NoSuchIDException("");
                 }
@@ -827,10 +831,11 @@ void PSTask::run(const Configuration& config) {
 #ifdef USE_CIRRUS
                 model_store.put(MODEL_BASE, model);
 #elif defined(USE_REDIS)
-		char* data = new char[lms.size(model)];
-		lms.serialize(model, data);
-		redis_put_binary_numid(r, MODEL_BASE, data, lms.size(model));
-		delete[] data;
+                uint64_t data_size = lms.size(model);
+                auto data = std::unique_ptr<char[]>(
+	            	    new char[data_size]);
+		lms.serialize(model, data.get());
+		redis_put_binary_numid(r, MODEL_BASE, data.get(), lms.size(model));
 #endif
             }
         }
@@ -1059,25 +1064,29 @@ void LoadingTask::run(const Configuration& config) {
             samples_store.put(SAMPLE_BASE + i, sample);
 #elif defined(USE_REDIS)
             uint64_t len = cas_samples.size(sample);
-	    char* data = new char[len];
-            memset(data, 0, len);
-	    cas_samples.serialize(sample, data);
-	    redis_put_binary_numid(r, SAMPLE_BASE + i, data, cas_samples.size(sample));
-	    delete[] data;
+	    {
+               auto data = std::unique_ptr<char[]>(
+	           	    new char[len]);
+	       cas_samples.serialize(sample, data.get());
+	       redis_put_binary_numid(r, SAMPLE_BASE + i, data.get(), cas_samples.size(sample));
+            }
 #endif
 #ifdef USE_CIRRUS
             std::cout << "[LOADER] "
-               << "Putting label" << std::endl;
+               << "Putting label"
+               << std::endl;
             labels_store.put(LABEL_BASE + i, label);
 #elif defined(USE_REDIS)
             std::cout << "[LOADER] "
                << "Storing labels on REDIS with size: "
                << cas_labels.size(label)
                << std::endl;
-	    data = new char[cas_labels.size(label)];
-	    cas_labels.serialize(label, data);
-	    redis_put_binary_numid(r, LABEL_BASE + i, data, cas_labels.size(label));
-	    delete[] data;
+            {
+	       auto data = std::unique_ptr<char>(
+	           	    new char[cas_labels.size(label)]);
+	       cas_labels.serialize(label, data.get());
+	       redis_put_binary_numid(r, LABEL_BASE + i, data.get(), cas_labels.size(label));
+            }
 #endif
         } catch(...) {
             std::cout << "[LOADER] "
