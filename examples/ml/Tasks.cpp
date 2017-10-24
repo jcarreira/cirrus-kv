@@ -18,6 +18,7 @@
 #include "Input.h"
 #include "Utils.h"
 #include "Redis.h"
+#include "RedisIterator.h"
 
 //#define DEBUG
 #define READ_AHEAD (6)
@@ -142,6 +143,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #elif USE_S3
 #endif
 
+
 #ifdef PRELOAD_DATA
     std::cout << "PRELOADING is set. Should use other task code" << std::endl;
     exit(-1);
@@ -151,6 +153,12 @@ void LogisticTask::run(const Configuration& config, int worker) {
         config.get_minibatch_size();
     std::cout << "[WORKER] "
         << "num_batches: " << num_batches << std::endl;
+
+#ifdef USE_PREFETCH
+    RedisIterator rit_samples(SAMPLE_BASE, SAMPLE_BASE + 121, REDIS_IP, REDIS_PORT);
+    RedisIterator rit_labels(LABEL_BASE, LABEL_BASE + 121, REDIS_IP, REDIS_PORT);
+#endif
+
 #ifdef USE_CIRRUS
 
     // this is used to access the training data sample
@@ -249,10 +257,17 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 << "\n";
 #endif
 
-            auto before_samples = get_time_ns();
+            //auto before_samples = get_time_ns();
+            //auto start = auto start = std::chrono::high_resolution_clock::now();
+            std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
 #ifdef USE_CIRRUS
             samples = *samples_iter;
+#elif defined USE_PREFETCH
+            int len_samples = batch_size * sizeof(double);
+            data = rit_samples.get_next();
+            samples = cad_samples(data, len_samples);
+            free(data);
 #elif defined(USE_REDIS)
             int len_samples;
             data = redis_get_numid(r, SAMPLE_BASE + batch_id, &len_samples);
@@ -262,8 +277,10 @@ void LogisticTask::run(const Configuration& config, int worker) {
             samples = cad_samples(data, len_samples);
             free(data);
 #endif
-
-            uint64_t elapsed_ns = get_time_ns() - before_samples;
+            std::chrono::steady_clock::time_point finish = std::chrono::steady_clock::now();
+            uint64_t elapsed_ns =
+                 std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
+            //uint64_t elapsed_ns = get_time_ns() - before_samples;
             double bw = 1.0 * batch_size * sizeof(double) /
                 elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
 #ifdef USE_CIRRUS
@@ -272,8 +289,10 @@ void LogisticTask::run(const Configuration& config, int worker) {
             std::cout << "Get Sample " << batch_id << " Elapsed (REDIS) "
 #endif
                 << " batch size: " << batch_size
+                << " len samples: " << len_samples
                 << " ns: " << elapsed_ns
                 << " BW (MB/s): " << bw
+                << "at time: " << get_time_us()
                 << "\n";
 #ifdef DEBUG
             std::cout << "[WORKER] "
@@ -286,6 +305,11 @@ void LogisticTask::run(const Configuration& config, int worker) {
             auto before_labels = get_time_ns();
 #ifdef USE_CIRRUS
             labels = *labels_iter;
+#elif defined USE_PREFETCH
+            data = rit_labels.get_next();
+            int len_labels = batch_size * sizeof(double) / 10;
+            labels = cad_labels(data, len_labels);
+            free(data);
 #elif defined(USE_REDIS)
             int len_labels;
             data = redis_get_numid(r, LABEL_BASE + batch_id, &len_labels);
@@ -298,6 +322,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
             auto after_labels = get_time_ns();
             std::cout << "[WORKER] "
                 << "labels get (ns): " << (after_labels - before_labels)
+                << "at time: " << get_time_us()
                 << "\n";
 
 #ifdef DEBUG
@@ -377,6 +402,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         auto elapsed_us = get_time_us() - now;
         std::cout << "[WORKER] "
             << "Gradient compute time (us): " << elapsed_us
+            << "at time: " << get_time_us()
             << " version " << version
             << "\n";
         gradient->setVersion(version++);
