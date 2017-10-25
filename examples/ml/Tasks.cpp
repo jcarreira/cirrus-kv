@@ -515,7 +515,8 @@ void LogisticTaskPreloaded::get_data_samples(auto r, uint64_t left_id, uint64_t 
 
 void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     std::cout << "[WORKER-PRELOADED] "
-        << "Worker task connecting to store" << std::endl;
+        << "Worker task id: " << worker
+        << "connecting to store" << std::endl;
     
     lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
     lr_model_deserializer lmd(MODEL_GRAD_SIZE);
@@ -542,7 +543,7 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     std::vector<std::shared_ptr<double>> samples_preloaded;
     std::vector<std::shared_ptr<double>> labels_preloaded;
 
-    wait_for_start(worker, r, nworkers);
+    wait_for_start(3 + worker, r, nworkers);
     
     uint64_t left_id = (worker_id - 4) * (num_batches / nworkers);
     uint64_t right_id = (worker_id - 4 + 1) * (num_batches / nworkers);

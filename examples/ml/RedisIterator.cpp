@@ -85,7 +85,7 @@ void RedisIterator::thread_function() {
       } else {
         ring_lock.unlock();
       }
-      usleep(10000);
+      usleep(500);
    }
 }
 
