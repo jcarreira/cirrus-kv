@@ -4,10 +4,10 @@ CC=g++
 CC_FLAGS=-std=c++17
 
 setup:
-	mkdir build outputs hash_outputs
+	mkdir build outputs hash_outputs sort_outputs
 
 clean:
-	rm -f build/* outputs/*
+	rm -f build/* outputs/* sort_outputs/*
 	find hash_outputs/ -maxdepth 1 -name '*.txt' -delete
 
 config: config.cpp config.hpp
@@ -25,6 +25,12 @@ hash_output: hash_output.cpp hash_output.hpp
 hash_lambda: hash_output.cpp hash_lambda.hpp
 	$(CC) $(CC_FLAGS) -c hash_lambda.cpp -o build/hash_lambda.o
 
-main: config record hash_input hash_output hash_lambda main.cpp
+sort_input: sort_input.cpp sort_input.hpp
+	$(CC) $(CC_FLAGS) -c sort_input.cpp -o build/sort_input.o
+
+sort_lambda: sort_lambda.cpp sort_lambda.hpp
+	$(CC) $(CC_FLAGS) -c sort_lambda.cpp -o build/sort_lambda.o
+
+main: config record hash_input hash_output hash_lambda sort_input sort_lambda main.cpp
 	$(CC) $(CC_FLAGS) -c main.cpp -o build/main.o
-	$(CC) build/*.o -o outputs/main -lpthread
+	$(CC) build/*.o -o outputs/main -lpthread -lstdc++fs

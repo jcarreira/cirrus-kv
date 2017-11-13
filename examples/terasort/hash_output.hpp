@@ -25,13 +25,15 @@ namespace cirrus_terasort {
 	private:
 		std::string _parent_dir;
 		uint32_t _hash_bytes;
+		uint32_t _hash_modulus;
 		std::thread::id _id;
 		std::string _cached_id;
 		std::map<uint32_t, thread_hash_file_output> _prefix_2_file_map;
 	public:
-		thread_hash_output(std::thread::id i, uint32_t hb, std::string pd);
+		thread_hash_output(std::thread::id i, uint32_t hb, uint32_t hm, std::string pd);
 		
 		const uint32_t hash_bytes() const;
+		const uint32_t hash_modulus() const;
 		const std::string parent_dir() const;
 		void write(record rec);
 	};
