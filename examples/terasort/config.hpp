@@ -16,6 +16,7 @@ namespace cirrus_terasort {
 		uint32_t _hash_nodes; // the number of nodes reserved for hashing
 		uint32_t _hash_buckets; // the number of buckets we'll hash into (should be a power of 2)
 		uint32_t _hash_bytes; // 256 * _hash_bytes = _hash_buckets
+		uint32_t _hash_modulus;
 		enum hash_mode _h_mode;
 		
 		uint32_t _num_hash_output_files; // will depend on the hash_mode
@@ -27,7 +28,7 @@ namespace cirrus_terasort {
 		uint32_t _sort_nodes;
 		std::string _sort_output_dir; // inputs will be in _hash_output_dir
 	public:
-		config(uint32_t hn, uint32_t hbs, enum hash_mode h_m,
+		config(uint32_t hn, uint32_t hbs, uint32_t hm, enum hash_mode h_m,
 			uint32_t ncs, std::string hod, uint32_t sn, std::string sod);
 
 		const uint32_t hash_nodes() const;
@@ -39,6 +40,7 @@ namespace cirrus_terasort {
 		const std::string hash_output_dir() const;
 		const uint32_t sort_nodes() const;
 		const std::string sort_output_dir() const;
+		const uint32_t hash_modulus() const;
 	};
 }
 

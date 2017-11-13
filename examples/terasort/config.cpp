@@ -1,8 +1,8 @@
 #include "config.hpp"
 
 namespace cirrus_terasort {
-	config::config(uint32_t hn, uint32_t hbs, enum hash_mode h_m, uint32_t ncs, std::string hod, uint32_t sn, std::string sod)
-		: _hash_nodes(hn), _hash_bytes(hbs), _h_mode(h_m), _num_input_chunks(ncs), _hash_output_dir(hod), _sort_nodes(sn),
+	config::config(uint32_t hn, uint32_t hbs, uint32_t hm, enum hash_mode h_m, uint32_t ncs, std::string hod, uint32_t sn, std::string sod)
+		: _hash_nodes(hn), _hash_bytes(hbs), _hash_modulus(hm), _h_mode(h_m), _num_input_chunks(ncs), _hash_output_dir(hod), _sort_nodes(sn),
 			_sort_output_dir(sod) {
 		_hash_buckets = _hash_bytes << 8;
 		_num_hash_output_files = h_m == hash_mode::HASH_STREAMING ? _hash_nodes * _hash_buckets :
@@ -43,5 +43,9 @@ namespace cirrus_terasort {
 
 	const std::string config::sort_output_dir() const {
 		return _sort_output_dir;
+	}
+	
+	const uint32_t config::hash_modulus() const {
+		return _hash_modulus;
 	}
 }

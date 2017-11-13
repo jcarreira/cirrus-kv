@@ -18,8 +18,8 @@ namespace cirrus_terasort {
 		_output_stream.close();
 	}
 
-	thread_hash_output::thread_hash_output(std::thread::id i, uint32_t hb, std::string pd) :
-		_id(i), _hash_bytes(hb), _parent_dir(pd) {
+	thread_hash_output::thread_hash_output(std::thread::id i, uint32_t hb, uint32_t hm, std::string pd) :
+		_id(i), _hash_bytes(hb), _hash_modulus(hm), _parent_dir(pd) {
 		std::stringstream ss;
 		ss << _id;
 		_cached_id = ss.str();
@@ -29,8 +29,12 @@ namespace cirrus_terasort {
 		return _hash_bytes;
 	}
 
+	const uint32_t thread_hash_output::hash_modulus() const {
+		return _hash_modulus;
+	}
+
 	void thread_hash_output::write(record rec) {
-		uint32_t hashed_value = std::hash<std::string>{}(rec.raw_data().substr(0, _hash_bytes));
+		uint32_t hashed_value = std::hash<std::string>{}(rec.raw_data().substr(0, _hash_bytes)) % _hash_modulus;
 		if(!_prefix_2_file_map.count(hashed_value))
 			_prefix_2_file_map.emplace(hashed_value,
 				thread_hash_file_output(_parent_dir + "/" + 
@@ -48,8 +52,8 @@ namespace cirrus_terasort {
 		_map_mutex.lock();
 		if(!_output_map.count(hashed_id))
 			_output_map.emplace(hashed_id,
-						thread_hash_output(curr_id, _conf->hash_bytes(),
-								_conf->hash_output_dir()));
+				thread_hash_output(curr_id, _conf->hash_bytes(), _conf->hash_modulus(),
+					_conf->hash_output_dir()));
 		_map_mutex.unlock();
 		_output_map.at(hashed_id).write(rec);
 	}
