@@ -1,7 +1,7 @@
 all: main
 
 CC=g++
-CC_FLAGS=-std=c++17
+CC_FLAGS=-std=c++17 -O3
 
 setup:
 	mkdir build outputs hash_outputs sort_outputs
@@ -34,3 +34,13 @@ sort_lambda: sort_lambda.cpp sort_lambda.hpp
 main: config record hash_input hash_output hash_lambda sort_input sort_lambda main.cpp
 	$(CC) $(CC_FLAGS) -c main.cpp -o build/main.o
 	$(CC) build/*.o -o outputs/main -lpthread -lstdc++fs
+
+baseline: config record hash_input
+	$(CC) $(CC_FLAGS) -c baseline.cpp -o build/baseline.o
+	$(CC) build/*.o -o outputs/baseline -lpthread -lstdc++fs
+
+run_baseline: baseline
+	./outputs/baseline
+
+run: all
+	./outputs/main

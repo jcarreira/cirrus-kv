@@ -19,16 +19,19 @@ namespace cirrus_terasort {
 		}
 	}
 
-	std::vector<record> sort_input::read_files(std::thread::id tid) {
+	std::vector<std::shared_ptr<record>> sort_input::read_files(std::thread::id tid) {
 		uint32_t hashed_tid = std::hash<std::thread::id>{}(tid);
-		std::vector<record> ret;
+		auto read_start = std::chrono::high_resolution_clock::now();
+		std::vector<std::shared_ptr<record>> ret;
 		std::vector<std::shared_ptr<std::ifstream>>& vec = _file_split[_index_counter++];
 		for(std::shared_ptr<std::ifstream> i: vec) {
 			std::vector<char> buf(101, 0);
 			while(i->read(buf.data(), buf.size()))
-				ret.push_back(std::string(buf.begin(), buf.end() - 1));
+				ret.push_back(std::make_shared<record>(std::string(buf.begin(), buf.end() - 1)));
 			if(i->gcount() != 0) throw std::runtime_error("bad file read size.");
 		}
+		auto read_end = std::chrono::high_resolution_clock::now();
+		std::cout << "Reading " << ret.size() << " records took " << std::chrono::duration_cast<std::chrono::seconds>(read_end - read_start).count() << " seconds" << std::endl;
 		return ret;
 	}
 }

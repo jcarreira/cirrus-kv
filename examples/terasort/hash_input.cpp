@@ -23,16 +23,16 @@ namespace cirrus_terasort {
 		return _read_chunk_length;
 	}
 
-	const std::vector<record> hash_input::read_chunk() {
+	const std::vector<std::shared_ptr<record>> hash_input::read_chunk() {
 		std::vector<char> buf(_read_chunk_length, 0);
-		std::vector<record> ret{};
+		std::vector<std::shared_ptr<record>> ret{};
 		_read_mutex.lock();
 		_input_stream.read(buf.data(), buf.size());
 		uint32_t gcount = _input_stream.gcount();
 		_read_mutex.unlock();
 		if(!gcount) return ret;
 		for(uint32_t i = 0; i < _conf->num_input_chunks() && (i + 1) * (record_size + 1) <= gcount; i++)
-			ret.push_back(record(std::string(buf.begin() + i * (record_size + 1),
+			ret.push_back(std::make_shared<record>(std::string(buf.begin() + i * (record_size + 1),
 							buf.begin() + i * (record_size + 1) + record_size)));
 		return ret;
 	}

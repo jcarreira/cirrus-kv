@@ -26,7 +26,7 @@ namespace cirrus_terasort {
 		~hash_input();
 
 		const std::string input_file_name() const;
-		const std::vector<record> read_chunk();
+		const std::vector<std::shared_ptr<record>> read_chunk();
 		const uint32_t read_chunk_length() const;
 	};
 }

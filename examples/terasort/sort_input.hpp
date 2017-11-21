@@ -23,7 +23,7 @@ namespace cirrus_terasort {
 		sort_input(const sort_input& si) = delete;
 		sort_input& operator=(const sort_input& si) = delete;
 
-		std::vector<record> read_files(std::thread::id tid);
+		std::vector<std::shared_ptr<record>> read_files(std::thread::id tid);
 	};
 }
 
