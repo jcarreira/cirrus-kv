@@ -58,8 +58,10 @@ void benchmark_redis(redisContext* r, unsigned int data_size) {
    
    double avg_elapsed = cum_us / 100.0;
    double bw_MBps = data_size / avg_elapsed / 1024 / 1024 * 1000 * 1000;
-   std::cout << "Average get bandwidth (MB/s): " << bw_MBps << std::endl;
-   std::cout << "Average get latency (us): " << avg_elapsed << std::endl;
+   std::cout << "Average get bandwidth (MB/s): " << bw_MBps
+             << " size: " << data_size << std::endl;
+   std::cout << "Average get latency (us): " << avg_elapsed
+             << " size: " << data_size << std::endl;
 }
 
 int main() {
