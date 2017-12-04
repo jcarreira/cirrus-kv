@@ -33,6 +33,35 @@ void test_get(redisContext* r, const char* id) {
    }
 }
 
+void benchmark_redis(redisContext* r, unsigned int data_size) {
+   std::string s;
+   std::string id = "0";
+
+   // create object with right size
+   for (int i = 0; i < data_size; ++i) {
+       s += "a";
+   }
+
+   // put object in the object store
+   test_put(r, id.c_str(), s.c_str());
+  
+   // benchmark 100 times 
+   unsigned long long int cum_us = 0;
+   for (int i = 0; i < 100; ++i) {
+       auto start = std::chrono::high_resolution_clock::now();
+       test_get(r, id.c_str());
+       auto elapsed = std::chrono::high_resolution_clock::now() - start;
+       long long microseconds =
+            std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+       cum_us += microseconds;
+   }
+   
+   double avg_elapsed = cum_us / 100.0;
+   double bw_MBps = data_size / avg_elapsed / 1024 / 1024 * 1000 * 1000;
+   std::cout << "Average get bandwidth (MB/s): " << bw_MBps << std::endl;
+   std::cout << "Average get latency (us): " << avg_elapsed << std::endl;
+}
+
 int main() {
    std::cout << "Connecting to redis" << std::endl;
    auto r = redis_connect("testing-redis-interf.lpfp73.0001.usw2.cache.amazonaws.com", 6379);
@@ -42,26 +71,9 @@ int main() {
      return -1;
    }
 
-   std::string s;
-   std::string id = "0";
-   unsigned int data_size = 100000;
-   for (int i = 0; i < data_size; ++i) {
-       s+= "a";
-   }
-   test_put(r, id.c_str(), s.c_str());
+   benchmark_redis(r, 100000);
+   benchmark_redis(r, 1);
 
-   unsigned long long int cum_us = 0;
-   for (int i = 0; i < 100; ++i) {
-       auto start = std::chrono::high_resolution_clock::now();
-       test_get(r, id.c_str());
-       auto elapsed = std::chrono::high_resolution_clock::now() - start;
-       long long microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
-       cum_us += microseconds;
-   }
-
-   double avg_elapsed = cum_us / 100.0;
-   double bw_MBps = data_size / avg_elapsed / 1024 / 1024 * 1000 * 1000;
-   std::cout << "Average get bandwidth (MB/s): " << bw_MBps << std::endl;
 
    return 0;
 }
