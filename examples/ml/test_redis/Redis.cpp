@@ -99,7 +99,9 @@ extern "C" {
 
         if (reply->type == REDIS_REPLY_NIL) {
             std::cout << "[REDIS] "
-                << "redis returned nil" << std::endl;
+                << "redis returned nil"
+                << " with id: " << id
+                << std::endl;
             freeReplyObject(reply);
             return NULL;
         }
