@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <chrono>
 
+static const int KB = 1024;
 
 void test_put(redisContext* r, const char* id, const char*value) {
    redis_put_binary(r, id, value, strlen(value));
@@ -73,9 +74,12 @@ int main() {
      return -1;
    }
 
-   benchmark_redis(r, 100000);
    benchmark_redis(r, 1);
-
+   benchmark_redis(r, 500);
+   benchmark_redis(r, 1 * KB);
+   benchmark_redis(r, 10 * KB);
+   benchmark_redis(r, 100 * KB);
+   benchmark_redis(r, 1000 * KB);
 
    return 0;
 }
