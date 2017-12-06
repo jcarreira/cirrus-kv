@@ -8,172 +8,197 @@ extern "C" {
 
 //#define REDIS_DEBUG
 
-    redisContext* redis_connect(const char* hostname, int port) {
-        struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+redisContext* redis_connect(const char* hostname, int port) {
+    struct timeval timeout = { 1, 500000 }; // 1.5 seconds
 
 #ifdef REDIS_DEBUG
-        std::cout << "Connecting to hostname: " << hostname << std::endl;
+    std::cout << "Connecting to hostname: " << hostname << std::endl;
 #endif
-        redisContext *c;
-        c = redisConnectWithTimeout(hostname, port, timeout);
+    redisContext *c;
+    c = redisConnectWithTimeout(hostname, port, timeout);
 
-        return c;
+    return c;
+}
+
+void redis_put(redisContext* c, const char* id,
+        const char* s) {
+#ifdef REDIS_DEBUG
+    std::cout << "Redis put"
+        << " id: " << id
+        << " id size: " << strlen(id)
+        << std::endl;    
+#endif
+    redisReply* reply = (redisReply*) redisCommand(c,"SET key:%s %s", id, s);
+
+#ifdef REDIS_DEBUG
+    std::cout << "Redis put"
+        << " reply type: " << reply->type
+        << " status: " << reply->str
+        << std::endl;    
+#endif
+
+    freeReplyObject(reply);
+}
+
+void redis_put_binary(redisContext* c, const char* id,
+        const char* s, size_t size) {
+#ifdef REDIS_DEBUG
+    std::cout << "Redis put binary"
+        << " id: " << id
+        << " id size: " << strlen(id)
+        << " data size: " << size
+        << std::endl;    
+#endif
+    redisReply* reply = (redisReply*)
+        redisCommand(c,"SET key:%s %b", id, s, size);
+
+#ifdef REDIS_DEBUG
+    std::cout << "Redis put binary"
+        << " reply type: " << reply->type
+        << " status: " << reply->str
+        << " size: " << reply->len
+        << std::endl;    
+#endif
+
+    freeReplyObject(reply);
+}
+
+void redis_put_binary_numid(redisContext* c, uint64_t id,
+        const char* s, size_t size) {
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "redis put binary numid"
+        << "id : " << id
+        << " size: " << size << std::endl;
+#endif
+
+    char id_str[100];
+    int ret = snprintf(id_str, 100, "%lu", id);
+    if (ret < 0) {
+        std::cout << "ERROR in sprintf" << std::endl;
     }
-
-    void redis_put(redisContext* c, const char* id,
-            const char* s) {
 #ifdef REDIS_DEBUG
-        std::cout << "Redis put"
-            << " id: " << id
-            << " id size: " << strlen(id)
-            << std::endl;    
+    std::cout << "[REDIS] "
+        << "redis put binary2 with sprintf" 
+        << "id_str:-" << id_str
+        << "-" << std::endl;
 #endif
-        redisReply* reply = (redisReply*) redisCommand(c,"SET key:%s %s", id, s);
-
+    redis_put_binary(c, id_str, s, size);
 #ifdef REDIS_DEBUG
-        std::cout << "Redis put"
-            << " reply type: " << reply->type
-            << " status: " << reply->str
-            << std::endl;    
+    std::cout << "[REDIS] "
+        << "redis put binary3 " << std::endl;
 #endif
+}
 
+char* redis_get(redisContext* c, const char* id, int* len) {
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "redis get id: " << id << std::endl;
+#endif
+    redisReply* reply = (redisReply*)redisCommand(c,"GET key:%s", id);
+
+    if (reply->type == REDIS_REPLY_NIL) {
+        std::cout << "[REDIS] "
+            << "redis returned nil"
+            << " with id: " << id
+            << std::endl;
         freeReplyObject(reply);
+        return NULL;
     }
 
-    void redis_put_binary(redisContext* c, const char* id,
-            const char* s, size_t size) {
 #ifdef REDIS_DEBUG
-        std::cout << "Redis put binary"
-            << " id: " << id
-            << " id size: " << strlen(id)
-            << " data size: " << size
-            << std::endl;    
-#endif
-        redisReply* reply = (redisReply*)
-            redisCommand(c,"SET key:%s %b", id, s, size);
-
-#ifdef REDIS_DEBUG
-        std::cout << "Redis put binary"
-            << " reply type: " << reply->type
-            << " status: " << reply->str
-            << " size: " << reply->len
-            << std::endl;    
+    std::cout << "[REDIS] "
+        << "redis returned success len: " << reply->len << std::endl;
 #endif
 
-        freeReplyObject(reply);
+    char* ret = (char*)malloc(reply->len);
+    memcpy(ret, reply->str, reply->len);
+
+    if (len != nullptr) {
+        *len = reply->len;
     }
 
-    void redis_put_binary_numid(redisContext* c, uint64_t id,
-            const char* s, size_t size) {
+    freeReplyObject(reply);
+    return ret;
+}
+
+char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
+    char* id_str;
+    asprintf(&id_str , "%lu", id);
+
+    char* ret = redis_get(c, id_str, len);
+    if (ret) {
 #ifdef REDIS_DEBUG
         std::cout << "[REDIS] "
-            << "redis put binary numid"
-            << "id : " << id
-            << " size: " << size << std::endl;
+            << "redis got"
+            << "id : " << id_str
+            << " len: " << *len
+            << std::endl;
 #endif
-
-        char id_str[100];
-        int ret = snprintf(id_str, 100, "%lu", id);
-        if (ret < 0) {
-            std::cout << "ERROR in sprintf" << std::endl;
-        }
+    } else {
 #ifdef REDIS_DEBUG
         std::cout << "[REDIS] "
-            << "redis put binary2 with sprintf" 
-            << "id_str:-" << id_str
-            << "-" << std::endl;
-#endif
-        redis_put_binary(c, id_str, s, size);
-#ifdef REDIS_DEBUG
-        std::cout << "[REDIS] "
-            << "redis put binary3 " << std::endl;
-#endif
-    }
-
-    char* redis_get(redisContext* c, const char* id, int* len) {
-#ifdef REDIS_DEBUG
-        std::cout << "[REDIS] "
-            << "redis get id: " << id << std::endl;
-#endif
-        redisReply* reply = (redisReply*)redisCommand(c,"GET key:%s", id);
-
-        if (reply->type == REDIS_REPLY_NIL) {
-            std::cout << "[REDIS] "
-                << "redis returned nil"
-                << " with id: " << id
-                << std::endl;
-            freeReplyObject(reply);
-            return NULL;
-        }
-
-#ifdef REDIS_DEBUG
-        std::cout << "[REDIS] "
-            << "redis returned success len: " << reply->len << std::endl;
-#endif
-
-        char* ret = (char*)malloc(reply->len);
-        memcpy(ret, reply->str, reply->len);
-
-        if (len != nullptr) {
-            *len = reply->len;
-        }
-
-        freeReplyObject(reply);
-        return ret;
-    }
-
-    char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
-        char* id_str;
-        asprintf(&id_str , "%lu", id);
-
-        char*ret = redis_get(c, id_str, len);
-        if (ret) {
-#ifdef REDIS_DEBUG
-            std::cout << "[REDIS] "
-                << "redis got"
-                << "id : " << id_str
-                << " len: " << *len
-                << std::endl;
-#endif
-        } else {
-#ifdef REDIS_DEBUG
-            std::cout << "[REDIS] "
-                << "redis get failed"
-                << std::endl;
-#endif
-	    free(id_str);
-#ifdef REDIS_DEBUG
-            std::cout << "[REDIS] "
-                << "redis return nullptr"
-                << std::endl;
-#endif
-	    return nullptr;
-        }
-
-#ifdef REDIS_DEBUG
-	std::cout << "[REDIS] "
-		<< "freeing id_str"
-		<< std::endl;
+            << "redis get failed"
+            << std::endl;
 #endif
         free(id_str);
 #ifdef REDIS_DEBUG
-	std::cout << "[REDIS] "
-		<< "return ret"
-		<< std::endl;
+        std::cout << "[REDIS] "
+            << "redis return nullptr"
+            << std::endl;
 #endif
-        return ret;
+        return nullptr;
     }
 
-    void redis_ping(redisContext* c) {
-        redisReply* reply = (redisReply*)redisCommand(c,"PING");
-        freeReplyObject(reply);
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "freeing id_str"
+        << std::endl;
+#endif
+    free(id_str);
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "return ret"
+        << std::endl;
+#endif
+    return ret;
+}
+
+void redis_ping(redisContext* c) {
+    redisReply* reply = (redisReply*)redisCommand(c,"PING");
+    freeReplyObject(reply);
+}
+
+void redis_delete(redisContext* c, const char* id) {
+    redisReply* reply = (redisReply*)
+        redisCommand(c,"DEL %s", id );
+    freeReplyObject(reply);
+}
+
+char cmd[10000];
+char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
+    cmd[0] = 0;
+    strcat(cmd, "MGET");
+   
+    // can be made more efficient by asprintf'ing directly into buffer 
+    for (uint64_t i = 0; i < n; ++i) {
+        char* id_str;
+        asprintf(&id_str , "%lu", id[i]);
+        strcat(cmd, " ");
+        strcat(cmd, id_str);
+        free(id_str);
+    }
+    
+    redisReply* reply = (redisReply*) redisCommand(c, cmd);
+
+    char** ret_vec = new char*[n];
+    for (uint64_t i = 0; i < n; ++i) {
+        ret_vec[i] = new char[strlen(reply->element[i]->str) + 1];
+        strcpy(ret_vec[i], reply->element[i]->str);
     }
 
-    void redis_delete(redisContext* c, const char* id) {
-        redisReply* reply = (redisReply*)
-            redisCommand(c,"DEL %s", id );
-        freeReplyObject(reply);
-    }
+    return ret_vec;
+}
 
 }
 

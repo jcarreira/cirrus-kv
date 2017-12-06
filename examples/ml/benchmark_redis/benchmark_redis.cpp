@@ -39,7 +39,7 @@ void benchmark_redis(redisContext* r, unsigned int data_size) {
    std::string id = "benchmarkredis";
 
    // create object with right size
-   for (int i = 0; i < data_size; ++i) {
+   for (unsigned int i = 0; i < data_size; ++i) {
        s += "a";
    }
 

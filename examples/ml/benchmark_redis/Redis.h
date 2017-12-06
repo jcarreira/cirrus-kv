@@ -14,7 +14,7 @@ void redis_put_binary_numid(redisContext* c, uint64_t id,
                              const char* s, size_t size);
 char* redis_get(redisContext* c, const char* id, int* len = nullptr);
 char* redis_get_numid(redisContext* c, uint64_t id, int* len = nullptr);
-char* redis_mget_numid(redisContext* c, int n, uint64_t* id, int* len = nullptr);
+char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id);
 void redis_ping(redisContext* c);
 void redis_delete(redisContext* c, const char* id);
 
