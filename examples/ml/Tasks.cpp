@@ -69,38 +69,38 @@ void MLTask::wait_for_start(int index, cirrus::TCPClient& client, int nworkers) 
 }
 #elif defined(USE_REDIS)
 void MLTask::wait_for_start(int index, auto r, int nworkers) {
-    std::cout << "wait_for_start index: " << index
+    std::cout
+        << "Waiting for all workers to start. index: " << index
         << std::endl;
 
-    std::cout << "Updating start index: " << index
-        << std::endl;
-    char data = 1;
+    char data = 1; // bit used to indicate start
     redis_put_binary_numid(r, START_BASE + index, &data, 1);
-    std::cout << "Updated start index: " << index << std::endl;
 
     int num_waiting_tasks = 3 + nworkers;
     while (1) {
-        int i = 0;
-        for (i = 1; i < num_waiting_tasks; ++i) {
+        int i = 1;
+        for (; i < num_waiting_tasks; ++i) {
+#ifdef DEBUG
             std::cout << "Getting status i: " << i << std::endl;
-            int len;
+#endif
+            int len; // length of object received
             char* data = redis_get_numid(r, START_BASE + i, &len);
             if (data == nullptr) {
                 std::cout << "wait_for_start breaking" << std::endl;
                 break;
             }
             auto is_done = bool(data[0]);
-            std::cout << "is_done: " << is_done << std::endl;
             free(data);
             if (!is_done)
                 break;
         }
-        //std::cout << "wait_for_start i: " << i << std::endl;
-        if (i == num_waiting_tasks)
+        if (i == num_waiting_tasks) {
             break;
+        } else {
+            std::cout << "Worker " << i << " not done" << std::endl;
+        }
     }
-    std::cout << "Done waiting: " << index
-        << std::endl;
+    std::cout << "Worker " << index << " done waiting: " << std::endl;
 }
 #endif
 
@@ -133,12 +133,17 @@ void LogisticTask::run(const Configuration& config, int worker) {
                 lms, lmd);
 #elif defined(USE_REDIS)
     std::cout << "[WORKER] "
-        << "Worker task using REDIS" << std::endl;
+        << "Worker task connecting to REDIS. "
+        << "IP: " << REDIS_IP << std::endl;
     auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+
     if (r == NULL || r -> err) { 
-    std::cout << "[WORKER] "
-        << "Error connecting to REDIS" << std::endl;
-       throw std::runtime_error("Error connecting to redis server");
+       std::cout << "[WORKER] "
+           << "Error connecting to REDIS"
+           << " IP: " << REDIS_IP
+           << std::endl;
+       throw std::runtime_error(
+            "Error connecting to redis server. IP: " + std::string(REDIS_IP));
     }
 #elif USE_S3
 #endif
@@ -228,6 +233,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
             if (data == nullptr) {
                 throw cirrus::NoSuchIDException("");
             }
+            auto after_model = get_time_ns();
+
 #ifdef DEBUG
             std::cout << "[WORKER] "
                 << "Worker task deserializing the model at id: "
@@ -243,7 +250,6 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #endif
             free(data);
 #endif
-            auto after_model = get_time_ns();
             std::cout << "[WORKER] "
                 << "model get (ns): " << (after_model - before_model)
                 << std::endl;
@@ -259,7 +265,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
             //auto before_samples = get_time_ns();
             //auto start = auto start = std::chrono::high_resolution_clock::now();
-            std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point start =
+                                             std::chrono::steady_clock::now();
 
 #ifdef USE_CIRRUS
             samples = *samples_iter;
@@ -277,9 +284,11 @@ void LogisticTask::run(const Configuration& config, int worker) {
             samples = cad_samples(data, len_samples);
             free(data);
 #endif
-            std::chrono::steady_clock::time_point finish = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point finish =
+                                       std::chrono::steady_clock::now();
             uint64_t elapsed_ns =
-                 std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
+                 std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                                      finish-start).count();
             //uint64_t elapsed_ns = get_time_ns() - before_samples;
             double bw = 1.0 * batch_size * sizeof(double) /
                 elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
@@ -528,7 +537,8 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     if (r == NULL || r -> err) { 
     std::cout << "[WORKER-PRELOADED] "
         << "Error connecting to REDIS" << std::endl;
-       throw std::runtime_error("Error connecting to redis server");
+       throw std::runtime_error(
+            "Error connecting to redis server. IP: " + std::string(REDIS_IP));
     }
 #else
     std::cout << "USE_S3 not supported" << std::endl;
@@ -726,7 +736,8 @@ void PSTask::run(const Configuration& config) {
 #elif defined(USE_REDIS)
     auto r  = redis_connect(REDIS_IP, REDIS_PORT);
     if (r == NULL || r -> err) { 
-       throw std::runtime_error("Error connecting to redis server");
+       throw std::runtime_error(
+            "Error connecting to redis server. IP: " + std::string(REDIS_IP));
     }
 #endif
 
@@ -915,7 +926,8 @@ void ErrorTask::run(const Configuration& /* config */) {
 #elif defined(USE_REDIS)
     auto r  = redis_connect(REDIS_IP, REDIS_PORT);
     if (r == NULL || r -> err) { 
-       throw std::runtime_error("Error connecting to redis server");
+       throw std::runtime_error(
+            "Error connecting to redis server. IP: " + std::string(REDIS_IP));
     }
     
     wait_for_start(1, r, nworkers);
@@ -1031,10 +1043,11 @@ void LoadingTask::run(const Configuration& config) {
     //        config.get_input_path(),
     //        " ", 3,
     //        config.get_limit_cols(), false);  // data is already normalized
+    bool normalize = config.get_normalize();
     auto dataset = input.read_input_csv(
             config.get_input_path(),
-            "\t", 10,
-            config.get_limit_cols(), true);
+            " ", 10,
+            config.get_limit_cols(), normalize);
 
     dataset.check_values();
 #ifdef DEBUG
@@ -1057,7 +1070,8 @@ void LoadingTask::run(const Configuration& config) {
 #elif defined(USE_REDIS)
     auto r  = redis_connect(REDIS_IP, REDIS_PORT);
     if (r == NULL || r -> err) { 
-       throw std::runtime_error("Error connecting to redis server");
+       throw std::runtime_error(
+            "Error connecting to redis server. IP: " + std::string(REDIS_IP));
     }
 #endif
 

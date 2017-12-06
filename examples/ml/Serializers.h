@@ -75,7 +75,7 @@ class c_array_deserializer{
 
         if (des_size != size) {
             std::cout
-                    << "Wrong size received at c_array_deserializer)"
+                    << "c_array_deserializer:: Wrong size received"
                     << " size: " + std::to_string(des_size)
                     << " expected: " + std::to_string(size)
                     << " name: " + name

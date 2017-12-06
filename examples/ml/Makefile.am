@@ -21,9 +21,9 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/client/ \
 	       -L$(TOP_DIR)/src/ \
 	       -L$(TOP_DIR)/src/authentication \
-	       -L$(TOP_DIR)/src/common \ 
+	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/ec2-user/cirrus/examples/ml/test_redis/hiredis
+	       -L/home/ec2-user/cirrus/examples/ml/benchmark_redis/hiredis
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
@@ -35,14 +35,14 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/ \
-           -I/home/ec2-user/cirrus/examples/ml/test_redis/ \
-           -I/home/ec2-user/cirrus/examples/ml/test_redis/hiredis
+           -I/home/ec2-user/cirrus/examples/ml/benchmark_redis/ \
+           -I/home/ec2-user/cirrus/examples/ml/benchmark_redis/hiredis
 
 CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
-              Tasks.cpp /home/ec2-user/cirrus/examples/ml/test_redis/Redis.cpp \
+              Tasks.cpp /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp \
               RedisIterator.cpp
 
 CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
@@ -50,10 +50,10 @@ CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              /home/ec2-user/cirrus/examples/ml/test_redis/Redis.cpp
+              /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
 				$(CPP_SOURCES_SOFTMAX)
-two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
-bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)
+#two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
+#bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)

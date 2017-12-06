@@ -36,7 +36,7 @@ void test_get(redisContext* r, const char* id) {
 
 void benchmark_redis(redisContext* r, unsigned int data_size) {
    std::string s;
-   std::string id = "0";
+   std::string id = "benchmarkredis";
 
    // create object with right size
    for (int i = 0; i < data_size; ++i) {
@@ -63,6 +63,8 @@ void benchmark_redis(redisContext* r, unsigned int data_size) {
              << " size: " << data_size << std::endl;
    std::cout << "Average get latency (us): " << avg_elapsed
              << " size: " << data_size << std::endl;
+
+   redis_delete(r, id.c_str());
 }
 
 int main() {
