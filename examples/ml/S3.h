@@ -25,13 +25,13 @@ void put_object(cirrus::ObjectID id, Aws::S3::S3Client& client,
 //  
 //  object_request.SetBody(input_data);
     
-    auto put_object_outcome = s3_client.putObject(bucket_name, key_name, "JOAO"); 
+    auto put_object_outcome = s3_client.putObject(
+                                           bucket_name, key_name, "JOAO"); 
 //  auto put_object_outcome = s3_client.PutObject(object_request);
   
   if (put_object_outcome.IsSuccess()) {
       std::cout << "Done!" << std::endl;
-  }
-  else {
+  } else {
       std::cout << "PutObject error: " <<
           put_object_outcome.GetError().GetExceptionName() << " " <<
           put_object_outcome.GetError().GetMessage() << std::endl;
