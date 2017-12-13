@@ -1,18 +1,8 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include <fstream>
-#include <iterator>
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <iomanip>
-#include <map>
-#include <string>
 #include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <memory>
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -25,14 +15,12 @@
 static const uint64_t KB = 1024;
 static const uint64_t MB = 1024 * KB;
 const char PORT[] = "12345";
-const char IP[] = "127.0.0.1";
-static const uint64_t MILLION = 1000000;
-static const uint64_t N_ITER = 1000;
+const char IP[] = "10.10.49.84";
 
 
 /**
-  * This benchmark aims to find the put bandwidth achieved when it keeps
-  * outstanding_target requests in flight.
+  * This benchmark is used to determine the latency of
+  * removing a set of objects
   */
 template <uint64_t SIZE>
 void remove_bulk_benchmark(uint64_t num_objs) {
@@ -61,7 +49,7 @@ void remove_bulk_benchmark(uint64_t num_objs) {
 
 
 auto main() -> int {
-    remove_bulk_benchmark<100 * 1024>(5000);
+    remove_bulk_benchmark<100 * KB>(5000);
 
     return 0;
 }
