@@ -79,3 +79,27 @@ void Dataset::print() const {
     samples_.print();
 }
 
+std::shared_ptr<double> Dataset::build_s3_obj(uint64_t l, uint64_t r) {
+  uint64_t num_samples = r - l;
+  uint64_t entries_per_sample = samples_.cols + 1;
+
+  std::shared_ptr<double> s3_obj = std::shared_ptr<double>(
+      new double[num_samples * entries_per_sample],
+      std::default_delete<double[]>());
+
+  for (uint64_t i = 0; i < num_samples; ++i) {
+    double* d = s3_obj.get() + i * entries_per_sample;
+
+    // copy label
+    *d = labels_.get()[i];
+    d++; // move to features
+
+    // copy features
+    const double* start = samples_.row(l + i);
+    const double* end = samples_.row(l + i) + samples_.cols;
+    std::copy(start, end, d);
+  }
+
+  return s3_obj;
+}
+

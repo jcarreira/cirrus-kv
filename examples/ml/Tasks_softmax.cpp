@@ -140,7 +140,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #endif
 
 
-    uint64_t num_batches = config.get_num_samples() /
+    uint64_t num_batches = config.get_limit_samples() /
         config.get_minibatch_size();
     std::cout << "[WORKER] "
         << "num_batches: " << num_batches
@@ -615,6 +615,7 @@ void LoadingTask::run(const Configuration& config) {
     auto dataset = input.read_input_csv(
             config.get_input_path(),
             "\t", 30,
+            config.get_limit_samples(),
             config.get_limit_cols(), true);
 
     std::cout << "[LOADER] "
@@ -697,7 +698,8 @@ void LoadingTask::run(const Configuration& config) {
             if (i == 0) {
                 std::cout << "[LOADER] "
                     << "Storing sample with id: " << 0
-                    << " checksum: " << checksum(sample, batch_size) << std::endl
+                    << " checksum: " << checksum(sample.get(), batch_size)
+                    << std::endl
                     << std::endl;
             }
 
@@ -756,7 +758,7 @@ void LoadingTask::run(const Configuration& config) {
 
     std::cout << "[LOADER] "
         << "Got sample with id: " << 0
-        << " checksum: " << checksum(sample, batch_size) << std::endl
+        << " checksum: " << checksum(sample.get(), batch_size) << std::endl
         << "Added all samples"
         << std::endl;
 

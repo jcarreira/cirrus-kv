@@ -60,7 +60,7 @@ uint32_t crc32(const void *buf, size_t size) {
     return crc ^ ~0U;
 }
 
-double checksum(std::shared_ptr<double> p, uint64_t size) {
-    return crc32(p.get(), size * sizeof(double));
+double checksum(double* p, uint64_t size) {
+    return crc32(p, size * sizeof(double));
 }
 

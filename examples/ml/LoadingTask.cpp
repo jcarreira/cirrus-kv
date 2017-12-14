@@ -11,12 +11,9 @@
   * It signals when work is done by changing a bit in the object store
   */
 void LoadingTask::run(const Configuration& config) {
-  std::cout << "[LOADER] "
-    << "Read criteo input..."
-    << std::endl;
+  std::cout << "[LOADER] " << "Read criteo input..." << std::endl;
 
   Input input;
-
   // auto dataset = input.read_input_csv(
   //        config.get_input_path(),
   //        " ", 3,
@@ -25,6 +22,7 @@ void LoadingTask::run(const Configuration& config) {
   auto dataset = input.read_input_csv(
       config.get_input_path(),
       " ", 10,
+      config.get_limit_samples(),
       config.get_limit_cols(), normalize);
 
   dataset.check_values();
@@ -59,11 +57,9 @@ void LoadingTask::run(const Configuration& config) {
 #endif
 
   std::cout << "[LOADER] "
-    << "Adding "
-    << dataset.num_samples()
+    << "Adding " << dataset.num_samples()
     << " samples in batches of size (samples*features): "
-    << batch_size
-    << std::endl;
+    << batch_size << std::endl;
 
   // We put in batches of N samples
   for (unsigned int i = 0;
@@ -97,6 +93,7 @@ void LoadingTask::run(const Configuration& config) {
         << std::endl;
 #ifdef DATASET_IN_S3
       {
+        std::cout << "Adding sample to s3" << std::endl;
         uint64_t len = cas_samples.size(sample);
         auto data = std::unique_ptr<char[]>(
             new char[len]);
@@ -120,6 +117,7 @@ void LoadingTask::run(const Configuration& config) {
 
 #ifdef DATASET_IN_S3
       {
+        std::cout << "Adding label to s3" << std::endl;
         auto data = std::unique_ptr<char>(
             new char[cas_labels.size(label)]);
         cas_labels.serialize(label, data.get());

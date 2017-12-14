@@ -30,6 +30,12 @@ class Configuration {
       * @returns minibatch size
       */
     uint64_t get_minibatch_size() const;
+    
+    /**
+      * Get size of each object in S3
+      * @returns s3 object size
+      */
+    uint64_t get_s3_size() const;
 
     /**
       * Get flag indicating whether to use prefetching
@@ -92,9 +98,9 @@ class Configuration {
     bool get_normalize() const;
 
     /**
-      * Get number of training samples
+      * Get max number of training samples
       */
-    uint64_t get_num_samples() const;
+    uint64_t get_limit_samples() const;
 
  private:
     /**
@@ -108,6 +114,8 @@ class Configuration {
     uint64_t n_workers = 0;  //< number of system workers
 
     uint64_t minibatch_size = 0;  //< size of minibatch
+    uint64_t s3_size = 0;  //< size of samples chunk stored in each s3 object
+
     double learning_rate = 0;     //< sgd learning rate
     double epsilon = 0;           //< regularization rate
 
@@ -126,7 +134,7 @@ class Configuration {
     uint64_t limit_cols = 0;
     bool normalize = false;    //< whether to normalize the dataset
 
-    uint64_t num_samples = 0;  //< number of training input samples
+    uint64_t limit_samples = 0;  //< max number of training input samples
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

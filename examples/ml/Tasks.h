@@ -77,6 +77,34 @@ class LogisticTask : public MLTask {
  private:
 };
 
+class LogisticTaskS3 : public MLTask {
+ public:
+     LogisticTaskS3(const std::string& IP, const std::string& PORT,
+             uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+             uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+             uint64_t SAMPLE_BASE, uint64_t START_BASE,
+             uint64_t batch_size, uint64_t samples_per_batch,
+             uint64_t features_per_sample, uint64_t nworkers,
+             uint64_t worker_id) :
+         MLTask(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, worker_id)
+    {}
+
+     /**
+       * Worker here is a value 0..nworkers - 1
+       */
+     void run(const Configuration& config, int worker);
+
+ private:
+     bool run_phase1(auto& samples, auto& labels,
+         auto& model, auto r, auto& s3_iter,
+         uint64_t features_per_sample);
+     auto get_model(auto r, auto lmd);
+     void push_gradient(auto r, int, LRGradient*);
+};
+
 class LogisticTaskPreloaded : public MLTask {
  public:
      LogisticTaskPreloaded(const std::string& IP, const std::string& PORT,
@@ -160,6 +188,28 @@ class LoadingTask : public MLTask {
                 nworkers, worker_id)
     {}
      void run(const Configuration& config);
+
+ private:
+};
+
+class LoadingTaskS3 : public MLTask {
+ public:
+     LoadingTaskS3(const std::string& IP, const std::string& PORT,
+             uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+             uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+             uint64_t SAMPLE_BASE, uint64_t START_BASE,
+             uint64_t batch_size, uint64_t samples_per_batch,
+             uint64_t features_per_sample, uint64_t nworkers,
+             uint64_t worker_id) :
+         MLTask(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+                batch_size, samples_per_batch, features_per_sample,
+                nworkers, worker_id)
+    {}
+     void run(const Configuration& config);
+     Dataset read_dataset( const Configuration& config);
+     auto connect_redis();
+     void check_loading(auto& s3_client, uint64_t s3_obj_entries);
 
  private:
 };

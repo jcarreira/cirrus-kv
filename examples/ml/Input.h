@@ -24,11 +24,14 @@ class Input {
       * @param input_file Path to csv file with dataset
       * @param delimiter Delimiter string between every feature in the csv file
       * @param nthreads Number of threads to read the csv file
+      * @param limit_lines Maximum number of samples to read from file
       * @param limit_cols Maximum number of columns/features to read from file
       * @returns The dataset
       */
     Dataset read_input_csv(const std::string& input_file,
-            std::string delimiter, uint64_t nthreads, uint64_t limit_cols = 0,
+            std::string delimiter, uint64_t nthreads,
+            uint64_t limit_lines = 0,
+            uint64_t limit_cols = 0,
             bool to_normalize = false);
 
     /**

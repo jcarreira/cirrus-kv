@@ -88,7 +88,7 @@ void run_tasks(int rank, const Configuration& config) {
         pt.run(config);
         sleep_forever();
     } else if (rank == LOADING_TASK_RANK) {
-        LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        LoadingTaskS3 lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
@@ -105,18 +105,10 @@ void run_tasks(int rank, const Configuration& config) {
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-#ifdef PRELOAD_DATA
-        std::cout << "Launching preloaded task" << std::endl;
-        LogisticTaskPreloaded lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        LogisticTaskS3 lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
-#else
-        LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, rank);
-#endif
         lt.run(config, rank - WORKER_TASK_RANK);
         sleep_forever();
 

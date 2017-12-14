@@ -50,8 +50,9 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
-              PSTask.cpp RedisIterator.cpp TasksWait.cpp \
-	      Redis.cpp
+              PSTask.cpp TasksWait.cpp \
+	      RedisIterator.cpp  S3Iterator.cpp \
+	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp
 
 CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \

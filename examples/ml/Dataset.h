@@ -95,6 +95,11 @@ class Dataset {
       */
     void print() const;
 
+    /** Build data for S3 object
+      * from feature and label data from samples in range [l,r)
+      */
+    std::shared_ptr<double> build_s3_obj(uint64_t, uint64_t);
+
  public:
     Matrix samples_;  //< dataset in matrix format
     std::shared_ptr<const double> labels_;  //< vector of labels

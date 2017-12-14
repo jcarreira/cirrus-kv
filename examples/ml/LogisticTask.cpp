@@ -52,7 +52,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
   exit(-1);
 #endif
 
-  uint64_t num_batches = config.get_num_samples() /
+  uint64_t num_batches = config.get_limit_samples() /
     config.get_minibatch_size();
   std::cout << "[WORKER] "
     << "num_batches: " << num_batches << std::endl;
@@ -420,7 +420,7 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
   exit(-1);
 #endif
 
-  uint64_t num_batches = config.get_num_samples() /
+  uint64_t num_batches = config.get_limit_samples() /
     config.get_minibatch_size();
   std::cout << "[WORKER-PRELOADED] "
     << "num_batches: " << num_batches << std::endl;

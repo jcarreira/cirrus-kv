@@ -40,9 +40,7 @@ Dataset Input::read_input_criteo(const std::string& samples_input_file,
         exit(-1);
     }
 
-    std::cout << "Reading " << samples_entries
-        << " entries.."
-        << std::endl;
+    std::cout << "Reading " << samples_entries << " entries.." << std::endl;
 
     double* samples = new double[samples_entries * n_cols];
     double* labels  = new double[samples_entries];
@@ -97,9 +95,7 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
 
         std::vector<std::string> thread_lines;
 
-        /**
-          * Read up to read_at_a_time limes
-          */
+        // Read up to read_at_a_time limes
         std::cout << "Popping lines size: " << lines.size() << std::endl;
         input_mutex.lock();
         while (lines.size() && thread_lines.size() < read_at_a_time) {
@@ -209,28 +205,36 @@ void Input::split_data_labels(const std::vector<std::vector<double>>& input,
     }
 
     if (input[0].size() < label_col) {
-        throw std::runtime_error("Error: label column is too big");
+      throw std::runtime_error("Error: label column is too big");
     }
 
     // for every sample split it into labels and training data
     for (unsigned int i = 0; i < input.size(); ++i) {
-        labels.push_back(input[i][label_col]);  // get label
+      labels.push_back(input[i][label_col]);  // get label
 
-        std::vector<double> left, right;
-        // get all data before label
-        left = std::vector<double>(input[i].begin(),
-                                   input[i].begin() + label_col);
-        // get all data after label
-        right = std::vector<double>(input[i].begin() + label_col + 1,
-                                    input[i].end());
+      std::vector<double> left, right;
+      // get all data before label
+      left = std::vector<double>(input[i].begin(),
+          input[i].begin() + label_col);
+      // get all data after label
+      right = std::vector<double>(input[i].begin() + label_col + 1,
+          input[i].end());
 
-        left.insert(left.end(), right.begin(), right.end());
-        training_data.push_back(left);
+      left.insert(left.end(), right.begin(), right.end());
+      training_data.push_back(left);
     }
 }
 
+void shuffle_samples_labels(auto& samples, auto& labels) {
+  std::srand(42);
+  std::random_shuffle(samples.begin(), samples.end());
+  std::srand(42);
+  std::random_shuffle(labels.begin(), labels.end());
+}
+
 Dataset Input::read_input_csv(const std::string& input_file,
-        std::string delimiter, uint64_t nthreads, uint64_t limit_cols,
+        std::string delimiter, uint64_t nthreads,
+        uint64_t limit_lines, uint64_t limit_cols,
         bool to_normalize) {
     std::cout << "Reading input file: " << input_file << std::endl;
 
@@ -239,54 +243,51 @@ Dataset Input::read_input_csv(const std::string& input_file,
         throw std::runtime_error("Error opening input file");
     }
 
-    std::vector<std::vector<double>> samples;
-    std::vector<double> labels;
-
-    std::queue<std::string> lines[nthreads];
+    std::vector<std::vector<double>> samples; // final result
+    std::vector<double> labels; // final result
+    std::queue<std::string> lines[nthreads]; // input to threads
 
     std::mutex input_mutex[nthreads];   // mutex to protect queue of raw samples
     std::mutex output_mutex;  // mutex to protect queue of processed samples
     bool terminate = false;   // indicates when worker threads should terminate
-    std::vector<std::thread*> threads;  // vector of worker threads
+    std::vector<std::shared_ptr<std::thread>> threads;  // vector of worker threads
 
     for (uint64_t i = 0; i < nthreads; ++i) {
         threads.push_back(
-                new std::thread(
+                std::make_shared<std::thread>(
                         /**
                           * We could also declare read_csv_thread static and
                           * avoid this ugliness
                           */
                         std::bind(&Input::read_csv_thread, this,
-                            std::placeholders::_1,
-                            std::placeholders::_2,
-                            std::placeholders::_3,
-                            std::placeholders::_4,
-                            std::placeholders::_5,
-                            std::placeholders::_6,
-                            std::placeholders::_7,
-                            std::placeholders::_8),
-                    std::ref(input_mutex[i]),
-                    std::ref(output_mutex),
-                    delimiter,
-                    std::ref(lines[i]), std::ref(samples),
+                            std::placeholders::_1, std::placeholders::_2,
+                            std::placeholders::_3, std::placeholders::_4,
+                            std::placeholders::_5, std::placeholders::_6,
+                            std::placeholders::_7, std::placeholders::_8),
+                    std::ref(input_mutex[i]), std::ref(output_mutex),
+                    delimiter, std::ref(lines[i]), std::ref(samples),
                     std::ref(labels), std::ref(terminate),
                     limit_cols));
     }
 
-    std::string line;
-    int batch_size = 100;
+    const int batch_size = 100; // we push things into shared queue in batches
     std::vector<std::string> input;
     input.reserve(batch_size);
-    uint64_t count = 0;
-    uint64_t thread_index = 0;
+    uint64_t lines_count = 0;
+    uint64_t thread_index = 0; // we push input to threads in round robin
     while (1) {
        int i;
-       for (i = 0; i < batch_size; ++i) {
-          if (!getline(fin, line)) {
+       for (i = 0; i < batch_size; ++i, lines_count++) {
+          std::string line;
+          if (!getline(fin, line))
              break;
-          }
+          // enforce max number of lines read
+          if (lines_count && lines_count >= limit_lines)
+            break;
           input[i] = line;
        }
+        if (i != batch_size)
+           break;
 
         input_mutex[thread_index].lock();
         for (int j = 0; j < i; ++j) {
@@ -294,18 +295,8 @@ Dataset Input::read_input_csv(const std::string& input_file,
         }
         input_mutex[thread_index].unlock();
 
-        count += i;
-        if (count % REPORT_LINES == 0) {
-            std::cout << "Read: " << count << " lines." << std::endl;
-        }
-
-        if (count > 1000000)
-           break;
-
-        if (i != batch_size) {
-           break;
-        }
-
+        if (lines_count % REPORT_LINES == 0)
+            std::cout << "Read: " << lines_count << " lines." << std::endl;
         thread_index = (thread_index + 1) % nthreads;
     }
 
@@ -313,6 +304,7 @@ Dataset Input::read_input_csv(const std::string& input_file,
        usleep(100000);
        for (thread_index = 0; thread_index < nthreads; ++thread_index) {
            input_mutex[thread_index].lock();
+           // check if a thread is still working
            if (!lines[thread_index].empty()) {
                input_mutex[thread_index].unlock();
               break;
@@ -324,10 +316,8 @@ Dataset Input::read_input_csv(const std::string& input_file,
     }
 
     terminate = true;
-    for (uint64_t i = 0; i < nthreads; ++i) {
-        threads[i]->join();
-        delete threads[i];
-    }
+    for (auto thread : threads)
+        thread->join();
 
     assert(samples.size() == labels.size());
 
@@ -335,19 +325,13 @@ Dataset Input::read_input_csv(const std::string& input_file,
     std::cout << "Printing first sample" << std::endl;
     print_sample(samples[0]);
 
-    if (to_normalize) {
+    if (to_normalize)
         normalize(samples);
-    }
 
-    std::srand(42);
-    std::random_shuffle(samples.begin(), samples.end());
-    std::srand(42);
-    std::random_shuffle(labels.begin(), labels.end());
+    shuffle_samples_labels(samples, labels);
 
     std::cout << "Printing first sample after normalization" << std::endl;
     print_sample(samples[0]);
-
-    // we transfer ownership of the samples and labels here
     return Dataset(samples, labels);
 }
 

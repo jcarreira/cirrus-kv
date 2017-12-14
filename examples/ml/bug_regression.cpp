@@ -127,6 +127,7 @@ void run_loading_task(const Configuration& config) {
     auto dataset = input.read_input_csv(
             config.get_input_path(),
             " ", 3,
+            config.get_limit_samples(),
             config.get_limit_cols(), true);
     std::cout << "[LOADER] "
         << "Done reading criteo..."

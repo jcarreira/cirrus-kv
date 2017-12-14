@@ -34,8 +34,9 @@ void Configuration::print() const {
     std::cout << "Printing configuration: " << std::endl;
     std::cout << "input_path: " << get_input_path() << std::endl;
     std::cout << "Minibatch size: " << get_minibatch_size() << std::endl;
+    std::cout << "S3 size: " << get_s3_size() << std::endl;
     std::cout << "learning rate: " << get_learning_rate() << std::endl;
-    std::cout << "num_samples: " << get_num_samples() << std::endl;
+    std::cout << "limit_samples: " << get_limit_samples() << std::endl;
 }
 
 /**
@@ -52,6 +53,8 @@ void Configuration::parse_line(const std::string& line) {
 
     if (s == "minibatch_size:") {
         iss >> minibatch_size;
+    } else if (s == "s3_size:") {
+        iss >> s3_size;
     } else if (s == "input_path:") {
         iss >> input_path;
     } else if (s == "samples_path:") {
@@ -72,8 +75,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> num_classes;
     } else if (s == "limit_cols:") {
         iss >> limit_cols;
-    } else if (s == "num_samples:") {
-        iss >> num_samples;
+    } else if (s == "limit_samples:") {
+        iss >> limit_samples;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -137,6 +140,12 @@ uint64_t Configuration::get_minibatch_size() const {
     return minibatch_size;
 }
 
+uint64_t Configuration::get_s3_size() const {
+    if (s3_size == 0)
+        throw std::runtime_error("Minibatch size not loaded");
+    return s3_size;
+}
+
 int Configuration::get_prefetching() const {
     if (prefetching == -1)
         throw std::runtime_error("prefetching not loaded");
@@ -189,7 +198,7 @@ bool Configuration::get_normalize() const {
 /**
   * Get number of training input samples
   */
-uint64_t Configuration::get_num_samples() const {
-    return num_samples;
+uint64_t Configuration::get_limit_samples() const {
+    return limit_samples;
 }
 
