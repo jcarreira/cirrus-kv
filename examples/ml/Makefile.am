@@ -11,7 +11,10 @@ bin_PROGRAMS = parameter_server parameter_server_softmax
 #               parameter_server_softmax
 
 LIBS         =  -lclient -lauthentication -lutils \
-		-levictionpolicies -lhiredis
+		-levictionpolicies -lhiredis \
+		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
+		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
+		-lall -lkeyutils -lhiredis
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -22,10 +25,15 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
-	       -L$(TOP_DIR)/src/cache_manager
+	       -L$(TOP_DIR)/src/cache_manager \
+	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
+	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-s3 \
+	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
+	       -L/home/ec2-user/keyutils/keyutils-1.5.10
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive \
+	   -lpthread -Wl,--no-whole-archive
 CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -ggdb -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
@@ -33,7 +41,9 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/third_party/eigen_source \
            -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
-           -I $(MPI_HOME)/include/
+           -I $(MPI_HOME)/include/ -Itest_aws \
+	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
+	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/
 
 CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
@@ -53,5 +63,3 @@ CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
 				$(CPP_SOURCES_SOFTMAX)
-#two_clients_test_SOURCES  = two_clients_test.cpp $(CPP_SOURCES)
-#bug_regression_SOURCES  = bug_regression.cpp $(CPP_SOURCES)

@@ -59,17 +59,17 @@ int test_redis() {
 
 void test_s3() {
     std::cout << "Initializing aws" << std::endl;
-    initialize_aws();
+    s3_initialize_aws();
 
     std::cout << "Creating client" << std::endl;
-    auto client = create_client();
+    auto client = s3_create_client();
     std::cout << "Putting object" << std::endl;
-    put_object(0, client, "cirrusonlambdas", "JOAO");
+    s3_put_object(0, client, "cirrusonlambdas", "JOAO");
     std::cout << "Getting object" << std::endl;
-    auto res = get_object(0, client, "cirrusonlambdas");
+    auto res = s3_get_object(0, client, "cirrusonlambdas");
     std::cout << "Received: " << res << std::endl;
 
-    shutdown_aws();
+    s3_shutdown_aws();
 }
 
 int main() {

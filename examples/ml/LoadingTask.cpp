@@ -3,6 +3,7 @@
 #include "Serializers.h"
 #include "Redis.h"
 #include "Input.h"
+#include "S3.h"
 
 /**
   * Load the object store with the training dataset
@@ -16,7 +17,7 @@ void LoadingTask::run(const Configuration& config) {
 
   Input input;
 
-  //auto dataset = input.read_input_csv(
+  // auto dataset = input.read_input_csv(
   //        config.get_input_path(),
   //        " ", 3,
   //        config.get_limit_cols(), false);  // data is already normalized
@@ -38,7 +39,12 @@ void LoadingTask::run(const Configuration& config) {
   c_array_deserializer<double> cad_labels(samples_per_batch,
       "loader labels_store", false);
 
-#ifdef USE_CIRRUS
+
+#ifdef DATASET_IN_S3
+  s3_initialize_aws();
+  auto s3_client = s3_create_client();
+#endif
+#if defined(USE_CIRRUS)
   cirrus::TCPClient client;
   cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
     samples_store(IP, PORT, &client, cas_samples, cad_samples);
@@ -46,7 +52,7 @@ void LoadingTask::run(const Configuration& config) {
     labels_store(IP, PORT, &client, cas_labels, cad_labels);
 #elif defined(USE_REDIS)
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (r == NULL || r -> err) { 
+  if (r == NULL || r -> err) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
@@ -89,18 +95,39 @@ void LoadingTask::run(const Configuration& config) {
         << (SAMPLE_BASE + i)
         << " samples with size (bytes): " << sizeof(double) * batch_size
         << std::endl;
-#ifdef USE_CIRRUS
-      samples_store.put(SAMPLE_BASE + i, sample);
-#elif defined(USE_REDIS)
-      uint64_t len = cas_samples.size(sample);
+#ifdef DATASET_IN_S3
       {
+        uint64_t len = cas_samples.size(sample);
         auto data = std::unique_ptr<char[]>(
             new char[len]);
         cas_samples.serialize(sample, data.get());
-        redis_put_binary_numid(r, SAMPLE_BASE + i, data.get(), cas_samples.size(sample));
+        s3_put_object(SAMPLE_BASE + i, s3_client,
+            "cirrusonlambdas",
+            std::string(data.get(), cas_samples.size(sample)));
+      }
+#elif defined(USE_CIRRUS)
+      samples_store.put(SAMPLE_BASE + i, sample);
+#elif defined(USE_REDIS)
+      {
+        uint64_t len = cas_samples.size(sample);
+        auto data = std::unique_ptr<char[]>(
+            new char[len]);
+        cas_samples.serialize(sample, data.get());
+        redis_put_binary_numid(r, SAMPLE_BASE + i,
+            data.get(), cas_samples.size(sample));
       }
 #endif
-#ifdef USE_CIRRUS
+
+#ifdef DATASET_IN_S3
+      {
+        auto data = std::unique_ptr<char>(
+            new char[cas_labels.size(label)]);
+        cas_labels.serialize(label, data.get());
+        s3_put_object(LABEL_BASE + i, s3_client,
+            "cirrusonlambdas",
+            std::string(data.get(), cas_labels.size(label)));
+      }
+#elif defined(USE_CIRRUS)
       std::cout << "[LOADER] "
         << "Putting label"
         << std::endl;
@@ -114,7 +141,8 @@ void LoadingTask::run(const Configuration& config) {
         auto data = std::unique_ptr<char>(
             new char[cas_labels.size(label)]);
         cas_labels.serialize(label, data.get());
-        redis_put_binary_numid(r, LABEL_BASE + i, data.get(), cas_labels.size(label));
+        redis_put_binary_numid(r, LABEL_BASE + i,
+                         data.get(), cas_labels.size(label));
       }
 #endif
     } catch(...) {
@@ -163,7 +191,7 @@ void LoadingTask::run(const Configuration& config) {
 #endif
   std::cout << std::endl;
 
-#ifdef USE_CIRRUS    
+#ifdef USE_CIRRUS
   wait_for_start(LOADING_TASK_RANK, client, nworkers);
 #elif defined(USE_REDIS)
   wait_for_start(LOADING_TASK_RANK, r, nworkers);
