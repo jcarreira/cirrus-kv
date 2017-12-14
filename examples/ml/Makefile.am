@@ -22,8 +22,7 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
-	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/ec2-user/cirrus/examples/ml/benchmark_redis/hiredis
+	       -L$(TOP_DIR)/src/cache_manager
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
@@ -34,9 +33,7 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/third_party/eigen_source \
            -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
-           -I $(MPI_HOME)/include/ \
-           -I/home/ec2-user/cirrus/examples/ml/benchmark_redis/ \
-           -I/home/ec2-user/cirrus/examples/ml/benchmark_redis/hiredis
+           -I $(MPI_HOME)/include/
 
 CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
@@ -44,14 +41,14 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
               PSTask.cpp RedisIterator.cpp TasksWait.cpp \
-	      /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp
+	      Redis.cpp
 
 CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp
+              Redis.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \

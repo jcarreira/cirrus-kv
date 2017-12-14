@@ -44,7 +44,6 @@ void LogisticTask::run(const Configuration& config, int worker) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-#elif USE_S3
 #endif
 
 
@@ -123,33 +122,14 @@ void LogisticTask::run(const Configuration& config, int worker) {
       model = model_store.get(MODEL_BASE);
 #elif defined(USE_REDIS)
       int len;
-#ifdef DEBUG
-      std::cout << "[WORKER] "
-        << "Worker task getting the model at id: "
-        << MODEL_BASE
-        << "\n";
-#endif
       char* data = redis_get_numid(r, MODEL_BASE, &len);
       if (data == nullptr) {
         throw cirrus::NoSuchIDException("");
       }
-      auto after_model = get_time_ns();
-
-#ifdef DEBUG
-      std::cout << "[WORKER] "
-        << "Worker task deserializing the model at id: "
-        << MODEL_BASE
-        << "\n";
-#endif
       model = lmd(data, len);
-#ifdef DEBUG
-      std::cout << "[WORKER] "
-        << "Worker task freeing the model at id: "
-        << MODEL_BASE
-        << "\n";
-#endif
       free(data);
 #endif
+      auto after_model = get_time_ns();
       std::cout << "[WORKER] "
         << "model get (ns): " << (after_model - before_model)
         << std::endl;

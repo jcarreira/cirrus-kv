@@ -1,5 +1,6 @@
 CXXFLAGS=-std=c++11 -Wall
-INCLUDES=-I../../../third_party/hiredis/ -I../benchmark_redis/ -I../test_aws/ \
+INCLUDES=-I../../../third_party/hiredis/ -I../benchmark_redis/ \
+	 -I../test_aws/ -I.. \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
         -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/
 LDFLAGS=-L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
@@ -14,7 +15,7 @@ LDFLAGS=-L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ 
 LIBFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 all:  
-	g++ $(CXXFLAGS) test_s3_redis.cpp ../benchmark_redis/Redis.cpp $(INCLUDES) $(LDFLAGS) $(LIBFLAGS) -o test_s3_redis
+	g++ $(CXXFLAGS) test_s3_redis.cpp ../Redis.cpp $(INCLUDES) $(LDFLAGS) $(LIBFLAGS) -o test_s3_redis
 
 clean:
 	rm -rf a.out test_s3_redis
