@@ -18,6 +18,7 @@ class Dataset {
 
     /**
       * Construct a dataset given a vector of samples and a vector of labels
+      * This method copies all the inputs
       * @param samples Vector of samples
       * @param labels Vector of labels
       */
@@ -25,13 +26,27 @@ class Dataset {
             const std::vector<double>& labels);
     /**
       * Construct a dataset given a vector of samples and a vector of labels
+      * This method copies all the inputs
       * @param samples Vector of samples
       * @param labels Vector of labels
-      * @param n_samples Nunber of samples in the dataset
+      * @param n_samples Number of samples in the dataset
       * @param n_features Number of features on each sample
       */
     Dataset(const double* samples,
             const double* labels,
+            uint64_t n_samples,
+            uint64_t n_features);
+
+    /**
+      * Construct a dataset given a vector of minibatches (samples and labels)
+      * This method copies all the inputs
+      * @param samples Vector of minibatches samples
+      * @param labels Vector of minibatches labels
+      * @param n_samples Number of samples in the dataset
+      * @param n_features Number of features on each sample
+      */
+    Dataset(std::vector<std::shared_ptr<double>> samples,
+            std::vector<std::shared_ptr<double>> labels,
             uint64_t n_samples,
             uint64_t n_features);
 

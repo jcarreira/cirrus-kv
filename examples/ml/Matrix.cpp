@@ -36,6 +36,24 @@ Matrix::Matrix(const double* d, uint64_t r, uint64_t c) {
     data.reset(copy, std::default_delete<const double[]>());
 }
 
+Matrix::Matrix(const std::vector<std::shared_ptr<double>> d,
+    uint64_t r, uint64_t c) {
+
+  rows = d.size() * r;
+  cols = c;
+
+  // XXX extra copy here
+  double* copy = new double[rows * cols];
+  for (uint64_t i = 0; i < d.size(); ++i) {
+    memcpy(
+        copy + i * (r * c),
+        d[i].get(),
+        r * c * sizeof(double));
+  }
+
+  data.reset(copy, std::default_delete<const double[]>());
+}
+
 const double* Matrix::row(uint64_t l) const {
     const double* data_start = reinterpret_cast<const double*>(data.get());
     return &data_start[l * cols];

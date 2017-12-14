@@ -2,12 +2,53 @@
 
 #include "Serializers.h"
 #include "Redis.h"
+#include "config.h"
+
+#define ERROR_INTERVAL_USEC (500) // time between error checks
+
+
+#if defined(USE_REDIS)
+LRModel ErrorTask::get_model_redis(auto r, auto lmd) {
+  int len_model;
+  char* data = redis_get_numid(r, MODEL_BASE, &len_model);
+  LRModel model = lmd(data, len_model);
+  free(data);
+  return model;
+}
+          
+void ErrorTask::get_samples_labels_redis(
+    auto r, auto i, auto& samples, auto& labels,
+    auto cad_samples, auto cad_labels) {
+  int len_samples;
+  char* data = redis_get_numid(r, SAMPLE_BASE + i, &len_samples);
+  if (data == NULL)
+    throw cirrus::NoSuchIDException("Error getting samples");
+  samples = cad_samples(data, len_samples);
+  free(data);
+
+  int len_labels;
+  data = redis_get_numid(r, LABEL_BASE + i, &len_labels);
+  if (data == NULL)
+    throw cirrus::NoSuchIDException("Error getting labels");
+  labels = cad_labels(data, len_labels);
+  free(data);
+}
+#endif
+
+void check_labels(auto labels, auto samples_per_batch) {
+  for (uint64_t i = 0; i < labels.size(); ++i) {
+    for (uint64_t j = 0; j < samples_per_batch; ++j) {
+      std::cout << "label " << *(labels[i].get() + j) << std::endl;
+    }
+  }
+}
 
 void ErrorTask::run(const Configuration& /* config */) {
   std::cout << "Compute error task connecting to store" << std::endl;
 
   cirrus::TCPClient client;
 
+  // declare serializers
   lr_model_serializer lms(MODEL_GRAD_SIZE);
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
   c_array_serializer<double> cas_samples(batch_size);
@@ -41,11 +82,51 @@ void ErrorTask::run(const Configuration& /* config */) {
   wait_for_start(ERROR_TASK_RANK, r, nworkers);
 #endif
 
-  bool first_time = true;
-  while (1) {
-    sleep(2);
+  // get data first
+  // we get up to 10K samples
+  // what we are going to use as a test set
+  std::cout << "[ERROR_TASK] getting 10k minibatches"
+    << "\n";
+start:
+  std::vector<std::shared_ptr<double>> labels_vec;
+  std::vector<std::shared_ptr<double>> samples_vec;
+  for (int i = 0; i < 10000; ++i) {
+    std::shared_ptr<double> samples;
+    std::shared_ptr<double> labels;
+    try {
+#ifdef USE_CIRRUS
+      samples = samples_store.get(SAMPLE_BASE + i);
+      labels = labels_store.get(LABEL_BASE + i);
+#elif defined(USE_REDIS)
+      get_samples_labels_redis(r, i, samples, labels, cad_samples, cad_labels);
+#endif
+    } catch(const cirrus::NoSuchIDException& e) {
+      if (i == 0)
+        goto start;  // no loss to be computed
+      else
+        goto loop_accuracy;  // we looked at all minibatches
+    }
+    labels_vec.push_back(labels);
+    samples_vec.push_back(samples);
+  }
 
-    double loss = 0;
+  std::cout << "[ERROR_TASK] Got " << labels_vec.size() << " minibatches"
+    << "\n";
+  std::cout << "[ERROR_TASK] Building dataset"
+    << "\n";
+
+  //check_labels(labels_vec, samples_per_batch);
+
+loop_accuracy:
+  Dataset dataset(samples_vec, labels_vec,
+      samples_per_batch, features_per_sample);
+
+  std::cout << "[ERROR_TASK] Computing accuracies"
+    << "\n";
+  while (1) {
+    usleep(ERROR_INTERVAL_USEC); //
+
+    //double loss = 0;
     try {
       // first we get the model
       std::cout << "[ERROR_TASK] getting the model at id: "
@@ -55,81 +136,17 @@ void ErrorTask::run(const Configuration& /* config */) {
 #ifdef USE_CIRRUS
       model = model_store.get(MODEL_BASE);
 #elif defined(USE_REDIS)
-      int len_model;
-      char* data = redis_get_numid(r, MODEL_BASE, &len_model);
-      model = lmd(data, len_model);
-      free(data);
+      model = get_model_redis(r, lmd);
 #endif
 
       std::cout << "[ERROR_TASK] received the model with id: "
-        << MODEL_BASE
-        << " csum: " << model.checksum()
-        << "\n";
-
-      // then we compute the error
-      loss = 0;
-      uint64_t count = 0;
-
-      // we keep reading until a get() fails
-      for (int i = 0; 1; ++i) {
-        std::shared_ptr<double> samples;
-        std::shared_ptr<double> labels;
-
-        try {
-#ifdef USE_CIRRUS
-          samples = samples_store.get(SAMPLE_BASE + i);
-          labels = labels_store.get(LABEL_BASE + i);
-#elif defined(USE_REDIS)
-          int len_samples;
-          data = redis_get_numid(r, SAMPLE_BASE + i, &len_samples);
-          if (data == NULL) throw cirrus::NoSuchIDException("");
-          samples = cad_samples(data, len_samples);
-          free(data);
-
-          int len_labels;
-          data = redis_get_numid(r, LABEL_BASE + i, &len_labels);
-          if (data == NULL) throw cirrus::NoSuchIDException("");
-          labels = cad_labels(data, len_labels);
-          free(data);
-#endif
-        } catch(const cirrus::NoSuchIDException& e) {
-          if (i == 0)
-            goto continue_point;  // no loss to be computed
-          else
-            goto compute_loss;  // we looked at all minibatches
-        }
-
-        std::cout << "[ERROR_TASK] received data and labels with id: "
-          << i
-          << "\n";
-
-        Dataset dataset(samples.get(), labels.get(),
-            samples_per_batch, features_per_sample);
-
-#ifdef DEBUG
-        std::cout << "[ERROR_TASK] checking the dataset"
-          << "\n";
-        dataset.check_values();
-#endif
-
-        std::cout << "[ERROR_TASK] computing loss"
-          << "\n";
-        loss += model.calc_loss(dataset);
-        std::cout << "[ERROR_TASK] computed loss"
-          << "\n";
-        count++;
-      }
-
-compute_loss:
-      loss = loss / count;  // compute average loss over all minibatches
+        << MODEL_BASE << "\n";
+      model.calc_loss(dataset);
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;
     }
-
-    std::cout << "Learning loss: " << loss << std::endl;
-
-continue_point:
-    first_time = first_time;
   }
+
+  //std::cout << "Learning loss (avg per sample): " << loss << std::endl;
 }
 

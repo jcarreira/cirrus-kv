@@ -46,7 +46,6 @@
 
 #define BILLION (1000000000ULL)
 #define MILLION (1000000ULL)
-
 #define SAMPLE_BASE   (0)
 #define MODEL_BASE    (1 * BILLION)
 #define GRADIENT_BASE (2 * BILLION)

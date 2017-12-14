@@ -8,6 +8,8 @@
 #include <Utils.h>
 #include <Checksum.h>
 
+#include <cassert>
+
 Dataset::Dataset() {
 }
 
@@ -24,7 +26,30 @@ Dataset::Dataset(const double* samples,
                  uint64_t n_samples,
                  uint64_t n_features) :
     samples_(samples, n_samples, n_features) {
-    labels_.reset(labels);
+    double* l = new double[n_samples];
+    std::copy(labels, labels + n_samples, l);
+    labels_.reset(l, array_deleter<double>);
+}
+
+Dataset::Dataset(std::vector<std::shared_ptr<double>> samples,
+                 std::vector<std::shared_ptr<double>> labels,
+                 uint64_t samples_per_batch,
+                 uint64_t features_per_sample) :
+    samples_(samples, samples_per_batch, features_per_sample) {
+  assert(labels.size() == samples.size());
+
+  uint64_t num_labels = samples.size() * samples_per_batch; 
+  double* all_labels = new double[num_labels];
+
+  // copy labels in each minibatch sequentially
+  for (uint64_t i = 0; i < labels.size(); ++i) {
+    std::memcpy(
+        all_labels + i * samples_per_batch,
+        labels[i].get(),
+        samples_per_batch * sizeof(double));
+  }
+
+  labels_.reset(all_labels, array_deleter<double>);
 }
 
 uint64_t Dataset::num_features() const {

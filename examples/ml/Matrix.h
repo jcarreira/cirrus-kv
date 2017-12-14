@@ -10,6 +10,7 @@ class Matrix {
  public:
     /**
       * Build matrix
+      * This method copies all the inputs
       * @param m Contents of matrix in a vector of doubles format
       */
     Matrix(std::vector<std::vector<double>> m =
@@ -17,11 +18,22 @@ class Matrix {
 
     /**
       * Build matrix
+      * This method copies all the inputs
       * @param data Data in row major order format
       * @param rows Number of rows of matrix
       * @param cols Number of columns of matrix
       */
     Matrix(const double* data, uint64_t rows, uint64_t cols);
+
+    /**
+      * Build matrix
+      * This method copies all the inputs
+      * @param data Several minibatches. Each one is in row major order format
+      * @param rows Number of rows in each minibatch
+      * @param cols Number of columns in each minibatch
+      */
+    Matrix(const std::vector<std::shared_ptr<double>> d,
+        uint64_t r, uint64_t c);
 
     /**
       * Returns constant pointer to a row of the matrix

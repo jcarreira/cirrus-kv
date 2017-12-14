@@ -7,6 +7,7 @@
 #include <client/TCPClient.h>
 #include "config.h"
 #include "Redis.h"
+#include "LRModel.h"
 
 class MLTask {
  public:
@@ -138,6 +139,10 @@ class ErrorTask : public MLTask {
      void run(const Configuration& config);
 
  private:
+     LRModel get_model_redis(auto r, auto lmd);
+     void get_samples_labels_redis(
+         auto r, auto i, auto& samples, auto& labels,
+         auto cad_samples, auto cad_labels);
 };
 
 class LoadingTask : public MLTask {
