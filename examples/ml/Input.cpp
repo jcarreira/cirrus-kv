@@ -105,7 +105,6 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         while (lines.size() && thread_lines.size() < read_at_a_time) {
             thread_lines.push_back(lines.front());
             lines.pop();
-            //std::cout << "Popped line: " << thread_lines.back() << std::endl;
         }
 
         if (thread_lines.size() == 0) {
@@ -176,10 +175,7 @@ void Input::print_sample(const std::vector<double>& sample) const {
 std::vector<std::vector<double>> Input::read_mnist_csv(
         const std::string& input_file,
         std::string delimiter) {
-    
-
     FILE* fin = fopen(input_file.c_str(), "r");
-    //std::ifstream fin(input_file, std::ifstream::in);
     if (!fin) {
         throw std::runtime_error("Can't open file: " + input_file);
     }
@@ -189,9 +185,6 @@ std::vector<std::vector<double>> Input::read_mnist_csv(
     std::string line;
     char str[STR_SIZE + 1] = {0};
     while (fgets(str, 1000000, fin) != NULL) {
-    //while (getline(fin, line)) {
-        //assert(line.size() < STR_SIZE);
-        //strncpy(str, line.c_str(), STR_SIZE);
         char* s = str;
 
         std::vector<double> sample;
@@ -294,7 +287,7 @@ Dataset Input::read_input_csv(const std::string& input_file,
           }
           input[i] = line;
        }
-       
+
         input_mutex[thread_index].lock();
         for (int j = 0; j < i; ++j) {
            lines[thread_index].push(input[j]);
@@ -321,10 +314,10 @@ Dataset Input::read_input_csv(const std::string& input_file,
        for (thread_index = 0; thread_index < nthreads; ++thread_index) {
            input_mutex[thread_index].lock();
            if (!lines[thread_index].empty()) {
-	      input_mutex[thread_index].unlock();
+               input_mutex[thread_index].unlock();
               break;
            }
-	   input_mutex[thread_index].unlock();
+           input_mutex[thread_index].unlock();
        }
        if (thread_index == nthreads)
           break;
@@ -346,11 +339,11 @@ Dataset Input::read_input_csv(const std::string& input_file,
         normalize(samples);
     }
 
-    std::srand (42);
+    std::srand(42);
     std::random_shuffle(samples.begin(), samples.end());
-    std::srand (42);
+    std::srand(42);
     std::random_shuffle(labels.begin(), labels.end());
-    
+
     std::cout << "Printing first sample after normalization" << std::endl;
     print_sample(samples[0]);
 
@@ -363,8 +356,8 @@ void Input::normalize(std::vector<std::vector<double>>& data) {
     std::vector<double> sds(data[0].size());
 
     // calculate mean of each feature
-    for (unsigned int i = 0; i < data.size(); ++i) { // for each sample
-        for (unsigned int j = 0; j < data[0].size(); ++j) { // for each feature
+    for (unsigned int i = 0; i < data.size(); ++i) {  // for each sample
+        for (unsigned int j = 0; j < data[0].size(); ++j) {  // for each feature
             means[j] += data[i][j] / data.size();
         }
     }

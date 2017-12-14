@@ -63,12 +63,14 @@ void Matrix::check_values() const {
                 throw std::runtime_error("Matrix has nans");
             }
 
-            // this sanity check may break even though things are correct
-            // though it might help catch bugs
-            //if (val > 300 || val < -300) {
-            //    throw std::runtime_error("Matrix::check value: "
-            //            + std::to_string(val) + " badly normalized");
-            //}
+#ifdef DEBUG
+             this sanity check may break even though things are correct
+             though it might help catch bugs
+            if (val > 300 || val < -300) {
+                throw std::runtime_error("Matrix::check value: "
+                        + std::to_string(val) + " badly normalized");
+            }
+#endif
         }
     }
 }

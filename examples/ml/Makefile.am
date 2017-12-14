@@ -42,8 +42,9 @@ CPP_SOURCES = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
-              Tasks.cpp /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp \
-              RedisIterator.cpp
+              ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
+              PSTask.cpp RedisIterator.cpp TasksWait.cpp \
+	      /home/ec2-user/cirrus/examples/ml/benchmark_redis/Redis.cpp
 
 CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \

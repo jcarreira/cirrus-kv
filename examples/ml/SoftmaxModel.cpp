@@ -55,7 +55,7 @@ SoftmaxModel::serialize() const {
 
     res.second = getSerializedSize();
     res.first.reset(new char[res.second]);
-    
+
     uint64_t* uint_ptr = reinterpret_cast<uint64_t*>(res.first.get());
     *uint_ptr++ = d;
     *uint_ptr++ = nclasses;

@@ -52,6 +52,7 @@
 #define GRADIENT_BASE (2 * BILLION)
 #define LABEL_BASE    (3 * BILLION)
 #define START_BASE    (4 * BILLION)
+
 int nworkers = 2;
 
 int num_classes = 2;
@@ -67,7 +68,7 @@ void sleep_forever() {
 
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
-const char IP[] = "172.31.5.138"; // REDIS instance
+const char IP[] = "172.31.5.138";  // REDIS instance
 
 static const uint32_t SIZE = 1;
 
@@ -80,38 +81,31 @@ void run_memory_task(const Configuration& /* config */) {
 
 void run_tasks(int rank, const Configuration& config) {
     std::cout << "Run tasks rank: " << rank << std::endl;
-    if (rank == 0) {
-        // run_memory_task(config_path);
-        sleep_forever();
-    } else if (rank == 1) {
-        //sleep(8);
+    if (rank == PS_TASK_RANK) {
         PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
         pt.run(config);
         sleep_forever();
-    } else if (rank == 2) {
-        //sleep(3);
+    } else if (rank == LOADING_TASK_RANK) {
         LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
         lt.run(config);
-    } else if (rank == 3) {
-        //sleep(5);
+    } else if (rank == ERROR_TASK_RANK) {
         ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
         et.run(config);
         sleep_forever();
-    } else if (rank >= 4 && rank < 4 + nworkers) {
+    } else if (rank >= WORKER_TASK_RANK && rank < WORKER_TASK_RANK + nworkers) {
         /**
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-        //sleep(10);
 #ifdef PRELOAD_DATA
         std::cout << "Launching preloaded task" << std::endl;
         LogisticTaskPreloaded lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
@@ -124,7 +118,7 @@ void run_tasks(int rank, const Configuration& config) {
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
 #endif
-        lt.run(config, rank - 4);
+        lt.run(config, rank - WORKER_TASK_RANK);
         sleep_forever();
 
     } else {
@@ -133,6 +127,8 @@ void run_tasks(int rank, const Configuration& config) {
 }
 
 void print_arguments() {
+    // nworkers is the number of processes computing gradients
+    // rank starts at 0
     std::cout << "./parameter_server config_file nworkers rank" << std::endl;
 }
 
@@ -180,8 +176,8 @@ int main(int argc, char** argv) {
     samples_per_batch = config.get_minibatch_size();
     batch_size = samples_per_batch * features_per_sample;
     num_classes = config.get_num_classes();
-    
-    std::cout 
+
+    std::cout
         << "samples_per_batch: " << samples_per_batch
         << " features_per_sample: " << features_per_sample
         << " batch_size: " << batch_size
@@ -192,7 +188,6 @@ int main(int argc, char** argv) {
         << std::endl;
     run_tasks(rank, config);
 
-    //MPI_Finalize();
     std::cout << "Test successful" << std::endl;
 
     return 0;

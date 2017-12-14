@@ -6,6 +6,7 @@
 
 #include <client/TCPClient.h>
 #include "config.h"
+#include "Redis.h"
 
 class MLTask {
  public:
@@ -33,7 +34,7 @@ class MLTask {
 #ifdef USE_CIRRUS
     void wait_for_start(int index, cirrus::TCPClient& client, int nworkers);
 #elif defined(USE_REDIS)
-    void wait_for_start(int index, auto r, int nworkers);
+    void wait_for_start(int index, redisContext* r, int nworkers);
 #endif
 
  protected:

@@ -1,0 +1,194 @@
+#include <examples/ml/Tasks.h>
+
+#include "Serializers.h"
+#include "Redis.h"
+#include "Utils.h"
+
+/**
+  * This is the task that runs the parameter server
+  * This task is responsible for
+  * 1) sending the model to the workers
+  * 2) receiving the gradient updates from the workers
+  *
+  */
+void PSTask::run(const Configuration& config) {
+  std::cout << "[PS] "
+    << "PS connecting to store"
+    << std::endl;
+  config.print();
+
+  lr_model_serializer lms(MODEL_GRAD_SIZE);
+  lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+  lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
+  lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
+
+#ifdef USE_CIRRUS
+  cirrus::TCPClient client;
+  cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
+    model_store(IP, PORT, &client,
+        lms, lmd);
+  cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
+    gradient_store(IP, PORT, &client,
+        lgs, lgd);
+#elif defined(USE_REDIS)
+  auto r  = redis_connect(REDIS_IP, REDIS_PORT);
+  if (r == NULL || r -> err) { 
+    throw std::runtime_error(
+        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
+  }
+#endif
+
+  std::cout << "[PS] "
+    << "PS task initializing model" << std::endl;
+  // initialize model
+
+  LRModel model(MODEL_GRAD_SIZE);
+  model.randomize();
+  std::cout << "[PS] "
+    << "PS publishing model at id: "
+    << MODEL_BASE
+    << " csum: " << model.checksum()
+    << std::endl;
+  // publish the model back to the store so workers can use it
+#ifdef USE_CIRRUS
+  model_store.put(MODEL_BASE, model);
+#elif defined(USE_REDIS)
+  {
+    auto data = std::unique_ptr<char[]>(
+        new char[lms.size(model)]);
+    lms.serialize(model, data.get());
+    redis_put_binary_numid(r, MODEL_BASE, data.get(), lms.size(model));
+  }
+#endif
+
+#if 0
+  std::cout << "[PS] "
+    << "PS getting model"
+    << " with id: " << MODEL_BASE
+    << std::endl;
+#ifdef USE_CIRRUS
+  auto m = model_store.get(MODEL_BASE);
+#elif defined(USE_REDIS)
+  int len_model;
+  data = redis_get_numid(r, MODEL_BASE, &len_model);
+  auto m = lmd(data, len_model);
+  free(data);
+#endif
+  std::cout << "[PS] "
+    << "PS model is here"
+    << std::endl;
+#endif
+
+  // we keep a version number for the gradient produced by each worker
+  std::vector<unsigned int> gradientVersions;
+  gradientVersions.resize(nworkers, 0);
+
+  bool first_time = true;
+
+#ifdef USE_CIRRUS    
+  wait_for_start(PS_TASK_RANK, client, nworkers);
+#elif defined(USE_REDIS)
+  wait_for_start(PS_TASK_RANK, r, nworkers);
+#endif
+
+  while (1) {
+    // for every worker, check for a new gradient computed
+    // if there is a new gradient, get it and update the model
+    // once model is updated publish it
+    for (int worker = 0; worker < static_cast<int>(nworkers); ++worker) {
+      int gradient_id = GRADIENT_BASE + worker;
+#ifdef DEBUG
+      std::cout << "[PS] "
+        << "PS task checking gradient id: "
+        << gradient_id
+        << std::endl;
+#endif
+
+      // get gradient from store
+      LRGradient gradient(MODEL_GRAD_SIZE);
+      try {
+#ifdef USE_CIRRUS
+        gradient = std::move(
+            gradient_store.get(gradient_id));
+#elif defined(USE_REDIS)
+        int len_grad;
+        char* data = redis_get_numid(r, gradient_id, &len_grad);
+        if (data == nullptr) {
+          throw cirrus::NoSuchIDException("");
+        }
+        gradient = lgd(data, len_grad);
+        free(data);
+#endif
+      } catch(const cirrus::NoSuchIDException& e) {
+        if (!first_time) {
+          std::cout
+            << "PS task not able to get gradient: "
+            << std::to_string(gradient_id)
+            << " gradient_id: " << gradient_id
+            << std::endl;
+        }
+        // this happens because the worker task
+        // has not uploaded the gradient yet
+        //worker--;
+        continue;
+      }
+
+      first_time = false;
+
+#ifdef DEBUG
+      std::cout << "[PS] "
+        << "PS task received gradient with #version: "
+        << gradient.getVersion()
+        << " from worker: " << worker
+        << " current gradient version: " << gradientVersions[worker]
+        << "\n";
+#endif
+
+      // check if this is a gradient we haven't used before
+      if (gradient.getVersion() > gradientVersions[worker]) {
+#ifdef DEBUG
+        std::cout << "[PS] "
+          << "PS task received new gradient version: "
+          << gradient.getVersion()
+          << std::endl;
+#endif
+
+        // if it's new
+        gradientVersions[worker] = gradient.getVersion();
+
+        // do a gradient step and update model
+#ifdef DEBUG
+        std::cout << "[PS] "
+          << "Updating model"
+          << " with csum: " << model.checksum()
+          << std::endl;
+#endif
+
+        model.sgd_update(config.get_learning_rate(), &gradient);
+
+        std::cout << "[PS] "
+          << "Publishing model at: " << get_time_us()
+          << "\n";
+        // publish the model back to the store so workers can use it
+#ifdef USE_CIRRUS
+        model_store.put(MODEL_BASE, model);
+#elif defined(USE_REDIS)
+        uint64_t data_size = lms.size(model);
+        auto data = std::unique_ptr<char[]>(
+            new char[data_size]);
+        lms.serialize(model, data.get());
+        redis_put_binary_numid(r, MODEL_BASE, data.get(), data_size);
+#endif
+      } else {
+#ifdef DEBUG
+        std::cout << "[PS] "
+          << "Gradient from worker: " << worker
+          << " is old. version: " << gradient.getVersion()
+          << " tracked version: " << gradientVersions[worker]
+          << std::endl;
+#endif
+      }
+    }
+  }
+}
+

@@ -52,7 +52,8 @@ uint64_t sm_gradient_serializer::size(const SoftmaxGradient& g) const {
     return g.getSerializedSize();
 }
 
-void sm_gradient_serializer::serialize(const SoftmaxGradient& g, void* mem) const {
+void sm_gradient_serializer::serialize(
+    const SoftmaxGradient& g, void* mem) const {
     g.serialize(mem);
 }
 
@@ -72,7 +73,8 @@ uint64_t sm_model_serializer::size(const SoftmaxModel& model) const {
     return model.getSerializedSize();
 }
 
-void sm_model_serializer::serialize(const SoftmaxModel& model, void* mem) const {
+void sm_model_serializer::serialize(
+    const SoftmaxModel& model, void* mem) const {
     model.serializeTo(mem);
 }
 

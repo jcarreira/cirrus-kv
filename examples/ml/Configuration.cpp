@@ -1,9 +1,9 @@
 #include <examples/ml/Configuration.h>
 
+#include <utils/Log.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <utils/Log.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
