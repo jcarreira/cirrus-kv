@@ -79,6 +79,43 @@ Dataset Input::read_input_criteo(const std::string& samples_input_file,
     return ds;
 }
 
+void Input::process_lines(
+    std::vector<std::string>& thread_lines,
+    const std::string& delimiter,
+    uint64_t limit_cols,
+    std::vector<std::vector<double>>& thread_samples,
+    std::vector<double>& thread_labels) {
+  char str[STR_SIZE];
+  while (!thread_lines.empty()) {
+    std::string line = thread_lines.back();
+    thread_lines.pop_back();
+    /*
+     * We have the line, now split it into features
+     */ 
+    assert(line.size() < STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE);
+    char* s = str;
+
+    uint64_t k = 0;
+    std::vector<double> sample;
+    while (char* l = strsep(&s, delimiter.c_str())) {
+      double v = string_to<double>(l);
+      sample.push_back(v);
+      k++;
+      if (limit_cols && k == limit_cols)
+        break;
+    }
+
+    // we assume first column is label
+    double label = sample.front();
+    sample.erase(sample.begin());
+
+    thread_labels.push_back(label);
+    thread_samples.push_back(sample);
+  }
+
+}
+
 void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
         const std::string& delimiter,
         std::queue<std::string>& lines,  //< content produced by producer
@@ -90,74 +127,49 @@ void Input::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
     uint64_t read_at_a_time = 1000;
 
     while (1) {
-        if (terminate)
-            break;
+      if (terminate)
+        break;
 
-        std::vector<std::string> thread_lines;
+      std::vector<std::string> thread_lines;
 
-        // Read up to read_at_a_time limes
-        std::cout << "Popping lines size: " << lines.size() << std::endl;
-        input_mutex.lock();
-        while (lines.size() && thread_lines.size() < read_at_a_time) {
-            thread_lines.push_back(lines.front());
-            lines.pop();
-        }
+      // Read up to read_at_a_time limes
+      std::cout << "Popping lines size: " << lines.size() << std::endl;
+      input_mutex.lock();
+      while (lines.size() && thread_lines.size() < read_at_a_time) {
+        thread_lines.push_back(lines.front());
+        lines.pop();
+      }
 
-        if (thread_lines.size() == 0) {
-            input_mutex.unlock();
-            continue;
-        }
-
+      if (thread_lines.size() == 0) {
         input_mutex.unlock();
+        continue;
+      }
 
-        std::vector<std::vector<double>> thread_samples;
-        std::vector<double> thread_labels;
+      input_mutex.unlock();
 
-        char str[STR_SIZE];
+      std::vector<std::vector<double>> thread_samples;
+      std::vector<double> thread_labels;
 
-        while (!thread_lines.empty()) {
-            std::string line = thread_lines.back();
-            thread_lines.pop_back();
-            /*
-             * We have the line, now split it into features
-             */ 
-            assert(line.size() < STR_SIZE);
-            strncpy(str, line.c_str(), STR_SIZE);
-            char* s = str;
+      // parses samples in thread_lines
+      // and pushes labels and features into
+      // thread_samples and thread_labels
+      process_lines(thread_lines, delimiter,
+          limit_cols, thread_samples, thread_labels);
 
-            uint64_t k = 0;
-            std::vector<double> sample;
-            while (char* l = strsep(&s, delimiter.c_str())) {
-                double v = string_to<double>(l);
-                sample.push_back(v);
-                k++;
-                if (limit_cols && k == limit_cols)
-                    break;
-            }
+      output_mutex.lock();
+      while (thread_samples.size()) {
+        samples.push_back(thread_samples.back());
+        labels.push_back(thread_labels.back());
+        thread_samples.pop_back();
+        thread_labels.pop_back();
+      }
+      output_mutex.unlock();
 
-            // we assume first column is label
-            double label = sample.front();
-            sample.erase(sample.begin());
-
-            thread_labels.push_back(label);
-            thread_samples.push_back(sample);
-        }
-
-        output_mutex.lock();
-        while (thread_samples.size()) {
-            samples.push_back(thread_samples.back());
-            labels.push_back(thread_labels.back());
-            thread_samples.pop_back();
-            thread_labels.pop_back();
-        }
-        output_mutex.unlock();
-
-        if (count_read % REPORT_THREAD == 0) {
-            std::cout
-                << "Thread processed line: " << count_read
-                << std::endl;
-        }
-        count_read += read_at_a_time;
+      if (count_read % REPORT_THREAD == 0) {
+        std::cout << "Thread processed line: " << count_read
+          << std::endl;
+      }
+      count_read += read_at_a_time;
     }
 }
 

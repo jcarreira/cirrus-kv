@@ -90,6 +90,13 @@ class Input {
       * @param sample Sample to be printed
       */
     void print_sample(const std::vector<double>& sample) const;
+
+    void process_lines(
+        std::vector<std::string>&,
+        const std::string&,
+        uint64_t,
+        std::vector<std::vector<double>>&,
+        std::vector<double>&);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_
