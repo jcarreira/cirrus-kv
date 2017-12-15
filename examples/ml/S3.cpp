@@ -17,6 +17,12 @@ Aws::S3::S3Client s3_create_client() {
   return s3_client;
 }
 
+Aws::S3::S3Client* s3_create_client_ptr() {
+  Aws::Client::ClientConfiguration clientConfig;
+  clientConfig.region = Aws::Region::US_WEST_2;
+  return new Aws::S3::S3Client(clientConfig);
+}
+
 void s3_put_object(uint64_t id, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name, const std::string& object) {
   std::string key_name = "CIRRUS" + std::to_string(id);

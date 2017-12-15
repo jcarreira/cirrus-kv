@@ -1,17 +1,6 @@
-#include <unistd.h>
 #include <stdlib.h>
-#include <fstream>
-#include <algorithm>
 #include <cstdint>
-#include <iostream>
-#include <map>
 #include <string>
-#include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <memory>
-
 #include <Checksum.h>
 #include "Input.h"
 #include "Utils.h"
@@ -23,26 +12,16 @@
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
-#include "utils/CirrusTime.h"
 #include "utils/Log.h"
-#include "utils/Stats.h"
 #include "client/TCPClient.h"
 #include "common/Exception.h"
 #include <Tasks.h>
 
 #include "config.h"
 
-#ifdef USE_S3
-#include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/PutObjectRequest.h>
-#endif
-
 
 #define INSTS (1000000)  // 1 million
 #define LOADING_DONE (INSTS + 1)
-
-#define MODEL_GRAD_SIZE 10
 
 #define BILLION (1000000000ULL)
 #define MILLION (1000000ULL)
@@ -55,9 +34,8 @@
 int nworkers = 2;
 
 int num_classes = 2;
-int features_per_sample = 10;
 int samples_per_batch = 8000;
-int batch_size = samples_per_batch * features_per_sample;
+int batch_size = -1;
 
 void sleep_forever() {
     while (1) {
@@ -80,21 +58,23 @@ void run_memory_task(const Configuration& /* config */) {
 
 void run_tasks(int rank, const Configuration& config) {
     std::cout << "Run tasks rank: " << rank << std::endl;
+    int features_per_sample = config.get_num_features();
+
     if (rank == PS_TASK_RANK) {
-        PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        PSTask pt(IP, PORT, features_per_sample, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
         pt.run(config);
         sleep_forever();
     } else if (rank == LOADING_TASK_RANK) {
-        LoadingTaskS3 lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        LoadingTaskS3 lt(IP, PORT, features_per_sample, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
         lt.run(config);
     } else if (rank == ERROR_TASK_RANK) {
-        ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        ErrorTask et(IP, PORT, features_per_sample, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
@@ -105,7 +85,7 @@ void run_tasks(int rank, const Configuration& config) {
           * Worker tasks run here
           * Number of tasks is determined by the value of nworkers
           */
-        LogisticTaskS3 lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
+        LogisticTaskS3 lt(IP, PORT, features_per_sample, MODEL_BASE,
                 LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
                 batch_size, samples_per_batch, features_per_sample,
                 nworkers, rank);
@@ -165,12 +145,12 @@ int main(int argc, char** argv) {
     // 1. the number of classes
     // 2. the size of input
     samples_per_batch = config.get_minibatch_size();
-    batch_size = samples_per_batch * features_per_sample;
+    batch_size = samples_per_batch * config.get_num_features();
     num_classes = config.get_num_classes();
 
     std::cout
         << "samples_per_batch: " << samples_per_batch
-        << " features_per_sample: " << features_per_sample
+        << " features_per_sample: " << config.get_num_features()
         << " batch_size: " << batch_size
         << std::endl;
 

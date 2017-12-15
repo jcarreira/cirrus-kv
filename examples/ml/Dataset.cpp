@@ -61,14 +61,17 @@ uint64_t Dataset::num_samples() const {
 }
 
 void Dataset::check_values() const {
-    const double* l = labels_.get();
-    for (uint64_t i = 0; i < num_samples(); ++i) {
-        if (std::isnan(l[i]) || std::isinf(l[i])) {
-            throw std::runtime_error(
-                    "Dataset::check_values nan/inf error in labels");
-        }
+  const double* l = labels_.get();
+  for (uint64_t i = 0; i < num_samples(); ++i) {
+    if (!FLOAT_EQ(l[i], 1.0) && !FLOAT_EQ(l[i], 0.0))
+      throw std::runtime_error(
+          "Dataset::check_values wrong label value: " + std::to_string(l[i]));
+    if (std::isnan(l[i]) || std::isinf(l[i])) {
+      throw std::runtime_error(
+          "Dataset::check_values nan/inf error in labels");
     }
-    samples_.check_values();
+  }
+  samples_.check_values();
 }
 
 double Dataset::checksum() const {
@@ -79,6 +82,11 @@ void Dataset::print() const {
     samples_.print();
 }
 
+void Dataset::print_info() const {
+  std::cout << "Dataset #samples: " << samples_.rows << std::endl;
+  std::cout << "Dataset #cols: " << samples_.cols << std::endl;
+}
+
 std::shared_ptr<double> Dataset::build_s3_obj(uint64_t l, uint64_t r) {
   uint64_t num_samples = r - l;
   uint64_t entries_per_sample = samples_.cols + 1;
@@ -87,16 +95,20 @@ std::shared_ptr<double> Dataset::build_s3_obj(uint64_t l, uint64_t r) {
       new double[num_samples * entries_per_sample],
       std::default_delete<double[]>());
 
+  std::cout << "entries_per_sample: " << entries_per_sample << std::endl;
   for (uint64_t i = 0; i < num_samples; ++i) {
     double* d = s3_obj.get() + i * entries_per_sample;
 
+
     // copy label
     *d = labels_.get()[i];
+    if (!FLOAT_EQ(*d, 0.0) && !FLOAT_EQ(*d, 1.0))
+      throw std::runtime_error("Erorr in build_s3_obj");
     d++; // move to features
 
     // copy features
     const double* start = samples_.row(l + i);
-    const double* end = samples_.row(l + i) + samples_.cols;
+    const double* end = samples_.row(l + i) + samples_.cols + 1;
     std::copy(start, end, d);
   }
 

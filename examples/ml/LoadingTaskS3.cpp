@@ -4,6 +4,7 @@
 #include "Redis.h"
 #include "Input.h"
 #include "S3.h"
+#include "Utils.h"
 
 Dataset LoadingTaskS3::read_dataset(
     const Configuration& config) {
@@ -42,14 +43,14 @@ void LoadingTaskS3::check_loading(
       "loader samples_store");
   std::shared_ptr<double> sample = cad_samples(data.data(), data.size());
 
+  std::cout << "[LOADER] Checking label values.."
+    << std::endl;
   double label = sample.get()[0];
   if (label != 1.0 && label != 0.0) {
     throw std::runtime_error("Wrong label value");
   }
 
-  std::cout << "[LOADER] "
-    << "Got sample with id: " << 0
-    << "Added all samples"
+  std::cout << "[LOADER] Got sample with id: " << 0 << "Added all samples"
     << std::endl;
 
 #ifdef DEBUG
@@ -64,7 +65,6 @@ void LoadingTaskS3::check_loading(
 #endif
   std::cout << std::endl;
 }
-
 
 /**
  * Load the object store with the training dataset
@@ -81,8 +81,8 @@ void LoadingTaskS3::run(const Configuration& config) {
   uint64_t s3_obj_entries = s3_obj_num_samples * s3_obj_sample_entries;
 
   Dataset dataset = read_dataset(config);
+  dataset.check_values();
 
-  c_array_serializer<double> cas_samples(s3_obj_entries);
   s3_initialize_aws();
   auto s3_client = s3_create_client();
   auto r  = connect_redis();
@@ -98,10 +98,23 @@ void LoadingTaskS3::run(const Configuration& config) {
     std::cout << "[LOADER] Building s3 batches" << std::endl;
 
     uint64_t first_sample = i * s3_obj_num_samples;
-    uint64_t right_sample = (i+1) * s3_obj_num_samples;
-    std::shared_ptr<double> s3_obj = dataset.build_s3_obj(first_sample, right_sample);
+    uint64_t last_sample = (i+1) * s3_obj_num_samples;
+    std::shared_ptr<double> s3_obj = dataset.build_s3_obj(first_sample, last_sample);
+
+#if 0
+    for (uint64_t j = 0; j < s3_obj_num_samples; ++j) {
+      double* label = s3_obj.get() + j * s3_obj_sample_entries;
+
+      double* samples = label + 1;
+      if (!FLOAT_EQ(*label, 0.0) && !FLOAT_EQ(*label, 1.0)) {
+        throw std::runtime_error(
+            "LoadingTaskS3::run Wrong label value " + std::to_string(*label));
+      }
+    }
+#endif
 
     // serialize and write data into s3
+    c_array_serializer<double> cas_samples(s3_obj_entries);
     uint64_t len = cas_samples.size(s3_obj);
     std::unique_ptr<char[]> data = std::unique_ptr<char[]>(new char[len]);
     cas_samples.serialize(s3_obj, data.get());

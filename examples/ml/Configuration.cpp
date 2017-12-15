@@ -55,6 +55,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> minibatch_size;
     } else if (s == "s3_size:") {
         iss >> s3_size;
+    } else if (s == "num_features:") {
+        iss >> num_features;
     } else if (s == "input_path:") {
         iss >> input_path;
     } else if (s == "samples_path:") {
@@ -202,3 +204,9 @@ uint64_t Configuration::get_limit_samples() const {
     return limit_samples;
 }
 
+/**
+  * Get number of training input samples
+  */
+uint64_t Configuration::get_num_features() const {
+    return num_features;
+}

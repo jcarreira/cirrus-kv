@@ -14,24 +14,25 @@ S3Iterator::S3Iterator(
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows), s3_cols(s3_cols),
     minibatch_rows(minibatch_rows) {
-      // initialize s3
-      s3_initialize_aws();
-      s3_client = s3_create_client();
+      
+  std::cout << "Creating S3Iterator"
+    << " left_id: " << left_id
+    << " right_id: " << right_id
+    << std::endl;
 
-      std::cout << "Creating S3Iterator"
-        << " left_id: " << left_id
-        << " right_id: " << right_id
-        << std::endl;
+  // initialize s3
+  s3_initialize_aws();
+  s3_client.reset(s3_create_client_ptr());
 
-      cur = left_id;
-      last = left_id;  // last is exclusive
+  cur = left_id;
+  last = left_id;  // last is exclusive
 
-      for (uint64_t i = 0; i < read_ahead; ++i) {
-        pref_sem.signal();
-      }
+  for (uint64_t i = 0; i < read_ahead; ++i) {
+    pref_sem.signal();
+  }
 
-      thread = new std::thread(std::bind(&S3Iterator::thread_function, this));
-    }
+  thread = new std::thread(std::bind(&S3Iterator::thread_function, this));
+}
 
 std::shared_ptr<double> S3Iterator::get_next() {
   std::cout << "Get next "
@@ -71,7 +72,7 @@ std::shared_ptr<double> S3Iterator::get_next() {
 
 void S3Iterator::push_samples(const std::shared_ptr<double>& samples) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
-  uint64_t minibatch_n_entries = minibatch_rows * s3_cols;
+  uint64_t minibatch_n_entries = minibatch_rows * (s3_cols + 1);
 
   std::list<std::shared_ptr<double>> minibatches;
   for (uint64_t i = 0; i < n_minibatches; ++i) {
@@ -91,8 +92,8 @@ void S3Iterator::push_samples(const std::shared_ptr<double>& samples) {
 
 void S3Iterator::thread_function() {
   c_array_deserializer<double> cad_samples(
-      s3_rows * s3_cols,
-      "worker samples_store");
+      s3_rows * (s3_cols + 1), // also count labels
+      "S3 deserializer");
 
   while (1) {
     // if we can go it means there is a slot
@@ -101,7 +102,7 @@ void S3Iterator::thread_function() {
 
     std::string s3_obj;
     try {
-      s3_obj = s3_get_object(last, s3_client, S3_BUCKET);
+      s3_obj = s3_get_object(last, *s3_client, S3_BUCKET);
     } catch(...) {
       std::cout << "S3Iterator: error in s3_get_object" << std::endl;
       exit(-1);

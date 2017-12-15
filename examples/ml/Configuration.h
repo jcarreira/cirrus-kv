@@ -101,6 +101,11 @@ class Configuration {
       * Get max number of training samples
       */
     uint64_t get_limit_samples() const;
+    
+    /**
+      * Get max number of training samples
+      */
+    uint64_t get_num_features() const;
 
  private:
     /**
@@ -135,6 +140,7 @@ class Configuration {
     bool normalize = false;    //< whether to normalize the dataset
 
     uint64_t limit_samples = 0;  //< max number of training input samples
+    uint64_t num_features = 0;   //< number of features in each sample
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

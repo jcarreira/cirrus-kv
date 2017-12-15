@@ -95,6 +95,11 @@ class Dataset {
       */
     void print() const;
 
+    /**
+      * Print some information about the dataset
+      */
+    void print_info() const;
+
     /** Build data for S3 object
       * from feature and label data from samples in range [l,r)
       */

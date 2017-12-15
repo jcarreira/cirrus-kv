@@ -17,6 +17,7 @@ using namespace Aws::S3;
 
 void s3_initialize_aws();
 Aws::S3::S3Client s3_create_client();
+Aws::S3::S3Client* s3_create_client_ptr();
 void s3_put_object(uint64_t id, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name, const std::string& object);
 std::string s3_get_object(uint64_t id, Aws::S3::S3Client& s3_client,

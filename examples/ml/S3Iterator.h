@@ -30,7 +30,7 @@ class S3Iterator {
   
   Configuration conf;
 
-  Aws::S3::S3Client s3_client;
+  std::shared_ptr<Aws::S3::S3Client> s3_client;
 
   uint64_t cur;
   uint64_t last;

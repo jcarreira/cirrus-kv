@@ -44,11 +44,31 @@ void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
 
 /** We unpack each minibatch into samples and labels
   */
-void unpack_minibatch(
-    std::shared_ptr<double> /*minibatch*/,
+void LogisticTaskS3::unpack_minibatch(
+    std::shared_ptr<double> minibatch,
     auto& samples, auto& labels) {
-  samples = std::shared_ptr<double>(new double[0], std::default_delete<double[]>());
-  labels = std::shared_ptr<double>(new double[0], std::default_delete<double[]>());
+  uint64_t num_samples_per_batch = batch_size / features_per_sample;
+
+  samples = std::shared_ptr<double>(
+      new double[batch_size], std::default_delete<double[]>());
+  labels = std::shared_ptr<double>(
+      new double[num_samples_per_batch], std::default_delete<double[]>());
+
+  for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
+    double* data = minibatch.get() + j * (features_per_sample + 1);
+    labels.get()[j] = *data;
+
+    //std::cout << "j: " << j << std::endl;
+    //std::cout << "features_per_sample: " << features_per_sample << std::endl;
+    if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
+      throw std::runtime_error(
+          "Wrong label in unpack_minibatch " + std::to_string(*data));
+
+    data++;
+    std::copy(data,
+        data + features_per_sample,
+        samples.get() + j * features_per_sample);
+  }
 }
 
 // get samples and labels data
@@ -57,11 +77,7 @@ bool LogisticTaskS3::run_phase1(
     auto& s3_iter, uint64_t /*features_per_sample*/) {
   
   static bool first_time = true;
-  c_array_deserializer<double> cad_samples(batch_size,
-      "worker samples_store");
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-  c_array_deserializer<double> cad_labels(samples_per_batch,
-      "worker labels_store", false);
 
   try {
     auto before_model = get_time_ns();
@@ -114,8 +130,6 @@ auto connect_redis() {
 }
 
 void LogisticTaskS3::run(const Configuration& config, int worker) {
-  std::cout << "[WORKER] " << "Worker task connecting to store" << std::endl;
-
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
 
   // Create iterator that goes from 0 to num_s3_batches
@@ -126,7 +140,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   // we use redis
   auto r = connect_redis();
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
-  wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
+  //wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
 
   uint64_t version = 0;
   while (1) {
@@ -141,15 +155,22 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     Dataset dataset(samples.get(), labels.get(),
         samples_per_batch, features_per_sample);
+    dataset.check_values();
+    dataset.print_info();
 
     auto now = get_time_us();
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
+
+    std::cout << "Computing gradient" << std::endl;
     try {
       gradient = model.minibatch_grad(0, dataset.samples_,
           labels.get(), samples_per_batch, config.get_epsilon());
+    } catch(const std::runtime_error& e) {
+      std::cout << "Error. " << e.what() << std::endl;
+      exit(-1);
     } catch(...) {
-      std::cout << "There was an error here" << std::endl;
+      std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);
     }
     auto elapsed_us = get_time_us() - now;

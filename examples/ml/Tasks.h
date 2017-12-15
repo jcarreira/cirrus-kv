@@ -103,6 +103,8 @@ class LogisticTaskS3 : public MLTask {
          uint64_t features_per_sample);
      auto get_model(auto r, auto lmd);
      void push_gradient(auto r, int, LRGradient*);
+     void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
+         auto& samples, auto& labels);
 };
 
 class LogisticTaskPreloaded : public MLTask {
