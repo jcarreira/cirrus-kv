@@ -109,4 +109,6 @@ void print_statistics(const T& begin, const T& end) {
         << std::endl;
 }
 
+void sleep_forever();
+
 #endif  // EXAMPLES_ML_UTILS_H_

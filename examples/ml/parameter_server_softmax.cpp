@@ -50,12 +50,6 @@ int features_per_sample = (28*28);
 int samples_per_batch = 100;
 int batch_size = samples_per_batch * features_per_sample;
 
-void sleep_forever() {
-    while (1) {
-        sleep(1000);
-    }
-}
-
 static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "10.10.49.95";

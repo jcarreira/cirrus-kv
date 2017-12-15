@@ -74,3 +74,10 @@ double get_rand_between_0_1() {
     return 1.0 * mt_rand() / mt_rand.max();
 }
 
+void sleep_forever() {
+    while (1) {
+        sleep(1000);
+    }
+}
+
+

@@ -6,13 +6,17 @@
 #include "S3.h"
 #include "Utils.h"
 
+#define READ_INPUT_THREADS (10)
+const std::string INPUT_DELIMITER = " ";
+
 Dataset LoadingTaskS3::read_dataset(
     const Configuration& config) {
   Input input;
+
   bool normalize = config.get_normalize();
   Dataset dataset = input.read_input_csv(
       config.get_input_path(),
-      " ", 10,
+      INPUT_DELIMITER, READ_INPUT_THREADS,
       config.get_limit_samples(),
       config.get_limit_cols(), normalize);
   dataset.check_values();
@@ -20,12 +24,18 @@ Dataset LoadingTaskS3::read_dataset(
 }
 
 auto LoadingTaskS3::connect_redis() {
-  auto r = redis_connect(REDIS_IP, REDIS_PORT);
+  auto r = redis_connect(redis_ip, redis_port);
   if (r == NULL || r -> err) {
     throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
+        "Error connecting to redis server. IP: " + std::string(redis_ip));
   }
   return r;
+}
+
+void check_label(double label) {
+  if (label != 1.0 && label != 0.0) {
+    throw std::runtime_error("Wrong label value");
+  }
 }
 
 /**
@@ -39,25 +49,17 @@ void LoadingTaskS3::check_loading(
   std::string data = s3_get_object(SAMPLE_BASE, s3_client, "cirrusonlambdas");
   
   c_array_deserializer<double> cad_samples(
-      s3_obj_entries,
-      "loader samples_store");
+      s3_obj_entries, "loader samples_store");
   std::shared_ptr<double> sample = cad_samples(data.data(), data.size());
 
-  std::cout << "[LOADER] Checking label values.."
-    << std::endl;
-  double label = sample.get()[0];
-  if (label != 1.0 && label != 0.0) {
-    throw std::runtime_error("Wrong label value");
-  }
+  std::cout << "[LOADER] Checking label values.." << std::endl;
+  check_label(sample.get()[0]);
 
   std::cout << "[LOADER] Got sample with id: " << 0 << "Added all samples"
     << std::endl;
 
 #ifdef DEBUG
-  std::cout << "[LOADER] "
-    << "Print sample 0"
-    << std::endl;
-
+  std::cout << "[LOADER] " << "Print sample 0" << std::endl;
   for (unsigned int i = 1; i <= features_per_sample; ++i) {
     double val = sample.get()[i];
     std::cout << val << " ";
@@ -98,7 +100,7 @@ void LoadingTaskS3::run(const Configuration& config) {
     std::cout << "[LOADER] Building s3 batches" << std::endl;
 
     uint64_t first_sample = i * s3_obj_num_samples;
-    uint64_t last_sample = (i+1) * s3_obj_num_samples;
+    uint64_t last_sample = (i + 1) * s3_obj_num_samples;
     std::shared_ptr<double> s3_obj = dataset.build_s3_obj(first_sample, last_sample);
 
 #if 0

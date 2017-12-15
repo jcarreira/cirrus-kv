@@ -19,10 +19,6 @@
 
 #include "config.h"
 
-
-#define INSTS (1000000)  // 1 million
-#define LOADING_DONE (INSTS + 1)
-
 #define BILLION (1000000000ULL)
 #define MILLION (1000000ULL)
 #define SAMPLE_BASE   (0)
@@ -31,70 +27,57 @@
 #define LABEL_BASE    (3 * BILLION)
 #define START_BASE    (4 * BILLION)
 
-int nworkers = 2;
-
-int num_classes = 2;
-int samples_per_batch = 8000;
-int batch_size = -1;
-
-void sleep_forever() {
-    while (1) {
-        sleep(1000);
-    }
-}
-
 static const uint64_t GB = (1024*1024*1024);
-const char PORT[] = "12345";
-const char IP[] = "172.31.5.138";  // REDIS instance
-
 static const uint32_t SIZE = 1;
 
 void run_memory_task(const Configuration& /* config */) {
-    std::cout << "Launching TCP server" << std::endl;
-    int ret = system("~/tcpservermain");
-    std::cout << "System returned: " << ret << std::endl;
+  std::cout << "Launching TCP server" << std::endl;
+  int ret = system("~/tcpservermain");
+  std::cout << "System returned: " << ret << std::endl;
 }
 
+void run_tasks(int rank, int nworkers, 
+    int batch_size, const Configuration& config) {
 
-void run_tasks(int rank, const Configuration& config) {
-    std::cout << "Run tasks rank: " << rank << std::endl;
-    int features_per_sample = config.get_num_features();
+  std::cout << "Run tasks rank: " << rank << std::endl;
+  int features_per_sample = config.get_num_features();
+  int samples_per_batch = config.get_minibatch_size();
 
-    if (rank == PS_TASK_RANK) {
-        PSTask pt(IP, PORT, features_per_sample, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, rank);
-        pt.run(config);
-        sleep_forever();
-    } else if (rank == LOADING_TASK_RANK) {
-        LoadingTaskS3 lt(IP, PORT, features_per_sample, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, rank);
-        lt.run(config);
-    } else if (rank == ERROR_TASK_RANK) {
-        ErrorTask et(IP, PORT, features_per_sample, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, rank);
-        et.run(config);
-        sleep_forever();
-    } else if (rank >= WORKER_TASK_RANK && rank < WORKER_TASK_RANK + nworkers) {
-        /**
-          * Worker tasks run here
-          * Number of tasks is determined by the value of nworkers
-          */
-        LogisticTaskS3 lt(IP, PORT, features_per_sample, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, rank);
-        lt.run(config, rank - WORKER_TASK_RANK);
-        sleep_forever();
+  if (rank == PS_TASK_RANK) {
+    PSTask pt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    pt.run(config);
+    sleep_forever();
+  } else if (rank == LOADING_TASK_RANK) {
+    LoadingTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+  } else if (rank == ERROR_TASK_RANK) {
+    ErrorTask et(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    et.run(config);
+    sleep_forever();
+  } else if (rank >= WORKER_TASK_RANK && rank < WORKER_TASK_RANK + nworkers) {
+    /**
+     * Worker tasks run here
+     * Number of tasks is determined by the value of nworkers
+     */
+    LogisticTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config, rank - WORKER_TASK_RANK);
+    sleep_forever();
 
-    } else {
-        throw std::runtime_error("Wrong number of tasks");
-    }
+  } else {
+    throw std::runtime_error("Wrong number of tasks");
+  }
 }
 
 void print_arguments() {
@@ -113,51 +96,48 @@ Configuration load_configuration(const std::string& config_path) {
     return config;
 }
 
+void print_hostname() {
+  char name[200];
+  gethostname(name, 200);
+  std::cout << "MPI multi task test running on hostname: " << name
+    << std::endl;
+}
+
 int main(int argc, char** argv) {
     std::cout << "Starting parameter server" << std::endl;
-
-    int rank = 0;
 
     if (argc != 4) {
         print_arguments();
         throw std::runtime_error("Wrong number of arguments");
     }
 
-    char name[200];
-    gethostname(name, 200);
-    std::cout << "MPI multi task test running on hostname: " << name
-        << " with rank: " << rank
-        << std::endl;
+    print_hostname();
 
-    nworkers = string_to<int>(argv[2]);
+    int nworkers = string_to<int>(argv[2]);
     std::cout << "Running parameter server with: "
         << nworkers << " workers"
         << std::endl;
 
-    rank = string_to<int>(argv[3]);
+    int rank = string_to<int>(argv[3]);
     std::cout << "Running parameter server with: "
         << rank << " rank"
         << std::endl;
+
     auto config = load_configuration(argv[1]);
     config.print();
 
     // from config we get
-    // 1. the number of classes
-    // 2. the size of input
-    samples_per_batch = config.get_minibatch_size();
-    batch_size = samples_per_batch * config.get_num_features();
-    num_classes = config.get_num_classes();
+    int batch_size = config.get_minibatch_size() * config.get_num_features();
 
     std::cout
-        << "samples_per_batch: " << samples_per_batch
+        << "samples_per_batch: " << config.get_minibatch_size()
         << " features_per_sample: " << config.get_num_features()
-        << " batch_size: " << batch_size
+        << " batch_size: " << config.get_minibatch_size()
         << std::endl;
 
     // call the right task for this process
-    std::cout << "Running task"
-        << std::endl;
-    run_tasks(rank, config);
+    std::cout << "Running task" << std::endl;
+    run_tasks(rank, nworkers, batch_size, config);
 
     std::cout << "Test successful" << std::endl;
 
