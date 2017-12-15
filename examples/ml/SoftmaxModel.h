@@ -29,7 +29,7 @@ class SoftmaxModel : public Model {
       */
     std::pair<std::unique_ptr<char[]>, uint64_t>
     serialize() const;
-    
+
     /**
       * serializes this model into memory pointed by mem
       */

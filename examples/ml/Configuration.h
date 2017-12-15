@@ -30,7 +30,7 @@ class Configuration {
       * @returns minibatch size
       */
     uint64_t get_minibatch_size() const;
-    
+
     /**
       * Get size of each object in S3
       * @returns s3 object size
@@ -101,7 +101,7 @@ class Configuration {
       * Get max number of training samples
       */
     uint64_t get_limit_samples() const;
-    
+
     /**
       * Get max number of training samples
       */

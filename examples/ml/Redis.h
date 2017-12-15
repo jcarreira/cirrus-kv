@@ -20,4 +20,4 @@ void redis_delete(redisContext* c, const char* id);
 
 }
 
-#endif // _CIRRUS_REDIS_H_
+#endif  // _CIRRUS_REDIS_H_

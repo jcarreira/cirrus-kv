@@ -19,7 +19,7 @@ class Model {
        * @return Pointer to serialized model and size of serialized model
        */
      virtual std::pair<std::unique_ptr<char[]>, uint64_t> serialize() const = 0;
-    
+
      /**
       * serializes this model into memory pointed by mem
       */

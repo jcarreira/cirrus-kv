@@ -1,7 +1,6 @@
 #ifndef EXAMPLES_ML_UTILS_H_
 #define EXAMPLES_ML_UTILS_H_
 
-//#include <mpi.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <sstream>
@@ -15,13 +14,7 @@
             __builtin_clzll((X)) - 1)
 
 #define FLOAT_EPS (1e-7)
-#define FLOAT_EQ(A,B) (std::fabs((A)-(B)) < FLOAT_EPS)
-
-/**
-  * Check output of an MPI return code
-  * Throws exception with error message in case of MPI error
-  */
-//void check_mpi_error(int err, std::string error = "");
+#define FLOAT_EQ(A, B) (std::fabs((A) - (B)) < FLOAT_EPS)
 
 /**
   * Get current time/epoch in ns
@@ -67,11 +60,6 @@ std::string to_string(const C& s) {
   * Return the size of a file
   */
 std::ifstream::pos_type filesize(const std::string& filename);
-
-/**
-  * Initializes mpi
-  */
-//void init_mpi(int argc, char**argv);
 
 /**
   * Returns the name of the host where the process is running

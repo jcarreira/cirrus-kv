@@ -140,7 +140,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   // we use redis
   auto r = connect_redis();
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
-  //wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
+  wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
 
   uint64_t version = 0;
   while (1) {

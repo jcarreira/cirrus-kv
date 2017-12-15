@@ -89,7 +89,7 @@ class LogisticTaskPreloaded : public MLTask {
              batch_size, samples_per_batch, features_per_sample,
              nworkers, worker_id)
     {}
-     void get_data_samples(auto r, 
+     void get_data_samples(auto r,
                            uint64_t left_id, uint64_t right_id,
                            auto& samples, auto& labels);
 
@@ -107,7 +107,7 @@ class PSTask : public MLTask {
              uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
              uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
              uint64_t SAMPLE_BASE, uint64_t START_BASE,
-             uint64_t batch_size, uint64_t samples_per_batch, 
+             uint64_t batch_size, uint64_t samples_per_batch,
              uint64_t features_per_sample, uint64_t nworkers,
              uint64_t worker_id) :
          MLTask(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,

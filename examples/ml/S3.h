@@ -11,7 +11,7 @@
 #include <aws/core/client/ClientConfiguration.h>
 #include <string>
 
-//#define DEBUG
+// #define DEBUG
 
 using namespace Aws::S3;
 

@@ -2,12 +2,14 @@
 #define EXAMPLES_ML_TASKS_H_
 
 #include <Configuration.h>
-#include <string>
 
 #include <client/TCPClient.h>
 #include "config.h"
 #include "Redis.h"
 #include "LRModel.h"
+
+#include <string>
+#include <vector>
 
 class MLTask {
  public:
@@ -121,7 +123,7 @@ class LogisticTaskPreloaded : public MLTask {
              batch_size, samples_per_batch, features_per_sample,
              nworkers, worker_id)
     {}
-     void get_data_samples(auto r, 
+     void get_data_samples(auto r,
                            uint64_t left_id, uint64_t right_id,
                            auto& samples, auto& labels);
 
@@ -139,17 +141,24 @@ class PSTask : public MLTask {
              uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
              uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
              uint64_t SAMPLE_BASE, uint64_t START_BASE,
-             uint64_t batch_size, uint64_t samples_per_batch, 
+             uint64_t batch_size, uint64_t samples_per_batch,
              uint64_t features_per_sample, uint64_t nworkers,
-             uint64_t worker_id) :
-         MLTask(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-                batch_size, samples_per_batch, features_per_sample,
-                nworkers, worker_id)
-    {}
+             uint64_t worker_id);
+
      void run(const Configuration& config);
 
  private:
+     void update_gradient_version(
+         auto& gradient, int worker, LRModel& model, Configuration config);
+     auto connect_redis();
+     void put_model(LRModel model);
+     void get_gradient(auto r, auto& gradient, auto gradient_id);
+
+     bool first_time = true;
+#if defined(USE_REDIS)
+     redisContext* r;
+     std::vector<unsigned int> gradientVersions;
+#endif
 };
 
 class ErrorTask : public MLTask {
@@ -209,7 +218,7 @@ class LoadingTaskS3 : public MLTask {
                 nworkers, worker_id)
     {}
      void run(const Configuration& config);
-     Dataset read_dataset( const Configuration& config);
+     Dataset read_dataset(const Configuration& config);
      auto connect_redis();
      void check_loading(auto& s3_client, uint64_t s3_obj_entries);
 

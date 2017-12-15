@@ -152,7 +152,7 @@ class lr_gradient_serializer : public cirrus::Serializer<LRGradient> {
 
     uint64_t size(const LRGradient& g) const override;
     void serialize(const LRGradient& g, void* mem) const override;
- 
+
  private:
     uint64_t n;             //< size of the model
     std::string name;  //< name associated with this serializer
@@ -172,10 +172,8 @@ class lr_gradient_deserializer {
     uint64_t n;  //< size of the gradient
 };
 
-/*************************************************************************
-  ************************************************************************
+ /************************************************************************
   * Softmax Serializers
-  ************************************************************************
   ************************************************************************
   */
 
@@ -192,9 +190,9 @@ class sm_gradient_serializer : public cirrus::Serializer<SoftmaxGradient> {
     void serialize(const SoftmaxGradient& g, void* mem) const override;
 
  private:
-    uint64_t nclasses; //< size of the model
-    uint64_t d;        //< size of the model
-    std::string name;  //< name associated with this serializer
+    uint64_t nclasses;  //< size of the model
+    uint64_t d;         //< size of the model
+    std::string name;   //< name associated with this serializer
 };
 
 /**

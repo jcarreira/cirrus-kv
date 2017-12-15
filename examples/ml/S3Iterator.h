@@ -2,12 +2,12 @@
 #define _S3_ITERATOR_H_
 
 #include "S3.h"
-#include "Configuration.h"
-#include <thread>
-#include <mutex>
-#include <list>
-#include <string>
 #include <common/Synchronization.h>
+#include "Configuration.h"
+
+#include <thread>
+#include <list>
+#include <mutex>
 #include "Serializers.h"
 
 class S3Iterator {
@@ -27,7 +27,7 @@ class S3Iterator {
 
   uint64_t left_id;
   uint64_t right_id;
-  
+
   Configuration conf;
 
   std::shared_ptr<Aws::S3::S3Client> s3_client;
@@ -38,8 +38,8 @@ class S3Iterator {
 
   uint64_t read_ahead = 5;
 
-  std::thread* thread; // background thread
-  std::mutex ring_lock; // used to synchronize access
+  std::thread* thread;   // background thread
+  std::mutex ring_lock;  // used to synchronize access
   // used to control number of blocks to prefetch
   cirrus::PosixSemaphore pref_sem;
 
@@ -49,4 +49,4 @@ class S3Iterator {
   uint64_t features_per_sample;
 };
 
-#endif // _S3_ITERATOR_H_
+#endif  // _S3_ITERATOR_H_

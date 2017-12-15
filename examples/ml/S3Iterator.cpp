@@ -58,7 +58,8 @@ std::shared_ptr<double> S3Iterator::get_next() {
   uint64_t ring_size = ring.size();
   ring_lock.unlock();
 
-  if (ring_size < 10000) {
+  if (ring_size < 10000 && pref_sem.getvalue() < (int)read_ahead) {
+    std::cout << "Signal semaphore" << std::endl;
     pref_sem.signal();
   }
 
@@ -95,10 +96,12 @@ void S3Iterator::thread_function() {
       s3_rows * (s3_cols + 1), // also count labels
       "S3 deserializer");
 
+  uint64_t count = 0;
   while (1) {
     // if we can go it means there is a slot
     // in the ring
     pref_sem.wait();
+    std::cout << "Getting object. count: " << count++ << std::endl;
 
     std::string s3_obj;
     try {
