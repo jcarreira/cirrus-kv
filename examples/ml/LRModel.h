@@ -121,14 +121,20 @@ class LRModel : public Model {
       */
     void print() const;
 
+    /**
+      * Return model size (should match sample size)
+      * @return Size of the model
+      */
+    uint64_t size() const;
+
  private:
     /**
       * Check whether value n is an integer
       */
     bool is_integer(double n) const;
 
-    std::vector<double> weights;  //< vector of the model weights
-    uint64_t d;                   //< size of the model
+    std::vector<double> weights_;  //< vector of the model weights
+    uint64_t d_;                   //< size of the model
 };
 
 #endif  // EXAMPLES_ML_LRMODEL_H_

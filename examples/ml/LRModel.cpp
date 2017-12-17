@@ -1,4 +1,4 @@
-#include <examples/ml/LRModel.h>
+#include <LRModel.h>
 #include <Utils.h>
 #include <MlUtils.h>
 #include <Eigen/Dense>
@@ -6,15 +6,17 @@
 #include <Checksum.h>
 #include <algorithm>
 
-LRModel::LRModel(uint64_t d) :
-    d(d) {
-    weights.resize(d);
+LRModel::LRModel(uint64_t d) {
+    weights_.resize(d);
 }
 
-LRModel::LRModel(const double* w, uint64_t d) :
-    d(d) {
-    weights.resize(d);
-    std::copy(w, w + d, weights.begin());
+LRModel::LRModel(const double* w, uint64_t d) {
+    weights_.resize(d);
+    std::copy(w, w + d, weights_.begin());
+}
+
+uint64_t LRModel::size() const {
+  return weights_.size();
 }
 
 std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
@@ -42,24 +44,24 @@ LRModel::serialize() const {
     res.first.reset(new char[size]);
 
     res.second = size;
-    std::memcpy(res.first.get(), weights.data(), getSerializedSize());
+    std::memcpy(res.first.get(), weights_.data(), getSerializedSize());
 
     return res;
 }
 
 void LRModel::serializeTo(void* mem) const {
-    std::memcpy(mem, weights.data(), getSerializedSize());
+    std::memcpy(mem, weights_.data(), getSerializedSize());
 }
 
 void LRModel::randomize() {
-    for (uint64_t i = 0; i < d; ++i) {
-        weights[i] = get_rand_between_0_1();
+    for (uint64_t i = 0; i < size(); ++i) {
+        weights_[i] = get_rand_between_0_1();
     }
 }
 
 std::unique_ptr<Model> LRModel::copy() const {
     std::unique_ptr<LRModel> new_model =
-        std::make_unique<LRModel>(weights.data(), d);
+        std::make_unique<LRModel>(weights_.data(), size());
     return new_model;
 }
 
@@ -71,19 +73,19 @@ void LRModel::sgd_update(double learning_rate,
         throw std::runtime_error("Error in dynamic cast");
     }
 
-    for (uint64_t i = 0; i < d; ++i) {
-       weights[i] += learning_rate * grad->weights[i];
+    for (uint64_t i = 0; i < size(); ++i) {
+       weights_[i] += learning_rate * grad->weights[i];
     }
 }
 
 uint64_t LRModel::getSerializedSize() const {
-    return d * sizeof(double);
+    return size() * sizeof(double);
 }
 
 void LRModel::loadSerialized(const void* data) {
-    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", d);
+    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
     const double* v = reinterpret_cast<const double*>(data);
-    std::copy(v, v + d, weights.begin());
+    std::copy(v, v + size(), weights_.begin());
 }
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
@@ -91,10 +93,15 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         double* labels,
         uint64_t labels_size,
         double epsilon) const {
-    auto w = weights;
+    auto w = weights_;
 #ifdef DEBUG
     dataset.check_values();
 #endif
+
+    if (dataset.cols != d_) {
+      throw std::runtime_error(
+          "Model size doesn't match sample size");
+    }
 
     const double* dataset_data = dataset.data.get();
     // create Matrix for dataset
@@ -103,14 +110,14 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
           ds(const_cast<double*>(dataset_data), dataset.rows, dataset.cols);
 
     // create weight vector
-    Eigen::Map<Eigen::VectorXd> weights(w.data(), d);
+    Eigen::Map<Eigen::VectorXd> tmp_weights(w.data(), size());
 
     // create vector with labels
     Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
 
     // apply logistic function to matrix multiplication
     // between dataset and weights
-    auto part1_1 = (ds * weights);
+    auto part1_1 = (ds * tmp_weights);
     auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
 
     Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
@@ -118,7 +125,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     // compute difference between labels and logistic probability
     auto part2 = lbs - part1;
     auto part3 = ds.transpose() * part2;
-    auto part4 = weights * 2 * epsilon;
+    auto part4 = tmp_weights * 2 * epsilon;
     auto res = part4 + part3;
 
     std::vector<double> vec_res;
@@ -137,7 +144,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 double LRModel::calc_loss(Dataset& dataset) const {
     double total_loss = 0;
 
-    auto w = weights;
+    auto w = weights_;
 
 #ifdef DEBUG
     dataset.check_values();
@@ -154,7 +161,7 @@ double LRModel::calc_loss(Dataset& dataset) const {
             ds(const_cast<double*>(ds_data),
                     dataset.samples_.rows, dataset.samples_.cols);
 
-    Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), d);
+    Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
 
     // count how many samples are wrongly classified
     uint64_t wrong_count = 0;
@@ -213,13 +220,13 @@ double LRModel::calc_loss(Dataset& dataset) const {
 }
 
 uint64_t LRModel::getSerializedGradientSize() const {
-    return d * sizeof(double);
+    return size() * sizeof(double);
 }
 
 std::unique_ptr<ModelGradient> LRModel::loadGradient(void* mem) const {
-    auto grad = std::make_unique<LRGradient>(d);
+    auto grad = std::make_unique<LRGradient>(size());
 
-    for (uint64_t i = 0; i < d; ++i) {
+    for (uint64_t i = 0; i < size(); ++i) {
         grad->weights[i] = reinterpret_cast<double*>(mem)[i];
     }
 
@@ -231,12 +238,12 @@ bool LRModel::is_integer(double n) const {
 }
 
 double LRModel::checksum() const {
-    return crc32(weights.data(), weights.size() * sizeof(double));
+    return crc32(weights_.data(), weights_.size() * sizeof(double));
 }
 
 void LRModel::print() const {
     std::cout << "MODEL: ";
-    for (const auto& w : weights) {
+    for (const auto& w : weights_) {
         std::cout << " " << w;
     }
     std::cout << std::endl;
