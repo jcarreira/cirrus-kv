@@ -40,6 +40,7 @@ class MLTask {
     void wait_for_start(int index, cirrus::TCPClient& client, int nworkers);
 #elif defined(USE_REDIS)
     void wait_for_start(int index, redisContext* r, int nworkers);
+    bool get_worker_status(auto r, int worker_id);
 #endif
 
   protected:
@@ -103,8 +104,8 @@ class LogisticTaskS3 : public MLTask {
 
   private:
     bool run_phase1(auto& samples, auto& labels,
-        auto& model, auto r, auto& s3_iter,
-        uint64_t features_per_sample);
+        auto& model, auto& s3_iter,
+        uint64_t features_per_sample, auto& mp);
     auto get_model(auto r, auto lmd);
     void push_gradient(auto r, int, LRGradient*);
     void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
@@ -184,6 +185,8 @@ class ErrorTask : public MLTask {
     void get_samples_labels_redis(
         auto r, auto i, auto& samples, auto& labels,
         auto cad_samples, auto cad_labels);
+    void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
+        auto& samples, auto& labels);
 };
 
 class LoadingTask : public MLTask {

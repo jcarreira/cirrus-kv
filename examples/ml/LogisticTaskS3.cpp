@@ -16,16 +16,81 @@ void check_redis(auto r) {
   }
 }
 
-auto LogisticTaskS3::get_model(auto r, auto lmd) {
-  int len;
-  char* data = redis_get_numid(r, MODEL_BASE, &len);
-  if (data == nullptr) {
-    throw cirrus::NoSuchIDException("");
-  }
-  auto model = lmd(data, len);
-  free(data);
-  return model;
-}
+/**
+  * Works as a cache for remote model
+  */
+class ModelProxy {
+  public:
+    ModelProxy(auto r, uint64_t mgs, uint64_t mb) :
+      r(r), model(mgs), MODEL_BASE(mb), lmd(mgs)
+  {}
+
+    ~ModelProxy() {
+      thread_terminate = true;
+    }
+
+    LRModel get_model() {
+      // make sure we receive model at least once
+      while (first_time == true) {
+      }
+
+      std::cout << "[WORKER] waiting for lock" << std::endl;
+      model_lock.wait();
+      LRModel ret = model;
+      model_lock.signal();
+      std::cout << "[WORKER] waited for lock" << std::endl;
+      return ret;
+    }
+
+    void run() {
+      thread = std::make_unique<std::thread>(
+          std::bind(&ModelProxy::thread_run, this));
+    }
+
+    void thread_run() {
+      while (1) {
+        int len;
+        std::cout << "ModelProxy getting model" << std::endl;
+        std::chrono::steady_clock::time_point start =
+          std::chrono::steady_clock::now();
+        char* data = redis_get_numid(r, MODEL_BASE, &len);
+        std::chrono::steady_clock::time_point finish =
+          std::chrono::steady_clock::now();
+        uint64_t elapsed_ns =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+          finish-start).count();
+        std::cout << "ModelProxy getting model took(us): " << (elapsed_ns/1000.0) << std::endl;
+
+        if (data == nullptr) {
+          throw cirrus::NoSuchIDException("");
+        }
+        model_lock.wait();
+        model = lmd(data, len);
+        model_lock.signal();
+        free(data);
+
+        first_time = false;
+        if (thread_terminate == true)
+          break;
+        std::this_thread::yield();
+        usleep(500);
+      }
+    }
+
+  private:
+    volatile bool thread_terminate = false;
+    volatile bool first_time = true;
+
+    redisContext* r;
+    std::unique_ptr<std::thread> thread;
+    LRModel model;
+    //std::mutex model_lock;
+    cirrus::SpinLock model_lock;
+
+    uint64_t MODEL_BASE;
+    lr_model_deserializer lmd;
+};
+
 
 void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
   lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
@@ -33,10 +98,10 @@ void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
   uint64_t gradient_size = lgs.size(*lrg);
   auto data = std::unique_ptr<char[]>(new char[gradient_size]);
   lgs.serialize(*lrg, data.get());
-  
+
   int gradient_id = GRADIENT_BASE + worker;
   redis_put_binary_numid(r, gradient_id, data.get(), gradient_size);
-    
+
   std::cout << "[WORKER] "
       << "Worker task stored gradient at id: " << gradient_id
       << " at time (us): " << get_time_us() << "\n";
@@ -58,8 +123,6 @@ void LogisticTaskS3::unpack_minibatch(
     double* data = minibatch.get() + j * (features_per_sample + 1);
     labels.get()[j] = *data;
 
-    //std::cout << "j: " << j << std::endl;
-    //std::cout << "features_per_sample: " << features_per_sample << std::endl;
     if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
       throw std::runtime_error(
           "Wrong label in unpack_minibatch " + std::to_string(*data));
@@ -73,15 +136,13 @@ void LogisticTaskS3::unpack_minibatch(
 
 // get samples and labels data
 bool LogisticTaskS3::run_phase1(
-    auto& samples, auto& labels, auto& model, auto r,
-    auto& s3_iter, uint64_t /*features_per_sample*/) {
-  
-  static bool first_time = true;
-  lr_model_deserializer lmd(MODEL_GRAD_SIZE);
+    auto& samples, auto& labels, auto& model,
+    auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp) {
 
+  static bool first_time = true;
   try {
     auto before_model = get_time_ns();
-    model = get_model(r, lmd);
+    model = mp.get_model();
     auto after_model = get_time_ns();
     std::cout << "[WORKER] "
       << "model get (ns): " << (after_model - before_model)
@@ -100,7 +161,7 @@ bool LogisticTaskS3::run_phase1(
           finish-start).count();
     double bw = 1.0 * batch_size * sizeof(double) /
       elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
-    std::cout << "Get Sample Elapsed (S3) "
+    std::cout << "[WORKER] Get Sample Elapsed (S3) "
       << " batch size: " << batch_size
       << " ns: " << elapsed_ns
       << " BW (MB/s): " << bw
@@ -117,6 +178,7 @@ bool LogisticTaskS3::run_phase1(
       << "Model could not be found at id: " << MODEL_BASE << "\n";
     return false;
   }
+
   return true;
 }
 
@@ -141,6 +203,9 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   auto r = connect_redis();
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
   wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
+  
+  ModelProxy mp(r, MODEL_GRAD_SIZE, MODEL_BASE);
+  mp.run();
 
   uint64_t version = 0;
   while (1) {
@@ -150,8 +215,13 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
     LRModel model(MODEL_GRAD_SIZE);
 
     // get data, labels and model
-    if (!run_phase1(samples, labels, model, r, s3_iter, features_per_sample))
+    std::cout << "[WORKER] running phase 1" << std::endl;
+    if (!run_phase1(samples, labels, model, s3_iter, features_per_sample, mp))
       continue;
+    else {
+      std::cout << "[WORKER] else phase 1" << std::endl;
+    }
+    std::cout << "[WORKER] phase 1 done" << std::endl;
 
     Dataset dataset(samples.get(), labels.get(),
         samples_per_batch, features_per_sample);
@@ -164,7 +234,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     std::cout << "Computing gradient" << std::endl;
     try {
-      gradient = model.minibatch_grad(0, dataset.samples_,
+      gradient = model.minibatch_grad(dataset.samples_,
           labels.get(), samples_per_batch, config.get_epsilon());
     } catch(const std::runtime_error& e) {
       std::cout << "Error. " << e.what() << std::endl;
@@ -186,7 +256,6 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
       }
 
       push_gradient(r, worker, lrg);
-
     } catch(...) {
       std::cout << "[WORKER] "
         << "Worker task error doing put of gradient" << "\n";

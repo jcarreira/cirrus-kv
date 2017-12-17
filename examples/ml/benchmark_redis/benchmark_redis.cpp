@@ -69,7 +69,9 @@ void benchmark_redis(redisContext* r, unsigned int data_size) {
 
 int main() {
    std::cout << "Connecting to redis" << std::endl;
-   auto r = redis_connect("testing-redis-interf.lpfp73.0001.usw2.cache.amazonaws.com", 6379);
+   auto r = redis_connect(
+       "ec2-34-215-76-49.us-west-2.compute.amazonaws.com",
+       6379);
 
    if (r == NULL || r->err) {
      std::cout << "Connection error" << std::endl;

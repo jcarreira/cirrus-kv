@@ -139,7 +139,7 @@ uint64_t SoftmaxModel::getSerializedSize() const {
 }
 
 std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
-            int /* rank */, const Matrix& m,
+            const Matrix& m,
             double* labels,
             uint64_t labels_size,
             double epsilon) const {

@@ -74,7 +74,7 @@ class Matrix {
     uint64_t rows;   //< number of rows of matrix
     uint64_t cols;   //< number of columns of matrix
     std::shared_ptr<const double> data;  //< pointer to matrix contents
-    mutable std::shared_ptr<Matrix> cached_data;  //< cache for the transpose
+    mutable std::shared_ptr<Matrix> cached_transpose;  //< cache for the transpose
 };
 
 #endif  // EXAMPLES_ML_MATRIX_H_

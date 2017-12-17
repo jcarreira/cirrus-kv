@@ -86,14 +86,13 @@ class Model {
 
      /**
        * Compute gradient for minibatch
-       * @param rank MPI worker rank
        * @param dataset Dataset to use to compute the gradient
        * @param labels Correspoding sample labels
        * @param epsilon L2 regularization rate
        * @returns SGD gradient
        */
      virtual std::unique_ptr<ModelGradient> minibatch_grad(
-                int rank, const Matrix& dataset,
+                const Matrix& dataset,
                 double* labels,
                 uint64_t labels_size,
                 double epsilon) const = 0;

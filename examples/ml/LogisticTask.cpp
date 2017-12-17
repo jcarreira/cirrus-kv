@@ -278,7 +278,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
     try {
-      gradient = model.minibatch_grad(0, dataset.samples_,
+      gradient = model.minibatch_grad(dataset.samples_,
           labels.get(), samples_per_batch, config.get_epsilon());
     } catch(...) {
       std::cout << "There was an error here" << std::endl;
@@ -531,7 +531,7 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
     try {
-      gradient = model.minibatch_grad(0, dataset.samples_,
+      gradient = model.minibatch_grad(dataset.samples_,
           labels.get(), samples_per_batch, config.get_epsilon());
     } catch(...) {
       std::cout << "There was an error here" << std::endl;

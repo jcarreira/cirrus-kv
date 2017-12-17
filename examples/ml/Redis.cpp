@@ -98,10 +98,12 @@ char* redis_get(redisContext* c, const char* id, int* len) {
     redisReply* reply = (redisReply*)redisCommand(c,"GET key:%s", id);
 
     if (reply->type == REDIS_REPLY_NIL) {
+#ifdef REDIS_DEBUG
         std::cout << "[REDIS] "
             << "redis returned nil"
             << " with id: " << id
             << std::endl;
+#endif
         freeReplyObject(reply);
         return NULL;
     }

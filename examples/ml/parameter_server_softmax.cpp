@@ -13,7 +13,7 @@
 #include <memory>
 
 #include <Checksum.h>
-#include "Input.h"
+#include "InputReader.h"
 #include "Utils.h"
 #include "Model.h"
 #include "SoftmaxModel.h"

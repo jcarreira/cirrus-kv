@@ -7,7 +7,7 @@
 #include <queue>
 #include <mutex>
 
-class Input {
+class InputReader {
  public:
     /**
       * Reads criteo dataset in binary format

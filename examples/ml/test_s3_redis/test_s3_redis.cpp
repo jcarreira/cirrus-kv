@@ -39,7 +39,7 @@ char* test_get(redisContext* r, const char* id) {
 int test_redis() {
    std::cout << "Connecting to redis" << std::endl;
    const char* redis_path =
-       "testing-redis-interf.lpfp73.0001.usw2.cache.amazonaws.com";
+     "ec2-34-215-76-49.us-west-2.compute.amazonaws.com";
    auto r = redis_connect(redis_path, 6379);
 
    if (r == NULL || r->err) {

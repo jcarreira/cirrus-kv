@@ -3,6 +3,8 @@
 #include "Serializers.h"
 #include "Redis.h"
 #include "config.h"
+#include "S3Iterator.h"
+#include "Utils.h"
 
 #define ERROR_INTERVAL_USEC (500) // time between error checks
 
@@ -43,30 +45,35 @@ void check_labels(auto labels, auto samples_per_batch) {
   }
 }
 
-void ErrorTask::run(const Configuration& /* config */) {
+void ErrorTask::run(const Configuration& config) {
   std::cout << "Compute error task connecting to store" << std::endl;
 
-  cirrus::TCPClient client;
-
   // declare serializers
-  lr_model_serializer lms(MODEL_GRAD_SIZE);
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-  c_array_serializer<double> cas_samples(batch_size);
-  c_array_deserializer<double> cad_samples(batch_size,
-      "error samples_store");
-  c_array_serializer<double> cas_labels(samples_per_batch);
+  c_array_deserializer<double> cad_samples(batch_size, "error samples_store");
   c_array_deserializer<double> cad_labels(samples_per_batch,
       "error labels_store", false);
 
-#ifdef USE_CIRRUS
+#ifdef DATASET_IN_S3
+  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
+  S3Iterator s3_iter(0, num_s3_batches, config,
+      config.get_s3_size(), features_per_sample,
+      config.get_minibatch_size());
+#endif
+
+#if defined(USE_CIRRUS)
+  cirrus::TCPClient client;
+  lr_model_serializer lms(MODEL_GRAD_SIZE);
   // this is used to access the most up to date model
   cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
     model_store(IP, PORT, &client, lms, lmd);
 
+  c_array_serializer<double> cas_samples(batch_size);
   // this is used to access the training data sample
   cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
     samples_store(IP, PORT, &client, cas_samples, cad_samples);
 
+  c_array_serializer<double> cas_labels(samples_per_batch);
   // this is used to access the training labels
   cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
     labels_store(IP, PORT, &client, cas_labels, cad_labels);
@@ -94,7 +101,10 @@ start:
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
     try {
-#ifdef USE_CIRRUS
+#ifdef DATASET_IN_S3
+    std::shared_ptr<double> minibatch = s3_iter.get_next();
+    unpack_minibatch(minibatch, samples, labels);
+#elif defined(USE_CIRRUS)
       samples = samples_store.get(SAMPLE_BASE + i);
       labels = labels_store.get(LABEL_BASE + i);
 #elif defined(USE_REDIS)
@@ -150,3 +160,29 @@ loop_accuracy:
   //std::cout << "Learning loss (avg per sample): " << loss << std::endl;
 }
 
+void ErrorTask::unpack_minibatch(
+    std::shared_ptr<double> minibatch,
+    auto& samples, auto& labels) {
+  uint64_t num_samples_per_batch = batch_size / features_per_sample;
+
+  samples = std::shared_ptr<double>(
+      new double[batch_size], std::default_delete<double[]>());
+  labels = std::shared_ptr<double>(
+      new double[num_samples_per_batch], std::default_delete<double[]>());
+
+  for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
+    double* data = minibatch.get() + j * (features_per_sample + 1);
+    labels.get()[j] = *data;
+
+    //std::cout << "j: " << j << std::endl;
+    //std::cout << "features_per_sample: " << features_per_sample << std::endl;
+    if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
+      throw std::runtime_error(
+          "Wrong label in unpack_minibatch " + std::to_string(*data));
+
+    data++;
+    std::copy(data,
+        data + features_per_sample,
+        samples.get() + j * features_per_sample);
+  }
+}

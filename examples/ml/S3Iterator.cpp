@@ -24,7 +24,7 @@ S3Iterator::S3Iterator(
   s3_initialize_aws();
   s3_client.reset(s3_create_client_ptr());
 
-  cur = left_id;
+  //cur = left_id;
   last = left_id;  // last is exclusive
 
   for (uint64_t i = 0; i < read_ahead; ++i) {
@@ -35,14 +35,15 @@ S3Iterator::S3Iterator(
 }
 
 std::shared_ptr<double> S3Iterator::get_next() {
-  std::cout << "Get next "
-    << " cur: " << cur
-    << " last: " << last
-    << "\n";
+  //std::cout << "Get next "
+  //  //<< " cur: " << cur
+  //  << " last: " << last
+  //  << "\n";
   while (1) {
     ring_lock.lock();
     if (ring.empty()) {
       ring_lock.unlock();
+      usleep(1000);
     } else {
       break;
     }
@@ -50,24 +51,24 @@ std::shared_ptr<double> S3Iterator::get_next() {
 
   std::shared_ptr<double> ret = ring.front();
   ring.pop_front();
-  cur++;
-  if (cur == right_id) {
-    cur = left_id;
-  }
+  //cur++;
+  //if (cur == right_id) {
+  //  cur = left_id;
+  //}
   
   uint64_t ring_size = ring.size();
   ring_lock.unlock();
 
   if (ring_size < 10000 && pref_sem.getvalue() < (int)read_ahead) {
-    std::cout << "Signal semaphore" << std::endl;
+    //std::cout << "Signal semaphore" << std::endl;
     pref_sem.signal();
   }
 
-  std::cout << "Returning prefetched batch"
-    << " cur: " << cur
-    << " last: " << last
-    << " ring size: " << ring_size
-    << std::endl;
+  //std::cout << "Returning prefetched batch"
+  //  //<< " cur: " << cur
+  //  << " last: " << last
+  //  << " ring size: " << ring_size
+  //  << std::endl;
   return ret;
 }
 
@@ -92,6 +93,10 @@ void S3Iterator::push_samples(const std::shared_ptr<double>& samples) {
 }
 
 void S3Iterator::thread_function() {
+
+  std::cout << "Building S3 deser. with size: "
+    << s3_rows << " x " << (s3_cols + 1) << " = " << (s3_rows * (s3_cols + 1))
+    << std::endl;
   c_array_deserializer<double> cad_samples(
       s3_rows * (s3_cols + 1), // also count labels
       "S3 deserializer");
@@ -105,7 +110,20 @@ void S3Iterator::thread_function() {
 
     std::string s3_obj;
     try {
+      std::chrono::steady_clock::time_point start =
+        std::chrono::steady_clock::now();
       s3_obj = s3_get_object(last, *s3_client, S3_BUCKET);
+      std::chrono::steady_clock::time_point finish =
+        std::chrono::steady_clock::now();
+      uint64_t elapsed_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            finish-start).count();
+
+      double MBps = (1.0 * s3_obj.size() / elapsed_ns) / 1024 / 1024 * 1000 * 1000 * 1000;
+      std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0)
+        << " size (KB): " << (s3_obj.size() / 1024.0)
+        << " bandwidth (MB/s): " << MBps
+        << std::endl;
     } catch(...) {
       std::cout << "S3Iterator: error in s3_get_object" << std::endl;
       exit(-1);
@@ -113,8 +131,8 @@ void S3Iterator::thread_function() {
     
     // update index
     last++;
-    if (last == cur)
-      throw std::runtime_error("Error in iterator");
+    //if (last == cur)
+    //  throw std::runtime_error("Error in iterator");
     if (last == right_id)
       last = left_id;
 

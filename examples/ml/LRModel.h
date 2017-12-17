@@ -79,7 +79,6 @@ class LRModel : public Model {
 
     /**
      * Compute a minibatch gradient
-     * @param rank MPI worker rank
      * @param dataset Dataset to learn on
      * @param labels Labels of the samples
      * @param labels_size Size of the labels array
@@ -87,7 +86,7 @@ class LRModel : public Model {
      * @return Newly computed gradient
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            int rank, const Matrix& dataset,
+            const Matrix& dataset,
             double* labels,
             uint64_t labels_size,
             double epsilon) const override;

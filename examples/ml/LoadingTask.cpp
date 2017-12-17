@@ -2,7 +2,7 @@
 
 #include "Serializers.h"
 #include "Redis.h"
-#include "Input.h"
+#include "InputReader.h"
 #include "S3.h"
 
 /**
@@ -13,7 +13,7 @@
 void LoadingTask::run(const Configuration& config) {
   std::cout << "[LOADER] " << "Read criteo input..." << std::endl;
 
-  Input input;
+  InputReader input;
   // auto dataset = input.read_input_csv(
   //        config.get_input_path(),
   //        " ", 3,

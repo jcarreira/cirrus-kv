@@ -7,20 +7,17 @@
 #ifdef USE_CIRRUS
 void MLTask::wait_for_start(
     int index, cirrus::TCPClient& client, int nworkers) {
-  std::cout << "wait_for_start index: " << index
-    << std::endl;
+  std::cout << "wait_for_start index: " << index << std::endl;
 
   c_array_serializer<bool> start_counter_ser(1);
   c_array_deserializer<bool> start_counter_deser(1);
-  auto t = std::make_shared<bool>(true);
+  //auto t = std::make_shared<bool>(true);
 
   std::cout << "Connecting to CIRRUS store : " << std::endl;
   cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<bool>>
-    start_store(IP, PORT, &client,
-        start_counter_ser, start_counter_deser);
+    start_store(IP, PORT, &client, start_counter_ser, start_counter_deser);
 
-  std::cout << "Updating start index: " << index
-    << std::endl;
+  std::cout << "Updating start index: " << index << std::endl;
   start_store.put(START_BASE + index, t);
   std::cout << "Updated start index: " << index << std::endl;
 
@@ -48,9 +45,19 @@ void MLTask::wait_for_start(
     << std::endl;
 }
 #elif defined(USE_REDIS)
+bool MLTask::get_worker_status(auto r, int worker_id) {
+  int len;  // length of object received
+  char* data = redis_get_numid(r, START_BASE + worker_id, &len);
+  if (data == nullptr) {
+    return false;
+  }
+  auto is_done = bool(data[0]);
+  free(data);
+  return is_done;
+}
+
 void MLTask::wait_for_start(int index, redisContext* r, int nworkers) {
-  std::cout
-    << "Waiting for all workers to start. index: " << index
+  std::cout << "Waiting for all workers to start. index: " << index
     << std::endl;
 
   char data = 1;  // bit used to indicate start
@@ -60,17 +67,7 @@ void MLTask::wait_for_start(int index, redisContext* r, int nworkers) {
   while (1) {
     int i = 1;
     for (; i < num_waiting_tasks; ++i) {
-#ifdef DEBUG
-      std::cout << "Getting status i: " << i << std::endl;
-#endif
-      int len;  // length of object received
-      char* data = redis_get_numid(r, START_BASE + i, &len);
-      if (data == nullptr) {
-        std::cout << "wait_for_start breaking" << std::endl;
-        break;
-      }
-      auto is_done = bool(data[0]);
-      free(data);
+      bool is_done = get_worker_status(r, i);
       if (!is_done)
         break;
     }

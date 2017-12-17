@@ -2,7 +2,7 @@
 
 #include "Serializers.h"
 #include "Redis.h"
-#include "Input.h"
+#include "InputReader.h"
 #include "S3.h"
 #include "Utils.h"
 
@@ -11,7 +11,7 @@ const std::string INPUT_DELIMITER = " ";
 
 Dataset LoadingTaskS3::read_dataset(
     const Configuration& config) {
-  Input input;
+  InputReader input;
 
   bool normalize = config.get_normalize();
   Dataset dataset = input.read_input_csv(
@@ -24,7 +24,7 @@ Dataset LoadingTaskS3::read_dataset(
 }
 
 auto LoadingTaskS3::connect_redis() {
-  auto r = redis_connect(redis_ip, redis_port);
+  redisContext* r = redis_connect(redis_ip.c_str(), redis_port);
   if (r == NULL || r -> err) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(redis_ip));
@@ -82,17 +82,22 @@ void LoadingTaskS3::run(const Configuration& config) {
   uint64_t s3_obj_sample_entries = features_per_sample + 1;
   uint64_t s3_obj_entries = s3_obj_num_samples * s3_obj_sample_entries;
 
-  Dataset dataset = read_dataset(config);
-  dataset.check_values();
-
   s3_initialize_aws();
   auto s3_client = s3_create_client();
   auto r  = connect_redis();
+ 
+
+  // XXX we don't intend to run this task at runtime
+  //wait_for_start(LOADING_TASK_RANK, r, nworkers);
+  //return;
+  
+  Dataset dataset = read_dataset(config);
+  dataset.check_values();
 
   std::cout << "[LOADER] "
     << "Adding " << dataset.num_samples()
-    << " samples in batches of size (s3_obj_entries): "
-    << s3_obj_entries << std::endl;
+    << " samples in batches of size (s3_obj_entries): " << s3_obj_entries
+    << std::endl;
 
   // For each S3 object (group of s3_obj_num_samples samples)
   uint64_t num_s3_objs = dataset.num_samples() / s3_obj_num_samples;
@@ -120,8 +125,9 @@ void LoadingTaskS3::run(const Configuration& config) {
     uint64_t len = cas_samples.size(s3_obj);
     std::unique_ptr<char[]> data = std::unique_ptr<char[]>(new char[len]);
     cas_samples.serialize(s3_obj, data.get());
+    std::cout << "Putting object in S3 with size: " << len << std::endl;
     s3_put_object(SAMPLE_BASE + i, s3_client, "cirrusonlambdas",
-        std::string(data.get(), cas_samples.size(s3_obj)));
+        std::string(data.get(), len));
   }
 
   check_loading(s3_client, s3_obj_entries);

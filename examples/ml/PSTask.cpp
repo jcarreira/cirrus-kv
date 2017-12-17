@@ -121,8 +121,7 @@ void PSTask::run(const Configuration& config) {
           std::cout
             << "PS task not able to get gradient: "
             << std::to_string(gradient_id)
-            << " gradient_id: " << gradient_id
-            << std::endl;
+            << "\n";
         }
         // this happens because the worker task
         // has not uploaded the gradient yet

@@ -45,7 +45,7 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/
 
-CPP_SOURCES = Input.cpp Utils.cpp \
+CPP_SOURCES = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
@@ -54,7 +54,7 @@ CPP_SOURCES = Input.cpp Utils.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp \
 	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp
 
-CPP_SOURCES_SOFTMAX = Input.cpp Utils.cpp \
+CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \

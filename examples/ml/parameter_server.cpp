@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <Checksum.h>
-#include "Input.h"
+#include "InputReader.h"
 #include "Utils.h"
 #include "Model.h"
 #include "LRModel.h"
@@ -76,24 +76,24 @@ void run_tasks(int rank, int nworkers,
     sleep_forever();
 
   } else {
-    throw std::runtime_error("Wrong number of tasks");
+    throw std::runtime_error("Wrong task rank: " + std::to_string(rank));
   }
 }
 
 void print_arguments() {
-    // nworkers is the number of processes computing gradients
-    // rank starts at 0
-    std::cout << "./parameter_server config_file nworkers rank" << std::endl;
+  // nworkers is the number of processes computing gradients
+  // rank starts at 0
+  std::cout << "./parameter_server config_file nworkers rank" << std::endl;
 }
 
 Configuration load_configuration(const std::string& config_path) {
-    Configuration config;
-    std::cout << "Loading configuration"
-        << std::endl;
-    config.read(config_path);
-    std::cout << "Configuration read"
-        << std::endl;
-    return config;
+  Configuration config;
+  std::cout << "Loading configuration"
+    << std::endl;
+  config.read(config_path);
+  std::cout << "Configuration read"
+    << std::endl;
+  return config;
 }
 
 void print_hostname() {
@@ -104,43 +104,43 @@ void print_hostname() {
 }
 
 int main(int argc, char** argv) {
-    std::cout << "Starting parameter server" << std::endl;
+  std::cout << "Starting parameter server" << std::endl;
 
-    if (argc != 4) {
-        print_arguments();
-        throw std::runtime_error("Wrong number of arguments");
-    }
+  if (argc != 4) {
+    print_arguments();
+    throw std::runtime_error("Wrong number of arguments");
+  }
 
-    print_hostname();
+  print_hostname();
 
-    int nworkers = string_to<int>(argv[2]);
-    std::cout << "Running parameter server with: "
-        << nworkers << " workers"
-        << std::endl;
+  int nworkers = string_to<int>(argv[2]);
+  std::cout << "Running parameter server with: "
+    << nworkers << " workers"
+    << std::endl;
 
-    int rank = string_to<int>(argv[3]);
-    std::cout << "Running parameter server with: "
-        << rank << " rank"
-        << std::endl;
+  int rank = string_to<int>(argv[3]);
+  std::cout << "Running parameter server with: "
+    << rank << " rank"
+    << std::endl;
 
-    auto config = load_configuration(argv[1]);
-    config.print();
+  auto config = load_configuration(argv[1]);
+  config.print();
 
-    // from config we get
-    int batch_size = config.get_minibatch_size() * config.get_num_features();
+  // from config we get
+  int batch_size = config.get_minibatch_size() * config.get_num_features();
 
-    std::cout
-        << "samples_per_batch: " << config.get_minibatch_size()
-        << " features_per_sample: " << config.get_num_features()
-        << " batch_size: " << config.get_minibatch_size()
-        << std::endl;
+  std::cout
+    << "samples_per_batch: " << config.get_minibatch_size()
+    << " features_per_sample: " << config.get_num_features()
+    << " batch_size: " << config.get_minibatch_size()
+    << std::endl;
 
-    // call the right task for this process
-    std::cout << "Running task" << std::endl;
-    run_tasks(rank, nworkers, batch_size, config);
+  // call the right task for this process
+  std::cout << "Running task" << std::endl;
+  run_tasks(rank, nworkers, batch_size, config);
 
-    std::cout << "Test successful" << std::endl;
+  std::cout << "Test successful" << std::endl;
 
-    return 0;
+  return 0;
 }
 

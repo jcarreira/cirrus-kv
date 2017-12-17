@@ -15,7 +15,8 @@ LDFLAGS=-L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ 
 LIBFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 all:  
-	g++ $(CXXFLAGS) test_s3_redis.cpp ../Redis.cpp $(INCLUDES) $(LDFLAGS) $(LIBFLAGS) -o test_s3_redis
+	g++ $(CXXFLAGS) test_s3_redis.cpp ../Redis.cpp ../S3.cpp $(INCLUDES) $(LDFLAGS) $(LIBFLAGS) -o test_s3_redis
+	g++ $(CXXFLAGS) test_s3_contention.cpp ../S3.cpp $(INCLUDES) $(LDFLAGS) $(LIBFLAGS) -o test_s3_contention
 
 clean:
 	rm -rf a.out test_s3_redis

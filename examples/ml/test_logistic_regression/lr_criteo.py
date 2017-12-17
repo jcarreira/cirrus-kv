@@ -141,8 +141,8 @@ normalize_dataset(dataset, minmax)
 
 # evaluate algorithm
 n_folds = 5
-l_rate = 0.01
-n_epoch = 1000
+l_rate = 0.001
+n_epoch = 10000
 
 print("Evaluating algorithm")
 scores = evaluate_algorithm(dataset, logistic_regression, n_folds, l_rate, n_epoch)

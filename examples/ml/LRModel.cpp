@@ -87,7 +87,7 @@ void LRModel::loadSerialized(const void* data) {
 }
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
-        int /* rank */, const Matrix& dataset,
+        const Matrix& dataset,
         double* labels,
         uint64_t labels_size,
         double epsilon) const {

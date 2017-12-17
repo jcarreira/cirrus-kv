@@ -36,7 +36,7 @@ class S3Iterator {
   uint64_t last;
   std::list<std::shared_ptr<double>> ring;
 
-  uint64_t read_ahead = 5;
+  uint64_t read_ahead = 1;
 
   std::thread* thread;   // background thread
   std::mutex ring_lock;  // used to synchronize access

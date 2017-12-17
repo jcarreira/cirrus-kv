@@ -65,14 +65,13 @@ class SoftmaxModel : public Model {
 
     /**
       * Compute a minibatch gradient
-      * @param rank
       * @param dataset
       * @param labels
       * @param epsilon
       * @return
       */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            int rank, const Matrix& dataset,
+            const Matrix& dataset,
             double* labels,
             uint64_t labels_size,
             double epsilon) const override;
