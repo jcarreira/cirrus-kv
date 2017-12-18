@@ -1,9 +1,11 @@
+#include <unistd.h>
 #include <cstdlib>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #include <InputReader.h>
 #include <LRModel.h>
@@ -32,8 +34,27 @@ void print_info(const auto& samples) {
 }
 
 void check_error(auto model, auto dataset) {
-  auto loss = model.calc_loss(dataset);
+  auto loss = model->calc_loss(dataset);
   std::cout << "loss: " << loss << std::endl;
+}
+
+std::mutex model_lock;
+std::unique_ptr<LRModel> model;
+double epsilon = 0.00001;
+double learning_rate = 0.00000001;
+
+void learning_function(const Dataset& dataset) {
+  for (uint64_t i = 0; 1; ++i) {
+    Dataset ds = dataset.random_sample(20);
+
+    auto gradient = model->minibatch_grad(ds.samples_,
+        const_cast<double*>(ds.labels_.get()),
+        ds.num_samples(), epsilon);
+
+    model_lock.lock();
+    model->sgd_update(learning_rate, gradient.get());
+    model_lock.unlock();
+  }
 }
 
 int main() {
@@ -47,21 +68,22 @@ int main() {
   dataset.print_info();
 
   uint64_t num_cols = 13;
-  LRModel model(num_cols);
+  model.reset(new LRModel(num_cols));
 
-  double epsilon = 0.00001;
-  double learning_rate = 0.00000001;
-
-  for (uint64_t i = 0; 1; ++i) {
-    auto gradient = model.minibatch_grad(dataset.samples_,
-        const_cast<double*>(dataset.labels_.get()),
-        dataset.num_samples(), epsilon);
-    model.sgd_update(learning_rate, gradient.get());
-
-    if (i % 1024 == 0) {
-      check_error(model, dataset);
-    }
+  uint64_t num_threads = 20;
+  std::vector<std::shared_ptr<std::thread>> threads;
+  for (uint64_t i = 0; i < num_threads; ++i) {
+    threads.push_back(std::make_shared<std::thread>(
+          learning_function, dataset));
   }
+
+  while (1) {
+    usleep(100000); // 100ms
+    model_lock.lock();
+    check_error(model.get(), dataset);
+    model_lock.unlock();
+  }
+
 
   return 0;
 }
