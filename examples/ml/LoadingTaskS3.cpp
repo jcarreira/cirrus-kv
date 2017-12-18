@@ -19,7 +19,7 @@ Dataset LoadingTaskS3::read_dataset(
       INPUT_DELIMITER, READ_INPUT_THREADS,
       config.get_limit_samples(),
       config.get_limit_cols(), normalize);
-  dataset.check_values();
+  dataset.check();
   return dataset;
 }
 
@@ -92,7 +92,7 @@ void LoadingTaskS3::run(const Configuration& config) {
   //return;
   
   Dataset dataset = read_dataset(config);
-  dataset.check_values();
+  dataset.check();
 
   std::cout << "[LOADER] "
     << "Adding " << dataset.num_samples()

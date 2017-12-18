@@ -32,8 +32,9 @@ Dataset InputReader::read_input_criteo(const std::string& samples_input_file,
 
   // SPECIFIC of criteo dataset
   uint64_t n_cols = 13;
-  uint64_t samples_entries = samples_file_size / (sizeof(double) * n_cols);
-  uint64_t labels_entries = labels_file_size / (sizeof(double) * n_cols);
+  uint64_t samples_entries =
+    samples_file_size / (sizeof(FEATURE_TYPE) * n_cols);
+  uint64_t labels_entries = labels_file_size / (sizeof(FEATURE_TYPE) * n_cols);
 
   if (samples_entries != labels_entries) {
     puts("Number of sample / labels entries do not match");
@@ -42,8 +43,8 @@ Dataset InputReader::read_input_criteo(const std::string& samples_input_file,
 
   std::cout << "Reading " << samples_entries << " entries.." << std::endl;
 
-  double* samples = new double[samples_entries * n_cols];
-  double* labels  = new double[samples_entries];
+  FEATURE_TYPE* samples = new FEATURE_TYPE[samples_entries * n_cols];
+  FEATURE_TYPE* labels  = new FEATURE_TYPE[samples_entries];
 
   FILE* samples_file = fopen(samples_input_file.c_str(), "r");
   FILE* labels_file = fopen(labels_input_file.c_str(), "r");
@@ -53,17 +54,17 @@ Dataset InputReader::read_input_criteo(const std::string& samples_input_file,
   }
 
   std::cout
-    << " Reading " << sizeof(double) * n_cols
+    << " Reading " << sizeof(FEATURE_TYPE) * n_cols
     << " bytes"
     << std::endl;
 
-  uint64_t ret = fread(samples, sizeof(double) * n_cols, samples_entries,
+  uint64_t ret = fread(samples, sizeof(FEATURE_TYPE) * n_cols, samples_entries,
       samples_file);
   if (ret != samples_entries) {
     throw std::runtime_error("Did not read enough data");
   }
 
-  ret = fread(labels, sizeof(double), samples_entries, labels_file);
+  ret = fread(labels, sizeof(FEATURE_TYPE), samples_entries, labels_file);
   if (ret != samples_entries) {
     throw std::runtime_error("Did not read enough data");
   }
@@ -83,8 +84,8 @@ void InputReader::process_lines(
     std::vector<std::string>& thread_lines,
     const std::string& delimiter,
     uint64_t limit_cols,
-    std::vector<std::vector<double>>& thread_samples,
-    std::vector<double>& thread_labels) {
+    std::vector<std::vector<FEATURE_TYPE>>& thread_samples,
+    std::vector<FEATURE_TYPE>& thread_labels) {
   char str[STR_SIZE];
   while (!thread_lines.empty()) {
     std::string line = thread_lines.back();
@@ -97,9 +98,9 @@ void InputReader::process_lines(
     char* s = str;
 
     uint64_t k = 0;
-    std::vector<double> sample;
+    std::vector<FEATURE_TYPE> sample;
     while (char* l = strsep(&s, delimiter.c_str())) {
-      double v = string_to<double>(l);
+      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
       sample.push_back(v);
       k++;
       if (limit_cols && k == limit_cols)
@@ -107,20 +108,20 @@ void InputReader::process_lines(
     }
 
     // we assume first column is label
-    double label = sample.front();
+    FEATURE_TYPE label = sample.front();
     sample.erase(sample.begin());
 
     thread_labels.push_back(label);
     thread_samples.push_back(sample);
   }
-
 }
 
-void InputReader::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mutex,
+void InputReader::read_csv_thread(
+    std::mutex& input_mutex, std::mutex& output_mutex,
         const std::string& delimiter,
         std::queue<std::string>& lines,  //< content produced by producer
-        std::vector<std::vector<double>>& samples,
-        std::vector<double>& labels,
+        std::vector<std::vector<FEATURE_TYPE>>& samples,
+        std::vector<FEATURE_TYPE>& labels,
         bool& terminate,
         uint64_t limit_cols) {
   uint64_t count_read = 0;
@@ -133,7 +134,6 @@ void InputReader::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mu
     std::vector<std::string> thread_lines;
 
     // Read up to read_at_a_time limes
-    //std::cout << "Popping lines size: " << lines.size() << std::endl;
     input_mutex.lock();
     while (lines.size() && thread_lines.size() < read_at_a_time) {
       thread_lines.push_back(lines.front());
@@ -147,8 +147,8 @@ void InputReader::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mu
 
     input_mutex.unlock();
 
-    std::vector<std::vector<double>> thread_samples;
-    std::vector<double> thread_labels;
+    std::vector<std::vector<FEATURE_TYPE>> thread_samples;
+    std::vector<FEATURE_TYPE> thread_labels;
 
     // parses samples in thread_lines
     // and pushes labels and features into
@@ -173,31 +173,31 @@ void InputReader::read_csv_thread(std::mutex& input_mutex, std::mutex& output_mu
   }
 }
 
-void InputReader::print_sample(const std::vector<double>& sample) const {
+void InputReader::print_sample(const std::vector<FEATURE_TYPE>& sample) const {
   for (const auto& v : sample) {
     std::cout << " " << v;
   }
   std::cout << std::endl;
 }
 
-std::vector<std::vector<double>> InputReader::read_mnist_csv(
-        const std::string& input_file,
+std::vector<std::vector<InputReader::FEATURE_TYPE>>
+InputReader::read_mnist_csv(const std::string& input_file,
         std::string delimiter) {
     FILE* fin = fopen(input_file.c_str(), "r");
     if (!fin) {
         throw std::runtime_error("Can't open file: " + input_file);
     }
 
-    std::vector<std::vector<double>> samples;
+    std::vector<std::vector<FEATURE_TYPE>> samples;
 
     std::string line;
     char str[STR_SIZE + 1] = {0};
     while (fgets(str, 1000000, fin) != NULL) {
         char* s = str;
 
-        std::vector<double> sample;
+        std::vector<FEATURE_TYPE> sample;
         while (char* l = strsep(&s, delimiter.c_str())) {
-            double v = string_to<double>(l);
+            FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
             sample.push_back(v);
         }
 
@@ -207,10 +207,11 @@ std::vector<std::vector<double>> InputReader::read_mnist_csv(
     return samples;
 }
 
-void InputReader::split_data_labels(const std::vector<std::vector<double>>& input,
+void InputReader::split_data_labels(
+    const std::vector<std::vector<FEATURE_TYPE>>& input,
         unsigned int label_col,
-        std::vector<std::vector<double>>& training_data,
-        std::vector<double>& labels
+        std::vector<std::vector<FEATURE_TYPE>>& training_data,
+        std::vector<FEATURE_TYPE>& labels
         ) {
     if (input.size() == 0) {
         throw std::runtime_error("Error: Input data has 0 columns");
@@ -224,12 +225,12 @@ void InputReader::split_data_labels(const std::vector<std::vector<double>>& inpu
     for (unsigned int i = 0; i < input.size(); ++i) {
       labels.push_back(input[i][label_col]);  // get label
 
-      std::vector<double> left, right;
+      std::vector<FEATURE_TYPE> left, right;
       // get all data before label
-      left = std::vector<double>(input[i].begin(),
+      left = std::vector<FEATURE_TYPE>(input[i].begin(),
           input[i].begin() + label_col);
       // get all data after label
-      right = std::vector<double>(input[i].begin() + label_col + 1,
+      right = std::vector<FEATURE_TYPE>(input[i].begin() + label_col + 1,
           input[i].end());
 
       left.insert(left.end(), right.begin(), right.end());
@@ -255,14 +256,14 @@ Dataset InputReader::read_input_csv(const std::string& input_file,
     throw std::runtime_error("Error opening input file");
   }
 
-  std::vector<std::vector<double>> samples; // final result
-  std::vector<double> labels; // final result
-  std::queue<std::string> lines[nthreads]; // input to threads
+  std::vector<std::vector<FEATURE_TYPE>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;         // final result
+  std::queue<std::string> lines[nthreads];  // input to threads
 
   std::mutex input_mutex[nthreads];   // mutex to protect queue of raw samples
   std::mutex output_mutex;  // mutex to protect queue of processed samples
   bool terminate = false;   // indicates when worker threads should terminate
-  std::vector<std::shared_ptr<std::thread>> threads;  // vector of worker threads
+  std::vector<std::shared_ptr<std::thread>> threads;  // vec. of worker threads
 
   for (uint64_t i = 0; i < nthreads; ++i) {
     threads.push_back(
@@ -282,11 +283,11 @@ Dataset InputReader::read_input_csv(const std::string& input_file,
           limit_cols));
   }
 
-  const int batch_size = 100; // we push things into shared queue in batches
+  const int batch_size = 100;  // we push things into shared queue in batches
   std::vector<std::string> input;
   input.reserve(batch_size);
   uint64_t lines_count = 0;
-  uint64_t thread_index = 0; // we push input to threads in round robin
+  uint64_t thread_index = 0;  // we push input to threads in round robin
   while (1) {
     int i;
     for (i = 0; i < batch_size; ++i, lines_count++) {
@@ -347,9 +348,9 @@ Dataset InputReader::read_input_csv(const std::string& input_file,
   return Dataset(samples, labels);
 }
 
-void InputReader::normalize(std::vector<std::vector<double>>& data) {
-  std::vector<double> means(data[0].size());
-  std::vector<double> sds(data[0].size());
+void InputReader::normalize(std::vector<std::vector<FEATURE_TYPE>>& data) {
+  std::vector<FEATURE_TYPE> means(data[0].size());
+  std::vector<FEATURE_TYPE> sds(data[0].size());
 
   // calculate mean of each feature
   for (unsigned int i = 0; i < data.size(); ++i) {  // for each sample

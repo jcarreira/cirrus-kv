@@ -26,17 +26,6 @@ std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
     return model;
 }
 
-void check_dataset(Dataset& dataset) {
-    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-        for (uint64_t j = 0; j < dataset.num_features(); ++j) {
-            const double* s = dataset.sample(i);
-            if (std::isnan(s[j]) || std::isinf(s[j])) {
-                throw std::runtime_error("Invalid dataset");
-            }
-        }
-    }
-}
-
 std::pair<std::unique_ptr<char[]>, uint64_t>
 LRModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
@@ -95,12 +84,11 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         double epsilon) const {
     auto w = weights_;
 #ifdef DEBUG
-    dataset.check_values();
+    dataset.check();
 #endif
 
-    if (dataset.cols != d_) {
-      throw std::runtime_error(
-          "Model size doesn't match sample size");
+    if (dataset.cols != size() || labels_size != dataset.rows) {
+      throw std::runtime_error("Sizes don't match");
     }
 
     const double* dataset_data = dataset.data.get();
@@ -142,81 +130,78 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 }
 
 double LRModel::calc_loss(Dataset& dataset) const {
-    double total_loss = 0;
+  double total_loss = 0;
 
-    auto w = weights_;
+  auto w = weights_;
 
 #ifdef DEBUG
-    dataset.check_values();
-#endif
-#ifdef DEBUG
-    check_dataset(dataset);  // make sure dataset is valid
+  dataset.check();
 #endif
 
-    const double* ds_data =
-        reinterpret_cast<const double*>(dataset.samples_.data.get());
+  const double* ds_data =
+    reinterpret_cast<const double*>(dataset.samples_.data.get());
 
-    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
-        Eigen::Dynamic, Eigen::RowMajor>>
-            ds(const_cast<double*>(ds_data),
-                    dataset.samples_.rows, dataset.samples_.cols);
+  Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
+    Eigen::Dynamic, Eigen::RowMajor>>
+      ds(const_cast<double*>(ds_data),
+          dataset.samples_.rows, dataset.samples_.cols);
 
-    Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
+  Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
 
-    // count how many samples are wrongly classified
-    uint64_t wrong_count = 0;
-    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-        // get labeled class for the ith sample
-        double class_i =
-            reinterpret_cast<const double*>(dataset.labels_.get())[i];
+  // count how many samples are wrongly classified
+  uint64_t wrong_count = 0;
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    // get labeled class for the ith sample
+    double class_i =
+      reinterpret_cast<const double*>(dataset.labels_.get())[i];
 
-        assert(is_integer(class_i));
+    assert(is_integer(class_i));
 
-        int predicted_class = 0;
+    int predicted_class = 0;
 
-        auto r1 = ds.row(i) *  weights_eig;
-        if (mlutils::s_1(r1) > 0.5) {
-            predicted_class = 1;
-        }
-        if (predicted_class != class_i) {
-            wrong_count++;
-        }
-
-        double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
-        double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
-
-        double value = class_i *
-            mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
-            (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
-                        ds.row(i) * weights_eig));
-
-        // XXX not sure this check is necessary
-        if (value > 0 && value < 1e-6)
-            value = 0;
-
-        if (value > 0) {
-            std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
-            std::cout << "weights: " << std::endl << weights_eig << std::endl;
-            std::cout << "Class: " << class_i << " " << v1 << " " << v2
-                << std::endl;
-            throw std::runtime_error("Error: logistic loss is > 0");
-        }
-
-        total_loss -= value;
+    auto r1 = ds.row(i) *  weights_eig;
+    if (mlutils::s_1(r1) > 0.5) {
+      predicted_class = 1;
+    }
+    if (predicted_class != class_i) {
+      wrong_count++;
     }
 
-    if (total_loss < 0) {
-        throw std::runtime_error("total_loss < 0");
-    }
+    double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
+    double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
 
-    std::cout
-        << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.num_samples()))
+    double value = class_i *
+      mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
+      (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
+            ds.row(i) * weights_eig));
+
+    // XXX not sure this check is necessary
+    if (value > 0 && value < 1e-6)
+      value = 0;
+
+    if (value > 0) {
+      std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
+      std::cout << "weights: " << std::endl << weights_eig << std::endl;
+      std::cout << "Class: " << class_i << " " << v1 << " " << v2
         << std::endl;
+      throw std::runtime_error("Error: logistic loss is > 0");
+    }
 
-    if (std::isnan(total_loss) || std::isinf(total_loss))
-        throw std::runtime_error("calc_log_loss generated nan/inf");
+    total_loss -= value;
+  }
 
-    return total_loss;
+  if (total_loss < 0) {
+    throw std::runtime_error("total_loss < 0");
+  }
+
+  std::cout
+    << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.num_samples()))
+    << std::endl;
+
+  if (std::isnan(total_loss) || std::isinf(total_loss))
+    throw std::runtime_error("calc_log_loss generated nan/inf");
+
+  return total_loss;
 }
 
 uint64_t LRModel::getSerializedGradientSize() const {

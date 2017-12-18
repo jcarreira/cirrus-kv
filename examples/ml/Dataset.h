@@ -82,7 +82,7 @@ class Dataset {
     /**
       * Sanity check values in the dataset
       */
-    void check_values() const;
+    void check() const;
 
     /**
       * Compute checksum of values in the dataset

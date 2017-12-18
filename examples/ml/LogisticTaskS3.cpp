@@ -225,7 +225,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     Dataset dataset(samples.get(), labels.get(),
         samples_per_batch, features_per_sample);
-    dataset.check_values();
+    dataset.check();
     dataset.print_info();
 
     auto now = get_time_us();

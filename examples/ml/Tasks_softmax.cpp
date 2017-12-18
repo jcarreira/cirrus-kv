@@ -279,7 +279,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
         dataset.print();
 #endif
 
-        dataset.check_values();
+        dataset.check();
 
         // compute mini batch gradient
         std::unique_ptr<ModelGradient> gradient;
@@ -574,7 +574,7 @@ void ErrorTask::run(const Configuration& /* config */) {
                 //std::cout << "[ERROR_TASK] checking the dataset"
                 //        << "\n";
 
-                dataset.check_values();
+                dataset.check();
 
                 //std::cout << "[ERROR_TASK] computing loss"
                 //        << "\n";
@@ -626,7 +626,7 @@ void LoadingTask::run(const Configuration& config) {
     }
 
 #ifdef DEBUG
-    dataset.check_values();
+    dataset.check();
     dataset.print();
 #endif
     

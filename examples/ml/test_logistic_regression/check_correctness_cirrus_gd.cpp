@@ -5,6 +5,9 @@
 #include <fstream>
 #include <sstream>
 
+#include <InputReader.h>
+#include <LRModel.h>
+
 typedef float FEATURE_TYPE;
 const std::string INPUT_PATH = "criteo_data/day_1_100k_filtered";
 
@@ -28,38 +31,37 @@ void print_info(const auto& samples) {
   std::cout << "Number of cols: " << samples[0].size() << std::endl;
 }
 
+void check_error(auto model, auto dataset) {
+  auto loss = model.calc_loss(dataset);
+  std::cout << "loss: " << loss << std::endl;
+}
+
 int main() {
-  Input input;
-
-
-  //read_input(INPUT_PATH);
-  //std::ifstream fin(INPUT_PATH);
-  //std::string line;
-  //Std::vector<std::vector<FEATURE_TYPE>> samples;
-  //Std::vector<std::vector<FEATURE_TYPE>> labels;
-  //Std::vector<FEATURE_TYPE> labels;
-
-  //While (getline(fin, line)) {
-  //  std::cout << "line: " << line << std::endl;
-  //  std::vector<std::string> tokens = split(line, '\t');
-  //  std::vector<FEATURE_TYPE> sample_features;
-
-  //  for (const auto& t : tokens) {
-  //    FEATURE_TYPE v = std::atof(t.c_str());
-  //    sample_features.push_back(v);
-  //  }
-  //  samples.push_back(sample_features);
-  //}
-
-  //Print_info(samples);
+  InputReader input;
+  Dataset dataset = input.read_input_csv(
+      INPUT_PATH,
+      "\t", 1,
+      10000,
+      11, true); // normalize=true
+  dataset.check();
+  dataset.print_info();
 
   uint64_t num_cols = 10;
   LRModel model(num_cols);
 
-  Dataset dataset(samples, labels, num_samples, num_features);
-  gradient = model.minibatch_grad(dataset.samples_,
-      labels, samples_per_batch, config.get_epsilon());
+  double epsilon = 0.00001;
+  double learning_rate = 0.00000001;
+
+  for (uint64_t i = 0; 1; ++i) {
+    auto gradient = model.minibatch_grad(dataset.samples_,
+        const_cast<double*>(dataset.labels_.get()),
+        dataset.num_samples(), epsilon);
+    model.sgd_update(learning_rate, gradient.get());
+
+    if (i % 1024 == 0) {
+      check_error(model, dataset);
+    }
+  }
 
   return 0;
-
 }

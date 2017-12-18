@@ -134,7 +134,6 @@ class LRModel : public Model {
     bool is_integer(double n) const;
 
     std::vector<double> weights_;  //< vector of the model weights
-    uint64_t d_;                   //< size of the model
 };
 
 #endif  // EXAMPLES_ML_LRMODEL_H_

@@ -3,7 +3,7 @@
   * where each sample is a vector of doubles and the labels are also doubles
   */
 
-#include <examples/ml/Dataset.h>
+#include <Dataset.h>
 #include <algorithm>
 #include <Utils.h>
 #include <Checksum.h>
@@ -60,12 +60,13 @@ uint64_t Dataset::num_samples() const {
     return samples_.rows;
 }
 
-void Dataset::check_values() const {
+void Dataset::check() const {
   const double* l = labels_.get();
   for (uint64_t i = 0; i < num_samples(); ++i) {
-    if (!FLOAT_EQ(l[i], 1.0) && !FLOAT_EQ(l[i], 0.0))
+    if (!FLOAT_EQ(l[i], 1.0) && !FLOAT_EQ(l[i], 0.0)) {
       throw std::runtime_error(
           "Dataset::check_values wrong label value: " + std::to_string(l[i]));
+    }
     if (std::isnan(l[i]) || std::isinf(l[i])) {
       throw std::runtime_error(
           "Dataset::check_values nan/inf error in labels");

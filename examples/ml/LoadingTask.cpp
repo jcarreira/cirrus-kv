@@ -25,7 +25,7 @@ void LoadingTask::run(const Configuration& config) {
       config.get_limit_samples(),
       config.get_limit_cols(), normalize);
 
-  dataset.check_values();
+  dataset.check();
 #ifdef DEBUG
   dataset.print();
 #endif
