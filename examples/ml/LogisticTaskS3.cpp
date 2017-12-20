@@ -4,6 +4,8 @@
 #include "Redis.h"
 #include "Utils.h"
 #include "S3Iterator.h"
+#include "async.h"
+#include "adapters/libevent.h"
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
@@ -16,17 +18,35 @@ void check_redis(auto r) {
   }
 }
 
+
+std::mutex model_lock;
+std::unique_ptr<LRModel> model;
+std::unique_ptr<lr_model_deserializer> lmd;
+volatile bool first_time = true;
+
 /**
   * Works as a cache for remote model
   */
 class ModelProxy {
   public:
-    ModelProxy(auto r, uint64_t mgs, uint64_t mb, auto* redis_lock) :
-      r(r), model(mgs), MODEL_BASE(mb), lmd(mgs), redis_lock(redis_lock)
-  {}
+    ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
+      redis_ip(redis_ip), redis_port(redis_port),
+      redis_lock(redis_lock), base(event_base_new())
+  { 
+    model.reset(new LRModel(mgs));
+    lmd.reset(new lr_model_deserializer(mgs));
+  }
 
     ~ModelProxy() {
       thread_terminate = true;
+    }
+    
+    static void connectCallback(const redisAsyncContext*, int) {
+      std::cout << "connectCallback" << std::endl;
+    }
+
+    static void disconnectCallback(const redisAsyncContext*, int) {
+      std::cout << "disconnectCallback" << std::endl;
     }
 
     LRModel get_model() {
@@ -34,71 +54,74 @@ class ModelProxy {
       while (first_time == true) {
       }
 
-      //std::cout << "[WORKER] waiting for lock" << std::endl;
-      model_lock.wait();
-      LRModel ret = model;
-      model_lock.signal();
-      //std::cout << "[WORKER] waited for lock" << std::endl;
+      model_lock.lock();
+      LRModel ret = *model;
+      model_lock.unlock();
       return ret;
+    }
+
+    static void onMessage(redisAsyncContext*, void *reply, void*) {
+      redisReply *r = (redisReply*)reply;
+      if (reply == NULL) return;
+
+      printf("onMessage\n");
+      if (r->type == REDIS_REPLY_ARRAY) {
+        for (unsigned int j = 0; j < r->elements; j++) {
+          const char* str = r->element[j]->str;
+          uint64_t len = r->element[j]->len;
+      
+          printf("len: %lu\n", len);
+
+          // XXX fix this
+          if (j == 2 && len > 100) {
+            printf("Updating model at time: %lu\n", get_time_us());
+            model_lock.lock();
+            *model = lmd->operator()(str, len);
+            model_lock.unlock();
+            first_time = false;
+          }
+        }
+      } else {
+        std::cout << "Not an array" << std::endl;
+      }
+    }
+
+    void thread_fn() {
+      std::cout << "connecting to redis.." << std::endl;
+      redis_lock->lock();
+      redisAsyncContext* model_r = redis_async_connect(redis_ip.c_str(), redis_port);
+      std::cout << "connected to redis.." << model_r << std::endl;
+      if (!model_r) {
+        throw std::runtime_error("Error connecting to redis");
+      }
+      
+      std::cout << "libevent attach" << std::endl;
+      redisLibeventAttach(model_r, base);
+      redis_connect_callback(model_r, connectCallback);
+      redis_disconnect_callback(model_r, disconnectCallback);
+      redis_subscribe_callback(model_r, onMessage, "model");
+      redis_lock->unlock();
+      
+      std::cout << "eventbase dispatch" << std::endl;
+      event_base_dispatch(base);
     }
 
     void run() {
       thread = std::make_unique<std::thread>(
-          std::bind(&ModelProxy::thread_run, this));
-    }
-
-    void thread_run() {
-      while (1) {
-        int len;
-        std::cout << "ModelProxy getting model" << std::endl;
-        std::chrono::steady_clock::time_point start =
-          std::chrono::steady_clock::now();
-
-        redis_lock->lock();
-        char* data = redis_get_numid(r, MODEL_BASE, &len);
-        redis_lock->unlock();
-
-
-        std::chrono::steady_clock::time_point finish =
-          std::chrono::steady_clock::now();
-        uint64_t elapsed_ns =
-          std::chrono::duration_cast<std::chrono::nanoseconds>(
-          finish-start).count();
-        std::cout << "MP getm took(us): "
-          << (elapsed_ns/1000.0) << std::endl;
-
-        if (data == nullptr) {
-          throw cirrus::NoSuchIDException("");
-        }
-        model_lock.wait();
-        model = lmd(data, len);
-        model_lock.signal();
-        free(data);
-
-        first_time = false;
-        if (thread_terminate == true)
-          break;
-        std::this_thread::yield();
-        usleep(500);
-      }
+          std::bind(&ModelProxy::thread_fn, this));
     }
 
   private:
     volatile bool thread_terminate = false;
-    volatile bool first_time = true;
 
-    redisContext* r;
-    std::unique_ptr<std::thread> thread;
-    LRModel model;
-    //std::mutex model_lock;
-    cirrus::SpinLock model_lock;
-
-    uint64_t MODEL_BASE;
-    lr_model_deserializer lmd;
+    std::string redis_ip;
+    int redis_port;
 
     std::mutex* redis_lock;
-};
+    struct event_base *base;
 
+    std::unique_ptr<std::thread> thread;
+};
 
 void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
   lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
@@ -108,10 +131,10 @@ void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
   lgs.serialize(*lrg, data.get());
 
   int gradient_id = GRADIENT_BASE + worker;
-        
-  redis_lock.lock();
+       
+  redis_lock.lock(); 
   redis_put_binary_numid(r, gradient_id, data.get(), gradient_size);
-  redis_lock.unlock();
+  redis_lock.unlock(); 
 
   std::cout << "[WORKER] "
       << "Worker task stored gradient at id: " << gradient_id
@@ -163,9 +186,9 @@ bool LogisticTaskS3::run_phase1(
       std::chrono::steady_clock::now();
 
     std::shared_ptr<double> minibatch = s3_iter.get_next();
-    // std::cout << "[WORKER] "
-    //   << "got s3 data"
-    //   << std::endl;
+    std::cout << "[WORKER] "
+      << "got s3 data"
+      << std::endl;
     unpack_minibatch(minibatch, samples, labels);
 
     std::chrono::steady_clock::time_point finish =
@@ -208,19 +231,27 @@ auto connect_redis() {
 void LogisticTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
 
+  std::cout << "Starting ModelProxy" << std::endl;
+  ModelProxy mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE, &redis_lock);
+  mp.run();
+  std::cout << "Started ModelProxy" << std::endl;
+
+  // we use redis
+  std::cout << "Connecting to redis.." << std::endl;
+  redis_lock.lock();
+  auto r = connect_redis();
+  redis_lock.unlock();
+
+  std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
+  wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
+  
   // Create iterator that goes from 0 to num_s3_batches
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,
       config.get_minibatch_size());
-
-  // we use redis
-  auto r = connect_redis();
-  std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
-  wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
   
-  ModelProxy mp(r, MODEL_GRAD_SIZE, MODEL_BASE, &redis_lock);
-  mp.run();
-
+  std::cout << "[WORKER] starting loop" << std::endl;
+  
   uint64_t version = 0;
   while (1) {
     // maybe we can wait a few iterations to get the model
@@ -265,10 +296,6 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     try {
       LRGradient* lrg = dynamic_cast<LRGradient*>(gradient.get());
-      if (lrg == nullptr) {
-        throw std::runtime_error("Wrong dynamic cast");
-      }
-
       push_gradient(r, worker, lrg);
     } catch(...) {
       std::cout << "[WORKER] "

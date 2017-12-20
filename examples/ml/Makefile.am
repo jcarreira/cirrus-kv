@@ -14,7 +14,7 @@ LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
 		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
-		-lall -lkeyutils -lhiredis
+		-lall -lkeyutils -lhiredis -levent
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -29,7 +29,8 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
 	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-s3 \
 	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
-	       -L/home/ec2-user/keyutils/keyutils-1.5.10
+	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
+	       -L/home/ec2-user/libevent/install_dir/lib/
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive \

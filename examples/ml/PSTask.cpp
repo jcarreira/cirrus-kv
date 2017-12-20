@@ -56,8 +56,11 @@ void PSTask::put_model(LRModel model) {
       new char[lms.size(model)]);
   lms.serialize(model, data.get());
 
-  redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
-  //redisAsyncCommand(c, onMessage, NULL, "SUBSCRIBE testtopic");
+  redisReply* reply = (redisReply*)redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
+
+  std::cout << "Redis publish"
+    << " reply type: " << reply->type
+    << std::endl;
 }
 #endif
 

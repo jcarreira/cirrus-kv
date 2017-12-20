@@ -286,6 +286,17 @@ uint64_t redis_list_size(redisContext* r, const char* list_name) {
 
     return res;
 }
+/**
+  * ASYNC
+  */
+redisAsyncContext* redis_async_connect(const char* hostname, int port) {
+    redisAsyncContext *c = redisAsyncConnect(hostname, port);
+    if (c->err) {
+        printf("Error in redisAsyncConnect: %s\n", c->errstr);
+        return NULL;
+    }
+    return c;
+}
 
 void redis_subscribe_callback(redisAsyncContext* c, sub_handler h,
     const char* name) {

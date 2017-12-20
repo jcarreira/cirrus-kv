@@ -159,15 +159,20 @@ class PSTask : public MLTask {
     void put_model(LRModel model);
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
+    void thread_fn();
+
     bool first_time = true;
 #if defined(USE_REDIS)
     redisContext* r;
+    redisAsyncContext* model_r;
     //redisAsyncContext* model_r;
     std::vector<unsigned int> gradientVersions;
 #endif
 
     uint64_t server_clock = 0;  // minimum of all worker clocks
     std::vector<uint64_t> worker_clocks;  // every worker clock
+
+    std::unique_ptr<std::thread> thread;
 };
 
 class ErrorTask : public MLTask {
