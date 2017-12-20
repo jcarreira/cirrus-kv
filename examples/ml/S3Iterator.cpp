@@ -109,6 +109,7 @@ void S3Iterator::thread_function() {
     std::cout << "Getting object. count: " << count++ << std::endl;
 
     std::string s3_obj;
+try_start:
     try {
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
@@ -126,6 +127,7 @@ void S3Iterator::thread_function() {
         << std::endl;
     } catch(...) {
       std::cout << "S3Iterator: error in s3_get_object" << std::endl;
+      goto try_start;
       exit(-1);
     }
     
