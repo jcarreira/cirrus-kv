@@ -44,7 +44,7 @@ void LRModel::serializeTo(void* mem) const {
 
 void LRModel::randomize() {
     for (uint64_t i = 0; i < size(); ++i) {
-        weights_[i] = get_rand_between_0_1();
+        weights_[i] = 0.001 + get_rand_between_0_1();
     }
 }
 

@@ -4,6 +4,7 @@
 #include "Redis.h"
 #include "Utils.h"
 
+#define DEBUG
 
 auto PSTask::connect_redis() {
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -11,6 +12,12 @@ auto PSTask::connect_redis() {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
+  
+//  auto model_r  = redis_async_connect(REDIS_IP, REDIS_PORT);
+//  if (model_r == NULL || model_r->err) { 
+//    throw std::runtime_error(
+//        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
+//  }
   return r;
 }
 
@@ -30,8 +37,11 @@ PSTask::PSTask(const std::string& redis_ip, uint64_t redis_port,
   r = connect_redis();
 #endif
   gradientVersions.resize(nworkers, 0);
+  worker_clocks.resize(nworkers, 0);
 }
 
+
+#ifndef USE_REDIS_CHANNEL
 void PSTask::put_model(LRModel model) {
   lr_model_serializer lms(MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
@@ -39,6 +49,17 @@ void PSTask::put_model(LRModel model) {
   lms.serialize(model, data.get());
   redis_put_binary_numid(r, MODEL_BASE, data.get(), lms.size(model));
 }
+#else
+void PSTask::put_model(LRModel model) {
+  lr_model_serializer lms(MODEL_GRAD_SIZE);
+  auto data = std::unique_ptr<char[]>(
+      new char[lms.size(model)]);
+  lms.serialize(model, data.get());
+
+  redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
+  //redisAsyncCommand(c, onMessage, NULL, "SUBSCRIBE testtopic");
+}
+#endif
 
 void PSTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
   int len_grad;
@@ -172,7 +193,9 @@ void PSTask::update_gradient_version(
   model.sgd_update(config.get_learning_rate(), &gradient);
 
   std::cout << "[PS] "
-    << "Publishing model at: " << get_time_us() << "\n";
+    << "Publishing model at: " << get_time_us()
+    << " checksum: " << model.checksum()
+    << std::endl;
   // publish the model back to the store so workers can use it
 #ifdef USE_CIRRUS
   model_store.put(MODEL_BASE, model);

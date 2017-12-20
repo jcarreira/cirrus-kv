@@ -110,6 +110,8 @@ class LogisticTaskS3 : public MLTask {
     void push_gradient(auto r, int, LRGradient*);
     void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
         auto& samples, auto& labels);
+
+    std::mutex redis_lock;
 };
 
 class LogisticTaskPreloaded : public MLTask {
@@ -160,8 +162,12 @@ class PSTask : public MLTask {
     bool first_time = true;
 #if defined(USE_REDIS)
     redisContext* r;
+    //redisAsyncContext* model_r;
     std::vector<unsigned int> gradientVersions;
 #endif
+
+    uint64_t server_clock = 0;  // minimum of all worker clocks
+    std::vector<uint64_t> worker_clocks;  // every worker clock
 };
 
 class ErrorTask : public MLTask {

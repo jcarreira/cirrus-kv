@@ -139,9 +139,11 @@ loop_accuracy:
     //double loss = 0;
     try {
       // first we get the model
+#ifdef DEBUG
       std::cout << "[ERROR_TASK] getting the model at id: "
         << MODEL_BASE
         << "\n";
+#endif
       LRModel model(MODEL_GRAD_SIZE);
 #ifdef USE_CIRRUS
       model = model_store.get(MODEL_BASE);
@@ -149,8 +151,12 @@ loop_accuracy:
       model = get_model_redis(r, lmd);
 #endif
 
+#ifdef DEBUG
       std::cout << "[ERROR_TASK] received the model with id: "
         << MODEL_BASE << "\n";
+#endif
+      std::cout << "[ERROR_TASK] computing loss time(ms): " << get_time_ms() 
+        << std::endl;
       model.calc_loss(dataset);
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;

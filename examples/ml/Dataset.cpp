@@ -117,7 +117,7 @@ Dataset::build_s3_obj(uint64_t l, uint64_t r) {
   return s3_obj;
 }
 
-Dataset Dataset::Dataset::random_sample(uint64_t n_samples) {
+Dataset Dataset::Dataset::random_sample(uint64_t n_samples) const {
   std::random_device rd;
   std::default_random_engine re(rd());
   std::uniform_int_distribution<int> sampler(0, num_samples());

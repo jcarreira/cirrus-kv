@@ -28,7 +28,7 @@ void redis_put(redisContext* c, const char* id,
         << " id size: " << strlen(id)
         << std::endl;    
 #endif
-    redisReply* reply = (redisReply*) redisCommand(c,"SET key:%s %s", id, s);
+    redisReply* reply = (redisReply*) redisCommand(c,"SET %s %s", id, s);
 
 #ifdef REDIS_DEBUG
     std::cout << "Redis put"
@@ -45,12 +45,11 @@ void redis_put_binary(redisContext* c, const char* id,
 #ifdef REDIS_DEBUG
     std::cout << "Redis put binary"
         << " id: " << id
-        << " id size: " << strlen(id)
         << " data size: " << size
         << std::endl;    
 #endif
     redisReply* reply = (redisReply*)
-        redisCommand(c,"SET key:%s %b", id, s, size);
+        redisCommand(c,"SET %s %b", id, s, size);
 
 #ifdef REDIS_DEBUG
     std::cout << "Redis put binary"
@@ -80,8 +79,8 @@ void redis_put_binary_numid(redisContext* c, uint64_t id,
 #ifdef REDIS_DEBUG
     std::cout << "[REDIS] "
         << "redis put binary2 with sprintf" 
-        << "id_str:-" << id_str
-        << "-" << std::endl;
+        << "id_str:-" << id_str << "-"
+        << std::endl;
 #endif
     redis_put_binary(c, id_str, s, size);
 #ifdef REDIS_DEBUG
@@ -95,7 +94,41 @@ char* redis_get(redisContext* c, const char* id, int* len) {
     std::cout << "[REDIS] "
         << "redis get id: " << id << std::endl;
 #endif
-    redisReply* reply = (redisReply*)redisCommand(c,"GET key:%s", id);
+    redisReply* reply = (redisReply*)redisCommand(c,"GET %s", id);
+
+    if (reply->type == REDIS_REPLY_NIL) {
+#ifdef REDIS_DEBUG
+        std::cout << "[REDIS] "
+            << "redis returned nil"
+            << " with id: " << id
+            << std::endl;
+#endif
+        freeReplyObject(reply);
+        return NULL;
+    }
+
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "redis returned success len: " << reply->len << std::endl;
+#endif
+
+    char* ret = (char*)malloc(reply->len);
+    memcpy(ret, reply->str, reply->len);
+
+    if (len != nullptr) {
+        *len = reply->len;
+    }
+
+    freeReplyObject(reply);
+    return ret;
+}
+
+char* redis_binary_get(redisContext* c, const char* id, int* len) {
+#ifdef REDIS_DEBUG
+    std::cout << "[REDIS] "
+        << "redis binary get id: " << id << std::endl;
+#endif
+    redisReply* reply = (redisReply*)redisCommand(c,"GET %b", id);
 
     if (reply->type == REDIS_REPLY_NIL) {
 #ifdef REDIS_DEBUG
@@ -136,6 +169,10 @@ char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
             << "id : " << id_str
             << " len: " << *len
             << std::endl;
+        if (*len == 2) {
+          std::cout << "[REDIS] "
+            << "redis len 2 got ret: " << ret << std::endl;
+        }
 #endif
     } else {
 #ifdef REDIS_DEBUG
@@ -202,5 +239,65 @@ char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
     return ret_vec;
 }
 
+void redis_push_list(redisContext* r, const char* list_name, const char* data) {
+    cmd[0] = 0;
+    strcat(cmd, "LPUSH ");
+    strcat(cmd, list_name);
+    strcat(cmd, " ");
+    strcat(cmd, data);
+
+    // XXX check for status    
+    redisReply* reply = (redisReply*) redisCommand(r, cmd);
+    
+    freeReplyObject(reply);
 }
 
+char* redis_pop_list(redisContext* r, const char* list_name) {
+    cmd[0] = 0;
+    strcat(cmd, "LPOP ");
+    strcat(cmd, list_name);
+    redisReply* reply = (redisReply*) redisCommand(r, cmd);
+
+    if (reply->type == REDIS_REPLY_NIL) {
+        freeReplyObject(reply);
+        return NULL;
+    }
+
+    char* ret = (char*)malloc(reply->len);
+    memcpy(ret, reply->str, reply->len);
+
+    //if (len != nullptr) {
+    //    *len = reply->len;
+    //}
+
+    freeReplyObject(reply);
+    return ret;
+}
+
+uint64_t redis_list_size(redisContext* r, const char* list_name) {
+    cmd[0] = 0;
+    strcat(cmd, "LLEN ");
+    strcat(cmd, list_name);
+    redisReply* reply = (redisReply*) redisCommand(r, cmd);
+
+    uint64_t res = reply->integer;
+
+    freeReplyObject(reply);
+
+    return res;
+}
+
+void redis_subscribe_callback(redisAsyncContext* c, sub_handler h,
+    const char* name) {
+  redisAsyncCommand(c, h, NULL, "SUBSCRIBE %s", name);
+}
+
+void redis_connect_callback(redisAsyncContext* c, conn_handler h) {
+    redisAsyncSetConnectCallback(c, h);
+}
+
+void redis_disconnect_callback(redisAsyncContext* c, conn_handler h) {
+    redisAsyncSetDisconnectCallback(c, h);
+}
+
+}

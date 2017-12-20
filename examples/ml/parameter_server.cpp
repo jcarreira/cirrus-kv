@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <string>
 #include <Checksum.h>
-#include "InputReader.h"
 #include "Utils.h"
 #include "Model.h"
 #include "LRModel.h"

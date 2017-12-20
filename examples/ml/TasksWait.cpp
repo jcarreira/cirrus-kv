@@ -57,10 +57,12 @@ bool MLTask::get_worker_status(auto r, int worker_id) {
 }
 
 void MLTask::wait_for_start(int index, redisContext* r, int nworkers) {
-  std::cout << "Waiting for all workers to start. index: " << index
+  std::cout << "Waiting for all workers to start (redis). index: " << index
     << std::endl;
 
-  char data = 1;  // bit used to indicate start
+  std::cout << "Setting start flag in redis. id: " << START_BASE + index
+    << std::endl;
+  const char data = 1;  // bit used to indicate start
   redis_put_binary_numid(r, START_BASE + index, &data, 1);
 
   int num_waiting_tasks = WORKER_TASK_RANK + nworkers;

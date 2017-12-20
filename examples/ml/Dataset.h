@@ -112,7 +112,7 @@ class Dataset {
    * @param n_samples Number of samples to return
    * @return Random subset of samples
    */
-  Dataset random_sample(uint64_t n_samples);
+  Dataset random_sample(uint64_t n_samples) const;
 
   public:
   Matrix samples_;  //< dataset in matrix format

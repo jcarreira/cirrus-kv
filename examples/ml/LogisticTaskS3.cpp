@@ -21,8 +21,8 @@ void check_redis(auto r) {
   */
 class ModelProxy {
   public:
-    ModelProxy(auto r, uint64_t mgs, uint64_t mb) :
-      r(r), model(mgs), MODEL_BASE(mb), lmd(mgs)
+    ModelProxy(auto r, uint64_t mgs, uint64_t mb, auto* redis_lock) :
+      r(r), model(mgs), MODEL_BASE(mb), lmd(mgs), redis_lock(redis_lock)
   {}
 
     ~ModelProxy() {
@@ -34,11 +34,11 @@ class ModelProxy {
       while (first_time == true) {
       }
 
-      std::cout << "[WORKER] waiting for lock" << std::endl;
+      //std::cout << "[WORKER] waiting for lock" << std::endl;
       model_lock.wait();
       LRModel ret = model;
       model_lock.signal();
-      std::cout << "[WORKER] waited for lock" << std::endl;
+      //std::cout << "[WORKER] waited for lock" << std::endl;
       return ret;
     }
 
@@ -53,13 +53,19 @@ class ModelProxy {
         std::cout << "ModelProxy getting model" << std::endl;
         std::chrono::steady_clock::time_point start =
           std::chrono::steady_clock::now();
+
+        redis_lock->lock();
         char* data = redis_get_numid(r, MODEL_BASE, &len);
+        redis_lock->unlock();
+
+
         std::chrono::steady_clock::time_point finish =
           std::chrono::steady_clock::now();
         uint64_t elapsed_ns =
           std::chrono::duration_cast<std::chrono::nanoseconds>(
           finish-start).count();
-        std::cout << "ModelProxy getting model took(us): " << (elapsed_ns/1000.0) << std::endl;
+        std::cout << "MP getm took(us): "
+          << (elapsed_ns/1000.0) << std::endl;
 
         if (data == nullptr) {
           throw cirrus::NoSuchIDException("");
@@ -89,6 +95,8 @@ class ModelProxy {
 
     uint64_t MODEL_BASE;
     lr_model_deserializer lmd;
+
+    std::mutex* redis_lock;
 };
 
 
@@ -100,7 +108,10 @@ void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
   lgs.serialize(*lrg, data.get());
 
   int gradient_id = GRADIENT_BASE + worker;
+        
+  redis_lock.lock();
   redis_put_binary_numid(r, gradient_id, data.get(), gradient_size);
+  redis_lock.unlock();
 
   std::cout << "[WORKER] "
       << "Worker task stored gradient at id: " << gradient_id
@@ -152,13 +163,16 @@ bool LogisticTaskS3::run_phase1(
       std::chrono::steady_clock::now();
 
     std::shared_ptr<double> minibatch = s3_iter.get_next();
+    // std::cout << "[WORKER] "
+    //   << "got s3 data"
+    //   << std::endl;
     unpack_minibatch(minibatch, samples, labels);
 
     std::chrono::steady_clock::time_point finish =
       std::chrono::steady_clock::now();
     uint64_t elapsed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
-          finish-start).count();
+          finish - start).count();
     double bw = 1.0 * batch_size * sizeof(double) /
       elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
     std::cout << "[WORKER] Get Sample Elapsed (S3) "
@@ -204,7 +218,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
   wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
   
-  ModelProxy mp(r, MODEL_GRAD_SIZE, MODEL_BASE);
+  ModelProxy mp(r, MODEL_GRAD_SIZE, MODEL_BASE, &redis_lock);
   mp.run();
 
   uint64_t version = 0;
@@ -225,8 +239,8 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     Dataset dataset(samples.get(), labels.get(),
         samples_per_batch, features_per_sample);
-    dataset.check();
-    dataset.print_info();
+    //dataset.check();
+    //dataset.print_info();
 
     auto now = get_time_us();
     // compute mini batch gradient

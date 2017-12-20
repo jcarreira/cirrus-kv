@@ -41,6 +41,12 @@ void LRGradient::serialize(void* mem) const {
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
     double* data = reinterpret_cast<double*>(mem);
 
+    for (const auto& w : weights) {
+      if (w == 0) {
+        throw std::runtime_error("0 weight");
+      }
+    }
+
     std::copy(weights.begin(), weights.end(), data);
 }
 

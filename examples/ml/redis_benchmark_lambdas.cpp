@@ -11,7 +11,7 @@ int main() {
     int len;
 
     redisReply* reply = reinterpret_cast<redisReply*>(
-                                redisCommand(r, "GET key:0"));
+                                redisCommand(r, "GET 0"));
 
     std::chrono::steady_clock::time_point start2 =
                               std::chrono::steady_clock::now();
