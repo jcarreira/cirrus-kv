@@ -50,6 +50,7 @@ class ModelProxy {
     }
 
     LRModel get_model() {
+      std::cout << "get_model" << std::endl;
       // make sure we receive model at least once
       while (first_time == true) {
       }
@@ -66,20 +67,18 @@ class ModelProxy {
 
       printf("onMessage\n");
       if (r->type == REDIS_REPLY_ARRAY) {
-        for (unsigned int j = 0; j < r->elements; j++) {
-          const char* str = r->element[j]->str;
-          uint64_t len = r->element[j]->len;
-      
-          printf("len: %lu\n", len);
+        const char* str = r->element[2]->str;
+        uint64_t len = r->element[2]->len;
 
-          // XXX fix this
-          if (j == 2 && len > 100) {
-            printf("Updating model at time: %lu\n", get_time_us());
-            model_lock.lock();
-            *model = lmd->operator()(str, len);
-            model_lock.unlock();
-            first_time = false;
-          }
+        printf("len: %lu\n", len);
+
+        // XXX fix this
+        if (len > 100) {
+          printf("Updating model at time: %lu\n", get_time_us());
+          model_lock.lock();
+          *model = lmd->operator()(str, len);
+          model_lock.unlock();
+          first_time = false;
         }
       } else {
         std::cout << "Not an array" << std::endl;
