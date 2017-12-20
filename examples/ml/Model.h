@@ -80,9 +80,9 @@ class Model {
      /**
        * Calculate loss when applying model to a dataset
        * @param dataset Dataset to be used to calculate loss
-       * @return Total loss when applying model to dataset
+       * @return Pair <Total loss, accuracy> when applying model to dataset
        */
-     virtual double calc_loss(Dataset& dataset) const = 0;
+     virtual std::pair<double,double> calc_loss(Dataset& dataset) const = 0;
 
      /**
        * Compute gradient for minibatch

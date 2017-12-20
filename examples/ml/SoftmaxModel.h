@@ -79,7 +79,7 @@ class SoftmaxModel : public Model {
       * Compute the logistic loss of a given dataset on the current model
       * @areturn 
       */
-    double calc_loss(Dataset& dataset) const override;
+    std::pair<double, double> calc_loss(Dataset& dataset) const override;
 
     /**
       * Return the size of the gradient when serialized

@@ -4,7 +4,7 @@
 #include "Redis.h"
 #include "Utils.h"
 
-#define DEBUG
+//#define DEBUG
 
 auto PSTask::connect_redis() {
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -200,8 +200,8 @@ void PSTask::update_gradient_version(
 
   std::cout << "[PS] "
     << "Publishing model at: " << get_time_us()
-    << " checksum: " << model.checksum()
     << std::endl;
+    //<< " checksum: " << model.checksum()
   // publish the model back to the store so workers can use it
 #ifdef USE_CIRRUS
   model_store.put(MODEL_BASE, model);

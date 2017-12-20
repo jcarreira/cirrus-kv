@@ -129,9 +129,8 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     return ret;
 }
 
-double LRModel::calc_loss(Dataset& dataset) const {
+std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
   double total_loss = 0;
-
   auto w = weights_;
 
 #ifdef DEBUG
@@ -194,14 +193,11 @@ double LRModel::calc_loss(Dataset& dataset) const {
     throw std::runtime_error("total_loss < 0");
   }
 
-  std::cout
-    << "Accuracy: " << (1.0 - (1.0 * wrong_count / dataset.num_samples()))
-    << std::endl;
-
+  double accuracy = (1.0 - (1.0 * wrong_count / dataset.num_samples()));
   if (std::isnan(total_loss) || std::isinf(total_loss))
     throw std::runtime_error("calc_log_loss generated nan/inf");
 
-  return total_loss;
+  return std::make_pair(total_loss, accuracy);
 }
 
 uint64_t LRModel::getSerializedGradientSize() const {

@@ -8,8 +8,8 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
-#define ERROR_INTERVAL_USEC (500) // time between error checks
+//#define DEBUG
+#define ERROR_INTERVAL_USEC (50) // time between error checks
 
 /**
   * Ugly but necessary for now
@@ -56,16 +56,22 @@ class ModelProxyErrorTask {
     static void onMessage(redisAsyncContext*, void *reply, void*) {
       redisReply *r = reinterpret_cast<redisReply*>(reply);
 
-      printf("onMessage\n");
+#ifdef DEBUG
+      std::cout << "onMessage" << std::endl;
+#endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
         uint64_t len = r->element[2]->len;
 
+#ifdef DEBUG
         printf("len: %lu\n", len);
+#endif
 
         // XXX fix this. Should have some way to check if it's a model update
         if (len > 100) {
-          printf("Updating model at time: %lu\n", get_time_us());
+#ifdef DEBUG
+          std::cout << "Updating model at time: " << get_time_us() << std::endl;
+#endif
           ErrorTaskGlobal::model_lock.lock();
           *ErrorTaskGlobal::model = ErrorTaskGlobal::lmd->operator()(str, len);
           ErrorTaskGlobal::model_lock.unlock();
@@ -183,11 +189,6 @@ void ErrorTask::run(const Configuration& config) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-
-  wait_for_start(ERROR_TASK_RANK, r, nworkers);
-
-  ModelProxyErrorTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
-  mp.run();
 #endif
 
   // get data first
@@ -226,9 +227,13 @@ start:
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
 
+loop_accuracy:
+  wait_for_start(ERROR_TASK_RANK, r, nworkers);
+
+  ModelProxyErrorTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
+  mp.run();
   //check_labels(labels_vec, samples_per_batch);
 
-loop_accuracy:
   Dataset dataset(samples_vec, labels_vec,
       samples_per_batch, features_per_sample);
 
@@ -251,9 +256,10 @@ loop_accuracy:
       std::cout << "[ERROR_TASK] received the model with id: "
         << MODEL_BASE << "\n";
 #endif
-      std::cout << "[ERROR_TASK] computing loss time(us): " << get_time_us() 
-        << std::endl;
-      model.calc_loss(dataset);
+      std::cout << "[ERROR_TASK] computing loss" << std::endl;
+      std::pair<double, double> ret = model.calc_loss(dataset);
+      std::cout << "Loss: " << ret.first << " Accuracy: " << ret.second
+        << " time(us): " << get_time_us() << std::endl;
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;
     }

@@ -583,7 +583,8 @@ void ErrorTask::run(const Configuration& /* config */) {
                 //for (int k = 0; k < 10; ++k) {
                 //    std::cout << "label " << k << ": " << labels.get()[k] << std::endl;
                 //}
-                loss += model.calc_loss(dataset);
+                auto ret = model.calc_loss(dataset);
+                loss += ret.first;
                 count++;
             }
 

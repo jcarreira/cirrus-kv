@@ -32,7 +32,8 @@ void print_info(const auto& samples) {
 }
 
 void check_error(auto model, auto dataset) {
-  auto loss = model.calc_loss(dataset);
+  auto ret = model.calc_loss(dataset);
+  auto loss = ret.first;
   std::cout << "loss: " << loss << std::endl;
 }
 

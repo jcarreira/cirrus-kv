@@ -105,12 +105,14 @@ void S3Iterator::thread_function() {
   while (1) {
     // if we can go it means there is a slot
     // in the ring
+    std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
     std::cout << "Getting object. count: " << count++ << std::endl;
 
     std::string s3_obj;
 try_start:
     try {
+      std::cout << "S3Iterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
       s3_obj = s3_get_object(last, *s3_client, S3_BUCKET);
