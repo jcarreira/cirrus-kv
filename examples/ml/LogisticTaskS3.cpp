@@ -20,6 +20,18 @@ void check_redis(auto r) {
   }
 }
 
+//class GradientProxy {
+//  public:
+//    static void connectCallback(const redisAsyncContext*, int) {
+//      std::cout << "connectCallback" << std::endl;
+//    }
+//
+//    static void disconnectCallback(const redisAsyncContext*, int) {
+//      std::cout << "disconnectCallback" << std::endl;
+//    }
+//
+//};
+
 /**
   * Ugly but necessary for now
   * both onMessage and LogisticTaskS3 need access to this
@@ -30,6 +42,7 @@ std::unique_ptr<LRModel> model;
 std::unique_ptr<lr_model_deserializer> lmd;
 volatile bool first_time = true;
 volatile int model_version = 0;
+static auto prev_on_msg_time = get_time_us();
 
 /**
   * Works as a cache for remote model
@@ -44,10 +57,6 @@ class ModelProxy {
     model.reset(new LRModel(mgs));
     lmd.reset(new lr_model_deserializer(mgs));
   }
-
-    ~ModelProxy() {
-      thread_terminate = true;
-    }
     
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "connectCallback" << std::endl;
@@ -72,6 +81,10 @@ class ModelProxy {
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
+      auto now = get_time_us();
+      std::cout << "Time since last (us): "
+        << (now - prev_on_msg_time) << std::endl;
+      prev_on_msg_time = now;
 #ifdef DEBUG
       printf("onMessage\n");
 #endif
@@ -129,8 +142,6 @@ class ModelProxy {
     }
 
   private:
-    volatile bool thread_terminate = false;
-
     std::string redis_ip;
     int redis_port;
 
@@ -222,10 +233,10 @@ try_again:
     std::cout << "[WORKER] "
       << "model get (ns): " << (after_model - before_model)
       << std::endl;
-#endif
-
     std::chrono::steady_clock::time_point start =
       std::chrono::steady_clock::now();
+#endif
+
 
     std::shared_ptr<double> minibatch = s3_iter.get_next();
 #ifdef DEBUG
@@ -233,6 +244,7 @@ try_again:
 #endif
     unpack_minibatch(minibatch, samples, labels);
 
+#ifdef DEBUG
     std::chrono::steady_clock::time_point finish =
       std::chrono::steady_clock::now();
     uint64_t elapsed_ns =
@@ -244,8 +256,10 @@ try_again:
       << " batch size: " << batch_size
       << " ns: " << elapsed_ns
       << " BW (MB/s): " << bw
-      << "at time: " << get_time_us()
+      << " at time: " << get_time_us()
+      << " prev_model_version: " << prev_model_version
       << "\n";
+#endif
   } catch(const cirrus::NoSuchIDException& e) {
     if (!first_time) {
       std::cout << "[WORKER] Exiting" << std::endl;
@@ -341,7 +355,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 #ifdef DEBUG
     auto elapsed_us = get_time_us() - now;
     std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
-      << "at time: " << get_time_us()
+      << " at time: " << get_time_us()
       << " version " << version << "\n";
 #endif
     gradient->setVersion(version++);

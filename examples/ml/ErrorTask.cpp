@@ -202,11 +202,15 @@ start:
   std::vector<std::shared_ptr<double>> labels_vec;
   std::vector<std::shared_ptr<double>> samples_vec;
   for (int i = 0; i < 10000; ++i) {
+    std::cout << "[ERROR_TASK] getting iteration: " << i
+      << std::endl;
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
     try {
 #ifdef DATASET_IN_S3
     std::shared_ptr<double> minibatch = s3_iter.get_next();
+    std::cout << "[ERROR_TASK] unpacking"
+      << std::endl;
     unpack_minibatch(minibatch, samples, labels);
 #elif defined(USE_CIRRUS)
       samples = samples_store.get(SAMPLE_BASE + i);

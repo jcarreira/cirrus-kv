@@ -4,7 +4,7 @@
 #include "Redis.h"
 #include "Utils.h"
 
-#define DEBUG
+//#define DEBUG
 
 auto PSTask::connect_redis() {
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -50,7 +50,8 @@ void PSTask::put_model(LRModel model) {
       new char[lms.size(model)]);
   lms.serialize(model, data.get());
 
-  redisReply* reply = (redisReply*)redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
+  redisReply* reply = (redisReply*)redisCommand(
+      r, "PUBLISH model %b", data.get(), lms.size(model));
   assert(reply);
 }
 #endif
@@ -185,7 +186,7 @@ void PSTask::print_progress() const {
     auto elapsed_us = now - start;
     double iterations_per_us = 1.0 * count / elapsed_us;
     double iterations_per_sec = iterations_per_us * 1000 * 1000;
-    std::cout << "Iterations per sec: " << iterations_per_sec << std::endl;
+    std::cout << "Iterations per sec: " << iterations_per_sec << "\n";
   }
   count++;
 }
