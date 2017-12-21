@@ -7,6 +7,8 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
+//#define DEBUG
+
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
     std::cout << "[WORKER] "
@@ -18,7 +20,6 @@ void check_redis(auto r) {
   }
 }
 
-
 /**
   * Ugly but necessary for now
   * both onMessage and LogisticTaskS3 need access to this
@@ -28,6 +29,7 @@ std::mutex model_lock;
 std::unique_ptr<LRModel> model;
 std::unique_ptr<lr_model_deserializer> lmd;
 volatile bool first_time = true;
+volatile int model_version = 0;
 
 /**
   * Works as a cache for remote model
@@ -56,7 +58,6 @@ class ModelProxy {
     }
 
     LRModel get_model() {
-      std::cout << "get_model" << std::endl;
       // make sure we receive model at least once
       while (first_time == true) {
       }
@@ -71,18 +72,27 @@ class ModelProxy {
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
+#ifdef DEBUG
       printf("onMessage\n");
+#endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
         uint64_t len = r->element[2]->len;
 
+#ifdef DEBUG
         printf("len: %lu\n", len);
+#endif
 
         // XXX fix this
         if (len > 100) {
-          printf("Updating model at time: %lu\n", get_time_us());
+#ifdef DEBUG
+          std::cout << "Updating model at time: " << get_time_us()
+            << " version: " << model_version
+            << std::endl;
+#endif
           model_lock.lock();
           *model = lmd->operator()(str, len);
+          model_version++;
           model_lock.unlock();
           first_time = false;
         }
@@ -94,7 +104,8 @@ class ModelProxy {
     void thread_fn() {
       std::cout << "connecting to redis.." << std::endl;
       redis_lock->lock();
-      redisAsyncContext* model_r = redis_async_connect(redis_ip.c_str(), redis_port);
+      redisAsyncContext* model_r =
+        redis_async_connect(redis_ip.c_str(), redis_port);
       std::cout << "connected to redis.." << model_r << std::endl;
       if (!model_r) {
         throw std::runtime_error("Error connecting to redis");
@@ -144,6 +155,7 @@ void LogisticTaskS3::push_gradient(auto r, int worker, LRGradient* lrg) {
 
   std::cout << "[WORKER] "
       << "Worker task stored gradient at id: " << gradient_id
+      << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us() << "\n";
 }
 
@@ -177,24 +189,48 @@ void LogisticTaskS3::unpack_minibatch(
 // get samples and labels data
 bool LogisticTaskS3::run_phase1(
     auto& samples, auto& labels, auto& model,
-    auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp) {
+    auto& s3_iter, auto& mp, auto& prev_model_version) {
 
   static bool first_time = true;
   try {
+#ifdef DEBUG
     auto before_model = get_time_ns();
+#endif
+try_again:
     model = mp.get_model();
+    if (model_version != prev_model_version) {
+      prev_model_version = model_version;
+#ifdef DEBUG
+      std::cout << "new model."
+        << " prev_model_version: " << prev_model_version
+        << " model_version: " << model_version
+        << std::endl; 
+#endif
+    } else {
+#ifdef DEBUG
+      std::cout << "model is repeated."
+        << " prev_model_version: " << prev_model_version
+        << " model_version: " << model_version
+        << std::endl; 
+#endif
+      //sleep(1);
+      goto try_again;
+    }
+
+#ifdef DEBUG
     auto after_model = get_time_ns();
     std::cout << "[WORKER] "
       << "model get (ns): " << (after_model - before_model)
       << std::endl;
+#endif
 
     std::chrono::steady_clock::time_point start =
       std::chrono::steady_clock::now();
 
     std::shared_ptr<double> minibatch = s3_iter.get_next();
-    std::cout << "[WORKER] "
-      << "got s3 data"
-      << std::endl;
+#ifdef DEBUG
+    std::cout << "[WORKER] got s3 data" << std::endl;
+#endif
     unpack_minibatch(minibatch, samples, labels);
 
     std::chrono::steady_clock::time_point finish =
@@ -249,7 +285,8 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   auto r = connect_redis();
   redis_lock.unlock();
 
-  std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches << std::endl;
+  std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
+    << std::endl;
   wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
   
   // Create iterator that goes from 0 to num_s3_batches
@@ -259,30 +296,38 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   
   std::cout << "[WORKER] starting loop" << std::endl;
   
-  uint64_t version = 0;
+  uint64_t version = 1;
+  LRModel model(MODEL_GRAD_SIZE);
+  int prev_model_version = -1;
+
   while (1) {
     // maybe we can wait a few iterations to get the model
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
-    LRModel model(MODEL_GRAD_SIZE);
 
     // get data, labels and model
+#ifdef DEBUG
     std::cout << "[WORKER] running phase 1" << std::endl;
-    if (!run_phase1(samples, labels, model, s3_iter, features_per_sample, mp)) {
+#endif
+    if (!run_phase1(samples, labels, model, s3_iter, mp, prev_model_version)) {
       continue;
     }
+#ifdef DEBUG
     std::cout << "[WORKER] phase 1 done" << std::endl;
+#endif
 
     Dataset dataset(samples.get(), labels.get(),
         samples_per_batch, features_per_sample);
-    //dataset.check();
-    //dataset.print_info();
 
-    auto now = get_time_us();
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
+#ifdef DEBUG
+    auto now = get_time_us();
+    dataset.check();
+    dataset.print_info();
     std::cout << "Computing gradient" << std::endl;
+#endif
     try {
       gradient = model.minibatch_grad(dataset.samples_,
           labels.get(), samples_per_batch, config.get_epsilon());
@@ -293,10 +338,12 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
       std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);
     }
+#ifdef DEBUG
     auto elapsed_us = get_time_us() - now;
     std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
       << "at time: " << get_time_us()
       << " version " << version << "\n";
+#endif
     gradient->setVersion(version++);
 
     try {

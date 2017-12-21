@@ -158,13 +158,6 @@ void ErrorTask::run(const Configuration& config) {
   c_array_deserializer<double> cad_labels(samples_per_batch,
       "error labels_store", false);
 
-#ifdef DATASET_IN_S3
-  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
-  S3Iterator s3_iter(0, num_s3_batches, config,
-      config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
-#endif
-
 #if defined(USE_CIRRUS)
   cirrus::TCPClient client;
   lr_model_serializer lms(MODEL_GRAD_SIZE);
@@ -184,6 +177,7 @@ void ErrorTask::run(const Configuration& config) {
 
   wait_for_start(ERROR_TASK_RANK, client, nworkers);
 #elif defined(USE_REDIS)
+  std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
   if (r == NULL || r -> err) { 
     throw std::runtime_error(
@@ -191,11 +185,19 @@ void ErrorTask::run(const Configuration& config) {
   }
 #endif
 
+#ifdef DATASET_IN_S3
+  std::cout << "Creating S3Iterator" << std::endl;
+  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
+  S3Iterator s3_iter(0, num_s3_batches, config,
+      config.get_s3_size(), features_per_sample,
+      config.get_minibatch_size());
+#endif
+
   // get data first
   // we get up to 10K samples
   // what we are going to use as a test set
   std::cout << "[ERROR_TASK] getting 10k minibatches"
-    << "\n";
+    << std::endl;
 start:
   std::vector<std::shared_ptr<double>> labels_vec;
   std::vector<std::shared_ptr<double>> samples_vec;
@@ -240,7 +242,7 @@ loop_accuracy:
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
   while (1) {
-    usleep(ERROR_INTERVAL_USEC); //
+    //usleep(ERROR_INTERVAL_USEC); //
 
     try {
       // first we get the model

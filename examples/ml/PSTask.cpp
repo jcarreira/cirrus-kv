@@ -4,7 +4,7 @@
 #include "Redis.h"
 #include "Utils.h"
 
-//#define DEBUG
+#define DEBUG
 
 auto PSTask::connect_redis() {
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -12,12 +12,6 @@ auto PSTask::connect_redis() {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-  
-//  auto model_r  = redis_async_connect(REDIS_IP, REDIS_PORT);
-//  if (model_r == NULL || model_r->err) { 
-//    throw std::runtime_error(
-//        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-//  }
   return r;
 }
 
@@ -57,10 +51,7 @@ void PSTask::put_model(LRModel model) {
   lms.serialize(model, data.get());
 
   redisReply* reply = (redisReply*)redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
-
-  std::cout << "Redis publish"
-    << " reply type: " << reply->type
-    << std::endl;
+  assert(reply);
 }
 #endif
 
@@ -182,6 +173,23 @@ void PSTask::run(const Configuration& config) {
   }
 }
 
+void PSTask::print_progress() const {
+  static uint64_t count = 0;
+  static auto start = get_time_us();
+
+  // if it's the first time we record the timestamp
+  if (count == 0) {
+    start = get_time_us();
+  } else if (count % 10 == 0) {
+    auto now = get_time_us();
+    auto elapsed_us = now - start;
+    double iterations_per_us = 1.0 * count / elapsed_us;
+    double iterations_per_sec = iterations_per_us * 1000 * 1000;
+    std::cout << "Iterations per sec: " << iterations_per_sec << std::endl;
+  }
+  count++;
+}
+
 void PSTask::update_gradient_version(
     auto& gradient, int worker, LRModel& model, Configuration config ) {
 #ifdef DEBUG
@@ -208,5 +216,7 @@ void PSTask::update_gradient_version(
 #elif defined(USE_REDIS)
   put_model(model);
 #endif
+
+  print_progress();
 }
 
