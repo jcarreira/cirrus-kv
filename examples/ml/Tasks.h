@@ -155,15 +155,16 @@ class PSTask : public MLTask {
   private:
     auto connect_redis();
 
-    void put_model(LRModel model);
+    void put_model(const LRModel& model);
     void publish_model(const LRModel& model);
 
     void update_gradient_version(
         auto& gradient, int worker, LRModel& model, Configuration config);
+
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
-    void print_progress() const;
+    //void print_progress() const;
 
     /**
       * Attributes
@@ -172,9 +173,6 @@ class PSTask : public MLTask {
 
     bool first_time = true;
 #if defined(USE_REDIS)
-    redisContext* r;
-    redisAsyncContext* model_r;
-    //redisAsyncContext* model_r;
     std::vector<unsigned int> gradientVersions;
 #endif
 
