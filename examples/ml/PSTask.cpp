@@ -6,7 +6,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
+//#define DEBUG
 
 void update_publish_gradient(auto& gradient);
 
@@ -19,6 +19,7 @@ namespace PSTaskGlobal {
   static redisContext* model_r;
   static redisAsyncContext* gradient_r;
   static uint64_t MODEL_GRAD_SIZE;
+  static std::mutex ps_grad_start;
 }
 
 auto PSTask::connect_redis() {
@@ -65,7 +66,9 @@ void PSTask::put_model(const LRModel& model) {
       new char[lms.size(model)]);
   lms.serialize(model, data.get());
 
+#ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+#endif
   redisReply* reply = (redisReply*)redisCommand(
       PSTaskGlobal::model_r,
       "PUBLISH model %b", data.get(), lms.size(model));
@@ -98,6 +101,7 @@ class PSGradientProxy {
       PSTaskGlobal::MODEL_GRAD_SIZE = MODEL_GRAD_SIZE;
       PSTaskGlobal::lgd.reset(
           new lr_gradient_deserializer(MODEL_GRAD_SIZE));
+      PSTaskGlobal::ps_grad_start.lock();
     }
 
     static void connectCallback(const redisAsyncContext*, int) {
@@ -122,6 +126,7 @@ class PSGradientProxy {
         const char* str = r->element[2]->str;
         uint64_t len = r->element[2]->len;
 
+#ifdef DEBUG
         std::cout << "len: "
           << r->element[0]->len << " "
           << r->element[1]->len << " "
@@ -134,6 +139,7 @@ class PSGradientProxy {
         if (r->element[1]->str) {
           std::cout <<"str1: " << r->element[1]->str << std::endl;
         }
+#endif
         // r->element[0]->str == "message"
         char* str_1 = r->element[1]->str;
         char* str_0 = r->element[0]->str;
@@ -177,7 +183,7 @@ class PSGradientProxy {
           PSTaskGlobal::gradient_r, onMessage, "gradients");
       //redis_lock->unlock();
       
-      //mp_start_lock.unlock();
+      PSTaskGlobal::ps_grad_start.unlock();
       std::cout << "eventbase dispatch" << std::endl;
       event_base_dispatch(base);
     }
@@ -213,12 +219,16 @@ void PSTask::run(const Configuration& config) {
     << "PS publishing model at id: " << MODEL_BASE
     << " csum: " << PSTaskGlobal::model->checksum() << std::endl;
 
-  publish_model(*PSTaskGlobal::model);
-  wait_for_start(PS_TASK_RANK, PSTaskGlobal::model_r, nworkers);
-
-  PSTaskGlobal::config = config;
+  //publish_model(*PSTaskGlobal::model);
+  //sleep(2);
+  //
   PSGradientProxy gp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
   gp.run();
+  
+  PSTaskGlobal::config = config;
+  PSTaskGlobal::ps_grad_start.lock();
+
+  wait_for_start(PS_TASK_RANK, PSTaskGlobal::model_r, nworkers);
 
   publish_model(*PSTaskGlobal::model);
 
@@ -295,7 +305,9 @@ void update_publish_gradient(auto& gradient) {
       new char[lms.size(*PSTaskGlobal::model)]);
   lms.serialize(*PSTaskGlobal::model, data.get());
 
+#ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+#endif
   redisReply* reply = (redisReply*)redisCommand(
       PSTaskGlobal::model_r, "PUBLISH model %b", data.get(),
       lms.size(*PSTaskGlobal::model));

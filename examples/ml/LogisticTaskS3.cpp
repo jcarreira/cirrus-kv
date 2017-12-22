@@ -7,7 +7,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
+//#define DEBUG
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
