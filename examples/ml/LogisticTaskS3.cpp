@@ -7,7 +7,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-//#define DEBUG
+// #define DEBUG
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
@@ -41,13 +41,12 @@ class ModelProxy {
   public:
     ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
-      redis_lock(redis_lock), base(event_base_new())
-  { 
+      redis_lock(redis_lock), base(event_base_new()) {
     mp_start_lock.lock();
     model.reset(new LRModel(mgs));
     lmd.reset(new lr_model_deserializer(mgs));
   }
-    
+
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "ModelProxy::connectCallback" << std::endl;
       mp_start_lock.unlock();
@@ -75,7 +74,7 @@ class ModelProxy {
     }
 
     static void onMessage(redisAsyncContext*, void *reply, void*) {
-      redisReply *r = (redisReply*)reply;
+      redisReply *r = reinterpret_cast<redisReply*>(reply);
       if (reply == NULL) return;
 
       auto now = get_time_us();
@@ -120,20 +119,20 @@ class ModelProxy {
         throw std::runtime_error("ModelProxy::Error connecting to redis");
       }
       std::cout << "ModelProxy::connected to redis.." << model_r << std::endl;
-      
+
       std::cout << "libevent attached" << std::endl;
       redisLibeventAttach(model_r, base);
       redis_connect_callback(model_r, connectCallback);
       redis_disconnect_callback(model_r, disconnectCallback);
       redis_subscribe_callback(model_r, onMessage, "model");
       redis_lock->unlock();
-      
+
       std::cout << "eventbase dispatch" << std::endl;
       event_base_dispatch(base);
     }
 
     void run() {
-      std::cout << "Starting GradientProxy thread" << std::endl;
+      std::cout << "Starting ModelProxy thread" << std::endl;
       thread = std::make_unique<std::thread>(
           std::bind(&ModelProxy::thread_fn, this));
     }
@@ -150,10 +149,10 @@ class ModelProxy {
 
 class LogisticTaskGradientProxy {
   public:
-    LogisticTaskGradientProxy(auto redis_ip, auto redis_port, auto* redis_lock) :
+    LogisticTaskGradientProxy(
+        auto redis_ip, auto redis_port, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
-      redis_lock(redis_lock), base(event_base_new())
-  { 
+      redis_lock(redis_lock), base(event_base_new()) {
       gp_start_lock.lock();
   }
     static void connectCallback(const redisAsyncContext*, int) {
@@ -164,9 +163,8 @@ class LogisticTaskGradientProxy {
     static void disconnectCallback(const redisAsyncContext*, int) {
       std::cout << "disconnectCallback" << std::endl;
     }
-    
+
     static void onMessage(redisAsyncContext*, void *reply, void*) {
-      //redisReply *r = (redisReply*)reply;
       std::cout << "LogisticTaskGradientProxy onMessage" << std::endl;
       if (reply == NULL) return;
     }
@@ -179,15 +177,15 @@ class LogisticTaskGradientProxy {
       if (!gradient_r) {
         throw std::runtime_error("GradientProxy::Error connecting to redis");
       }
-      std::cout << "GradientProxy connected to redis.." << gradient_r << std::endl;
-      
+      std::cout << "GradientProxy connected to redis.." << gradient_r
+        << std::endl;
+
       std::cout << "libevent attached" << std::endl;
       redisLibeventAttach(gradient_r, base);
       redis_connect_callback(gradient_r, connectCallback);
       redis_disconnect_callback(gradient_r, disconnectCallback);
-      //redis_subscribe_callback(gradient_r, onMessage, "gradients");
       redis_lock->unlock();
-      
+
       std::cout << "eventbase dispatch" << std::endl;
       event_base_dispatch(base);
     }
@@ -204,7 +202,8 @@ class LogisticTaskGradientProxy {
     std::unique_ptr<std::thread> thread;
 };
 
-void LogisticTaskS3::push_gradient(auto gradient_r, int worker, LRGradient* lrg) {
+void LogisticTaskS3::push_gradient(
+    auto gradient_r, int worker, LRGradient* lrg) {
   lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
 
 #ifdef DEBUG
@@ -216,9 +215,7 @@ void LogisticTaskS3::push_gradient(auto gradient_r, int worker, LRGradient* lrg)
   lgs.serialize(*lrg, data.get());
 
   int gradient_id = GRADIENT_BASE + worker;
-  
-  //redisReply* reply = (redisReply*)redisCommand(
-  //    gradient_r, "PUBLISH gradients %b", data.get(), gradient_size);
+
 #ifdef DEBUG
   std::cout << "Publishing gradients" << std::endl;
 #endif
@@ -286,16 +283,15 @@ try_again:
       std::cout << "new model."
         << " prev_model_version: " << prev_model_version
         << " model_version: " << model_version
-        << std::endl; 
+        << std::endl;
 #endif
     } else {
 #ifdef DEBUG
       std::cout << "model is repeated."
         << " prev_model_version: " << prev_model_version
         << " model_version: " << model_version
-        << std::endl; 
+        << std::endl;
 #endif
-      //sleep(1);
       goto try_again;
     }
 
@@ -357,7 +353,7 @@ auto connect_redis() {
 
 void LogisticTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
-  
+
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
   auto r = connect_redis();
@@ -380,14 +376,14 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
   wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
-  
+
   // Create iterator that goes from 0 to num_s3_batches
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,
       config.get_minibatch_size());
-  
+
   std::cout << "[WORKER] starting loop" << std::endl;
-  
+
   uint64_t version = 1;
   LRModel model(MODEL_GRAD_SIZE);
   int prev_model_version = -1;
