@@ -35,8 +35,10 @@ LRGradient
 lr_gradient_deserializer::operator()(const void* data, unsigned int des_size) {
     LRGradient gradient(n);
     if (des_size != gradient.getSerializedSize()) {
-        throw std::runtime_error(
-                "Wrong deserializer size at lr_gradient_deserializer");
+      throw std::runtime_error(
+          std::string("Wrong deserializer size at lr_gradient_deserializer") +
+          " Expected: " + std::to_string(gradient.getSerializedSize()) +
+          " Got: " + std::to_string(des_size));
     }
 
     gradient.loadSerialized(data);

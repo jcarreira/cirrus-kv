@@ -87,7 +87,7 @@ class ModelProxyErrorTask {
       redisAsyncContext* model_r = redis_async_connect(redis_ip.c_str(), redis_port);
       std::cout << "connected to redis.." << model_r << std::endl;
       if (!model_r) {
-        throw std::runtime_error("Error connecting to redis");
+        throw std::runtime_error("ModelProxyErrorTask::error connecting to redis");
       }
       
       std::cout << "ErrorTask: libevent attach" << std::endl;
