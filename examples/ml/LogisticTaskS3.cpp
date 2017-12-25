@@ -19,6 +19,11 @@ void check_redis(auto r) {
 }
 
 
+/**
+  * Ugly but necessary for now
+  * both onMessage and LogisticTaskS3 need access to this
+  */
+std::mutex mp_start_lock;
 std::mutex model_lock;
 std::unique_ptr<LRModel> model;
 std::unique_ptr<lr_model_deserializer> lmd;
@@ -33,6 +38,7 @@ class ModelProxy {
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new())
   { 
+    mp_start_lock.lock();
     model.reset(new LRModel(mgs));
     lmd.reset(new lr_model_deserializer(mgs));
   }
@@ -94,13 +100,14 @@ class ModelProxy {
         throw std::runtime_error("Error connecting to redis");
       }
       
-      std::cout << "libevent attach" << std::endl;
+      std::cout << "libevent attached" << std::endl;
       redisLibeventAttach(model_r, base);
       redis_connect_callback(model_r, connectCallback);
       redis_disconnect_callback(model_r, disconnectCallback);
       redis_subscribe_callback(model_r, onMessage, "model");
       redis_lock->unlock();
       
+      mp_start_lock.unlock();
       std::cout << "eventbase dispatch" << std::endl;
       event_base_dispatch(base);
     }
@@ -233,6 +240,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   std::cout << "Starting ModelProxy" << std::endl;
   ModelProxy mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE, &redis_lock);
   mp.run();
+  mp_start_lock.lock();
   std::cout << "Started ModelProxy" << std::endl;
 
   // we use redis
@@ -260,10 +268,8 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     // get data, labels and model
     std::cout << "[WORKER] running phase 1" << std::endl;
-    if (!run_phase1(samples, labels, model, s3_iter, features_per_sample, mp))
+    if (!run_phase1(samples, labels, model, s3_iter, features_per_sample, mp)) {
       continue;
-    else {
-      std::cout << "[WORKER] else phase 1" << std::endl;
     }
     std::cout << "[WORKER] phase 1 done" << std::endl;
 

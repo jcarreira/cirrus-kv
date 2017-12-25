@@ -76,6 +76,14 @@ void PSTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
   free(data);
 }
 
+void PSTask::publish_model(const LRModel& model) {
+#ifdef USE_CIRRUS
+  model_store.put(MODEL_BASE, model);
+#elif defined(USE_REDIS)
+  put_model(model);
+#endif
+}
+
 /**
   * This is the task that runs the parameter server
   * This task is responsible for
@@ -106,20 +114,15 @@ void PSTask::run(const Configuration& config) {
   std::cout << "[PS] "
     << "PS publishing model at id: " << MODEL_BASE
     << " csum: " << model.checksum() << std::endl;
-  // publish the model back to the store so workers can use it
-#ifdef USE_CIRRUS
-  model_store.put(MODEL_BASE, model);
-#elif defined(USE_REDIS)
-  put_model(model);
-#endif
 
-  // we keep a version number for the gradient produced by each worker
-
+  publish_model(model);
 #ifdef USE_CIRRUS    
   wait_for_start(PS_TASK_RANK, client, nworkers);
 #elif defined(USE_REDIS)
   wait_for_start(PS_TASK_RANK, r, nworkers);
 #endif
+  publish_model(model);
+  
 
   while (1) {
     // for every worker, check for a new gradient computed

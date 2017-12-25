@@ -153,10 +153,13 @@ class PSTask : public MLTask {
     void run(const Configuration& config);
 
   private:
+    auto connect_redis();
+
+    void put_model(LRModel model);
+    void publish_model(const LRModel& model);
+
     void update_gradient_version(
         auto& gradient, int worker, LRModel& model, Configuration config);
-    auto connect_redis();
-    void put_model(LRModel model);
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
