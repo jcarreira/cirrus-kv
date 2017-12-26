@@ -20,6 +20,8 @@ namespace ErrorTaskGlobal {
   std::unique_ptr<LRModel> model;
   std::unique_ptr<lr_model_deserializer> lmd;
   volatile bool model_is_here = true;
+  uint64_t start_time;
+  std::mutex mp_start_lock;
 }
 /**
   * Works as a cache for remote model
@@ -31,10 +33,12 @@ class ModelProxyErrorTask {
     { 
       ErrorTaskGlobal::model.reset(new LRModel(mgs));
       ErrorTaskGlobal::lmd.reset(new lr_model_deserializer(mgs));
+      ErrorTaskGlobal::mp_start_lock.lock();
     }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "connectCallback" << std::endl;
+      ErrorTaskGlobal::mp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -222,7 +226,7 @@ start:
       if (i == 0)
         goto start;  // no loss to be computed
       else
-        goto loop_accuracy;  // we looked at all minibatches
+        break;  // we looked at all minibatches
     }
     labels_vec.push_back(labels);
     samples_vec.push_back(samples);
@@ -232,12 +236,14 @@ start:
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
-
-loop_accuracy:
-  wait_for_start(ERROR_TASK_RANK, r, nworkers);
-
+  
   ModelProxyErrorTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
   mp.run();
+  ErrorTaskGlobal::mp_start_lock.lock();
+
+  wait_for_start(ERROR_TASK_RANK, r, nworkers);
+  ErrorTaskGlobal::start_time = get_time_us();
+
   //check_labels(labels_vec, samples_per_batch);
 
   Dataset dataset(samples_vec, labels_vec,
@@ -246,8 +252,6 @@ loop_accuracy:
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
   while (1) {
-    //usleep(ERROR_INTERVAL_USEC); //
-
     try {
       // first we get the model
 #ifdef DEBUG
@@ -264,8 +268,12 @@ loop_accuracy:
 #endif
       std::cout << "[ERROR_TASK] computing loss" << std::endl;
       std::pair<double, double> ret = model.calc_loss(dataset);
-      std::cout << "Loss: " << ret.first << " Accuracy: " << ret.second
-        << " time(us): " << get_time_us() << std::endl;
+      std::cout
+        << "Loss: " << ret.first << " Accuracy: " << ret.second
+        << "Avg Loss: " << (ret.first / dataset.num_samples())
+        << " time(us): " << get_time_us()
+        << " time from start (us): " << (get_time_us() - ErrorTaskGlobal::start_time)
+        << std::endl;
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;
     }
