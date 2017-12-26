@@ -15,6 +15,10 @@
 #include <memory>
 #include <algorithm>
 
+#include "MurmurHash3.h"
+
+#define HASH_BITS 20
+
 static const int REPORT_LINES = 10000;  // how often to report readin progress
 static const int REPORT_THREAD = 100000;  // how often proc. threads report
 static const int STR_SIZE = 10000;        // max size for dataset line
@@ -238,7 +242,9 @@ void InputReader::split_data_labels(
     }
 }
 
-void shuffle_samples_labels(auto& samples, auto& labels) {
+void InputReader::shuffle_samples_labels(
+      std::vector<std::vector<FEATURE_TYPE>>& samples,
+      std::vector<FEATURE_TYPE>& labels) {
   std::srand(42);
   std::random_shuffle(samples.begin(), samples.end());
   std::srand(42);
@@ -346,6 +352,98 @@ Dataset InputReader::read_input_csv(const std::string& input_file,
   std::cout << "Printing first sample after normalization" << std::endl;
   print_sample(samples[0]);
   return Dataset(samples, labels);
+}
+
+uint64_t hash_f(const char* s) {
+  uint64_t seed = 100;
+  uint64_t hash_otpt[2]= {0};
+  MurmurHash3_x64_128(s, strlen(s), seed, hash_otpt); // 0xb6d99cf8
+
+  std::cout << "MurmurHash3_x64_128 hash: " << hash_otpt[0] << std::endl;
+
+
+  return hash_otpt [0];
+
+}
+
+
+/** Feature is categorical if it contains
+  * a character that is not a digit
+  */
+bool InputReader::is_categorical(const char* s) {
+  for (uint64_t i = 0; s[i]; ++i) {
+    if (!isdigit(s[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+/**
+  * Parse a line from the training dataset
+  * containg numerical and/or categorical variables
+  */
+void InputReader::parse_sparse_line(
+    const std::string& line, const std::string& delimiter,
+    uint64_t /*limit_cols*/) {
+  char str[STR_SIZE];
+
+  if (line.size() > STR_SIZE) {
+    throw std::runtime_error("Input line is too big");
+  }
+
+  strncpy(str, line.c_str(), STR_SIZE);
+  char* s = str;
+
+  std::vector<uint64_t> cat_features;  // categorical features
+  cat_features.resize(2 << HASH_BITS);
+
+  std::vector<FEATURE_TYPE> num_features;
+  while (char* l = strsep(&s, delimiter.c_str())) {
+    if (is_categorical(l)) {
+      uint64_t hash = hash_f(l);
+      cat_features[hash]++;
+    } else {
+      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
+      num_features.push_back(v);
+    }
+  }
+}
+
+/** Handle both numerical and categorical variables
+ * For categorical variables we use the hashing trick
+ */
+Dataset InputReader::read_input_csv_sparse(const std::string& input_file,
+    std::string delimiter, uint64_t /*nthreads*/,
+    uint64_t limit_lines, uint64_t limit_cols,
+    bool /*to_normalize*/) {
+  std::cout << "Reading input file: " << input_file << std::endl;
+
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file");
+  }
+
+  std::vector<std::vector<FEATURE_TYPE>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;         // final result
+
+  uint64_t lines_count = 0;
+  // process each line
+  std::string line;
+  while (getline(fin, line)) {
+    lines_count++;
+    // enforce max number of lines read
+    if (lines_count && lines_count >= limit_lines)
+      break;
+    parse_sparse_line(line, delimiter, limit_cols);
+
+    if (lines_count % REPORT_LINES == 0) {
+      std::cout << "Read: " << lines_count << " lines." << std::endl;
+    }
+  }
+
+  return Dataset();
 }
 
 void InputReader::normalize(std::vector<std::vector<FEATURE_TYPE>>& data) {
