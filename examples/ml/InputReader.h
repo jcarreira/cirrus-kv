@@ -93,12 +93,35 @@ class InputReader {
    */
   void print_sample(const std::vector<FEATURE_TYPE>& sample) const;
 
+  /** Parse a training dataset sample
+    */
   void process_lines(
       std::vector<std::string>&,
       const std::string&,
       uint64_t,
       std::vector<std::vector<FEATURE_TYPE>>&,
       std::vector<FEATURE_TYPE>&);
+
+  /** Parse a training dataset sample that can contain
+    * categorical variables
+    */
+  void parse_sparse_line(
+      const std::string& line, const std::string& delimiter, uint64_t);
+  
+  /** Check if feature is categorical (contains character that is not diigt)
+    */
+  bool is_categorical(const char* s);
+
+  /** Shuffle both samples and labels
+    */
+  void shuffle_samples_labels(
+      std::vector<std::vector<FEATURE_TYPE>>& samples,
+      std::vector<FEATURE_TYPE>& labels);
+
+  Dataset read_input_csv_sparse(const std::string& input_file,
+    std::string delimiter, uint64_t nthreads,
+    uint64_t limit_lines, uint64_t limit_cols,
+    bool to_normalize);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

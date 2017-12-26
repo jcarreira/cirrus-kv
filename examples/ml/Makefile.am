@@ -53,14 +53,16 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
               PSTask.cpp TasksWait.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp \
-	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp
+	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp \
+	      MurmurHash3.cpp
+
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              Redis.cpp
+              Redis.cpp MurmurHash3.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
