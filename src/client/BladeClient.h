@@ -63,6 +63,8 @@ class BladeClient {
 
     virtual void connect(const std::string& address,
                          const std::string& port) = 0;
+    virtual void connect(const std::vector<std::string>& addresses,
+                         const std::vector<std::string>& ports) = 0;
 
     // Read
     virtual std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
@@ -87,6 +89,9 @@ class BladeClient {
             const WriteUnits& w) = 0;
 
     virtual bool remove(ObjectID id) = 0;
+        
+    virtual uint64_t numServers() const = 0;
+    virtual uint64_t serverFromOid(ObjectID id) const = 0;
 };
 
 }  // namespace cirrus

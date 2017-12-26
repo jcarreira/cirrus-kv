@@ -41,6 +41,8 @@ class TCPClient : public BladeClient {
     ~TCPClient() override;
     void connect(const std::string& address,
         const std::string& port) override;
+    void connect(const std::vector<std::string>& addresses,
+        const std::vector<std::string>& ports) override;
 
     // Read
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(
@@ -63,6 +65,9 @@ class TCPClient : public BladeClient {
             const WriteUnits& w) override;
 
     bool remove(ObjectID id) override;
+    
+    uint64_t numServers() const override;
+    uint64_t serverFromOid(ObjectID) const override;
 
  private:
     /**
@@ -105,17 +110,26 @@ class TCPClient : public BladeClient {
          std::shared_ptr<std::vector<char>> buffer;
     };
 
+    void connectSingleServer(
+        const std::string& address,
+        const std::string& port_string,
+        int* sock);
+
+    void loop();
+
     ssize_t send_all(int, const void*, size_t, int);
     ssize_t read_all(int sock, void* data, size_t len);
 
     ClientFuture enqueue_message(
-                        flatbuffers::FlatBufferBuilder* builder,
-                        const int txn_id);
-    void process_received();
+            uint64_t server_id,
+            flatbuffers::FlatBufferBuilder* builder,
+            const int txn_id);
+
+    int process_received(int fd);
     void process_send();
 
-    /** fd of the socket used to communicate w/ remote store */
-    int sock = 0;
+    /** fds of the sockets used to communicate w/ remote store */
+    std::vector<int> sockets;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */
     std::atomic<std::uint64_t> curr_txn_id = {0};
 
@@ -129,11 +143,16 @@ class TCPClient : public BladeClient {
       */
     cuckoohash_map<TxnID, struct txn_info> txn_map;
 
+    struct ToSendPair {
+        uint64_t server_id;
+        flatbuffers::FlatBufferBuilder* builder;
+    };
     /**
      * Queue of FlatBufferBuilders that the sender_thread processes to send
      * messages to the server.
      */
-    boost::lockfree::queue<flatbuffers::FlatBufferBuilder*,
+    boost::lockfree::queue<
+        ToSendPair,
         boost::lockfree::capacity<SEND_QUEUE_SIZE>> send_queue;
 
     /**

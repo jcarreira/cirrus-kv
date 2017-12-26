@@ -231,6 +231,28 @@ char* ParseIP(int argc, char *argv[]) {
     }
 }
 
+/**
+ * Given argc and argv, returns the number of shards
+ * @param argc number of command line arguments
+ * @param argv array of pointers to actual arguments
+ * @return pointer to third command line argument, which should be ip address
+ */
+char* ParseNumShards(int argc, char *argv[]) {
+    for (int i = 0; i < argc - 1; ++i) {
+        if (std::string("--num_shards") == argv[i]) {
+            std::string n = argv[i + 1];
+            bool is_num = std::find_if(n.begin(), 
+                    n.end(), [](char c) {
+                    return !std::isdigit(c); }) == n.end();
+            if (!is_num)
+                return nullptr;
+            return argv[i + 1];
+        }
+    }
+
+    return nullptr;
+}
+
 }  // namespace test_internal
 
 }  // namespace cirrus

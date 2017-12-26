@@ -138,6 +138,9 @@ struct RDMAMem {
 class RDMAClient : public BladeClient {
  public:
     void connect(const std::string& address, const std::string& port) override;
+    void connect(const std::vector<std::string>& addresses,
+                 const std::vector<std::string>& ports) override;
+
     bool write_sync(ObjectID id, const WriteUnit& w) override;
     std::pair<std::shared_ptr<const char>, unsigned int> read_sync(ObjectID oid)
         override;
@@ -159,6 +162,9 @@ class RDMAClient : public BladeClient {
             const WriteUnits& w) override;
 
     bool remove(ObjectID id) override;
+
+    uint64_t numServers() const override;
+    uint64_t serverFromOid(ObjectID) const override;
 
  private:
     /**
