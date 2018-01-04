@@ -128,6 +128,8 @@ class TCPClient : public BladeClient {
     int process_received(int fd);
     void process_send();
 
+    void check_bulk_oids(const std::vector<ObjectID>&);
+
     /** fds of the sockets used to communicate w/ remote store */
     std::vector<int> sockets;
     /** Next txn_id to assign to a txn_info. Used as a unique identifier. */

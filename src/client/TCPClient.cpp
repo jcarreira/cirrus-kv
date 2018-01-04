@@ -249,6 +249,16 @@ BladeClient::ClientFuture TCPClient::read_async(ObjectID oid) {
     return enqueue_message(serverFromOid(oid), builder, txn_id);
 }
 
+void TCPClient::check_bulk_oids(const std::vector<ObjectID>& oids) {
+   auto h = serverFromOid(oids[0]);
+   for (const auto& oid : oids) {
+      if (serverFromOid(oid) != h) {
+         throw std::runtime_error(
+               "Read bulk objects need to go to same server");
+      }
+   }
+}
+
 /**
  * Asynchronously reads a set of objects from the remote server.
  * @param oids the ids of the objects the user wishes to read to local memory.
@@ -259,6 +269,8 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
+    check_bulk_oids(oids);
+
     auto builder = new flatbuffers::FlatBufferBuilder(initial_buffer_size);
 
     // Create and send write request
@@ -275,7 +287,6 @@ BladeClient::ClientFuture TCPClient::read_async_bulk(
                                      0,
                                      message::TCPBladeMessage::Message_ReadBulk,
                                      msg_contents.Union());
-
     builder->Finish(msg);
 
 #ifdef PERF_LOG
@@ -357,6 +368,8 @@ BladeClient::ClientFuture TCPClient::write_async_bulk(
 #ifdef PERF_LOG
     TimerFunction builder_timer;
 #endif
+    check_bulk_oids(oids);
+
     auto w_size = w.size();
     auto builder = new flatbuffers::FlatBufferBuilder(w_size +
             sizeof(ObjectID) * oids.size() + 50);
@@ -378,7 +391,6 @@ BladeClient::ClientFuture TCPClient::write_async_bulk(
                                     0,
                                     message::TCPBladeMessage::Message_WriteBulk,
                                     msg_contents.Union());
-
     builder->Finish(msg);
 
 #ifdef PERF_LOG
