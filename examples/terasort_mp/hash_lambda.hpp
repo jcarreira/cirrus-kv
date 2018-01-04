@@ -1,11 +1,8 @@
-#ifndef CIRRUS_SERIALIZATION_HASH_LAMBDA_HPP
-#define CIRRUS_SERIALIZATION_HASH_LAMBDA_HPP
-
-#include "config_instance.hpp"
-
-#include "object_store/FullBladeObjectStore.h"
+#ifndef EXAMPLES_TERASORT_MP_HASH_LAMBDA_HPP_
+#define EXAMPLES_TERASORT_MP_HASH_LAMBDA_HPP_
 
 #include <atomic>
+#include <string>
 #include <thread>
 #include <mutex>
 #include <fstream>
@@ -13,28 +10,44 @@
 #include <map>
 #include <vector>
 
+#include "config_instance.hpp"
+
+#include "object_store/FullBladeObjectStore.h"
+
 namespace cirrus_terasort {
 
-	class hash_lambda {
-	private:
-		std::atomic<INT_TYPE> _counter;
-		std::map<std::pair<std::thread::id, INT_TYPE>,
-			std::shared_ptr<std::ofstream>> _file_map;
-		std::mutex _map_mutex;
-		INT_TYPE _start, _end;
-	public:
-		hash_lambda(INT_TYPE s, INT_TYPE e);
-		~hash_lambda();
-		
-		void add_to_map(std::vector<std::tuple<std::thread::id, INT_TYPE, std::shared_ptr<std::ofstream>>>& vec);
-		std::shared_ptr<std::ofstream> get_stream(std::pair<std::thread::id, INT_TYPE> p);
-		INT_TYPE next_counter();
-		INT_TYPE start();
-		INT_TYPE end();
-	};
+class hash_lambda {
+ private:
+        std::vector<std::string> _write_buffer;
+        std::vector<INT_TYPE> _write_buffer_sizes;
+        std::vector<std::shared_ptr<std::mutex>> _write_mutexes;
 
-	void hasher(std::shared_ptr<hash_lambda> hl, INT_TYPE p,
-		std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl<std::string>> store);
-}
+        std::vector<INT_TYPE> _counter_list;
+        std::atomic<INT_TYPE> _read_counter;
+        INT_TYPE _start, _end, _process_index;
 
-#endif
+        std::mutex _stats_lock;
+        std::vector<std::pair<long double, long double>> _thread_bandwidths;
+
+ public:
+        hash_lambda(INT_TYPE p, INT_TYPE s, INT_TYPE e);
+
+        void write(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                        <std::string>> store, INT_TYPE k, std::string v);
+        void finish(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                        <std::string>> store);
+
+        INT_TYPE next_counter();
+        INT_TYPE start();
+        INT_TYPE end();
+
+        void add_data(long double b, long double t);
+        void print_avg_stats();
+};
+
+void hasher(std::shared_ptr<hash_lambda> hl,
+        std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                <std::string>> store);
+}  // namespace cirrus_terasort
+
+#endif  // EXAMPLES_TERASORT_MP_HASH_LAMBDA_HPP_

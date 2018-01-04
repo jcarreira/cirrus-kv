@@ -1,18 +1,20 @@
-#ifndef CIRRUS_TERASORT_SERIALIZATION_HPP
-#define CIRRUS_TERASORT_SERIALIZATION_HPP
+#ifndef EXAMPLES_TERASORT_MP_SERIALIZATION_HPP_
+#define EXAMPLES_TERASORT_MP_SERIALIZATION_HPP_
+
+#include <string>
 
 #include "object_store/FullBladeObjectStore.h"
-#include <string>
 
 namespace cirrus_terasort {
 
-	std::string string_deserializer(const void* data, const uint64_t size);
+std::string string_deserializer(const void* data, const uint64_t size);
 
-	class string_serializer : public cirrus::Serializer<std::string> {
-	public:
-		uint64_t size(const std::string& s) const override;
-		void serialize(const std::string& s, void* mem) const override;
-	};
-}
+class string_serializer : public cirrus::Serializer<std::string> {
+ public:
+        uint64_t size(const std::string& s) const override;
+        void serialize(const std::string& s, void* mem) const override;
+};
 
-#endif
+}  // namespace cirrus_terasort
+
+#endif  // EXAMPLES_TERASORT_MP_SERIALIZATION_HPP_
