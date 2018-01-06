@@ -113,16 +113,24 @@ void sort_lambda::print_avg_stats() {
         to_print += "Sorting/merging process " + std::to_string(_process_index)
                 + " total merge rate: " + std::to_string(merge_avg) + " MB/s\n";
         to_print += "Sorting/merging process " + std::to_string(_process_index)
-                + " average merge rate: " + std::to_string(sort_avg /
+                + " average merge rate: " + std::to_string(merge_avg /
                         _merge_thread_bandwidths.size()) + " MB/s\n";
 
         std::cout << to_print;
 
-        std::ofstream of(std::string(config_instance::stats) + "/sort_rates_" +
-                std::to_string(_process_index) + ".txt");
+        std::ofstream of(std::string(config_instance::stats) +
+                "/sort_get_rates_" + std::to_string(_process_index) + ".txt");
         for (std::pair<long double, long double> p : _get_thread_bandwidths)
                 of << (p.first / 1e6) / (p.second / 1e6) << "\n";
         of.close();
+
+        std::ofstream of2(std::string(config_instance::stats) + "/merge_rates_"
+                + std::to_string(_process_index) + ".txt");
+        for (std::pair<long double, long double> p : _merge_thread_bandwidths)
+                of2 << (p.first / 1e6) << " MB / " << (p.second / 1e6) << " s "
+                        << "= " << (p.first / 1e6) / (p.second / 1e6) <<
+                        " MB/s" << "\n";
+        of2.close();
 }
 
 void sorter(std::shared_ptr<sort_lambda> sl,

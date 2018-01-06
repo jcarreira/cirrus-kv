@@ -2,7 +2,7 @@
 #define EXAMPLES_TERASORT_MP_CONFIG_INSTANCE_HPP_
 
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 
 namespace cirrus_terasort {
 
@@ -10,7 +10,7 @@ using INT_TYPE = uint64_t;
 
 namespace config_instance {
 
-static std::map<char, INT_TYPE> key_map = {
+static std::unordered_map<char, INT_TYPE> key_map = {
         { '0', 0 }, { '1', 1 }, { '2', 2 }, {'3', 3 }, { '4', 4 }, { '5', 5 },
         { '6', 6 }, { '7', 7 }, { '8', 8 }, { '9', 9 },
 
@@ -29,11 +29,12 @@ static std::map<char, INT_TYPE> key_map = {
         { 'x', 59 }, { 'y', 60 }, { 'z', 61 },
 };
 
-static constexpr INT_TYPE total_processes = 11;  // must match runtime
-static constexpr INT_TYPE hash_nodes = 5;
+static constexpr INT_TYPE total_processes = 21;  // must match runtime
+static constexpr INT_TYPE hash_nodes = 10;
 static constexpr INT_TYPE hash_bytes = 1;
 static constexpr INT_TYPE hash_threads = 16;
 static constexpr INT_TYPE hash_nodes_per_reader = 4;
+static constexpr INT_TYPE hash_bulk_get = 50;
 static constexpr char hash_output_dir[] = "/nscratch/nathreya/hash_output_dir";
 
 static constexpr char cirrus_port[] = "12345";
@@ -49,7 +50,7 @@ static constexpr INT_TYPE read_chunk_size = 1000;
 static constexpr INT_TYPE read_threads = 16;
 static constexpr INT_TYPE total_read_keys = num_records / read_chunk_size;
 
-static constexpr INT_TYPE sort_nodes = 5;
+static constexpr INT_TYPE sort_nodes = 10;
 static constexpr INT_TYPE sort_threads = 16;
 static constexpr char sort_output_dir[] = "/nscratch/nathreya/sort_output_dir";
 

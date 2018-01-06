@@ -28,12 +28,14 @@ class hash_lambda {
 
         std::mutex _stats_lock;
         std::vector<std::pair<long double, long double>> _thread_bandwidths;
+        std::vector<std::pair<long double, long double>> _get_bandwidths;
 
  public:
         hash_lambda(INT_TYPE p, INT_TYPE s, INT_TYPE e);
 
         void write(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
-                        <std::string>> store, INT_TYPE k, std::string v);
+                        <std::string>> store, INT_TYPE k, const std::string& v,
+                        INT_TYPE substr_start, INT_TYPE substr_len);
         void finish(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
                         <std::string>> store);
 
@@ -42,6 +44,7 @@ class hash_lambda {
         INT_TYPE end();
 
         void add_data(long double b, long double t);
+        void add_get_data(long double b, long double t);
         void print_avg_stats();
 };
 
