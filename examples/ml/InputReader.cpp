@@ -238,7 +238,9 @@ void InputReader::split_data_labels(
     }
 }
 
-void shuffle_samples_labels(auto& samples, auto& labels) {
+void InputReader::shuffle_samples_labels(
+    std::vector<std::vector<FEATURE_TYPE>>& samples,
+    std::vector<FEATURE_TYPE>& labels) {
   std::srand(42);
   std::random_shuffle(samples.begin(), samples.end());
   std::srand(42);
@@ -383,5 +385,41 @@ void InputReader::normalize(std::vector<std::vector<FEATURE_TYPE>>& data) {
       }
     }
   }
+}
+
+/**
+  * MovieLens 20M
+  * Size: 50732 users *  131262 ratings
+  * Format
+  * userId, movieId, rating, timestamp
+  */
+SparseDataset InputReader::read_movielens_ratings(const std::string& input_file) {
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file");
+  }
+
+  std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+  sparse_ds.resize(50732);
+
+  std::string line;
+  getline(fin, line); // read the header 
+  while (getline(fin, line)) {
+    char str[STR_SIZE];
+    assert(line.size() < STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE);
+
+    char* s = str;
+    char* l = strsep(&s, ",");
+    int userId = string_to<int>(l);
+    l = strsep(&s, ",");
+    int movieId = string_to<int>(l);
+    l = strsep(&s, ",");
+    double rating = string_to<double>(l);
+
+    sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
+  }
+
+  return SparseDataset(sparse_ds);
 }
 

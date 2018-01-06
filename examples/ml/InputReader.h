@@ -2,6 +2,7 @@
 #define EXAMPLES_ML_INPUT_H_
 
 #include <Dataset.h>
+#include <SparseDataset.h>
 #include <string>
 #include <vector>
 #include <queue>
@@ -18,6 +19,13 @@ class InputReader {
    */
   Dataset read_input_criteo(const std::string& samples_input_file,
       const std::string& labels_input_file);
+  
+  /**
+   * Read movielens dataset
+   * @param input_file Path to csv file with dataset
+   * @returns The dataset
+   */
+  SparseDataset read_movielens_ratings(const std::string& input_file);
 
   /**
    * Read dataset in csv file with given delimiter (e.g., tab, space)
@@ -99,6 +107,10 @@ class InputReader {
       uint64_t,
       std::vector<std::vector<FEATURE_TYPE>>&,
       std::vector<FEATURE_TYPE>&);
+
+  void shuffle_samples_labels(
+    std::vector<std::vector<FEATURE_TYPE>>& samples,
+    std::vector<FEATURE_TYPE>& labels);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_
