@@ -4,12 +4,14 @@
 #include <algorithm>
 #include <sstream>
 #include <cmath>
+#include <cstring>
+#include <cstdlib>
 #include <string>
 
 namespace cirrus_terasort {
 
 hash_lambda::hash_lambda(INT_TYPE p, INT_TYPE s, INT_TYPE e) : _start(s),
-        _end(e), _write_buffer(std::vector<std::string>{}),
+        _end(e), _write_buffer(std::vector<char*>{}),
         _write_buffer_sizes(std::vector<INT_TYPE>{}),
         _write_mutexes(std::vector<std::shared_ptr<std::mutex>>{}),
         _process_index(p), _counter_list(std::vector<INT_TYPE>{}) {
@@ -18,7 +20,10 @@ hash_lambda::hash_lambda(INT_TYPE p, INT_TYPE s, INT_TYPE e) : _start(s),
         for (INT_TYPE i = 0; i < config_instance::sort_nodes; i++) {
                 _counter_list.push_back(0);
 
-                _write_buffer.push_back("");
+                _write_buffer.push_back((char*)
+                        calloc((config_instance::record_size + 1)
+                        * config_instance::read_chunk_size + 2,
+                        sizeof(char)));
                 _write_buffer_sizes.push_back(0);
                 _write_mutexes.push_back(std::make_shared<std::mutex>());
         }
@@ -33,7 +38,8 @@ void hash_lambda::finish(
 
                 INT_TYPE key_offset = _counter_list[k]++ *
                         config_instance::sort_nodes;
-                store->put(start_offset + key_offset, _write_buffer[k]);
+                store->put(start_offset + key_offset, std::string(
+                        _write_buffer[k]));
 
                 INT_TYPE key_offset2 = _counter_list[k]++ *
                         config_instance::sort_nodes;
@@ -57,12 +63,19 @@ void hash_lambda::write(
                         config_instance::total_read_keys + k;
                 INT_TYPE key_offset = _counter_list[k]++ *
                         config_instance::sort_nodes;
-                store->put(start_offset + key_offset, _write_buffer[k]);
+                store->put(start_offset + key_offset, std::string(
+                        _write_buffer[k]));
 
-                _write_buffer[k].clear();
+                std::memset(_write_buffer[k], 0, (config_instance::record_size
+                        + 1) * config_instance::read_chunk_size + 2);
                 _write_buffer_sizes[k] = 0;
         }
-        _write_buffer[k] += v.substr(substr_start, substr_len) + "\n";
+        std::memcpy(_write_buffer[k] +
+                _write_buffer_sizes[k] * (config_instance::record_size + 1),
+                v.data() + substr_start, substr_len);
+        _write_buffer[k][
+                _write_buffer_sizes[k] * (config_instance::record_size + 1)
+                + substr_len] = '\n';
         _write_buffer_sizes[k]++;
 
         _write_mutexes[k]->unlock();
