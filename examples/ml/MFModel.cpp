@@ -40,24 +40,28 @@ MFModel::MFModel(const void* w, bool is_sparse, uint64_t n, uint64_t d) {
   weights_ = new double[n * d];
   memset(weights_, 0, n * d * sizeof(double));
 
-  void* data = weights;
+  void* data = reinterpret_cast<void*>(weights_);
 
   if (!is_sparse) {
-    double* input_data = reinterpret_cast<double*>(w);
+    const double* input_data = reinterpret_cast<const double*>(w);
     for (uint64_t i = 0; i < n; ++i) {
       std::copy(input_data, input_data + d, data);
       input_data += d;
     }
   } else {
     for (uint64_t i = 0; i < n; ++i) {
-      uint32_t* numRatings = reinterpret_cast<uint32_t*>(w);
-      uint32_t* movieId = (numRatings + 1);
-      double* rating = reinterpret_cast<double*>(movieId + 1);
+      const uint32_t* numRatings = reinterpret_cast<const uint32_t*>(w);
+      const uint32_t* movieId = (numRatings + 1);
+      const double* rating = reinterpret_cast<const double*>(movieId + 1);
       // set user rating
-      weights_[i * d + movieId] = *rating;
-      w = reinterpret_cast<void*>(rating + 1);
+      weights_[i * d + *movieId] = *rating;
+      w = reinterpret_cast<const void*>(rating + 1);
     }
   }
+}
+
+MFModel::MFModel(const SparseDataset& dataset) {
+  throw std::runtime_error("Not implemented");
 }
 
 uint64_t MFModel::size() const {
@@ -69,7 +73,9 @@ uint64_t MFModel::size() const {
   * Number of factors (32bits)
   * Weights in row order
   */
-std::unique_ptr<Model> MFModel::deserialize(void* data, uint64_t size) const {
+//std::unique_ptr<Model> MFModel::deserialize(void* data, uint64_t size) const {
+// XXX fix this
+int MFModel::deserialize(void* data, uint64_t size) const {
     uint32_t* data_p = (uint32_t*)data;
     uint32_t n = *data_p++;
     uint32_t d = *data_p++;
@@ -78,12 +84,13 @@ std::unique_ptr<Model> MFModel::deserialize(void* data, uint64_t size) const {
     double* ratings_data = reinterpret_cast<double*>(is_sparse + 1);
 
     if (*is_sparse) {
-      return std::unique_ptr<MFModel> model = std::make_unique<MFModel>(
-          reinterpret_cast<double*>(ratings_data), *is_sparse, n, d);
+      //return std::make_unique<MFModel>(
+      //    reinterpret_cast<double*>(ratings_data), *is_sparse, n, d);
     } else {
-      return std::unique_ptr<MFModel> model = std::make_unique<MFModel>(
-          reinterpret_cast<double*>(ratings_data), *is_sparse, n, d);
+      //return std::make_unique<MFModel>(
+      //    reinterpret_cast<double*>(ratings_data), *is_sparse, n, d);
     }
+    return 0;
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
@@ -99,7 +106,7 @@ MFModel::serialize() const {
 }
 
 void MFModel::serializeTo(void* mem, bool is_sparse) const {
-    uint32_t* data_u = (uint32_t*)res.first.get();
+    uint32_t* data_u = reinterpret_cast<uint32_t*>(mem);
 
     *data_u = n_;
     data_u++;
@@ -157,22 +164,23 @@ void MFModel::loadSerialized(const void* data) {
     cirrus::LOG<cirrus::INFO>("loadSerialized n: ", n_, " d: ", d_);
 
     uint32_t* m = (uint32_t*)data;
-    uint32_t n = *m++;
-    uint32_t d = *m++;
+    n_ = *m++;
+    d_ = *m++;
+    bool *is_sparse = reinterpret_cast<bool*>(m);
+    is_sparse++;
+
+    data = re
 
     weights_ = new double[n_ * d_];
 
     for (uint64_t i = 0; i < n; ++i) {
-        weights_.resize(d);
         std::copy(w, w + d, weights_[i].data());
         w += d;
     }
 }
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
-        const Matrix& dataset,
-        double* labels,
-        uint64_t labels_size,
+        const SparseDataset& dataset,
         double epsilon) const {
     auto w = weights_;
 #ifdef DEBUG

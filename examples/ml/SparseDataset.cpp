@@ -13,7 +13,11 @@ SparseDataset::SparseDataset() {
 }
 
 SparseDataset::SparseDataset(const std::vector<std::vector<std::pair<int, double>>>& samples) :
-    data_(samples) {
+    data_(samples), max_features_(0) {
+
+    max_features_ = std::max_element(samples.begin(), samples.end(),
+        [](const std::vector<std::pair<int, double>>& a,
+           const std::vector<std::pair<int, double>>& b) { return a.size() < b.size(); })->size();
 }
 
 uint64_t SparseDataset::num_samples() const {
@@ -103,5 +107,9 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
   }
 
   return SparseDataset(samples);
+}
+
+uint64_t SparseDataset::max_features() const {
+  return max_features_;
 }
 

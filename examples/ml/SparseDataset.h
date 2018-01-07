@@ -37,6 +37,12 @@ class SparseDataset {
   //uint64_t num_features() const;
 
   /**
+   * Get the max number of features of any single user
+   * @return Max number of features of any single user
+   */
+  uint64_t max_features() const;
+
+  /**
    * Returns pointer to specific sample in this dataset
    * @param sample Sample index
    * @returns Pointer to dataset sample
@@ -80,6 +86,7 @@ class SparseDataset {
 
   public:
   std::vector<std::vector<std::pair<int, double>>> data_;
+  uint64_t max_features_; // largest number of featuers of any single user
 };
 
 #endif  // EXAMPLES_ML_SPARSEDATASET_H_

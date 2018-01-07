@@ -7,49 +7,48 @@
 #include <Matrix.h>
 #include <Dataset.h>
 #include <ModelGradient.h>
+#include <SparseDataset.h>
 
 /**
   * Matrix Factorization model
   * Model is represented with a vector of doubles
   */
-class MFModel : public Model {
- public:
-    /**
-      * MFModel constructor
-      * @param n Features dimension
-      * @param d Features dimension
-      */
-    explicit MFModel(uint64_t d);
 
+// XXX Should derive from Model
+class MFModel {
+ public:
     /**
       * MFModel constructor from weight vector
       * @param w Array of model weights
       * @param d Features dimension
       */
-    MFModel(const double* w, uint64_t d);
+    MFModel(const void* w, bool is_sparse, uint64_t n, uint64_t d);
+    MFModel(uint64_t n, uint64_t d);
+    
+    explicit MFModel(const SparseDataset&);
 
     /**
      * Set the model weights to values between 0 and 1
      */
-    void randomize() override;
+    void randomize();
 
     /**
      * Loads model weights from serialized memory
      * @param mem Memory where model is serialized
      */
-    void loadSerialized(const void* mem) override;
+    void loadSerialized(const void* mem);
 
     /**
       * serializes this model into memory
       * @return pair of memory pointer and size of serialized model
       */
     std::pair<std::unique_ptr<char[]>, uint64_t>
-        serialize() const override;
+        serialize() const;
 
     /**
       * serializes this model into memory pointed by mem
       */
-    void serializeTo(void* mem) const;
+    void serializeTo(void* mem, bool is_sparse) const;
 
     /**
      * Create new model from serialized weights
@@ -57,13 +56,13 @@ class MFModel : public Model {
      * @param size Size of the serialized model
      */
     std::unique_ptr<Model> deserialize(void* data,
-            uint64_t size) const override;
+            uint64_t size) const;
 
     /**
      * Performs a deep copy of this model
      * @return New model
      */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<Model> copy() const;
 
     /**
      * Performs an SGD update in the direction of the input gradient
@@ -76,46 +75,42 @@ class MFModel : public Model {
      * Returns the size of the model weights serialized
      * @returns Size of the model when serialized
      */
-    uint64_t getSerializedSize() const override;
+    uint64_t getSerializedSize() const;
 
     /**
      * Compute a minibatch gradient
      * @param dataset Dataset to learn on
-     * @param labels Labels of the samples
-     * @param labels_size Size of the labels array
      * @param epsilon L2 Regularization rate
      * @return Newly computed gradient
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            const Matrix& dataset,
-            double* labels,
-            uint64_t labels_size,
-            double epsilon) const override;
+            const SparseDataset& dataset,
+            double epsilon) const;
     /**
      * Compute the logistic loss of a given dataset on the current model
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    double calc_loss(Dataset& dataset) const override;
+    double calc_loss(Dataset& dataset) const;
 
     /**
      * Return the size of the gradient when serialized
      * @return Size of gradient when serialized
      */
-    uint64_t getSerializedGradientSize() const override;
+    uint64_t getSerializedGradientSize() const;
 
     /**
       * Builds a gradient that is stored serialized
       * @param mem Memory address where the gradient is serialized
       * @return Pointer to new gradient object
       */
-    std::unique_ptr<ModelGradient> loadGradient(void* mem) const override;
+    std::unique_ptr<ModelGradient> loadGradient(void* mem) const;
 
     /**
       * Compute checksum of the model
       * @return Checksum of the model
       */
-    double checksum() const override;
+    double checksum() const;
 
     /**
       * Print the model's weights
@@ -130,7 +125,8 @@ class MFModel : public Model {
 
  private:
     double* weights_;
-    //std::vector<std::vector<double>> weights_;  //< vector of the model weights
+    uint64_t n_;
+    uint64_t d_;
 };
 
 #endif  // EXAMPLES_ML_MFMODEL_H_

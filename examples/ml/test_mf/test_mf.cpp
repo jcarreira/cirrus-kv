@@ -23,20 +23,19 @@ int main() {
     dataset.check();
     dataset.print_info();
 
-    uint64_t samples = dataset.num_samples();
-    uint64_t cols = dataset.max_cols();
+    //uint64_t samples = dataset.num_samples();
+    //uint64_t cols = dataset.max_features();
 
-    mf_mode.reset(new MFModel(samples, cols));
+    // Initialize the model with initial values from dataset
+    mf_model.reset(new MFModel(dataset));
 
     // SGD learning
     for (uint64_t i = 0; 1; ++i) {
         SparseDataset ds = dataset.random_sample(20);
 
-        auto gradient = model->minibatch_grad(ds.samples_,
-                const_cast<double*>(ds.labels_.get()),
-                ds.num_samples(), epsilon);
+        auto gradient = mf_model->minibatch_grad(ds, epsilon);
 
-        model->sgd_update(learning_rate, gradient.get());
+        mf_model->sgd_update(learning_rate, gradient.get());
     }
 
     return 0;
