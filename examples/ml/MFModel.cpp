@@ -136,11 +136,13 @@ void MFModel::randomize() {
   }
 }
 
+#if 0
 std::unique_ptr<Model> MFModel::copy() const {
     std::unique_ptr<MFModel> new_model =
         std::make_unique<MFModel>(weights_, n_, d_);
     return new_model;
 }
+#endif
 
 void MFModel::sgd_update(double learning_rate,
         const ModelGradient* gradient) {
@@ -169,23 +171,25 @@ void MFModel::loadSerialized(const void* data) {
     bool *is_sparse = reinterpret_cast<bool*>(m);
     is_sparse++;
 
-    data = re
+    //data = re
 
     weights_ = new double[n_ * d_];
 
-    for (uint64_t i = 0; i < n; ++i) {
-        std::copy(w, w + d, weights_[i].data());
-        w += d;
+    for (uint64_t i = 0; i < n_; ++i) {
+        std::copy(w, w + d_, weights_[i].data());
+        w += d_;
     }
 }
 
-std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
+std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
     auto w = weights_;
 #ifdef DEBUG
     dataset.check();
 #endif
+
+#if 0
 
     if (dataset.cols != size() || labels_size != dataset.rows) {
       throw std::runtime_error("Sizes don't match");
@@ -224,6 +228,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
 #ifdef DEBUG
     ret->check_values();
+#endif
 #endif
 
     return ret;
@@ -319,15 +324,13 @@ std::unique_ptr<ModelGradient> MFModel::loadGradient(void* mem) const {
 }
 
 double MFModel::checksum() const {
-    return crc32(weights_.data(), weights_.size() * sizeof(double));
+    return crc32(weights_, size() * sizeof(double));
 }
 
 void MFModel::print() const {
     std::cout << "MODEL: ";
-    for (const auto& w : weights_) {
-        for (const auto& v : w) {
-            std::cout << " " << v;
-        }
+    for (uint64_t i = 0; i < n_ * d_; ++i) {
+      std::cout << " " << weights_[i];
     }
     std::cout << std::endl;
 }
