@@ -7,7 +7,6 @@
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "cache_manager/CacheManager.h"
-#include "utils/CirrusTime.h"
 #include "cache_manager/LRAddedEvictionPolicy.h"
 #include "cache_manager/LRUEvictionPolicy.h"
 #include "utils/Stats.h"

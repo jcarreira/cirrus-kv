@@ -60,7 +60,7 @@ class FullBladeObjectStoreTempl : public ObjectStore<T> {
     void put_bulk_fast(const std::vector<ObjectID>& oids,
             const std::vector<T>& data);
 
-    void removeBulk(ObjectID first, ObjectID last) override;
+    void remove_bulk(ObjectID first, ObjectID last) override;
 
     void printStats() const noexcept override;
 
@@ -356,7 +356,7 @@ bool FullBladeObjectStoreTempl<T>::remove(ObjectID id) {
  * @param last the last in a range of continuous ObjectIDs to be removed
  */
 template<class T>
-void FullBladeObjectStoreTempl<T>::removeBulk(ObjectID first, ObjectID last) {
+void FullBladeObjectStoreTempl<T>::remove_bulk(ObjectID first, ObjectID last) {
     if (first > last) {
         throw cirrus::Exception("First ObjectID to remove must be leq last.");
     }

@@ -42,7 +42,7 @@ class CacheManager {
     void put(ObjectID oid, const T& obj);
     void prefetch(ObjectID oid);
     void remove(ObjectID oid);
-    void removeBulk(ObjectID first, ObjectID last);
+    void remove_bulk(ObjectID first, ObjectID last);
     void prefetchBulk(ObjectID first, ObjectID last);
     void get_bulk(ObjectID start, ObjectID last, T* data);
     void put_bulk(ObjectID start, ObjectID last, T* data);

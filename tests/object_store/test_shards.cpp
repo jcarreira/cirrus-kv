@@ -14,6 +14,8 @@ static const uint64_t BILLION = MILLION * 1000;
 static const uint64_t GB = 1024 * 1024 * 1024;
 bool use_rdma_client;
 
+static const uint64_t NUM_ITERS = 100000;
+
 /**
   * Test the correctness of multiple shards
   * We assume all the servers are running in 127.0.01
@@ -40,13 +42,19 @@ void test_store_shards(uint64_t num_shards) {
 
     srand(time(NULL));
 
+    cirrus::TimerFunction tf;
+    std::cout << "Storing objects" << std::endl;
     std::vector<cirrus::ObjectID> oids;
-    for (uint64_t i = 0; i < 10000; i++) {
+    for (uint64_t i = 0; i < NUM_ITERS; i++) {
         cirrus::ObjectID oid = rand() % BILLION;
         oids.push_back(oid);
         store.put(oid, oid);
     }
 
+    auto elapsed = tf.getUsElapsed();
+    std::cout << "Elapsed (us): " << elapsed << std::endl;
+
+    std::cout << "Checking sharded objects" << std::endl;
     for (const auto& oid : oids) {
         cirrus::ObjectID retval = store.get(oid);
         if (retval != oid) {
