@@ -25,7 +25,8 @@ class InputReader {
    * @param input_file Path to csv file with dataset
    * @returns The dataset
    */
-  SparseDataset read_movielens_ratings(const std::string& input_file);
+  SparseDataset read_movielens_ratings(const std::string& input_file,
+   int *number_users, int* number_movies);
 
   /**
    * Read dataset in csv file with given delimiter (e.g., tab, space)

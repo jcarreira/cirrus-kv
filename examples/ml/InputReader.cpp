@@ -192,7 +192,7 @@ InputReader::read_mnist_csv(const std::string& input_file,
 
     std::string line;
     char str[STR_SIZE + 1] = {0};
-    while (fgets(str, 1000000, fin) != NULL) {
+    while (fgets(str, STR_SIZE, fin) != NULL) {
         char* s = str;
 
         std::vector<FEATURE_TYPE> sample;
@@ -393,11 +393,14 @@ void InputReader::normalize(std::vector<std::vector<FEATURE_TYPE>>& data) {
   * Format
   * userId, movieId, rating, timestamp
   */
-SparseDataset InputReader::read_movielens_ratings(const std::string& input_file) {
+SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
+   int *number_users, int* number_movies) {
   std::ifstream fin(input_file, std::ifstream::in);
   if (!fin) {
-    throw std::runtime_error("Error opening input file");
+    throw std::runtime_error("Error opening input file " + input_file);
   }
+
+  *number_movies = *number_users = 0;
 
   std::vector<std::vector<std::pair<int, double>>> sparse_ds;
   sparse_ds.resize(50732);
@@ -418,6 +421,9 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file)
     double rating = string_to<double>(l);
 
     sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
+
+    *number_users = std::max(*number_users, userId);
+    *number_movies = std::max(*number_movies, movieId);
   }
 
   return SparseDataset(sparse_ds);

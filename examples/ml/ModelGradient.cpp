@@ -70,6 +70,12 @@ void LRGradient::check_values() const {
     }
 }
 
+/** 
+  * SOFTMAX
+  *
+  *
+  */
+
 SoftmaxGradient::SoftmaxGradient(uint64_t nclasses, uint64_t d) {
     weights.resize(d);
     for (auto& v : weights) {
@@ -133,3 +139,70 @@ void SoftmaxGradient::check_values() const {
     }
 }
 
+/** 
+  * MFGradient
+  *
+  */
+
+MFGradient::MFGradient(uint64_t nclasses, uint64_t d) {
+    weights.resize(d);
+    for (auto& v : weights) {
+        v.resize(nclasses);
+    }
+}
+
+MFGradient::MFGradient(const std::vector<std::vector<double>>& w) {
+    weights = w;
+}
+
+void MFGradient::serialize(void* mem) const {
+    *reinterpret_cast<uint32_t*>(mem) = version;
+    mem = reinterpret_cast<void*>(
+            (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
+    double* data = reinterpret_cast<double*>(mem);
+
+    for (const auto& v : weights) {
+        std::copy(v.begin(), v.end(), data);
+        data += v.size();
+    }
+}
+
+uint64_t MFGradient::getSerializedSize() const {
+    return weights.size() * weights[0].size() * sizeof(double)
+        + sizeof(uint32_t);
+}
+
+void MFGradient::loadSerialized(const void* mem) {
+    version = *reinterpret_cast<const uint32_t*>(mem);
+    mem = reinterpret_cast<const void*>(
+            (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
+    const double* data = reinterpret_cast<const double*>(mem);
+
+    for (auto& v : weights) {
+        std::copy(data, data + v.size(), v.begin());
+        data += v.size();
+    }
+}
+
+void MFGradient::print() const {
+    std::cout
+        << "MFGradient (" << weights.size() << "x"
+        << weights[0].size() << "): " << std::endl;
+    for (const auto &v : weights) {
+        for (const auto &vv : v) {
+            std::cout << vv << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+void MFGradient::check_values() const {
+    for (const auto &v : weights) {
+        for (const auto &vv : v) {
+            if (std::isnan(vv) || std::isinf(vv)) {
+                throw std::runtime_error("MFGradient::check_values error");
+            }
+        }
+    }
+}

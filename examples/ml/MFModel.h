@@ -15,17 +15,15 @@
   */
 
 // XXX Should derive from Model
-class MFModel {
+class MFModel : public Model {
  public:
     /**
       * MFModel constructor from weight vector
       * @param w Array of model weights
       * @param d Features dimension
       */
-    MFModel(const void* w, bool is_sparse, uint64_t n, uint64_t d);
-    MFModel(uint64_t n, uint64_t d);
-    
-    explicit MFModel(const SparseDataset&);
+    MFModel(const void* w, uint64_t n, uint64_t d);
+    MFModel(uint64_t users, uint64_t items, uint64_t factors);
 
     /**
      * Set the model weights to values between 0 and 1
@@ -48,7 +46,7 @@ class MFModel {
     /**
       * serializes this model into memory pointed by mem
       */
-    void serializeTo(void* mem, bool is_sparse) const;
+    void serializeTo(void* mem) const;
 
     /**
      * Create new model from serialized weights
@@ -84,14 +82,26 @@ class MFModel {
      * @return Newly computed gradient
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            const SparseDataset& dataset,
+            const Matrix& m,
+            double* labels,
+            uint64_t labels_size,
+            //const SparseDataset& dataset,
             double epsilon) const;
+     
+    std::unique_ptr<ModelGradient> sgd_update(
+                double learning_rate,
+                uint64_t base_user,
+                const SparseDataset&,
+                double epsilon) const;
+
     /**
      * Compute the logistic loss of a given dataset on the current model
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
     double calc_loss(Dataset& dataset) const;
+    
+    double calc_loss(SparseDataset& dataset) const;
 
     /**
      * Return the size of the gradient when serialized
@@ -124,9 +134,30 @@ class MFModel {
     uint64_t size() const;
 
  private:
-    double* weights_;
-    uint64_t n_;
-    uint64_t d_;
+    double& get_user_weights(uint64_t userId, uint64_t factor) const;
+    double& get_item_weights(uint64_t itemId, uint64_t factor) const;
+
+    double predict(uint32_t userId, uint32_t itemId) const;
+
+    void initialize_weights(uint64_t, uint64_t, uint64_t);
+
+    double* user_weights_;
+    double* item_weights_;
+
+    double* user_bias_;
+    double* item_bias_;
+
+    double user_bias_reg_;
+    double item_bias_reg_;
+
+    double item_fact_reg_;
+    double user_fact_reg_;
+
+    uint64_t nusers_;
+    uint64_t nitems_;
+    uint64_t nfactors_;
+
+    double global_bias_ = 0;
 };
 
 #endif  // EXAMPLES_ML_MFMODEL_H_

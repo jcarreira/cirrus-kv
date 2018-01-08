@@ -32,7 +32,7 @@ void SparseDataset::check() const {
       }
 
       double rating = v.second;
-      if (!FLOAT_EQ(rating, 1.0) && !FLOAT_EQ(rating, 0.0)) {
+      if (rating < 0 || rating > 100) {
         throw std::runtime_error(
             "Dataset::check_values wrong label value: " + std::to_string(rating));
       }
@@ -62,6 +62,7 @@ void SparseDataset::print() const {
 
 void SparseDataset::print_info() const {
   std::cout << "SparseDataset #samples: " << data_.size() << std::endl;
+  std::cout << "SparseDataset max features: " << max_features_ << std::endl;
 }
 
 //std::shared_ptr<Dataset::FEATURE_TYPE>
@@ -104,6 +105,20 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
     int index = sampler(re);
 
     samples.push_back(data_[index]);
+  }
+
+  return SparseDataset(samples);
+}
+
+SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) const {
+  std::vector<std::vector<std::pair<int, double>>> samples;
+
+  if (start + n_samples > data_.size()) {
+    throw std::runtime_error("Start goes over size of dataset");
+  }
+
+  for (uint64_t i = start; i < start + n_samples; ++i) {
+    samples.push_back(data_[i]);
   }
 
   return SparseDataset(samples);

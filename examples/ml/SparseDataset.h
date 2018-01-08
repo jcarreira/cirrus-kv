@@ -83,6 +83,8 @@ class SparseDataset {
    * @return Random subset of samples
    */
   SparseDataset random_sample(uint64_t n_samples) const;
+  
+  SparseDataset sample_from(uint64_t start, uint64_t n_samples) const;
 
   public:
   std::vector<std::vector<std::pair<int, double>>> data_;
