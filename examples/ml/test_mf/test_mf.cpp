@@ -64,30 +64,36 @@ void netflix() {
     int number_movies, number_users;
 
     std::cout << "Reading movie dataset" << std::endl;
-    SparseDataset dataset = input.read_netflix_ratings("nf_parsed_1M", &number_users, &number_movies);
+    SparseDataset dataset = input.read_netflix_ratings("nf_parsed", &number_users, &number_movies);
     dataset.check();
     dataset.print_info();
 
     // Initialize the model with initial values from dataset
-    int nfactors = 100;
+    int nfactors = 10;
     mf_model.reset(new MFModel(number_users, number_movies, nfactors));
 
     std::cout << "Starting SGD learning" << std::endl;
     
-    double learning_rate = 0.5;
+    double learning_rate = 0.01;
 
     // SGD learning
     uint64_t batch_size = 20;
     double loss = 0;
     double prev_loss = 0;
     double epsilon = 0.00001;
-    for (uint64_t i = 0; 1; i += batch_size) {
+
+    while (1) {
+      for (uint64_t i = 0; i + batch_size < number_users; i += batch_size) {
         SparseDataset ds = dataset.sample_from(i, batch_size);
 
         // we update the model here
         auto gradient = mf_model->sgd_update(learning_rate, i, ds, epsilon);
 
-        if (i % 1000 == 0) {
+        //if (i == 2600000) {
+        //  learning_rate *= 0.5;
+        //}
+
+        if (i % 100000 == 0) {
           loss = mf_model->calc_loss(dataset);
           std::cout 
             << "Iteration " << i
@@ -95,11 +101,12 @@ void netflix() {
 
 
           if (prev_loss == loss) {
-            learning_rate *= 0.8;
+            learning_rate *= 0.9;
             std::cout << "learning_rate: " << learning_rate << std::endl;
           }
           prev_loss = loss;
         }
+      }
     }
 }
 

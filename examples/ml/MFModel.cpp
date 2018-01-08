@@ -26,11 +26,11 @@ void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfacto
   user_bias_ = new double[users];
   item_bias_ = new double[items];
 
-  item_fact_reg_ = 0.0;
-  user_fact_reg_ = 0.0;
+  item_fact_reg_ = 0.01;
+  user_fact_reg_ = 0.01;
 
-  user_bias_reg_ = 0.0;
-  item_bias_reg_ = 0.0;
+  user_bias_reg_ = 0.01;
+  item_bias_reg_ = 0.01;
 
   nusers_ = users;
   nitems_ = items;
@@ -201,11 +201,11 @@ std::unique_ptr<ModelGradient> MFModel::sgd_update(
         double pred = predict(user, itemId);
         double error = rating - pred;
 
-        std::cout 
-          << "rating: " << rating
-          << " prediction: " << pred
-          << " error: " << error
-          << std::endl;
+        //std::cout 
+        //  << "rating: " << rating
+        //  << " prediction: " << pred
+        //  << " error: " << error
+        //  << std::endl;
 
         user_bias_[user] += learning_rate * (error - user_bias_reg_ * user_bias_[user]);
         item_bias_[itemId] += learning_rate * (error - item_bias_reg_ * item_bias_[itemId]);
@@ -218,9 +218,9 @@ std::unique_ptr<ModelGradient> MFModel::sgd_update(
 
         // update user latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          double delta_user_w = learning_rate * (error * get_item_weights(itemId, k));
-          std::cout << "delta_user_w: " << delta_user_w << std::endl;
-            //learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
+          double delta_user_w = 
+            learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
+          //std::cout << "delta_user_w: " << delta_user_w << std::endl;
           get_user_weights(user, k) += delta_user_w;
 #ifdef DEBUG
           if (std::isnan(get_user_weights(user, k)) || std::isinf(get_user_weights(user, k))) {
@@ -231,9 +231,9 @@ std::unique_ptr<ModelGradient> MFModel::sgd_update(
 
         // update item latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          double delta_item_w = learning_rate * (error * get_user_weights(user, k));
-          std::cout << "delta_item_w: " << delta_item_w << std::endl;
-            //learning_rate * (error * get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
+          double delta_item_w =
+            learning_rate * (error * get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
+          //std::cout << "delta_item_w: " << delta_item_w << std::endl;
           get_item_weights(itemId, k) += delta_item_w;
 #ifdef DEBUG
           if (std::isnan(get_item_weights(itemId, k)) || std::isinf(get_item_weights(itemId, k))) {
@@ -266,6 +266,9 @@ double MFModel::calc_loss(SparseDataset& dataset) const {
 
       double prediction = predict(userId, movieId);
       double e = rating - prediction;
+
+      //std::cout << "e: " << e << std::endl;
+
       error += pow(e, 2);
       if (std::isnan(e) || std::isnan(error)) {
         std::string error = std::string("nan in calc_loss rating: ") + std::to_string(rating) +

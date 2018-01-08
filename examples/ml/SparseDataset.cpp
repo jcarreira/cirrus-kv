@@ -63,6 +63,18 @@ void SparseDataset::print() const {
 void SparseDataset::print_info() const {
   std::cout << "SparseDataset #samples: " << data_.size() << std::endl;
   std::cout << "SparseDataset max features: " << max_features_ << std::endl;
+
+  //double avg = 0;
+  //uint64_t count = 0;
+  //for (const auto& w : data_) {
+  //  for (const auto& v : w) {
+  //    avg += v.second;
+  //    count++;
+  //  }
+  //}
+
+  //std::cout << "Average rating: " << (avg / count) << std::endl;
+
 }
 
 //std::shared_ptr<Dataset::FEATURE_TYPE>

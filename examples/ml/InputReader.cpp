@@ -473,10 +473,18 @@ void normalize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& 
 #endif
 
     for (auto& v : sparse_ds[i]) {
-      if (stddev)
+      if (stddev) {
+        //std::cout
+        //  << "v.second: " << v.second
+        //  << " mean: " << mean
+        //  << " stddev: " << stddev;
+
         v.second = (v.second - mean) / stddev;
-      else
+        //std::cout 
+        //  << " v.second2: " << v.second << std::endl;
+      } else {
         v.second = mean;
+      }
 #ifdef DEBUG 
       if (std::isnan(v.second) || std::isinf(v.second)) {
         std::cout 

@@ -133,7 +133,7 @@ class MFModel : public Model {
       */
     uint64_t size() const;
 
- private:
+ public:
     double& get_user_weights(uint64_t userId, uint64_t factor) const;
     double& get_item_weights(uint64_t itemId, uint64_t factor) const;
 
