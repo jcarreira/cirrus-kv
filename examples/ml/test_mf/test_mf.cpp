@@ -41,7 +41,7 @@ void movielens() {
         SparseDataset ds = dataset.sample_from(i, batch_size);
 
         // we update the model here
-        auto gradient = mf_model->sgd_update(learning_rate, i, ds, epsilon);
+        mf_model->sgd_update(learning_rate, i, ds, epsilon);
 
         if (i % 100 == 0) {
           loss = mf_model->calc_loss(dataset);
@@ -87,7 +87,7 @@ void netflix() {
         SparseDataset ds = dataset.sample_from(i, batch_size);
 
         // we update the model here
-        auto gradient = mf_model->sgd_update(learning_rate, i, ds, epsilon);
+        mf_model->sgd_update(learning_rate, i, ds, epsilon);
 
         //if (i == 2600000) {
         //  learning_rate *= 0.5;
