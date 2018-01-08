@@ -32,13 +32,13 @@ void SparseDataset::check() const {
       }
 
       double rating = v.second;
-      if (rating < 0 || rating > 100) {
+      if (rating < -100 || rating > 100) {
         throw std::runtime_error(
-            "Dataset::check_values wrong label value: " + std::to_string(rating));
+            "SparseDataset::check_values wrong rating value: " + std::to_string(rating));
       }
       if (std::isnan(rating) || std::isinf(rating)) {
         throw std::runtime_error(
-            "Dataset::check_values nan/inf error in labels");
+            "SparseDataset::check_values nan/inf rating");
       }
     }
   }

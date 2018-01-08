@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <ModelGradient.h>
 
+#define DEBUG
+
 // XXX matrix can be very sparse
 
 
@@ -24,20 +26,20 @@ void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfacto
   user_bias_ = new double[users];
   item_bias_ = new double[items];
 
-  item_fact_reg_ = 0.1;
-  user_fact_reg_ = 0.1;
+  item_fact_reg_ = 0.0;
+  user_fact_reg_ = 0.0;
 
-  user_bias_reg_ = 0.1;
-  item_bias_reg_ = 0.1;
+  user_bias_reg_ = 0.0;
+  item_bias_reg_ = 0.0;
 
   nusers_ = users;
   nitems_ = items;
   nfactors_ = nfactors;
 
-  memset(user_weights_, 0, users * nfactors * sizeof(double));
-  memset(item_weights_, 0, items * nfactors * sizeof(double));
   memset(user_bias_, 0, users * sizeof(double));
   memset(item_bias_, 0, items * sizeof(double));
+
+  randomize();
 }
 
 MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
@@ -106,7 +108,18 @@ void MFModel::serializeTo(void* mem) const {
   * We probably want to put 0 in the values we don't know
   */
 void MFModel::randomize() {
-  throw std::runtime_error("Not implemented");
+  std::default_random_engine generator;
+  std::normal_distribution<double> distribution(0, 1.0 / nfactors_); // mean 0 and stddev=1
+  for (uint64_t i = 0; i < nusers_; ++i) {
+    for (uint64_t j = 0; j < nfactors_; ++j) {
+      get_user_weights(i, j) = distribution(generator);
+    }
+  }
+  for (uint64_t i = 0; i < nitems_; ++i) {
+    for (uint64_t j = 0; j < nfactors_; ++j) {
+      get_item_weights(i, j) = distribution(generator);
+    }
+  }
 }
 
 std::unique_ptr<Model> MFModel::copy() const {
@@ -144,6 +157,15 @@ double MFModel::predict(uint32_t userId, uint32_t itemId) const {
   
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
+#ifdef DEBUG
+    if (std::isnan(res) || std::isinf(res)) {
+      std::cout << "userId: " << userId << " itemId: " << itemId 
+        << " get_user_weights(userId, i): " << get_user_weights(userId, i)
+        << " get_item_weights(itemId, i): " << get_item_weights(itemId, i)
+        << std::endl;
+      throw std::runtime_error("nan error in predict");
+    }
+#endif
   }
   return res;
 }
@@ -169,10 +191,6 @@ std::unique_ptr<ModelGradient> MFModel::sgd_update(
             uint64_t base_user,
             const SparseDataset& dataset,
             double epsilon) const {
-#ifdef DEBUG
-    dataset.check();
-#endif
-
     // iterate all pairs user rating
     for (uint64_t i = 0; i < dataset.data_.size(); ++i) {
       for (uint64_t j = 0; j < dataset.data_[i].size(); ++j) {
@@ -183,23 +201,52 @@ std::unique_ptr<ModelGradient> MFModel::sgd_update(
         double pred = predict(user, itemId);
         double error = rating - pred;
 
+        std::cout 
+          << "rating: " << rating
+          << " prediction: " << pred
+          << " error: " << error
+          << std::endl;
+
         user_bias_[user] += learning_rate * (error - user_bias_reg_ * user_bias_[user]);
-        item_bias_[itemId] += learning_rate * (error = item_bias_reg_ * item_bias_[itemId]);
+        item_bias_[itemId] += learning_rate * (error - item_bias_reg_ * item_bias_[itemId]);
+
+#ifdef DEBUG
+        if (std::isnan(user_bias_[user]) || std::isnan(item_bias_[itemId]) ||
+            std::isinf(user_bias_[user]) || std::isinf(item_bias_[itemId]))
+          throw std::runtime_error("nan in user_bias or item_bias");
+#endif
 
         // update user latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          get_user_weights(user, k) +=
-            learning_rate * (error - get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
+          double delta_user_w = learning_rate * (error * get_item_weights(itemId, k));
+          std::cout << "delta_user_w: " << delta_user_w << std::endl;
+            //learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
+          get_user_weights(user, k) += delta_user_w;
+#ifdef DEBUG
+          if (std::isnan(get_user_weights(user, k)) || std::isinf(get_user_weights(user, k))) {
+            throw std::runtime_error("nan in user weight");
+          }
+#endif
         }
 
         // update item latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          get_item_weights(itemId, k) +=
-            learning_rate * (error - get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
+          double delta_item_w = learning_rate * (error * get_user_weights(user, k));
+          std::cout << "delta_item_w: " << delta_item_w << std::endl;
+            //learning_rate * (error * get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
+          get_item_weights(itemId, k) += delta_item_w;
+#ifdef DEBUG
+          if (std::isnan(get_item_weights(itemId, k)) || std::isinf(get_item_weights(itemId, k))) {
+            std::cout << "error: " << error << std::endl;
+            std::cout << "user weight: " << get_user_weights(user, k) << std::endl;
+            std::cout << "item weight: " << get_item_weights(itemId, k) << std::endl;
+            std::cout << "learning_rate: " << learning_rate << std::endl;
+            throw std::runtime_error("nan in item weight");
+          }
+#endif
         }
       }
     }
-
     return std::make_unique<MFGradient>(10, 10);
 }
 
@@ -217,8 +264,14 @@ double MFModel::calc_loss(SparseDataset& dataset) const {
       uint64_t movieId = dataset.data_[userId][j].first;
       double rating = dataset.data_[userId][j].second;
 
-      double e = rating - predict(userId, movieId);
+      double prediction = predict(userId, movieId);
+      double e = rating - prediction;
       error += pow(e, 2);
+      if (std::isnan(e) || std::isnan(error)) {
+        std::string error = std::string("nan in calc_loss rating: ") + std::to_string(rating) +
+          " prediction: " + std::to_string(prediction);
+        throw std::runtime_error(error);
+      }
       count++;
     }
   }
