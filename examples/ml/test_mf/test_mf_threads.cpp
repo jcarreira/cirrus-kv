@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include <random>
 
 #include <InputReader.h>
 #include <MFModel.h>
@@ -18,18 +19,20 @@ int number_movies, number_users;
 
 void thread_func(SparseDataset& dataset) {
   double learning_rate = 0.01;
+  uint64_t batch_size = 20;
+
+  std::random_device rd;
+  std::default_random_engine re(rd());
+  std::uniform_int_distribution<int> sampler(0, dataset.data_.size() - batch_size);
 
   // SGD learning
-  uint64_t batch_size = 20;
   double epsilon = 0.00001;
   while (1) {
-    for (uint64_t i = 0; i + batch_size < number_users; i += batch_size) {
-      SparseDataset ds = dataset.sample_from(i, batch_size);
+    uint64_t start = sampler(re);
+    SparseDataset ds = dataset.sample_from(start, batch_size);
 
-      // we update the model here
-      mf_model->sgd_update(learning_rate, i, ds, epsilon);
-
-    }
+    // we update the model here
+    mf_model->sgd_update(learning_rate, start, ds, epsilon);
   }
 }
 

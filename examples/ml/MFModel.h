@@ -87,9 +87,15 @@ class MFModel : public Model {
             uint64_t labels_size,
             //const SparseDataset& dataset,
             double epsilon) const;
+
+    std::unique_ptr<ModelGradient> minibatch_grad(
+        double learning_rate,
+        uint64_t base_user,
+        const SparseDataset& dataset,
+        double epsilon) const;
+
      
-    std::unique_ptr<ModelGradient> sgd_update(
-                double learning_rate,
+    void sgd_update(double learning_rate,
                 uint64_t base_user,
                 const SparseDataset&,
                 double epsilon) const;
