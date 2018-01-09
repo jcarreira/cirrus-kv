@@ -120,6 +120,10 @@ class InputReader {
   void shuffle_samples_labels(
     std::vector<std::vector<FEATURE_TYPE>>& samples,
     std::vector<FEATURE_TYPE>& labels);
+
+  double compute_mean(std::vector<std::pair<int, double>>&);
+  double compute_stddev(double, std::vector<std::pair<int, double>>&);
+  void standardize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>&);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

@@ -405,6 +405,8 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
   *number_movies = *number_users = 0;
 
   std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+
+  // XXX Fix
   sparse_ds.resize(50732);
 
   std::string line;
@@ -431,26 +433,30 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
   return SparseDataset(sparse_ds);
 }
 
-double compute_mean(std::vector<std::pair<int, double>>& user_ratings) {
+double InputReader::compute_mean(std::vector<std::pair<int, double>>& user_ratings) {
   double mean = 0;
-  for (uint64_t j = 0; j < user_ratings.size(); ++j) {
-    mean += user_ratings[j].second;
+
+  for (auto& r : user_ratings) {
+    mean += r.second;
   }
   mean /= user_ratings.size();
+
   return mean;
 }
 
-double compute_stddev(uint64_t mean, std::vector<std::pair<int, double>>& user_ratings) {
+double InputReader::compute_stddev(double mean, std::vector<std::pair<int, double>>& user_ratings) {
   double stddev = 0;
-  for (uint64_t j = 0; j < user_ratings.size(); ++j) {
-    stddev += (mean - user_ratings[j].second) * (mean - user_ratings[j].second);
+
+  for (const auto& r : user_ratings) {
+    stddev += (mean - r.second) * (mean - r.second);
   }
   stddev /= user_ratings.size();
   stddev = std::sqrt(stddev);
+
   return stddev;
 }
 
-void normalize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& sparse_ds) {
+void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& sparse_ds) {
   // for every use we compute the mean and stddev
   // then we normalize each entry
   for (uint64_t i = 0; i < sparse_ds.size(); ++i) {
@@ -460,6 +466,8 @@ void normalize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& 
     double mean = compute_mean(sparse_ds[i]);
     double stddev = compute_stddev(mean, sparse_ds[i]);
 
+    // check if all ratings of an user have same value
+    // if so we 'discard' this user
     if (stddev == 0.0) {
       sparse_ds[i].clear();
       continue;
@@ -474,14 +482,7 @@ void normalize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& 
 
     for (auto& v : sparse_ds[i]) {
       if (stddev) {
-        //std::cout
-        //  << "v.second: " << v.second
-        //  << " mean: " << mean
-        //  << " stddev: " << stddev;
-
         v.second = (v.second - mean) / stddev;
-        //std::cout 
-        //  << " v.second2: " << v.second << std::endl;
       } else {
         v.second = mean;
       }
@@ -536,7 +537,8 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
     *number_movies = std::max(*number_movies, movieId);
   }
 
-  normalize_sparse_dataset(sparse_ds);
+  // we standardize the dataset
+  standardize_sparse_dataset(sparse_ds);
 
   auto ds = SparseDataset(sparse_ds);
   std::cout << "Checking sparse dataset" << std::endl;

@@ -9,11 +9,7 @@
 
 #define DEBUG
 
-// XXX matrix can be very sparse
-
-
-// Support both sparse and non sparse representations
-
+// FORMAT
 // Number of users (32bits)
 // Number of factors (32bits)
 // Sample1: factor 1 (double) | factor 2 | factor 3 
@@ -48,8 +44,6 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
 
 MFModel::MFModel(const void* w, uint64_t n, uint64_t d) {
   throw std::runtime_error("Not implemented");
-//  const double* input_data = reinterpret_cast<const double*>(w);
-//  std::copy(input_data, input_data + n * d, weights_);
 }
 
 uint64_t MFModel::size() const {
@@ -57,11 +51,6 @@ uint64_t MFModel::size() const {
   return 0;
 }
 
-/** Format
-  * Number of users (32bits)
-  * Number of factors (32bits)
-  * Weights in row order
-  */
 std::unique_ptr<Model> MFModel::deserialize(void* data, uint64_t size) const {
     uint32_t* data_p = (uint32_t*)data;
     //uint32_t users = *data_p++;
