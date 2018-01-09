@@ -15,6 +15,8 @@
 #include <memory>
 #include <algorithm>
 
+#define DEBUG
+
 static const int REPORT_LINES = 10000;  // how often to report readin progress
 static const int REPORT_THREAD = 100000;  // how often proc. threads report
 static const int STR_SIZE = 10000;        // max size for dataset line
@@ -192,7 +194,7 @@ InputReader::read_mnist_csv(const std::string& input_file,
 
     std::string line;
     char str[STR_SIZE + 1] = {0};
-    while (fgets(str, 1000000, fin) != NULL) {
+    while (fgets(str, STR_SIZE, fin) != NULL) {
         char* s = str;
 
         std::vector<FEATURE_TYPE> sample;
@@ -238,7 +240,9 @@ void InputReader::split_data_labels(
     }
 }
 
-void shuffle_samples_labels(auto& samples, auto& labels) {
+void InputReader::shuffle_samples_labels(
+    std::vector<std::vector<FEATURE_TYPE>>& samples,
+    std::vector<FEATURE_TYPE>& labels) {
   std::srand(42);
   std::random_shuffle(samples.begin(), samples.end());
   std::srand(42);
@@ -383,5 +387,163 @@ void InputReader::normalize(std::vector<std::vector<FEATURE_TYPE>>& data) {
       }
     }
   }
+}
+
+/**
+  * MovieLens 20M
+  * Size: 50732 users *  131262 ratings
+  * Format
+  * userId, movieId, rating, timestamp
+  */
+SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
+   int *number_users, int* number_movies) {
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file " + input_file);
+  }
+
+  *number_movies = *number_users = 0;
+
+  std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+
+  // XXX Fix
+  sparse_ds.resize(50732);
+
+  std::string line;
+  getline(fin, line); // read the header 
+  while (getline(fin, line)) {
+    char str[STR_SIZE];
+    assert(line.size() < STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE);
+
+    char* s = str;
+    char* l = strsep(&s, ",");
+    int userId = string_to<int>(l);
+    l = strsep(&s, ",");
+    int movieId = string_to<int>(l);
+    l = strsep(&s, ",");
+    double rating = string_to<double>(l);
+
+    sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
+
+    *number_users = std::max(*number_users, userId);
+    *number_movies = std::max(*number_movies, movieId);
+  }
+
+  return SparseDataset(sparse_ds);
+}
+
+double InputReader::compute_mean(std::vector<std::pair<int, double>>& user_ratings) {
+  double mean = 0;
+
+  for (auto& r : user_ratings) {
+    mean += r.second;
+  }
+  mean /= user_ratings.size();
+
+  return mean;
+}
+
+double InputReader::compute_stddev(double mean, std::vector<std::pair<int, double>>& user_ratings) {
+  double stddev = 0;
+
+  for (const auto& r : user_ratings) {
+    stddev += (mean - r.second) * (mean - r.second);
+  }
+  stddev /= user_ratings.size();
+  stddev = std::sqrt(stddev);
+
+  return stddev;
+}
+
+void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& sparse_ds) {
+  // for every use we compute the mean and stddev
+  // then we normalize each entry
+  for (uint64_t i = 0; i < sparse_ds.size(); ++i) {
+    if (sparse_ds[i].size() == 0)
+      continue;
+
+    double mean = compute_mean(sparse_ds[i]);
+    double stddev = compute_stddev(mean, sparse_ds[i]);
+
+    // check if all ratings of an user have same value
+    // if so we 'discard' this user
+    if (stddev == 0.0) {
+      sparse_ds[i].clear();
+      continue;
+    }
+     
+#ifdef DEBUG 
+    if (std::isnan(mean) || std::isinf(mean))
+      throw std::runtime_error("wrong mean");
+    if (std::isnan(stddev) || std::isinf(stddev))
+      throw std::runtime_error("wrong stddev");
+#endif
+
+    for (auto& v : sparse_ds[i]) {
+      if (stddev) {
+        v.second = (v.second - mean) / stddev;
+      } else {
+        v.second = mean;
+      }
+#ifdef DEBUG 
+      if (std::isnan(v.second) || std::isinf(v.second)) {
+        std::cout 
+          << "mean: " << mean
+          << " stddev: " << stddev
+          << std::endl;
+        throw std::runtime_error("wrong rating");
+      }
+#endif
+    }
+  }
+}
+
+
+/**
+  * Format
+  * userId, movieId, rating
+  */
+SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
+   int *number_users, int* number_movies) {
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file " + input_file);
+  }
+
+  *number_movies = *number_users = 0;
+
+  std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+  sparse_ds.resize(2649430);
+
+  std::string line;
+  getline(fin, line); // read the header 
+  while (getline(fin, line)) {
+    char str[STR_SIZE];
+    assert(line.size() < STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE);
+
+    char* s = str;
+    char* l = strsep(&s, ",");
+    int userId = string_to<int>(l);
+    l = strsep(&s, ",");
+    int movieId = string_to<int>(l);
+    l = strsep(&s, ",");
+    double rating = string_to<double>(l);
+
+    sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
+
+    *number_users = std::max(*number_users, userId);
+    *number_movies = std::max(*number_movies, movieId);
+  }
+
+  // we standardize the dataset
+  standardize_sparse_dataset(sparse_ds);
+
+  auto ds = SparseDataset(sparse_ds);
+  std::cout << "Checking sparse dataset" << std::endl;
+  ds.check();
+  std::cout << "Checking sparse dataset done" << std::endl;
+  return ds;
 }
 

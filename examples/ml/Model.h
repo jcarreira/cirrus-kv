@@ -6,6 +6,7 @@
 #include <vector>
 #include <ModelGradient.h>
 #include <Dataset.h>
+#include <SparseDataset.h>
 
 /**
   * Base class is used to represent a model
