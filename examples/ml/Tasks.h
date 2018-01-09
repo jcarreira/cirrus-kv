@@ -160,7 +160,7 @@ class PSTask : public MLTask {
 
     void update_gradient_version(
         auto& gradient, int worker, LRModel& model, Configuration config);
-
+    
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();

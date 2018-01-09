@@ -100,4 +100,24 @@ class SoftmaxGradient : public ModelGradient {
     std::vector<std::vector<double>> weights;  //< weights for softmax gradient
 };
 
+class MFGradient : public ModelGradient {
+ public:
+    friend class MFModel;
+
+    virtual ~MFGradient() = default;
+
+    MFGradient(uint64_t nsamples, uint64_t nfactors);
+    explicit MFGradient(const std::vector<std::vector<double>>&);
+
+    void loadSerialized(const void*);
+    void serialize(void*) const override;
+    uint64_t getSerializedSize() const override;
+
+    void print() const override;
+    void check_values() const override;
+ protected:
+    // [D * K]
+    std::vector<std::vector<double>> weights;
+};
+
 #endif  // EXAMPLES_ML_MODELGRADIENT_H_

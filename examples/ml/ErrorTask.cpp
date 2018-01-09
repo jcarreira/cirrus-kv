@@ -254,6 +254,8 @@ start:
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
   while (1) {
+    usleep(ERROR_INTERVAL_USEC); //
+
     try {
       // first we get the model
 #ifdef DEBUG

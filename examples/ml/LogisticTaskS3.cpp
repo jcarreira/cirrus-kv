@@ -125,7 +125,7 @@ class ModelProxy {
       redis_disconnect_callback(model_r, disconnectCallback);
       redis_subscribe_callback(model_r, onMessage, "model");
       redis_lock->unlock();
-
+      
       std::cout << "eventbase dispatch" << std::endl;
       event_base_dispatch(base);
     }
