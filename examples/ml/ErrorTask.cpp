@@ -71,8 +71,10 @@ class ModelProxyErrorTask {
         printf("len: %lu\n", len);
 #endif
 
-        // XXX fix this. Should have some way to check if it's a model update
-        if (len > 100) {
+        char* str_1 = r->element[1]->str;
+        char* str_0 = r->element[0]->str;
+        if (str_0 && strcmp(str_0, "message") == 0 &&
+            str_1 && strcmp(str_1, "model") == 0) {
 #ifdef DEBUG
           std::cout << "Updating model at time: " << get_time_us() << std::endl;
 #endif
