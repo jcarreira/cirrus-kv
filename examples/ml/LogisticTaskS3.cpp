@@ -20,19 +20,18 @@ void check_redis(auto r) {
   }
 }
 
-/**
-  * Ugly but necessary for now
-  * both onMessage and LogisticTaskS3 need access to this
-  */
-std::mutex mp_start_lock;
-std::mutex gp_start_lock;
-std::mutex model_lock;
-std::unique_ptr<LRModel> model;
-std::unique_ptr<lr_model_deserializer> lmd;
-volatile bool first_time = true;
-volatile int model_version = 0;
-static auto prev_on_msg_time = get_time_us();
-redisAsyncContext* gradient_r;
+// we need global variables because of the static callbacks
+namespace LogisticTaskS3Global {
+  std::mutex mp_start_lock;
+  std::mutex gp_start_lock;
+  std::mutex model_lock;
+  std::unique_ptr<LRModel> model;
+  std::unique_ptr<lr_model_deserializer> lmd;
+  volatile bool first_time = true;
+  volatile int model_version = 0;
+  static auto prev_on_msg_time = get_time_us();
+  redisAsyncContext* gradient_r;
+}
 
 /**
   * Works as a cache for remote model
@@ -42,14 +41,14 @@ class ModelProxy {
     ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new()) {
-    mp_start_lock.lock();
-    model.reset(new LRModel(mgs));
-    lmd.reset(new lr_model_deserializer(mgs));
+    LogisticTaskS3Global::mp_start_lock.lock();
+    LogisticTaskS3Global::model.reset(new LRModel(mgs));
+    LogisticTaskS3Global::lmd.reset(new lr_model_deserializer(mgs));
   }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "ModelProxy::connectCallback" << std::endl;
-      mp_start_lock.unlock();
+      LogisticTaskS3Global::mp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -61,15 +60,15 @@ class ModelProxy {
       std::cout << "ModelProxy waiting for model" << std::endl;
 #endif
       // make sure we receive model at least once
-      while (first_time == true) {
+      while (LogisticTaskS3Global::first_time == true) {
       }
 #ifdef DEBUG
       std::cout << "ModelProxy model is here" << std::endl;
 #endif
 
-      model_lock.lock();
-      LRModel ret = *model;
-      model_lock.unlock();
+      LogisticTaskS3Global::model_lock.lock();
+      LRModel ret = *LogisticTaskS3Global::model;
+      LogisticTaskS3Global::model_lock.unlock();
       return ret;
     }
 
@@ -79,8 +78,8 @@ class ModelProxy {
 
       auto now = get_time_us();
       std::cout << "Time since last (us): "
-        << (now - prev_on_msg_time) << std::endl;
-      prev_on_msg_time = now;
+        << (now - LogisticTaskS3Global::prev_on_msg_time) << std::endl;
+      LogisticTaskS3Global::prev_on_msg_time = now;
 #ifdef DEBUG
       printf("onMessage\n");
 #endif
@@ -96,14 +95,14 @@ class ModelProxy {
         if (len > 100) {
 #ifdef DEBUG
           std::cout << "Updating model at time: " << get_time_us()
-            << " version: " << model_version
+            << " version: " << LogisticTaskS3Global::model_version
             << std::endl;
 #endif
-          model_lock.lock();
-          *model = lmd->operator()(str, len);
-          model_version++;
-          model_lock.unlock();
-          first_time = false;
+          LogisticTaskS3Global::model_lock.lock();
+          *LogisticTaskS3Global::model = LogisticTaskS3Global::lmd->operator()(str, len);
+          LogisticTaskS3Global::model_version++;
+          LogisticTaskS3Global::model_lock.unlock();
+          LogisticTaskS3Global::first_time = false;
         }
       } else {
         std::cout << "Not an array" << std::endl;
@@ -153,11 +152,11 @@ class LogisticTaskGradientProxy {
         auto redis_ip, auto redis_port, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new()) {
-      gp_start_lock.lock();
+        LogisticTaskS3Global::gp_start_lock.lock();
   }
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "GradientProxy::connectCallback" << std::endl;
-      gp_start_lock.unlock();
+      LogisticTaskS3Global::gp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -172,18 +171,18 @@ class LogisticTaskGradientProxy {
     void thread_fn() {
       std::cout << "GradientProxy connecting to redis.." << std::endl;
       redis_lock->lock();
-      gradient_r =
+      LogisticTaskS3Global::gradient_r =
         redis_async_connect(redis_ip.c_str(), redis_port);
-      if (!gradient_r) {
+      if (!LogisticTaskS3Global::gradient_r) {
         throw std::runtime_error("GradientProxy::Error connecting to redis");
       }
-      std::cout << "GradientProxy connected to redis.." << gradient_r
+      std::cout << "GradientProxy connected to redis.." << LogisticTaskS3Global::gradient_r
         << std::endl;
 
       std::cout << "libevent attached" << std::endl;
-      redisLibeventAttach(gradient_r, base);
-      redis_connect_callback(gradient_r, connectCallback);
-      redis_disconnect_callback(gradient_r, disconnectCallback);
+      redisLibeventAttach(LogisticTaskS3Global::gradient_r, base);
+      redis_connect_callback(LogisticTaskS3Global::gradient_r, connectCallback);
+      redis_disconnect_callback(LogisticTaskS3Global::gradient_r, disconnectCallback);
       redis_lock->unlock();
 
       std::cout << "eventbase dispatch" << std::endl;
@@ -270,26 +269,25 @@ bool LogisticTaskS3::run_phase1(
     auto& samples, auto& labels, auto& model,
     auto& s3_iter, auto& mp, auto& prev_model_version) {
 
-  static bool first_time = true;
   try {
 #ifdef DEBUG
     auto before_model = get_time_ns();
 #endif
 try_again:
     model = mp.get_model();
-    if (model_version != prev_model_version) {
-      prev_model_version = model_version;
+    if (LogisticTaskS3Global::model_version != prev_model_version) {
+      prev_model_version = LogisticTaskS3Global::model_version;
 #ifdef DEBUG
       std::cout << "new model."
         << " prev_model_version: " << prev_model_version
-        << " model_version: " << model_version
+        << " model_version: " << LogisticTaskS3Global::model_version
         << std::endl;
 #endif
     } else {
 #ifdef DEBUG
       std::cout << "model is repeated."
         << " prev_model_version: " << prev_model_version
-        << " model_version: " << model_version
+        << " model_version: " << LogisticTaskS3Global::model_version
         << std::endl;
 #endif
       goto try_again;
@@ -328,10 +326,6 @@ try_again:
       << "\n";
 #endif
   } catch(const cirrus::NoSuchIDException& e) {
-    if (!first_time) {
-      std::cout << "[WORKER] Exiting" << std::endl;
-      exit(0);
-    }
     // this happens because the ps task
     // has not uploaded the model yet
     std::cout << "[WORKER] "
@@ -356,26 +350,24 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
-  auto r = connect_redis();
+  auto redis_con = connect_redis();
   redis_lock.unlock();
 
   std::cout << "Starting ModelProxy" << std::endl;
   ModelProxy mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE, &redis_lock);
   mp.run();
-  mp_start_lock.lock();
+  LogisticTaskS3Global::mp_start_lock.lock();
   std::cout << "Started ModelProxy" << std::endl;
 
   std::cout << "Starting GradientProxy" << std::endl;
   LogisticTaskGradientProxy gp(REDIS_IP, REDIS_PORT, &redis_lock);
   gp.run();
-  gp_start_lock.lock();
+  LogisticTaskS3Global::gp_start_lock.lock();
   std::cout << "Started GradientProxy" << std::endl;
-
-  // we use redis
-
+  
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
+  wait_for_start(WORKER_TASK_RANK + worker, redis_con, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
   S3Iterator s3_iter(0, num_s3_batches, config,
@@ -436,7 +428,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     try {
       LRGradient* lrg = dynamic_cast<LRGradient*>(gradient.get());
-      push_gradient(gradient_r, worker, lrg);
+      push_gradient(LogisticTaskS3Global::gradient_r, worker, lrg);
     } catch(...) {
       std::cout << "[WORKER] "
         << "Worker task error doing put of gradient" << "\n";
