@@ -338,6 +338,7 @@ double MFModel::calc_loss(SparseDataset& dataset) const {
   }
 
   error = error / count;
+  error = std::sqrt(error);
   return error;
 }
 

@@ -45,7 +45,7 @@ void netflix() {
     dataset.print_info();
 
     // Initialize the model with initial values from dataset
-    int nfactors = 10;
+    int nfactors = 200;
     mf_model.reset(new MFModel(number_users, number_movies, nfactors));
 
     std::cout << "Starting SGD learning" << std::endl;
@@ -59,7 +59,7 @@ void netflix() {
       sleep(1);
       double loss = mf_model->calc_loss(dataset);
       std::cout 
-        << " MSE: " << loss << std::endl;
+        << " RMSE: " << loss << std::endl;
     }
 
     for (auto thread : threads) {
