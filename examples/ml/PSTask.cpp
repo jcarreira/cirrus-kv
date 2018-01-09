@@ -3,21 +3,85 @@
 #include "Serializers.h"
 #include "Redis.h"
 #include "Utils.h"
+#include "async.h"
+#include "adapters/libevent.h"
 
-#define DEBUG
+// #define DEBUG
+
+void update_publish_gradient(auto& gradient);
+
+namespace PSTaskGlobal {
+  static volatile bool first_time = true;
+  static std::unique_ptr<lr_gradient_deserializer> lgd;
+  static auto prev_on_msg_time = get_time_us();
+  static std::unique_ptr<LRModel> model;
+  static Configuration config;
+  static redisAsyncContext* model_r;
+  static redisAsyncContext* gradient_r;
+  static uint64_t MODEL_GRAD_SIZE;
+  static std::mutex ps_grad_start;
+  std::mutex mp_start_lock;
+}
+
+/**
+  * Works as a cache for remote model
+  */
+class PSTaskModelProxy {
+  public:
+    PSTaskModelProxy(auto redis_ip, auto redis_port) :
+      redis_ip(redis_ip), redis_port(redis_port),
+      base(event_base_new()) {
+    PSTaskGlobal::mp_start_lock.lock();
+  }
+
+    static void connectCallback(const redisAsyncContext*, int) {
+      std::cout << "ModelProxy::connectCallback" << std::endl;
+      PSTaskGlobal::mp_start_lock.unlock();
+    }
+
+    static void disconnectCallback(const redisAsyncContext*, int) {
+      std::cout << "disconnectCallback" << std::endl;
+    }
+
+    void thread_fn() {
+      std::cout << "ModelProxy connecting to redis.." << std::endl;
+      PSTaskGlobal::model_r =
+        redis_async_connect(redis_ip.c_str(), redis_port);
+      if (!PSTaskGlobal::model_r) {
+        throw std::runtime_error("ModelProxy::Error connecting to redis");
+      }
+      std::cout << "ModelProxy::connected to redis.." << PSTaskGlobal::model_r
+        << std::endl;
+
+      std::cout << "libevent attached" << std::endl;
+      redisLibeventAttach(PSTaskGlobal::model_r, base);
+      redis_connect_callback(PSTaskGlobal::model_r, connectCallback);
+      redis_disconnect_callback(PSTaskGlobal::model_r, disconnectCallback);
+
+      std::cout << "eventbase dispatch" << std::endl;
+      event_base_dispatch(base);
+    }
+
+    void run() {
+      std::cout << "Starting ModelProxy thread" << std::endl;
+      thread = std::make_unique<std::thread>(
+          std::bind(&PSTaskModelProxy::thread_fn, this));
+    }
+
+  private:
+    std::string redis_ip;
+    int redis_port;
+    struct event_base *base;
+    std::unique_ptr<std::thread> thread;
+};
+
 
 auto PSTask::connect_redis() {
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (r == NULL || r -> err) { 
+  if (r == NULL || r -> err) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-  
-//  auto model_r  = redis_async_connect(REDIS_IP, REDIS_PORT);
-//  if (model_r == NULL || model_r->err) { 
-//    throw std::runtime_error(
-//        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-//  }
   return r;
 }
 
@@ -25,24 +89,20 @@ PSTask::PSTask(const std::string& redis_ip, uint64_t redis_port,
     uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
     uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
     uint64_t SAMPLE_BASE, uint64_t START_BASE,
-    uint64_t batch_size, uint64_t samples_per_batch, 
+    uint64_t batch_size, uint64_t samples_per_batch,
     uint64_t features_per_sample, uint64_t nworkers,
     uint64_t worker_id) :
   MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
       LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
       batch_size, samples_per_batch, features_per_sample,
-      nworkers, worker_id)
-{
-#if defined(USE_REDIS)
-  r = connect_redis();
-#endif
+      nworkers, worker_id) {
   gradientVersions.resize(nworkers, 0);
   worker_clocks.resize(nworkers, 0);
 }
 
 
 #ifndef USE_REDIS_CHANNEL
-void PSTask::put_model(LRModel model) {
+void PSTask::put_model(const LRModel& model) {
   lr_model_serializer lms(MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
       new char[lms.size(model)]);
@@ -50,17 +110,18 @@ void PSTask::put_model(LRModel model) {
   redis_put_binary_numid(r, MODEL_BASE, data.get(), lms.size(model));
 }
 #else
-void PSTask::put_model(LRModel model) {
+void PSTask::put_model(const LRModel& model) {
   lr_model_serializer lms(MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
       new char[lms.size(model)]);
   lms.serialize(model, data.get());
 
-  redisReply* reply = (redisReply*)redisCommand(r, "PUBLISH model %b", data.get(), lms.size(model));
-
-  std::cout << "Redis publish"
-    << " reply type: " << reply->type
-    << std::endl;
+#ifdef DEBUG
+  std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
+#endif
+  redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
+      "PUBLISH model %b", data.get(),
+      lms.size(model));
 }
 #endif
 
@@ -77,12 +138,116 @@ void PSTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
 }
 
 void PSTask::publish_model(const LRModel& model) {
-#ifdef USE_CIRRUS
-  model_store.put(MODEL_BASE, model);
-#elif defined(USE_REDIS)
   put_model(model);
-#endif
 }
+
+class PSGradientProxy {
+  public:
+    PSGradientProxy(auto redis_ip, auto redis_port, auto MODEL_GRAD_SIZE) :
+      redis_ip(redis_ip), redis_port(redis_port),
+      base(event_base_new()) {
+      PSTaskGlobal::MODEL_GRAD_SIZE = MODEL_GRAD_SIZE;
+      PSTaskGlobal::lgd.reset(
+          new lr_gradient_deserializer(MODEL_GRAD_SIZE));
+      PSTaskGlobal::ps_grad_start.lock();
+    }
+
+    static void connectCallback(const redisAsyncContext*, int) {
+      std::cout << "connectCallback" << std::endl;
+    }
+
+    static void disconnectCallback(const redisAsyncContext*, int) {
+      std::cout << "disconnectCallback" << std::endl;
+    }
+
+    static void onMessage(redisAsyncContext*, void *reply, void*) {
+      redisReply *r = (redisReply*)reply;
+      if (reply == NULL) return;
+
+      auto now = get_time_us();
+      std::cout << "Time since last (us): "
+        << (now - PSTaskGlobal::prev_on_msg_time) << std::endl;
+      PSTaskGlobal::prev_on_msg_time = now;
+
+      std::cout << "onMessage PSGradientProxy" << std::endl;
+      if (r->type == REDIS_REPLY_ARRAY) {
+        const char* str = r->element[2]->str;
+        uint64_t len = r->element[2]->len;
+
+#ifdef DEBUG
+        std::cout << "len: "
+          << r->element[0]->len << " "
+          << r->element[1]->len << " "
+          << r->element[2]->len << " "
+          << std::endl;
+
+        if (r->element[0]->str) {
+          std::cout <<"str0: " << r->element[0]->str << std::endl;
+        }
+        if (r->element[1]->str) {
+          std::cout <<"str1: " << r->element[1]->str << std::endl;
+        }
+#endif
+        // r->element[0]->str == "message"
+        char* str_1 = r->element[1]->str;
+        char* str_0 = r->element[0]->str;
+        if (str_0 && strcmp(str_0, "message") == 0 &&
+            str_1 && strcmp(str_1, "gradients") == 0) {
+          auto gradient = PSTaskGlobal::lgd->operator()(str, len);
+
+#ifdef DEBUG
+          std::cout << "Updating model at time: " << get_time_us()
+            << " version: " << gradient.getVersion()
+            << std::endl;
+#endif
+
+          update_publish_gradient(gradient);
+          PSTaskGlobal::first_time = false;
+        }
+      } else {
+        std::cout << "Not an array" << std::endl;
+      }
+    }
+
+    void thread_fn() {
+      std::cout << "connecting to redis.." << std::endl;
+      PSTaskGlobal:: gradient_r =
+        redis_async_connect(redis_ip.c_str(), redis_port);
+
+      std::cout << "connected to redis.." << std::endl;
+
+      if (!PSTaskGlobal::model_r || !PSTaskGlobal::gradient_r) {
+        throw std::runtime_error(
+            "PSTask.PSGradientProxy error connecting to redis");
+      }
+
+      std::cout << "libevent attached" << std::endl;
+      redisLibeventAttach(PSTaskGlobal::gradient_r, base);
+      redis_connect_callback(PSTaskGlobal::gradient_r, connectCallback);
+      redis_disconnect_callback(
+          PSTaskGlobal::gradient_r, disconnectCallback);
+      redis_subscribe_callback(
+          PSTaskGlobal::gradient_r, onMessage, "gradients");
+
+      PSTaskGlobal::ps_grad_start.unlock();
+      std::cout << "eventbase dispatch" << std::endl;
+      event_base_dispatch(base);
+    }
+
+    void run() {
+      thread = std::make_unique<std::thread>(
+          std::bind(&PSGradientProxy::thread_fn, this));
+    }
+
+  private:
+    std::string redis_ip;
+    int redis_port;
+    uint64_t MODEL_GRAD_SIZE;
+    struct event_base *base;
+
+    std::unique_ptr<std::thread> thread;
+};
+
 
 /**
   * This is the task that runs the parameter server
@@ -92,98 +257,54 @@ void PSTask::publish_model(const LRModel& model) {
   *
   */
 void PSTask::run(const Configuration& config) {
-  std::cout << "[PS] " << "PS connecting to store" << std::endl; config.print();
-
-  lr_model_serializer lms(MODEL_GRAD_SIZE);
-  lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-  lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
-  lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
-
-#ifdef USE_CIRRUS
-  cirrus::TCPClient client;
-  cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
-    model_store(IP, PORT, &client, lms, lmd);
-  cirrus::ostore::FullBladeObjectStoreTempl<LRGradient>
-    gradient_store(IP, PORT, &client, lgs, lgd);
-#endif
-
   std::cout << "[PS] " << "PS task initializing model" << std::endl;
   // initialize model
-  LRModel model(MODEL_GRAD_SIZE);
-  model.randomize();
+  PSTaskGlobal::model.reset(new LRModel(MODEL_GRAD_SIZE));
+  PSTaskGlobal::model->randomize();
   std::cout << "[PS] "
     << "PS publishing model at id: " << MODEL_BASE
-    << " csum: " << model.checksum() << std::endl;
+    << " csum: " << PSTaskGlobal::model->checksum() << std::endl;
 
-  publish_model(model);
-#ifdef USE_CIRRUS    
-  wait_for_start(PS_TASK_RANK, client, nworkers);
-#elif defined(USE_REDIS)
+  PSTaskGlobal::config = config;
+
+  PSTaskModelProxy mp(REDIS_IP, REDIS_PORT);
+  mp.run();
+  PSTaskGlobal::mp_start_lock.lock();
+
+  PSGradientProxy gp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
+  gp.run();
+  PSTaskGlobal::ps_grad_start.lock();
+
+  auto r = connect_redis();
   wait_for_start(PS_TASK_RANK, r, nworkers);
-#endif
-  publish_model(model);
-  
+
+  publish_model(*PSTaskGlobal::model);
 
   while (1) {
-    // for every worker, check for a new gradient computed
-    // if there is a new gradient, get it and update the model
-    // once model is updated publish it
-    for (int worker = 0; worker < static_cast<int>(nworkers); ++worker) {
-      int gradient_id = GRADIENT_BASE + worker;
-#ifdef DEBUG
-      std::cout << "[PS] " << "PS task checking gradient id: " << gradient_id
-        << std::endl;
-#endif
-
-      // get gradient from store
-      LRGradient gradient(MODEL_GRAD_SIZE);
-      try {
-#ifdef USE_CIRRUS
-        gradient = std::move(gradient_store.get(gradient_id));
-#elif defined(USE_REDIS)
-        get_gradient(r, gradient, gradient_id);
-#endif
-      } catch(const cirrus::NoSuchIDException& e) {
-        if (!first_time) {
-          std::cout
-            << "PS task not able to get gradient: "
-            << std::to_string(gradient_id)
-            << "\n";
-        }
-        // this happens because the worker task
-        // has not uploaded the gradient yet
-        //worker--;
-        continue;
-      }
-      first_time = false;
-
-#ifdef DEBUG
-      std::cout << "[PS] "
-        << "PS task received gradient with #version: "
-        << gradient.getVersion()
-        << " from worker: " << worker
-        << " current gradient version: " << gradientVersions[worker]
-        << "\n";
-#endif
-
-      // check if this is a gradient we haven't used before
-      if (gradient.getVersion() > gradientVersions[worker]) {
-        update_gradient_version(gradient, worker, model, config);
-      } else {
-#ifdef DEBUG
-        std::cout << "[PS] "
-          << "Gradient from worker: " << worker
-          << " is old. version: " << gradient.getVersion()
-          << " tracked version: " << gradientVersions[worker]
-          << std::endl;
-#endif
-      }
-    }
+    sleep(1);
   }
+}
+
+void print_progress() {
+  static uint64_t count = 0;
+  static auto start = get_time_us();
+
+  // if it's the first time we record the timestamp
+  if (count == 0) {
+    start = get_time_us();
+  } else if (count % 10 == 0) {
+    auto now = get_time_us();
+    auto elapsed_us = now - start;
+    double iterations_per_us = 1.0 * count / elapsed_us;
+    double iterations_per_sec = iterations_per_us * 1000 * 1000;
+    std::cout << "Iterations per sec: " << iterations_per_sec << "\n";
+  }
+  count++;
 }
 
 void PSTask::update_gradient_version(
     auto& gradient, int worker, LRModel& model, Configuration config ) {
+
 #ifdef DEBUG
   std::cout << "[PS] " << "PS task received new gradient version: "
     << gradient.getVersion() << std::endl;
@@ -196,17 +317,49 @@ void PSTask::update_gradient_version(
   std::cout << "[PS] " << "Updating model" << std::endl;
 #endif
 
-  model.sgd_update(config.get_learning_rate(), &gradient);
+  PSTaskGlobal::model->sgd_update(config.get_learning_rate(), &gradient);
 
   std::cout << "[PS] "
     << "Publishing model at: " << get_time_us()
-    << " checksum: " << model.checksum()
     << std::endl;
+    //<< " checksum: " << model.checksum()
   // publish the model back to the store so workers can use it
 #ifdef USE_CIRRUS
   model_store.put(MODEL_BASE, model);
 #elif defined(USE_REDIS)
   put_model(model);
 #endif
+
+  print_progress();
+}
+
+void update_publish_gradient(auto& gradient) {
+  static int count = 0;
+  // do a gradient step and update model
+#ifdef DEBUG
+  std::cout << "[PS] " << "Updating model" << std::endl;
+#endif
+
+  PSTaskGlobal::model->sgd_update(
+      PSTaskGlobal::config.get_learning_rate(), &gradient);
+
+  std::cout << "[PS] "
+    << "Publishing model at: " << get_time_us()
+    << " count: " << (++count)
+    << std::endl;
+
+  lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
+  auto data = std::unique_ptr<char[]>(
+      new char[lms.size(*PSTaskGlobal::model)]);
+  lms.serialize(*PSTaskGlobal::model, data.get());
+
+#ifdef DEBUG
+  std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
+#endif
+  redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
+      "PUBLISH model %b", data.get(),
+      lms.size(*PSTaskGlobal::model));
+
+  print_progress();
 }
 

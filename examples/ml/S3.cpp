@@ -13,6 +13,11 @@ void s3_initialize_aws() {
 Aws::S3::S3Client s3_create_client() {
   Aws::Client::ClientConfiguration clientConfig;
   clientConfig.region = Aws::Region::US_WEST_2;
+
+  // try big timeout
+  clientConfig.connectTimeoutMs = 30000;
+  clientConfig.requestTimeoutMs = 60000;
+
   Aws::S3::S3Client s3_client(clientConfig);
   return s3_client;
 }
@@ -20,6 +25,11 @@ Aws::S3::S3Client s3_create_client() {
 Aws::S3::S3Client* s3_create_client_ptr() {
   Aws::Client::ClientConfiguration clientConfig;
   clientConfig.region = Aws::Region::US_WEST_2;
+  
+  // try big timeout
+  clientConfig.connectTimeoutMs = 30000;
+  clientConfig.requestTimeoutMs = 60000;
+
   return new Aws::S3::S3Client(clientConfig);
 }
 

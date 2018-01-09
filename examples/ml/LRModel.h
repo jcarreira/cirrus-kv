@@ -95,7 +95,7 @@ class LRModel : public Model {
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    double calc_loss(Dataset& dataset) const override;
+    std::pair<double, double> calc_loss(Dataset& dataset) const override;
 
     /**
      * Return the size of the gradient when serialized

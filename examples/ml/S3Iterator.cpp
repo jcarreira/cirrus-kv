@@ -24,7 +24,6 @@ S3Iterator::S3Iterator(
   s3_initialize_aws();
   s3_client.reset(s3_create_client_ptr());
 
-  //cur = left_id;
   last = left_id;  // last is exclusive
 
   for (uint64_t i = 0; i < read_ahead; ++i) {
@@ -36,7 +35,6 @@ S3Iterator::S3Iterator(
 
 std::shared_ptr<double> S3Iterator::get_next() {
   //std::cout << "Get next "
-  //  //<< " cur: " << cur
   //  << " last: " << last
   //  << "\n";
   while (1) {
@@ -51,10 +49,6 @@ std::shared_ptr<double> S3Iterator::get_next() {
 
   std::shared_ptr<double> ret = ring.front();
   ring.pop_front();
-  //cur++;
-  //if (cur == right_id) {
-  //  cur = left_id;
-  //}
   
   uint64_t ring_size = ring.size();
   ring_lock.unlock();
@@ -64,11 +58,6 @@ std::shared_ptr<double> S3Iterator::get_next() {
     pref_sem.signal();
   }
 
-  //std::cout << "Returning prefetched batch"
-  //  //<< " cur: " << cur
-  //  << " last: " << last
-  //  << " ring size: " << ring_size
-  //  << std::endl;
   return ret;
 }
 
@@ -105,12 +94,14 @@ void S3Iterator::thread_function() {
   while (1) {
     // if we can go it means there is a slot
     // in the ring
+    std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
     std::cout << "Getting object. count: " << count++ << std::endl;
 
     std::string s3_obj;
 try_start:
     try {
+      std::cout << "S3Iterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
       s3_obj = s3_get_object(last, *s3_client, S3_BUCKET);
@@ -133,8 +124,6 @@ try_start:
     
     // update index
     last++;
-    //if (last == cur)
-    //  throw std::runtime_error("Error in iterator");
     if (last == right_id)
       last = left_id;
 

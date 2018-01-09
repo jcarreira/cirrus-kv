@@ -226,7 +226,7 @@ std::unique_ptr<ModelGradient> SoftmaxModel::minibatch_grad(
     return std::make_unique<SoftmaxGradient>(ret_gradient);
 }
 
-double SoftmaxModel::calc_loss(Dataset& data) const {
+std::pair<double, double> SoftmaxModel::calc_loss(Dataset& data) const {
     const Matrix& m = data.samples_;
     // XXX Fix, there is some code repetition here
     const double* m_data = reinterpret_cast<const double*>(m.data.get());
@@ -294,15 +294,16 @@ double SoftmaxModel::calc_loss(Dataset& data) const {
         sum += logprobs[i];
     }
 
+    double accuracy = (1.0 - (1.0 * count_wrong / dataset.rows()));
     std::cout
-        << "Accuracy: " << (1.0 - (1.0 * count_wrong / dataset.rows()))
+        << "Accuracy: " << accuracy
         << " wrong: " << count_wrong << " samples: " << dataset.rows()
         << std::endl;
 
     // constant
     double data_loss = sum / dataset.rows();
 
-    return data_loss;
+    return std::make_pair(data_loss, accuracy);
 }
 
 /**
