@@ -199,6 +199,8 @@ start:
   std::vector<std::shared_ptr<double>> labels_vec;
   std::vector<std::shared_ptr<double>> samples_vec;
   for (int i = 0; i < 10000; ++i) {
+    std::cout << "[ERROR_TASK] data i: " << i
+      << std::endl;
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
     try {

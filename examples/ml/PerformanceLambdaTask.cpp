@@ -29,7 +29,7 @@ void check_redis(auto r) {
 //  auto r = redis_connect(REDIS_IP, REDIS_PORT);
 //  check_redis(r);
 //  return r;
-//}
+//
 
 std::unique_ptr<LRModel> lr_model;
 

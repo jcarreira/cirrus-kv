@@ -103,7 +103,7 @@ class LogisticTaskS3 : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    bool run_phase1(auto& samples, auto& labels,
+    bool run_phase1(auto& dataset,
         auto& model, auto& s3_iter,
         uint64_t features_per_sample, auto& mp);
     auto get_model(auto r, auto lmd);

@@ -60,6 +60,7 @@ class ModelProxy {
       // make sure we receive model at least once
       while (first_time == true) {
       }
+      std::cout << "received model" << std::endl;
 
       model_lock.lock();
       LRModel ret = *model;
@@ -84,6 +85,7 @@ class ModelProxy {
           model_lock.lock();
           *model = lmd->operator()(str, len);
           model_lock.unlock();
+          printf("Updated model\n");
           first_time = false;
         }
       } else {
@@ -176,10 +178,9 @@ void LogisticTaskS3::unpack_minibatch(
 
 // get samples and labels data
 bool LogisticTaskS3::run_phase1(
-    auto& samples, auto& labels, auto& model,
+    auto& dataset, auto& model,
     auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp) {
 
-  static bool first_time = true;
   try {
     auto before_model = get_time_ns();
     model = mp.get_model();
@@ -191,11 +192,12 @@ bool LogisticTaskS3::run_phase1(
     std::chrono::steady_clock::time_point start =
       std::chrono::steady_clock::now();
 
-    std::shared_ptr<double> minibatch = s3_iter.get_next();
+    const double* minibatch = s3_iter.get_next_fast();
     std::cout << "[WORKER] "
       << "got s3 data"
       << std::endl;
-    unpack_minibatch(minibatch, samples, labels);
+    //unpack_minibatch(minibatch, samples, labels);
+    dataset.reset(new Dataset(minibatch, samples_per_batch, features_per_sample));
 
     std::chrono::steady_clock::time_point finish =
       std::chrono::steady_clock::now();
@@ -211,10 +213,6 @@ bool LogisticTaskS3::run_phase1(
       << "at time: " << get_time_us()
       << "\n";
   } catch(const cirrus::NoSuchIDException& e) {
-    if (!first_time) {
-      std::cout << "[WORKER] Exiting" << std::endl;
-      exit(0);
-    }
     // this happens because the ps task
     // has not uploaded the model yet
     std::cout << "[WORKER] "
@@ -262,19 +260,20 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   uint64_t version = 0;
   while (1) {
     // maybe we can wait a few iterations to get the model
-    std::shared_ptr<double> samples;
-    std::shared_ptr<double> labels;
+    //std::shared_ptr<double> samples;
+    //std::shared_ptr<double> labels;
     LRModel model(MODEL_GRAD_SIZE);
 
     // get data, labels and model
     std::cout << "[WORKER] running phase 1" << std::endl;
-    if (!run_phase1(samples, labels, model, s3_iter, features_per_sample, mp)) {
+    std::unique_ptr<Dataset> dataset;
+    if (!run_phase1(dataset, model, s3_iter, features_per_sample, mp)) {
       continue;
     }
     std::cout << "[WORKER] phase 1 done" << std::endl;
 
-    Dataset dataset(samples.get(), labels.get(),
-        samples_per_batch, features_per_sample);
+    //Dataset dataset(samples.get(), labels.get(),
+    //    samples_per_batch, features_per_sample);
     //dataset.check();
     //dataset.print_info();
 
@@ -284,8 +283,8 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     std::cout << "Computing gradient" << std::endl;
     try {
-      gradient = model.minibatch_grad(dataset.samples_,
-          labels.get(), samples_per_batch, config.get_epsilon());
+      gradient = model.minibatch_grad(dataset->samples_,
+          const_cast<double*>(dataset->labels_.get()), samples_per_batch, config.get_epsilon());
     } catch(const std::runtime_error& e) {
       std::cout << "Error. " << e.what() << std::endl;
       exit(-1);

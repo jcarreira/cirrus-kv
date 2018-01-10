@@ -1,4 +1,5 @@
 #include "S3Iterator.h"
+#include "Utils.h"
 #include <unistd.h>
 #include <vector>
 #include <iostream>
@@ -199,7 +200,7 @@ try_start:
     uint64_t elapsed_ns2 =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
           finish2-start).count();
-    std::cout << "pushing took (ns): " << elapsed_ns2 << std::endl;
+    std::cout << "pushing took (ns): " << elapsed_ns2 << " at (us) " << get_time_us() << std::endl;
   }
 }
 
