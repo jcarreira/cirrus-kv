@@ -21,6 +21,20 @@ Dataset::Dataset(const std::vector<std::vector<FEATURE_TYPE>>& samples,
     labels_.reset(l, array_deleter<FEATURE_TYPE>);
 }
 
+// XXX FIX
+Dataset::Dataset(const FEATURE_TYPE* minibatch,
+                 uint64_t n_samples,
+                 uint64_t n_features) :
+    samples_(minibatch, n_samples, n_features, true) {
+    
+    FEATURE_TYPE* l = new FEATURE_TYPE[n_samples];
+    for (uint64_t j = 0; j < n_samples;++j) {
+      const double* data = minibatch + j * (n_features + 1);
+      l[j] = *data;
+    }
+    labels_.reset(l, array_deleter<FEATURE_TYPE>);
+}
+
 Dataset::Dataset(const FEATURE_TYPE* samples,
                  const FEATURE_TYPE* labels,
                  uint64_t n_samples,

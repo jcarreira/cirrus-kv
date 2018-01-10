@@ -7,6 +7,8 @@ CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
 bin_PROGRAMS = parameter_server parameter_server_softmax
+
+#performance_lambda
 #two_clients_test bug_regression \
 #               parameter_server_softmax
 
@@ -52,16 +54,19 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
               PSTask.cpp TasksWait.cpp \
-	      RedisIterator.cpp  S3Iterator.cpp \
-	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp
+	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
+	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              Redis.cpp
+              Redis.cpp SparseDataset.cpp
 
+#PerformanceLambdaTask.cpp S3Iterator.cpp
+
+#performance_lambda_SOURCES  = PerformanceLambdaTask.cpp $(CPP_SOURCES)
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
 				$(CPP_SOURCES_SOFTMAX)

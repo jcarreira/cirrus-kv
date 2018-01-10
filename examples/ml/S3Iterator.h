@@ -19,11 +19,13 @@ class S3Iterator {
         uint64_t minibatch_rows);
 
     std::shared_ptr<double> get_next();
+    const double* get_next_fast();
 
     void thread_function();
 
  private:
   void push_samples(const std::shared_ptr<double>& samples);
+  void push_samples(std::ostringstream* oss);
 
   uint64_t left_id;
   uint64_t right_id;

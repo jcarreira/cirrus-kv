@@ -42,7 +42,14 @@ void run_tasks(int rank, int nworkers,
   int features_per_sample = config.get_num_features();
   int samples_per_batch = config.get_minibatch_size();
 
-  if (rank == PS_TASK_RANK) {
+  if (rank == PERFORMANCE_LAMBDA_RANK) {
+    PerformanceLambdaTask lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+    sleep_forever();
+  } else if (rank == PS_TASK_RANK) {
     PSTask pt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,

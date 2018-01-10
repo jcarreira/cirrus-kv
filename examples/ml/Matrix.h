@@ -8,6 +8,7 @@
 
 class Matrix {
  public:
+   Matrix(const double* d, uint64_t r, uint64_t c, bool); // XXX FIX
     /**
       * Build matrix
       * This method copies all the inputs

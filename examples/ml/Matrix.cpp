@@ -36,6 +36,22 @@ Matrix::Matrix(const double* d, uint64_t r, uint64_t c) {
   data.reset(copy, std::default_delete<const double[]>());
 }
 
+Matrix::Matrix(const double* d, uint64_t r, uint64_t c, bool) {
+  rows = r;
+  cols = c;
+
+  // XXX extra copy here
+  double* copy = new double[rows * cols];
+  for (uint64_t j = 0; j < rows; ++j) {
+    const double* data = d + j * (cols + 1);
+    data++;
+    std::copy(data,
+        data + cols,
+        copy + j * cols);
+  }
+  data.reset(copy, std::default_delete<const double[]>());
+}
+
 Matrix::Matrix(const std::vector<std::shared_ptr<double>> d,
     uint64_t r, uint64_t c) {
 

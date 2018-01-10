@@ -107,7 +107,7 @@ class Configuration {
       */
     uint64_t get_num_features() const;
 
- private:
+ public:
     /**
       * Parse a specific line in the config file
       * @param line Configuration line
