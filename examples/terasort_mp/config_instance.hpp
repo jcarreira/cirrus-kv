@@ -29,16 +29,16 @@ static std::unordered_map<char, INT_TYPE> key_map = {
         { 'x', 59 }, { 'y', 60 }, { 'z', 61 },
 };
 
-static constexpr INT_TYPE total_processes = 21;  // must match runtime
-static constexpr INT_TYPE hash_nodes = 10;
+static constexpr INT_TYPE total_processes = 10;  // must match runtime
+static constexpr INT_TYPE hash_nodes = 4;
 static constexpr INT_TYPE hash_bytes = 1;
-static constexpr INT_TYPE hash_threads = 16;
+static constexpr INT_TYPE hash_threads = 6;
 static constexpr INT_TYPE hash_nodes_per_reader = 4;
-static constexpr INT_TYPE hash_bulk_get = 50;
+static constexpr INT_TYPE hash_bulk_transfer = 50;
 static constexpr char hash_output_dir[] = "/nscratch/nathreya/hash_output_dir";
 
 static constexpr char cirrus_port[] = "12345";
-static constexpr char cirrus_ip[] = "10.10.49.83";
+static constexpr char cirrus_ip[] = "10.10.49.85";
 
 static constexpr INT_TYPE record_size = 100;
 static constexpr INT_TYPE num_records = 1'000'000'000;
@@ -50,8 +50,8 @@ static constexpr INT_TYPE read_chunk_size = 1000;
 static constexpr INT_TYPE read_threads = 16;
 static constexpr INT_TYPE total_read_keys = num_records / read_chunk_size;
 
-static constexpr INT_TYPE sort_nodes = 10;
-static constexpr INT_TYPE sort_threads = 16;
+static constexpr INT_TYPE sort_nodes = 5;
+static constexpr INT_TYPE sort_threads = 8;
 static constexpr char sort_output_dir[] = "/nscratch/nathreya/sort_output_dir";
 
 static constexpr INT_TYPE chars = 62;

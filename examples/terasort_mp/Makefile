@@ -2,7 +2,7 @@ all: outputs/main
 
 NUM_PROCS=9
 CC=/opt/openmpi/bin/mpic++
-CC_FLAGS=-std=c++17 -O3 -funroll-loops -L/data/joao/cirrus/src/client/ -L/data/joao/cirrus/src/utils/  -I/data/joao/cirrus/third_party/libcuckoo/  -I/data/joao/cirrus/third_party/flatbuffers/include -I/data/joao/cirrus/ -I/data/joao/cirrus/src/ 
+CC_FLAGS=-std=c++17 -O3 -funroll-loops -L/data/nathreya/cirrus/src/client/ -L/data/nathreya/cirrus/src/utils/  -I/data/nathreya/cirrus/third_party/libcuckoo/  -I/data/nathreya/cirrus/third_party/flatbuffers/include -I/data/nathreya/cirrus/ -I/data/nathreya/cirrus/src/ 
 LD_FLAGS=-lpthread -lstdc++fs -lclient -lutils
 
 

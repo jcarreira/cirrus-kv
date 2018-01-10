@@ -18,7 +18,8 @@ namespace cirrus_terasort {
 
 class hash_lambda {
  private:
-        std::vector<char*> _write_buffer;
+        std::vector<std::vector<char*>> _write_buffer;
+        std::vector<std::vector<INT_TYPE>> _write_buffer_indices;
         std::vector<INT_TYPE> _write_buffer_sizes;
         std::vector<std::shared_ptr<std::mutex>> _write_mutexes;
 
