@@ -51,6 +51,7 @@ S3Iterator::S3Iterator(
 
 int to_delete = -1;
 
+
 const double* S3Iterator::get_next_fast() {
   // we need to delete entry
   if (to_delete != -1) {
@@ -60,9 +61,27 @@ const double* S3Iterator::get_next_fast() {
     std::cout << "get_next_fast::Deleted entry: " << to_delete
       << std::endl;
   }
+
+  //static uint64_t after_wait1_cum = 0;
+  static uint64_t after_wait2_cum = 0;
+  static uint64_t after_wait_count = 0;
   
+  auto before_wait = get_time_us();
   sem_wait(&semaphore);
+  //auto after_wait1 = get_time_us();
   ring_lock.lock();
+  auto after_wait2 = get_time_us();
+  after_wait_count++;
+
+  //auto spent1 = (after_wait1 - before_wait);
+  auto spent2 = (after_wait2 - before_wait);
+  //after_wait1_cum += spent1;
+  after_wait2_cum += spent2;
+
+  //std::cout << "Time spent waiting 1: " << spent1 << " 2: " << spent2 << "\n";
+  if (after_wait_count && (after_wait_count % 2000 == 0)) {
+    std::cout << "Average time spent waiting (v2): " << after_wait2_cum / after_wait_count << "\n";
+  }
 
   auto ret = minibatches_list.pop();
   
@@ -75,7 +94,7 @@ const double* S3Iterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 5000 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 10000 && pref_sem.getvalue() < (int)read_ahead) {
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }
@@ -130,7 +149,6 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
 
   auto str_iter = list_strings.find(str_version);
 
-  ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
   for (uint64_t i = 0; i < n_minibatches; ++i) {
     const double* data = reinterpret_cast<const double*>(str_iter->second.c_str()) + i * minibatch_n_entries;
@@ -138,10 +156,11 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
+  ring_lock.lock();
     minibatches_list.add(std::make_pair(data, is_last));
+  ring_lock.unlock();
     sem_post(&semaphore);
   }
-  ring_lock.unlock();
   
   str_version++;
 }
