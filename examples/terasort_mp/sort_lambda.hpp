@@ -38,7 +38,10 @@ class sort_lambda {
         sort_lambda(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
                         <std::string>> s, INT_TYPE p);
 
-        std::vector<std::shared_ptr<std::string>> get_records();
+        std::tuple<std::vector<std::shared_ptr<std::string>>, bool, bool>
+                get_records();
+        std::pair<std::vector<std::shared_ptr<std::string>>, bool> smart_get(
+                const std::vector<INT_TYPE>& keys);
 
         void add_sort_data(long double b, long double t);
         void add_merge_data(long double b, long double t);

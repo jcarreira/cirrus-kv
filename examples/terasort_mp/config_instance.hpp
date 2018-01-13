@@ -29,11 +29,10 @@ static std::unordered_map<char, INT_TYPE> key_map = {
         { 'x', 59 }, { 'y', 60 }, { 'z', 61 },
 };
 
-static constexpr INT_TYPE total_processes = 10;  // must match runtime
+static constexpr INT_TYPE total_processes = 37;  // must match runtime
 static constexpr INT_TYPE hash_nodes = 4;
 static constexpr INT_TYPE hash_bytes = 1;
-static constexpr INT_TYPE hash_threads = 6;
-static constexpr INT_TYPE hash_nodes_per_reader = 4;
+static constexpr INT_TYPE hash_threads = 8;
 static constexpr INT_TYPE hash_bulk_transfer = 50;
 static constexpr char hash_output_dir[] = "/nscratch/nathreya/hash_output_dir";
 
@@ -50,8 +49,10 @@ static constexpr INT_TYPE read_chunk_size = 1000;
 static constexpr INT_TYPE read_threads = 16;
 static constexpr INT_TYPE total_read_keys = num_records / read_chunk_size;
 
-static constexpr INT_TYPE sort_nodes = 5;
-static constexpr INT_TYPE sort_threads = 8;
+static constexpr INT_TYPE sort_nodes = 32;
+static constexpr INT_TYPE sort_threads = 2;
+static constexpr INT_TYPE sort_bulk_transfer = 50;
+static constexpr INT_TYPE sort_transfer_wait_ms = 1000;
 static constexpr char sort_output_dir[] = "/nscratch/nathreya/sort_output_dir";
 
 static constexpr INT_TYPE chars = 62;

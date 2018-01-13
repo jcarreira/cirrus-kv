@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "timsort.hpp"
+
 namespace cirrus_terasort {
 
 sort_lambda::sort_lambda(
@@ -20,29 +22,84 @@ sort_lambda::sort_lambda(
         _finished = false;
 }
 
-std::vector<std::shared_ptr<std::string>> sort_lambda::get_records() {
+std::pair<std::vector<std::shared_ptr<std::string>>, bool> sort_lambda::smart_get(
+        const std::vector<INT_TYPE>& keys) {
+        try {
+                std::vector<std::string> vals = _store->get_bulk_fast(keys);
+                std::vector<std::shared_ptr<std::string>> ret;
+                for(const std::string& s : vals)
+                        ret.push_back(std::make_shared<std::string>(s));
+                return std::make_pair(ret, false);
+        }
+        catch(...) {  // fall to back serial
+                std::vector<std::shared_ptr<std::string>> ret;
+                bool retry = true;
+                for (const INT_TYPE& k : keys) {
+                        try {
+                                std::string chunk = _store->get(k);
+                                ret.push_back(
+                                        std::make_shared<std::string>(chunk));
+                                if(chunk == config_instance::sentinel) {
+                                        retry = false;
+                                        break;
+                                }
+                        }
+                        catch(...) {
+                                retry = true;
+                                break;
+                        }
+                }
+                return std::make_pair(ret, retry);
+        }
+}
+
+std::tuple<std::vector<std::shared_ptr<std::string>>, bool, bool>
+         sort_lambda::get_records() {
         std::vector<std::shared_ptr<std::string>> ret;
+        bool wait = false;
 
         _read_mutex.lock();
 
         auto get_start = std::chrono::high_resolution_clock::now();
         for (INT_TYPE n = _next_index; n < config_instance::hash_nodes &&
                 !_finished; n++) {
-                std::string chunk = _store->get(_index_list[n]);
-                if (chunk == config_instance::sentinel) {
+                std::vector<INT_TYPE> keys;
+                for(INT_TYPE j = 0; j < config_instance::sort_bulk_transfer;
+                        j++)
+                        keys.push_back(_index_list[n] +
+                                j * config_instance::sort_nodes);
+                const std::pair<std::vector<std::shared_ptr
+                        <std::string>>, bool>& p = smart_get(keys);
+                const std::vector<std::shared_ptr<std::string>>& chunks =
+                        std::move(p.first);
+                const bool& retry = p.second;
+                wait = retry;
+                        
+                _index_list[n] += config_instance::sort_nodes * chunks.size();
+                if (chunks.size() == 0 && !retry) {
                         _finished = ++_next_index >=
                                 config_instance::hash_nodes;
                 } else {
-                        _index_list[n] += config_instance::sort_nodes;
-                        for (INT_TYPE i = 0; i <
-                                config_instance::read_chunk_size && (i + 1) *
-                                (config_instance::record_size + 1) <=
-                                        chunk.size(); i++) {
-                                std::string str = chunk.substr(i *
-                                        (config_instance::record_size + 1),
-                                        config_instance::record_size);
-                                ret.push_back(
-                                        std::make_shared<std::string>(str));
+                        for(const std::shared_ptr<std::string>& chunk_ptr :
+                                chunks) {
+                                std::string chunk = *chunk_ptr;
+                                if(chunk == config_instance::sentinel) {
+                                        _finished = ++_next_index >=
+                                                config_instance::hash_nodes;
+                                        break;
+                                }
+                                for (INT_TYPE i = 0; i <
+                                        config_instance::read_chunk_size && 
+                                        (i + 1) * (config_instance::record_size
+                                        + 1) <= chunk.size(); i++) {
+                                        std::string str = chunk.substr(i *
+                                                (config_instance::record_size +
+                                                1),
+                                                config_instance::record_size);
+                                        ret.push_back(
+                                                std::make_shared<std::string>
+                                                        (str));
+                                }
                         }
                         break;
                 }
@@ -57,7 +114,7 @@ std::vector<std::shared_ptr<std::string>> sort_lambda::get_records() {
         _stats_lock.unlock();
 
         _read_mutex.unlock();
-        return ret;
+        return std::make_tuple(ret, _finished, wait);
 }
 
 void sort_lambda::add_sort_data(long double b, long double t) {
@@ -141,9 +198,18 @@ void sorter(std::shared_ptr<sort_lambda> sl,
                 (long double) config_instance::num_records /
                         (long double) config_instance::sort_nodes /
                                 (long double) config_instance::sort_threads);
-        while (recs.size() < 2 * target_size &&
-                (curr = sl->get_records()).size() != 0)
+        bool retry = true;
+        while (retry && recs.size() < 2 * target_size) {
+                const auto& t = sl->get_records();
+                curr = std::get<0>(t), retry = !std::get<1>(t);
+                bool wait = std::get<2>(t);
                 recs.insert(recs.end(), curr.begin(), curr.end());
+                if(wait)
+                        std::this_thread::sleep_for(
+                                std::chrono::milliseconds(
+                                        config_instance::sort_transfer_wait_ms
+                        ));
+        }
         auto sort_get_end = std::chrono::high_resolution_clock::now();
         long double get_time =
                 std::chrono::duration_cast<std::chrono::milliseconds>
@@ -152,7 +218,7 @@ void sorter(std::shared_ptr<sort_lambda> sl,
         sl->add_sort_get_data(get_bytes, get_time);
 
         auto sort_start = std::chrono::high_resolution_clock::now();
-        std::sort(recs.begin(), recs.end(), []
+        gfx::timsort(recs.begin(), recs.end(), []
                 (const std::shared_ptr<std::string>& lhs,
                 const std::shared_ptr<std::string>& rhs) {
                 return *lhs < *rhs;

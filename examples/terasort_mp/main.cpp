@@ -75,8 +75,7 @@ int main(int argc, char* argv[]) {
                         std::chrono::duration_cast<std::chrono::seconds>
                                 (read_end - read_start).count() << " seconds" <<
                                 std::endl;
-                for (INT_TYPE i = num_input_files; i < num_input_files +
-                        hash_nodes; i++)
+                for (INT_TYPE i = num_input_files; i < total_processes; i++)
                         MPI_Send(&sync, 1, MPI_INT, i, proc_rank,
                                 MPI_COMM_WORLD);
         } else if (proc_rank < num_input_files + hash_nodes) {  // hash nodes
@@ -118,13 +117,8 @@ int main(int argc, char* argv[]) {
                                 " seconds" << std::endl;
                 hl->print_avg_stats();
 
-                for (INT_TYPE i = num_input_files + hash_nodes;
-                        i < num_input_files + hash_nodes + sort_nodes; i++)
-                        MPI_Send(&sync, 1, MPI_INT, i, proc_rank,
-                                MPI_COMM_WORLD);
         } else if (proc_rank < total_processes) {  // sort nodes
-                for (INT_TYPE i = num_input_files;
-                        i < num_input_files + hash_nodes; i++)
+                for (INT_TYPE i = 0; i < num_input_files; i++)
                         MPI_Recv(&sync, 1, MPI_INT, i, i, MPI_COMM_WORLD,
                                 MPI_STATUS_IGNORE);
 
@@ -214,7 +208,8 @@ int main(int argc, char* argv[]) {
                                 { return *s1 < *s2; }))
                         throw std::runtime_error("expected a sorted output.");
                 else
-                        std::cout << "Sorted" << std::endl;
+                        std::cout << "Sorted " << to_write.size() << " records"
+                                << std::endl;
 
                 std::cout << "Starting write..." << std::endl;
                 std::ofstream of(std::string(sort_output_dir) + "/" +
