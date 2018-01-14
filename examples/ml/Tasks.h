@@ -103,11 +103,11 @@ class LogisticTaskS3 : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    bool run_phase1(auto& dataset,
-        auto& model, auto& s3_iter,
-        auto& mp, auto& prev_checksum);
+    bool run_phase1(
+        auto& dataset, auto& model,
+        auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp, auto& prev_model_version);
     auto get_model(auto r, auto lmd);
-    void push_gradient(auto r, int, LRGradient*);
+    void push_gradient(auto r, LRGradient*);
     void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
         auto& samples, auto& labels);
 
@@ -203,7 +203,7 @@ class ErrorTask : public MLTask {
     void get_samples_labels_redis(
         auto r, auto i, auto& samples, auto& labels,
         auto cad_samples, auto cad_labels);
-    void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
+    void parse_raw_minibatch(const double* minibatch,
         auto& samples, auto& labels);
 };
 
