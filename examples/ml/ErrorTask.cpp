@@ -133,8 +133,9 @@ void ErrorTask::get_samples_labels_redis(
     auto cad_samples, auto cad_labels) {
   int len_samples;
   char* data = redis_get_numid(r, SAMPLE_BASE + i, &len_samples);
-  if (data == NULL)
+  if (data == NULL) {
     throw cirrus::NoSuchIDException("Error getting samples");
+  }
   samples = cad_samples(data, len_samples);
   free(data);
 
@@ -171,13 +172,11 @@ void ErrorTask::run(const Configuration& config) {
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
 
-#ifdef DATASET_IN_S3
   std::cout << "Creating S3Iterator" << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,
       config.get_minibatch_size());
-#endif
 
   // get data first
   // we get up to 10K samples
@@ -193,14 +192,10 @@ start:
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
     try {
-#ifdef DATASET_IN_S3
-    std::shared_ptr<double> minibatch = s3_iter.get_next();
-    std::cout << "[ERROR_TASK] unpacking"
-      << std::endl;
-    unpack_minibatch(minibatch, samples, labels);
-#elif defined(USE_REDIS)
-      get_samples_labels_redis(r, i, samples, labels, cad_samples, cad_labels);
-#endif
+      const double* minibatch = s3_iter.get_next_fast();
+      std::cout << "[ERROR_TASK] unpacking"
+        << std::endl;
+      parse_raw_minibatch(minibatch, samples, labels);
     } catch(const cirrus::NoSuchIDException& e) {
       if (i == 0)
         goto start;  // no loss to be computed
@@ -222,8 +217,6 @@ start:
 
   wait_for_start(ERROR_TASK_RANK, r, nworkers);
   ErrorTaskGlobal::start_time = get_time_us();
-
-  //check_labels(labels_vec, samples_per_batch);
 
   Dataset dataset(samples_vec, labels_vec,
       samples_per_batch, features_per_sample);
@@ -261,8 +254,8 @@ start:
   }
 }
 
-void ErrorTask::unpack_minibatch(
-    std::shared_ptr<double> minibatch,
+void ErrorTask::parse_raw_minibatch(
+    const double* minibatch,
     auto& samples, auto& labels) {
   uint64_t num_samples_per_batch = batch_size / features_per_sample;
 
@@ -272,12 +265,13 @@ void ErrorTask::unpack_minibatch(
       new double[num_samples_per_batch], std::default_delete<double[]>());
 
   for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
-    double* data = minibatch.get() + j * (features_per_sample + 1);
+    const double* data = minibatch + j * (features_per_sample + 1);
     labels.get()[j] = *data;
 
-    if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
+    if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0)) {
       throw std::runtime_error(
           "Wrong label in unpack_minibatch " + std::to_string(*data));
+    }
 
     data++;
     std::copy(data,
