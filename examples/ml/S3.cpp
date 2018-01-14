@@ -1,6 +1,6 @@
 #include "S3.h"
 
-#define DEBUG
+//#define DEBUG
 
 using namespace Aws::S3;
 
@@ -13,7 +13,7 @@ void s3_initialize_aws() {
 Aws::S3::S3Client s3_create_client() {
   Aws::Client::ClientConfiguration clientConfig;
   clientConfig.region = Aws::Region::US_WEST_2;
-  clientConfig.maxConnections = 1;
+  clientConfig.maxConnections = 2;
   clientConfig.connectTimeoutMs = 30000;
   clientConfig.requestTimeoutMs = 60000;
 
@@ -102,13 +102,12 @@ std::ostringstream* s3_get_object_fast(uint64_t id, Aws::S3::S3Client& s3_client
 
   auto get_object_outcome = s3_client.GetObject(object_request);
 
-  std::cout << "s3_get_object_fast2" << std::endl;
+  std::cout << "s3_get_object_fast2" << "\n";
   if (get_object_outcome.IsSuccess()) {
     std::ostringstream* ss = new std::ostringstream;
-    std::cout << "s3_get_object_fast3" << std::endl;
-    auto buf = get_object_outcome.GetResult().GetBody().rdbuf();
-    *ss << buf;
-    std::cout << "s3_get_object_fast4" << std::endl;
+    std::cout << "s3_get_object_fast3" << "\n";
+    *ss << get_object_outcome.GetResult().GetBody().rdbuf();
+    std::cout << "s3_get_object_fast4" << "\n";
     return ss;
   } else {
     std::cout << "GetObject error: " <<
