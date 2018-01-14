@@ -75,7 +75,7 @@ const double* S3Iterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 5000 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 20000 && pref_sem.getvalue() < (int)read_ahead) {
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }
@@ -84,9 +84,11 @@ const double* S3Iterator::get_next_fast() {
 }
 
 std::shared_ptr<double> S3Iterator::get_next() {
+  throw std::runtime_error("No longer supported");
   //std::cout << "Get next "
   //  << " last: " << last
   //  << "\n";
+#if 0
   while (1) {
     ring_lock.lock();
     if (ring.empty()) {
@@ -103,11 +105,13 @@ std::shared_ptr<double> S3Iterator::get_next() {
   uint64_t ring_size = ring.size();
   ring_lock.unlock();
 
-  if (ring_size < 1000 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 500 && pref_sem.getvalue() < (int)read_ahead) {
     pref_sem.signal();
   }
 
   return ret;
+#endif
+  return std::shared_ptr<double>(); // dummy
 }
 
 void S3Iterator::push_samples(std::ostringstream* oss) {
