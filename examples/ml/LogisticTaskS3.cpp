@@ -79,8 +79,19 @@ class ModelProxy {
 
         printf("len: %lu\n", len);
 
-        // XXX fix this
-        if (len > 100) {
+        const char* str0 = r->element[0]->str;
+        uint64_t len0 = r->element[0]->len;
+        const char* str1 = r->element[1]->str;
+        uint64_t len1 = r->element[1]->len;
+
+        std::cout << "str0: " << str0
+          << " len0: " << len0
+          << " str1: " << str1
+          << " len1: " << len1
+          << std::endl;
+
+        if (strcmp(str0, "message") == 0 &&
+            strcmp(str1, "model") == 0) {
           printf("Updating model at time: %lu\n", get_time_us());
           model_lock.lock();
           *model = lmd->operator()(str, len);
