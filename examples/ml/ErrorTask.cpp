@@ -8,8 +8,8 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
-#define ERROR_INTERVAL_USEC (500) // time between error checks
+//#define DEBUG
+#define ERROR_INTERVAL_USEC (50) // time between error checks
 
 /**
   * Ugly but necessary for now
@@ -20,6 +20,8 @@ namespace ErrorTaskGlobal {
   std::unique_ptr<LRModel> model;
   std::unique_ptr<lr_model_deserializer> lmd;
   volatile bool model_is_here = true;
+  uint64_t start_time;
+  std::mutex mp_start_lock;
 }
 /**
   * Works as a cache for remote model
@@ -31,10 +33,12 @@ class ModelProxyErrorTask {
     { 
       ErrorTaskGlobal::model.reset(new LRModel(mgs));
       ErrorTaskGlobal::lmd.reset(new lr_model_deserializer(mgs));
+      ErrorTaskGlobal::mp_start_lock.lock();
     }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "connectCallback" << std::endl;
+      ErrorTaskGlobal::mp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -56,16 +60,24 @@ class ModelProxyErrorTask {
     static void onMessage(redisAsyncContext*, void *reply, void*) {
       redisReply *r = reinterpret_cast<redisReply*>(reply);
 
-      printf("onMessage\n");
+#ifdef DEBUG
+      std::cout << "onMessage" << std::endl;
+#endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
         uint64_t len = r->element[2]->len;
 
+#ifdef DEBUG
         printf("len: %lu\n", len);
+#endif
 
-        // XXX fix this. Should have some way to check if it's a model update
-        if (len > 100) {
-          printf("Updating model at time: %lu\n", get_time_us());
+        char* str_1 = r->element[1]->str;
+        char* str_0 = r->element[0]->str;
+        if (str_0 && strcmp(str_0, "message") == 0 &&
+            str_1 && strcmp(str_1, "model") == 0) {
+#ifdef DEBUG
+          std::cout << "Updating model at time: " << get_time_us() << std::endl;
+#endif
           ErrorTaskGlobal::model_lock.lock();
           *ErrorTaskGlobal::model = ErrorTaskGlobal::lmd->operator()(str, len);
           ErrorTaskGlobal::model_lock.unlock();
@@ -81,7 +93,7 @@ class ModelProxyErrorTask {
       redisAsyncContext* model_r = redis_async_connect(redis_ip.c_str(), redis_port);
       std::cout << "connected to redis.." << model_r << std::endl;
       if (!model_r) {
-        throw std::runtime_error("Error connecting to redis");
+        throw std::runtime_error("ModelProxyErrorTask::error connecting to redis");
       }
       
       std::cout << "ErrorTask: libevent attach" << std::endl;
@@ -152,13 +164,6 @@ void ErrorTask::run(const Configuration& config) {
   c_array_deserializer<double> cad_labels(samples_per_batch,
       "error labels_store", false);
 
-#ifdef DATASET_IN_S3
-  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
-  S3Iterator s3_iter(0, num_s3_batches, config,
-      config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
-#endif
-
 #if defined(USE_CIRRUS)
   cirrus::TCPClient client;
   lr_model_serializer lms(MODEL_GRAD_SIZE);
@@ -178,34 +183,40 @@ void ErrorTask::run(const Configuration& config) {
 
   wait_for_start(ERROR_TASK_RANK, client, nworkers);
 #elif defined(USE_REDIS)
+  std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
   if (r == NULL || r -> err) { 
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
+#endif
 
-  wait_for_start(ERROR_TASK_RANK, r, nworkers);
-
-  ModelProxyErrorTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
-  mp.run();
+#ifdef DATASET_IN_S3
+  std::cout << "Creating S3Iterator" << std::endl;
+  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
+  S3Iterator s3_iter(0, num_s3_batches, config,
+      config.get_s3_size(), features_per_sample,
+      config.get_minibatch_size());
 #endif
 
   // get data first
   // we get up to 10K samples
   // what we are going to use as a test set
   std::cout << "[ERROR_TASK] getting 10k minibatches"
-    << "\n";
+    << std::endl;
 start:
   std::vector<std::shared_ptr<double>> labels_vec;
   std::vector<std::shared_ptr<double>> samples_vec;
   for (int i = 0; i < 10000; ++i) {
-    std::cout << "[ERROR_TASK] data i: " << i
+    std::cout << "[ERROR_TASK] getting iteration: " << i
       << std::endl;
     std::shared_ptr<double> samples;
     std::shared_ptr<double> labels;
     try {
 #ifdef DATASET_IN_S3
     std::shared_ptr<double> minibatch = s3_iter.get_next();
+    std::cout << "[ERROR_TASK] unpacking"
+      << std::endl;
     unpack_minibatch(minibatch, samples, labels);
 #elif defined(USE_CIRRUS)
       samples = samples_store.get(SAMPLE_BASE + i);
@@ -217,7 +228,7 @@ start:
       if (i == 0)
         goto start;  // no loss to be computed
       else
-        goto loop_accuracy;  // we looked at all minibatches
+        break;  // we looked at all minibatches
     }
     labels_vec.push_back(labels);
     samples_vec.push_back(samples);
@@ -227,10 +238,16 @@ start:
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
+  
+  ModelProxyErrorTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
+  mp.run();
+  ErrorTaskGlobal::mp_start_lock.lock();
+
+  wait_for_start(ERROR_TASK_RANK, r, nworkers);
+  ErrorTaskGlobal::start_time = get_time_us();
 
   //check_labels(labels_vec, samples_per_batch);
 
-loop_accuracy:
   Dataset dataset(samples_vec, labels_vec,
       samples_per_batch, features_per_sample);
 
@@ -253,9 +270,14 @@ loop_accuracy:
       std::cout << "[ERROR_TASK] received the model with id: "
         << MODEL_BASE << "\n";
 #endif
-      std::cout << "[ERROR_TASK] computing loss time(us): " << get_time_us() 
+      std::cout << "[ERROR_TASK] computing loss" << std::endl;
+      std::pair<double, double> ret = model.calc_loss(dataset);
+      std::cout
+        << "Loss: " << ret.first << " Accuracy: " << ret.second
+        << "Avg Loss: " << (ret.first / dataset.num_samples())
+        << " time(us): " << get_time_us()
+        << " time from start (us): " << (get_time_us() - ErrorTaskGlobal::start_time)
         << std::endl;
-      model.calc_loss(dataset);
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;
     }
