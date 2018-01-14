@@ -7,10 +7,9 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <config.h>
 
 class InputReader {
-  typedef double FEATURE_TYPE;
-
   public:
   /**
    * Reads criteo dataset in binary format
@@ -121,9 +120,9 @@ class InputReader {
     std::vector<std::vector<FEATURE_TYPE>>& samples,
     std::vector<FEATURE_TYPE>& labels);
 
-  double compute_mean(std::vector<std::pair<int, double>>&);
-  double compute_stddev(double, std::vector<std::pair<int, double>>&);
-  void standardize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>&);
+  double compute_mean(std::vector<std::pair<int, FEATURE_TYPE>>&);
+  double compute_stddev(double, std::vector<std::pair<int, FEATURE_TYPE>>&);
+  void standardize_sparse_dataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

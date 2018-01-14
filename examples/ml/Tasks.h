@@ -108,7 +108,7 @@ class LogisticTaskS3 : public MLTask {
         auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp, auto& prev_model_version);
     auto get_model(auto r, auto lmd);
     void push_gradient(auto r, LRGradient*);
-    void unpack_minibatch(std::shared_ptr<double> /*minibatch*/,
+    void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 
     std::mutex redis_lock;
@@ -203,7 +203,7 @@ class ErrorTask : public MLTask {
     void get_samples_labels_redis(
         auto r, auto i, auto& samples, auto& labels,
         auto cad_samples, auto cad_labels);
-    void parse_raw_minibatch(const double* minibatch,
+    void parse_raw_minibatch(const FEATURE_TYPE* minibatch,
         auto& samples, auto& labels);
 };
 
@@ -269,7 +269,7 @@ class PerformanceLambdaTask : public MLTask {
     void run(const Configuration& config);
 
   private:
-    void unpack_minibatch(const double* /*minibatch*/,
+    void unpack_minibatch(const FEATURE_TYPE* /*minibatch*/,
         auto& samples, auto& labels);
 
     redisContext* connect_redis();

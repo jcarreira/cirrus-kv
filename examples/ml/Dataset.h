@@ -5,13 +5,12 @@
 #include <cstdint>
 #include <memory>
 #include <Matrix.h>
+#include <config.h>
 
 /**
   * This class is used to hold a dataset (both labels and samples)
   */
 class Dataset {
-  typedef double FEATURE_TYPE;
-
   public:
   Dataset(const FEATURE_TYPE* minibatch,
       uint64_t n_samples,

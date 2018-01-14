@@ -30,11 +30,11 @@ void LoadingTask::run(const Configuration& config) {
   dataset.print();
 #endif
 
-  c_array_serializer<double> cas_samples(batch_size);
-  c_array_deserializer<double> cad_samples(batch_size,
+  c_array_serializer<FEATURE_TYPE> cas_samples(batch_size);
+  c_array_deserializer<FEATURE_TYPE> cad_samples(batch_size,
       "loader samples_store");
-  c_array_serializer<double> cas_labels(samples_per_batch);
-  c_array_deserializer<double> cad_labels(samples_per_batch,
+  c_array_serializer<FEATURE_TYPE> cas_labels(samples_per_batch);
+  c_array_deserializer<FEATURE_TYPE> cad_labels(samples_per_batch,
       "loader labels_store", false);
 
 
@@ -44,9 +44,9 @@ void LoadingTask::run(const Configuration& config) {
 #endif
 #if defined(USE_CIRRUS)
   cirrus::TCPClient client;
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<FEATURE_TYPE>>
     samples_store(IP, PORT, &client, cas_samples, cad_samples);
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<FEATURE_TYPE>>
     labels_store(IP, PORT, &client, cas_labels, cad_labels);
 #elif defined(USE_REDIS)
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -68,28 +68,28 @@ void LoadingTask::run(const Configuration& config) {
       << "Building samples batch. Batch size: " << batch_size << std::endl;
     /** Build sample object
     */
-    auto sample = std::shared_ptr<double>(
-        new double[batch_size],
-        std::default_delete<double[]>());
+    auto sample = std::shared_ptr<FEATURE_TYPE>(
+        new FEATURE_TYPE[batch_size],
+        std::default_delete<FEATURE_TYPE[]>());
     // this memcpy can be avoided with some trickery
     std::memcpy(sample.get(), dataset.sample(i * samples_per_batch),
-        sizeof(double) * batch_size);
+        sizeof(FEATURE_TYPE) * batch_size);
 
     /**
      * Build label object
      */
-    auto label = std::shared_ptr<double>(
-        new double[samples_per_batch],
-        std::default_delete<double[]>());
+    auto label = std::shared_ptr<FEATURE_TYPE>(
+        new FEATURE_TYPE[samples_per_batch],
+        std::default_delete<FEATURE_TYPE[]>());
     // this memcpy can be avoided with some trickery
     std::memcpy(label.get(), dataset.label(i * samples_per_batch),
-        sizeof(double) * samples_per_batch);
+        sizeof(FEATURE_TYPE) * samples_per_batch);
 
     try {
       std::cout << "[LOADER] "
         << "Adding sample batch id: "
         << (SAMPLE_BASE + i)
-        << " samples with size (bytes): " << sizeof(double) * batch_size
+        << " samples with size (bytes): " << sizeof(FEATURE_TYPE) * batch_size
         << std::endl;
 #ifdef DATASET_IN_S3
       {
@@ -99,7 +99,7 @@ void LoadingTask::run(const Configuration& config) {
             new char[len]);
         cas_samples.serialize(sample, data.get());
         s3_put_object(SAMPLE_BASE + i, s3_client,
-            "cirrusonlambdas",
+            S3_BUCKET,
             std::string(data.get(), cas_samples.size(sample)));
       }
 #elif defined(USE_CIRRUS)
@@ -122,7 +122,7 @@ void LoadingTask::run(const Configuration& config) {
             new char[cas_labels.size(label)]);
         cas_labels.serialize(label, data.get());
         s3_put_object(LABEL_BASE + i, s3_client,
-            "cirrusonlambdas",
+            S3_BUCKET,
             std::string(data.get(), cas_labels.size(label)));
       }
 #elif defined(USE_CIRRUS)
@@ -183,7 +183,7 @@ void LoadingTask::run(const Configuration& config) {
     << std::endl;
 
   for (unsigned int i = 0; i < batch_size; ++i) {
-    double val = sample.get()[i];
+    FEATURE_TYPE val = sample.get()[i];
     std::cout << val << " ";
   }
 #endif

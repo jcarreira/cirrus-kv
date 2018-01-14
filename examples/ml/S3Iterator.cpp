@@ -8,16 +8,13 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define S3_BUCKET "cirrusonlambdas"
 
 sem_t semaphore;
-
 
 int str_version = 0;
 std::map<int, std::string> list_strings; // strings from s3
 
-//std::list<std::pair<const double*, int>> minibatches_list; // minibatches available to be returned from get_next
-CircularBuffer<std::pair<const double*, int>> minibatches_list(100000);
+CircularBuffer<std::pair<const FEATURE_TYPE*, int>> minibatches_list(100000);
 
 // s3_cad_size nmber of samples times features per sample
 S3Iterator::S3Iterator(
@@ -51,7 +48,7 @@ S3Iterator::S3Iterator(
 
 int to_delete = -1;
 
-const double* S3Iterator::get_next_fast() {
+const FEATURE_TYPE* S3Iterator::get_next_fast() {
   // we need to delete entry
   if (to_delete != -1) {
     std::cout << "get_next_fast::Deleting entry: " << to_delete
@@ -83,7 +80,7 @@ const double* S3Iterator::get_next_fast() {
   return ret.first;
 }
 
-std::shared_ptr<double> S3Iterator::get_next() {
+std::shared_ptr<FEATURE_TYPE> S3Iterator::get_next() {
   throw std::runtime_error("No longer supported");
   //std::cout << "Get next "
   //  << " last: " << last
@@ -99,7 +96,7 @@ std::shared_ptr<double> S3Iterator::get_next() {
     }
   }
 
-  std::shared_ptr<double> ret = ring.front();
+  std::shared_ptr<FEATURE_TYPE> ret = ring.front();
   ring.pop_front();
 
   uint64_t ring_size = ring.size();
@@ -111,7 +108,7 @@ std::shared_ptr<double> S3Iterator::get_next() {
 
   return ret;
 #endif
-  return std::shared_ptr<double>(); // dummy
+  return std::shared_ptr<FEATURE_TYPE>(); // dummy
 }
 
 void S3Iterator::push_samples(std::ostringstream* oss) {
@@ -137,7 +134,7 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
   ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
   for (uint64_t i = 0; i < n_minibatches; ++i) {
-    const double* data = reinterpret_cast<const double*>(str_iter->second.c_str()) + i * minibatch_n_entries;
+    const FEATURE_TYPE* data = reinterpret_cast<const FEATURE_TYPE*>(str_iter->second.c_str()) + i * minibatch_n_entries;
 
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
@@ -155,7 +152,7 @@ void S3Iterator::thread_function() {
   std::cout << "Building S3 deser. with size: "
     << s3_rows << " x " << (s3_cols + 1) << " = " << (s3_rows * (s3_cols + 1))
     << std::endl;
-  c_array_deserializer<double> cad_samples(
+  c_array_deserializer<FEATURE_TYPE> cad_samples(
       s3_rows * (s3_cols + 1), // also count labels
       "S3 deserializer");
 

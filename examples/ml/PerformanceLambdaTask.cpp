@@ -34,17 +34,17 @@ void check_redis(auto r) {
 std::unique_ptr<LRModel> lr_model;
 
 void PerformanceLambdaTask::unpack_minibatch(
-    const double* minibatch,
+    const FEATURE_TYPE* minibatch,
     auto& samples, auto& labels) {
   uint64_t num_samples_per_batch = batch_size / features_per_sample;
 
-  samples = std::shared_ptr<double>(
-      new double[batch_size], std::default_delete<double[]>());
-  labels = std::shared_ptr<double>(
-      new double[num_samples_per_batch], std::default_delete<double[]>());
+  samples = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[batch_size], std::default_delete<FEATURE_TYPE[]>());
+  labels = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[num_samples_per_batch], std::default_delete<FEATURE_TYPE[]>());
 
   for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
-    const double* data = minibatch + j * (features_per_sample + 1);
+    const FEATURE_TYPE* data = minibatch + j * (features_per_sample + 1);
     labels.get()[j] = *data;
 
     if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
@@ -79,10 +79,10 @@ void PerformanceLambdaTask::run(const Configuration& config) {
   auto start = get_time_ns();
   while (1) {
     // maybe we can wait a few iterations to get the model
-    //std::shared_ptr<double> samples;
-    //std::shared_ptr<double> labels;
+    //std::shared_ptr<FEATURE_TYPE> samples;
+    //std::shared_ptr<FEATURE_TYPE> labels;
     
-    const double* minibatch = s3_iter.get_next_fast();
+    const FEATURE_TYPE* minibatch = s3_iter.get_next_fast();
 
     //std::cout << "building dataset" << std::endl;
     Dataset dataset(minibatch, samples_per_batch, features_per_sample);
@@ -97,7 +97,7 @@ void PerformanceLambdaTask::run(const Configuration& config) {
     //std::cout << "computing gradient" << std::endl;
     std::unique_ptr<ModelGradient> gradient;
     gradient = lr_model->minibatch_grad(dataset.samples_,
-        const_cast<double*>(dataset.labels_.get()), samples_per_batch, config.get_epsilon());
+        const_cast<FEATURE_TYPE*>(dataset.labels_.get()), samples_per_batch, config.get_epsilon());
         //labels.get(), samples_per_batch, config.get_epsilon());
     
     count++;

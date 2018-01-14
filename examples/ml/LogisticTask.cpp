@@ -12,11 +12,11 @@ void LogisticTask::run(const Configuration& config, int worker) {
   lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
   lr_model_serializer lms(MODEL_GRAD_SIZE);
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-  c_array_serializer<double> cas_samples(batch_size);
-  c_array_deserializer<double> cad_samples(batch_size,
+  c_array_serializer<FEATURE_TYPE> cas_samples(batch_size);
+  c_array_deserializer<FEATURE_TYPE> cad_samples(batch_size,
       "worker samples_store");
-  c_array_serializer<double> cas_labels(samples_per_batch);
-  c_array_deserializer<double> cad_labels(samples_per_batch,
+  c_array_serializer<FEATURE_TYPE> cas_labels(samples_per_batch);
+  c_array_deserializer<FEATURE_TYPE> cad_labels(samples_per_batch,
       "worker labels_store", false);
 
 #ifdef USE_CIRRUS
@@ -66,12 +66,12 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
 #ifdef USE_CIRRUS
   // this is used to access the training data sample
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<FEATURE_TYPE>>
     samples_store(IP, PORT, &client, cas_samples, cad_samples);
   cirrus::LRAddedEvictionPolicy samples_policy(6);
-  cirrus::CacheManager<std::shared_ptr<double>> samples_cm(
+  cirrus::CacheManager<std::shared_ptr<FEATURE_TYPE>> samples_cm(
       &samples_store, &samples_policy, 6);
-  cirrus::CirrusIterable<std::shared_ptr<double>> s_iter(
+  cirrus::CirrusIterable<std::shared_ptr<FEATURE_TYPE>> s_iter(
       &samples_cm, READ_AHEAD, SAMPLE_BASE,
       SAMPLE_BASE + num_batches - 1);
 
@@ -80,13 +80,13 @@ void LogisticTask::run(const Configuration& config, int worker) {
   // this is used to access the training labels
   // we configure this store to return shared_ptr that do not free memory
   // because these objects will be owned by the Dataset
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
+  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<FEATURE_TYPE>>
     labels_store(IP, PORT, &client,
         cas_labels, cad_labels);
   cirrus::LRAddedEvictionPolicy labels_policy(6);
-  cirrus::CacheManager<std::shared_ptr<double>> labels_cm(
+  cirrus::CacheManager<std::shared_ptr<FEATURE_TYPE>> labels_cm(
       &labels_store, &labels_policy, 6);
-  cirrus::CirrusIterable<std::shared_ptr<double>> l_iter(
+  cirrus::CirrusIterable<std::shared_ptr<FEATURE_TYPE>> l_iter(
       &labels_cm, READ_AHEAD, LABEL_BASE,
       LABEL_BASE + num_batches - 1);
   auto labels_iter = l_iter.begin();
@@ -106,8 +106,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
   uint64_t version = 0;
   while (1) {
     // maybe we can wait a few iterations to get the model
-    std::shared_ptr<double> samples;
-    std::shared_ptr<double> labels;
+    std::shared_ptr<FEATURE_TYPE> samples;
+    std::shared_ptr<FEATURE_TYPE> labels;
     LRModel model(MODEL_GRAD_SIZE);
     try {
 #ifdef DEBUG
@@ -148,7 +148,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
 #ifdef USE_CIRRUS
       samples = *samples_iter;
 #elif defined USE_PREFETCH
-      int len_samples = batch_size * sizeof(double);
+      int len_samples = batch_size * sizeof(FEATURE_TYPE);
       data = rit_samples.get_next();
       samples = cad_samples(data, len_samples);
       free(data);
@@ -166,7 +166,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
       uint64_t elapsed_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             finish-start).count();
-      double bw = 1.0 * batch_size * sizeof(double) /
+      double bw = 1.0 * batch_size * sizeof(FEATURE_TYPE) /
         elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
 #ifdef USE_CIRRUS
       std::cout << "Get Sample " << batch_id << " Elapsed (CIRRUS) "
@@ -192,7 +192,7 @@ void LogisticTask::run(const Configuration& config, int worker) {
       labels = *labels_iter;
 #elif defined USE_PREFETCH
       data = rit_labels.get_next();
-      int len_labels = batch_size * sizeof(double) / 10;
+      int len_labels = batch_size * sizeof(FEATURE_TYPE) / 10;
       labels = cad_labels(data, len_labels);
       free(data);
 #elif defined(USE_REDIS)
@@ -253,8 +253,8 @@ void LogisticTask::run(const Configuration& config, int worker) {
 
     // Big hack. Shame on me
     // auto now = get_time_us();
-    std::shared_ptr<double> l(new double[samples_per_batch],
-        ml_array_nodelete<double>);
+    std::shared_ptr<FEATURE_TYPE> l(new FEATURE_TYPE[samples_per_batch],
+        ml_array_nodelete<FEATURE_TYPE>);
     std::copy(labels.get(), labels.get() + samples_per_batch, l.get());
     // std::cout << "Elapsed: " << get_time_us() - now << "\n";
 
@@ -354,11 +354,11 @@ void LogisticTaskPreloaded::get_data_samples(
     auto r, uint64_t left_id, uint64_t right_id, auto& samples, auto& labels) {
   std::cout << "get_data_samples" << std::endl;
 
-  c_array_serializer<double> cas_samples(batch_size);
-  c_array_deserializer<double> cad_samples(batch_size,
+  c_array_serializer<FEATURE_TYPE> cas_samples(batch_size);
+  c_array_deserializer<FEATURE_TYPE> cad_samples(batch_size,
       "worker samples_store");
-  c_array_serializer<double> cas_labels(samples_per_batch);
-  c_array_deserializer<double> cad_labels(samples_per_batch,
+  c_array_serializer<FEATURE_TYPE> cas_labels(samples_per_batch);
+  c_array_deserializer<FEATURE_TYPE> cad_labels(samples_per_batch,
       "error labels_store", false);
 
   uint64_t size = right_id - left_id;
@@ -425,8 +425,8 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
   std::cout << "[WORKER-PRELOADED] "
     << "num_batches: " << num_batches << std::endl;
 
-  std::vector<std::shared_ptr<double>> samples_preloaded;
-  std::vector<std::shared_ptr<double>> labels_preloaded;
+  std::vector<std::shared_ptr<FEATURE_TYPE>> samples_preloaded;
+  std::vector<std::shared_ptr<FEATURE_TYPE>> labels_preloaded;
 
   wait_for_start(WORKER_TASK_RANK + worker, r, nworkers);
 
@@ -517,8 +517,8 @@ void LogisticTaskPreloaded::run(const Configuration& config, int worker) {
     first_time = false;
 
     // Big hack. Shame on me
-    std::shared_ptr<double> l(new double[samples_per_batch],
-        ml_array_nodelete<double>);
+    std::shared_ptr<FEATURE_TYPE> l(new FEATURE_TYPE[samples_per_batch],
+        ml_array_nodelete<FEATURE_TYPE>);
     std::copy(labels.get(), labels.get() + samples_per_batch, l.get());
 
     std::cout << "[WORKER] "

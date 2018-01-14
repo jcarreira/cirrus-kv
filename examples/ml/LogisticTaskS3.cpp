@@ -22,6 +22,8 @@ void check_redis(auto r) {
   }
 }
 
+redisContext* redis_con;
+
 // we need global variables because of the static callbacks
 namespace LogisticTaskS3Global {
   std::mutex mp_start_lock;
@@ -207,7 +209,7 @@ class LogisticTaskGradientProxy {
 };
 
 void LogisticTaskS3::push_gradient(
-    auto gradient_r, LRGradient* lrg) {
+    auto /*gradient_r*/, LRGradient* lrg) {
   lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
 
 #ifdef DEBUG
@@ -223,16 +225,19 @@ void LogisticTaskS3::push_gradient(
 #endif
 
   redis_lock.lock();
-  int status = redisAsyncCommand(gradient_r, NULL, NULL,
-      "PUBLISH gradients %b", data.get(), gradient_size);
+  //int status = redisAsyncCommand(gradient_r, NULL, NULL,
+  //    "PUBLISH gradients %b", data.get(), gradient_size);
+  redisReply* reply = (redisReply*)redisCommand(redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
+  freeReplyObject(reply);
+
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
 #endif
   redis_lock.unlock();
 
-  if (status == REDIS_ERR) {
-    throw std::runtime_error("Error in redisAsyncCommand");
-  }
+  //if (status == REDIS_ERR) {
+  //  throw std::runtime_error("Error in redisAsyncCommand");
+  //}
 
 #ifdef DEBUG
   std::cout << "[WORKER] "
@@ -245,17 +250,17 @@ void LogisticTaskS3::push_gradient(
 /** We unpack each minibatch into samples and labels
   */
 void LogisticTaskS3::unpack_minibatch(
-    std::shared_ptr<double> minibatch,
+    std::shared_ptr<FEATURE_TYPE> minibatch,
     auto& samples, auto& labels) {
   uint64_t num_samples_per_batch = batch_size / features_per_sample;
 
-  samples = std::shared_ptr<double>(
-      new double[batch_size], std::default_delete<double[]>());
-  labels = std::shared_ptr<double>(
-      new double[num_samples_per_batch], std::default_delete<double[]>());
+  samples = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[batch_size], std::default_delete<FEATURE_TYPE[]>());
+  labels = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[num_samples_per_batch], std::default_delete<FEATURE_TYPE[]>());
 
   for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
-    double* data = minibatch.get() + j * (features_per_sample + 1);
+    FEATURE_TYPE* data = minibatch.get() + j * (features_per_sample + 1);
     labels.get()[j] = *data;
 
     if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0))
@@ -307,7 +312,7 @@ try_again:
       std::chrono::steady_clock::now();
 #endif
 
-    const double* minibatch = s3_iter.get_next_fast();
+    const FEATURE_TYPE* minibatch = s3_iter.get_next_fast();
 #ifdef DEBUG
     std::cout << "[WORKER] "
       << "got s3 data"
@@ -346,9 +351,9 @@ auto connect_redis() {
   std::cout << "[WORKER] "
     << "Worker task connecting to REDIS. "
     << "IP: " << REDIS_IP << std::endl;
-  auto r = redis_connect(REDIS_IP, REDIS_PORT);
-  check_redis(r);
-  return r;
+  auto redis_con = redis_connect(REDIS_IP, REDIS_PORT);
+  check_redis(redis_con);
+  return redis_con;
 }
 
 void LogisticTaskS3::run(const Configuration& config, int worker) {
@@ -358,7 +363,8 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
-  auto redis_con = connect_redis();
+  redis_con = connect_redis();
+  //auto redis_con = connect_redis();
   redis_lock.unlock();
 
   std::cout << "Starting ModelProxy" << std::endl;
@@ -415,7 +421,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 #endif
     try {
       gradient = model.minibatch_grad(dataset->samples_,
-          const_cast<double*>(dataset->labels_.get()), samples_per_batch, config.get_epsilon());
+          const_cast<FEATURE_TYPE*>(dataset->labels_.get()), samples_per_batch, config.get_epsilon());
     } catch(const std::runtime_error& e) {
       std::cout << "Error. " << e.what() << std::endl;
       exit(-1);

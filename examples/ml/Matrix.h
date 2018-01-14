@@ -5,17 +5,18 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <config.h>
 
 class Matrix {
  public:
-   Matrix(const double* d, uint64_t r, uint64_t c, bool); // XXX FIX
+   Matrix(const FEATURE_TYPE* d, uint64_t r, uint64_t c, bool); // XXX FIX
     /**
       * Build matrix
       * This method copies all the inputs
-      * @param m Contents of matrix in a vector of doubles format
+      * @param m Contents of matrix in a vector of FEATURE_TYPE format
       */
-    Matrix(std::vector<std::vector<double>> m =
-            std::vector<std::vector<double>>());
+    Matrix(std::vector<std::vector<FEATURE_TYPE>> m =
+            std::vector<std::vector<FEATURE_TYPE>>());
 
     /**
       * Build matrix
@@ -24,7 +25,7 @@ class Matrix {
       * @param rows Number of rows of matrix
       * @param cols Number of columns of matrix
       */
-    Matrix(const double* data, uint64_t rows, uint64_t cols);
+    Matrix(const FEATURE_TYPE* data, uint64_t rows, uint64_t cols);
 
     /**
       * Build matrix
@@ -33,7 +34,7 @@ class Matrix {
       * @param rows Number of rows in each minibatch
       * @param cols Number of columns in each minibatch
       */
-    Matrix(const std::vector<std::shared_ptr<double>> d,
+    Matrix(const std::vector<std::shared_ptr<FEATURE_TYPE>> d,
         uint64_t r, uint64_t c);
 
     /**
@@ -41,7 +42,7 @@ class Matrix {
       * @param l Index to the row
       * @returns Returns const pointer to contents of the row
       */
-    const double* row(uint64_t l) const;
+    const FEATURE_TYPE* row(uint64_t l) const;
 
     /**
       * Computes and returns transpose of the matrix
@@ -74,7 +75,7 @@ class Matrix {
  public:
     uint64_t rows;   //< number of rows of matrix
     uint64_t cols;   //< number of columns of matrix
-    std::shared_ptr<const double> data;  //< pointer to matrix contents
+    std::shared_ptr<const FEATURE_TYPE> data;  //< pointer to matrix contents
     mutable std::shared_ptr<Matrix> cached_transpose;  //< cache for the transpose
 };
 

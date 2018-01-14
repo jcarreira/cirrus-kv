@@ -29,7 +29,7 @@ Dataset::Dataset(const FEATURE_TYPE* minibatch,
     
     FEATURE_TYPE* l = new FEATURE_TYPE[n_samples];
     for (uint64_t j = 0; j < n_samples;++j) {
-      const double* data = minibatch + j * (n_features + 1);
+      const FEATURE_TYPE* data = minibatch + j * (n_features + 1);
       l[j] = *data;
     }
     labels_.reset(l, array_deleter<FEATURE_TYPE>);
@@ -102,7 +102,7 @@ void Dataset::print_info() const {
   std::cout << "Dataset #cols: " << samples_.cols << std::endl;
 }
 
-std::shared_ptr<Dataset::FEATURE_TYPE>
+std::shared_ptr<FEATURE_TYPE>
 Dataset::build_s3_obj(uint64_t l, uint64_t r) {
   uint64_t num_samples = r - l;
   uint64_t entries_per_sample = samples_.cols + 1;

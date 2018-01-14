@@ -12,12 +12,12 @@
 SparseDataset::SparseDataset() {
 }
 
-SparseDataset::SparseDataset(const std::vector<std::vector<std::pair<int, double>>>& samples) :
+SparseDataset::SparseDataset(const std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples) :
     data_(samples), max_features_(0) {
 
     max_features_ = std::max_element(samples.begin(), samples.end(),
-        [](const std::vector<std::pair<int, double>>& a,
-           const std::vector<std::pair<int, double>>& b) { return a.size() < b.size(); })->size();
+        [](const std::vector<std::pair<int, FEATURE_TYPE>>& a,
+           const std::vector<std::pair<int, FEATURE_TYPE>>& b) { return a.size() < b.size(); })->size();
 }
 
 uint64_t SparseDataset::num_samples() const {
@@ -31,7 +31,7 @@ void SparseDataset::check() const {
         throw std::runtime_error("Input error");
       }
 
-      double rating = v.second;
+      FEATURE_TYPE rating = v.second;
       if (rating < -100 || rating > 100) {
         throw std::runtime_error(
             "SparseDataset::check_values wrong rating value: " + std::to_string(rating));
@@ -111,7 +111,7 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
   std::default_random_engine re(rd());
   std::uniform_int_distribution<int> sampler(0, num_samples());
 
-  std::vector<std::vector<std::pair<int, double>>> samples;
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
 
   for (uint64_t i = 0; i < n_samples; ++i) {
     int index = sampler(re);
@@ -123,7 +123,7 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
 }
 
 SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) const {
-  std::vector<std::vector<std::pair<int, double>>> samples;
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
 
   if (start + n_samples > data_.size()) {
     throw std::runtime_error("Start goes over size of dataset");

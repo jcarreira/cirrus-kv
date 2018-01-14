@@ -161,8 +161,8 @@ void ErrorTask::run(const Configuration& config) {
 
   // declare serializers
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
-  c_array_deserializer<double> cad_samples(batch_size, "error samples_store");
-  c_array_deserializer<double> cad_labels(samples_per_batch,
+  c_array_deserializer<FEATURE_TYPE> cad_samples(batch_size, "error samples_store");
+  c_array_deserializer<FEATURE_TYPE> cad_labels(samples_per_batch,
       "error labels_store", false);
 
   std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
@@ -184,15 +184,15 @@ void ErrorTask::run(const Configuration& config) {
   std::cout << "[ERROR_TASK] getting 10k minibatches"
     << std::endl;
 start:
-  std::vector<std::shared_ptr<double>> labels_vec;
-  std::vector<std::shared_ptr<double>> samples_vec;
+  std::vector<std::shared_ptr<FEATURE_TYPE>> labels_vec;
+  std::vector<std::shared_ptr<FEATURE_TYPE>> samples_vec;
   for (int i = 0; i < 10000; ++i) {
     std::cout << "[ERROR_TASK] getting iteration: " << i
       << std::endl;
-    std::shared_ptr<double> samples;
-    std::shared_ptr<double> labels;
+    std::shared_ptr<FEATURE_TYPE> samples;
+    std::shared_ptr<FEATURE_TYPE> labels;
     try {
-      const double* minibatch = s3_iter.get_next_fast();
+      const FEATURE_TYPE* minibatch = s3_iter.get_next_fast();
       std::cout << "[ERROR_TASK] unpacking"
         << std::endl;
       parse_raw_minibatch(minibatch, samples, labels);
@@ -241,7 +241,7 @@ start:
         << MODEL_BASE << "\n";
 #endif
       std::cout << "[ERROR_TASK] computing loss" << std::endl;
-      std::pair<double, double> ret = model.calc_loss(dataset);
+      std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model.calc_loss(dataset);
       std::cout
         << "Loss: " << ret.first << " Accuracy: " << ret.second
         << "Avg Loss: " << (ret.first / dataset.num_samples())
@@ -255,17 +255,17 @@ start:
 }
 
 void ErrorTask::parse_raw_minibatch(
-    const double* minibatch,
+    const FEATURE_TYPE* minibatch,
     auto& samples, auto& labels) {
   uint64_t num_samples_per_batch = batch_size / features_per_sample;
 
-  samples = std::shared_ptr<double>(
-      new double[batch_size], std::default_delete<double[]>());
-  labels = std::shared_ptr<double>(
-      new double[num_samples_per_batch], std::default_delete<double[]>());
+  samples = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[batch_size], std::default_delete<FEATURE_TYPE[]>());
+  labels = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[num_samples_per_batch], std::default_delete<FEATURE_TYPE[]>());
 
   for (uint64_t j = 0; j < num_samples_per_batch; ++j) {
-    const double* data = minibatch + j * (features_per_sample + 1);
+    const FEATURE_TYPE* data = minibatch + j * (features_per_sample + 1);
     labels.get()[j] = *data;
 
     if (!FLOAT_EQ(*data, 1.0) && !FLOAT_EQ(*data, 0.0)) {

@@ -10,7 +10,7 @@
 
 /**
   * Logistic regression model
-  * Model is represented with a vector of doubles
+  * Model is represented with a vector of FEATURE_TYPEs
   */
 class LRModel : public Model {
  public:
@@ -25,7 +25,7 @@ class LRModel : public Model {
       * @param w Array of model weights
       * @param d Features dimension
       */
-    LRModel(const double* w, uint64_t d);
+    LRModel(const FEATURE_TYPE* w, uint64_t d);
 
     /**
      * Set the model weights to values between 0 and 1
@@ -87,7 +87,7 @@ class LRModel : public Model {
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
             const Matrix& dataset,
-            double* labels,
+            FEATURE_TYPE* labels,
             uint64_t labels_size,
             double epsilon) const override;
     /**
@@ -131,9 +131,9 @@ class LRModel : public Model {
     /**
       * Check whether value n is an integer
       */
-    bool is_integer(double n) const;
+    bool is_integer(FEATURE_TYPE n) const;
 
-    std::vector<double> weights_;  //< vector of the model weights
+    std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
 };
 
 #endif  // EXAMPLES_ML_LRMODEL_H_

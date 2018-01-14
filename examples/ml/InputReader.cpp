@@ -182,7 +182,7 @@ void InputReader::print_sample(const std::vector<FEATURE_TYPE>& sample) const {
   std::cout << std::endl;
 }
 
-std::vector<std::vector<InputReader::FEATURE_TYPE>>
+std::vector<std::vector<FEATURE_TYPE>>
 InputReader::read_mnist_csv(const std::string& input_file,
         std::string delimiter) {
     FILE* fin = fopen(input_file.c_str(), "r");
@@ -404,7 +404,7 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
 
   *number_movies = *number_users = 0;
 
-  std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> sparse_ds;
 
   // XXX Fix
   sparse_ds.resize(50732);
@@ -422,7 +422,7 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
     l = strsep(&s, ",");
     int movieId = string_to<int>(l);
     l = strsep(&s, ",");
-    double rating = string_to<double>(l);
+    FEATURE_TYPE rating = string_to<FEATURE_TYPE>(l);
 
     sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
 
@@ -433,7 +433,7 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
   return SparseDataset(sparse_ds);
 }
 
-double InputReader::compute_mean(std::vector<std::pair<int, double>>& user_ratings) {
+double InputReader::compute_mean(std::vector<std::pair<int, FEATURE_TYPE>>& user_ratings) {
   double mean = 0;
 
   for (auto& r : user_ratings) {
@@ -444,7 +444,7 @@ double InputReader::compute_mean(std::vector<std::pair<int, double>>& user_ratin
   return mean;
 }
 
-double InputReader::compute_stddev(double mean, std::vector<std::pair<int, double>>& user_ratings) {
+double InputReader::compute_stddev(double mean, std::vector<std::pair<int, FEATURE_TYPE>>& user_ratings) {
   double stddev = 0;
 
   for (const auto& r : user_ratings) {
@@ -456,7 +456,7 @@ double InputReader::compute_stddev(double mean, std::vector<std::pair<int, doubl
   return stddev;
 }
 
-void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<int, double>>>& sparse_ds) {
+void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds) {
   // for every use we compute the mean and stddev
   // then we normalize each entry
   for (uint64_t i = 0; i < sparse_ds.size(); ++i) {
@@ -513,7 +513,7 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
 
   *number_movies = *number_users = 0;
 
-  std::vector<std::vector<std::pair<int, double>>> sparse_ds;
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> sparse_ds;
   sparse_ds.resize(2649430);
 
   std::string line;
@@ -529,7 +529,7 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
     l = strsep(&s, ",");
     int movieId = string_to<int>(l);
     l = strsep(&s, ",");
-    double rating = string_to<double>(l);
+    FEATURE_TYPE rating = string_to<FEATURE_TYPE>(l);
 
     sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
 

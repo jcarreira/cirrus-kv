@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <config.h>
 
 /**
   * This class is a base class for a model's gradient
@@ -65,7 +66,7 @@ class LRGradient : public ModelGradient {
     virtual ~LRGradient() = default;
 
     LRGradient(LRGradient&& data);
-    explicit LRGradient(const std::vector<double>& data);
+    explicit LRGradient(const std::vector<FEATURE_TYPE>& data);
     explicit LRGradient(int d);
 
     LRGradient& operator=(LRGradient&& other);
@@ -77,7 +78,7 @@ class LRGradient : public ModelGradient {
     void print() const override;
     void check_values() const override;
  protected:
-    std::vector<double> weights;  //< gradients of the LR gradient
+    std::vector<FEATURE_TYPE> weights;  //< gradients of the LR gradient
 };
 
 class SoftmaxGradient : public ModelGradient {
@@ -87,7 +88,7 @@ class SoftmaxGradient : public ModelGradient {
     virtual ~SoftmaxGradient() = default;
 
     SoftmaxGradient(uint64_t nclasses, uint64_t d);
-    explicit SoftmaxGradient(const std::vector<std::vector<double>>&);
+    explicit SoftmaxGradient(const std::vector<std::vector<FEATURE_TYPE>>&);
 
     void loadSerialized(const void*);
     void serialize(void*) const override;
@@ -97,7 +98,7 @@ class SoftmaxGradient : public ModelGradient {
     void check_values() const override;
  protected:
     // [D * K]
-    std::vector<std::vector<double>> weights;  //< weights for softmax gradient
+    std::vector<std::vector<FEATURE_TYPE>> weights;  //< weights for softmax gradient
 };
 
 class MFGradient : public ModelGradient {
@@ -107,7 +108,7 @@ class MFGradient : public ModelGradient {
     virtual ~MFGradient() = default;
 
     MFGradient(uint64_t nsamples, uint64_t nfactors);
-    explicit MFGradient(const std::vector<std::vector<double>>&);
+    explicit MFGradient(const std::vector<std::vector<FEATURE_TYPE>>&);
 
     void loadSerialized(const void*);
     void serialize(void*) const override;
@@ -117,7 +118,7 @@ class MFGradient : public ModelGradient {
     void check_values() const override;
  protected:
     // [D * K]
-    std::vector<std::vector<double>> weights;
+    std::vector<std::vector<FEATURE_TYPE>> weights;
 };
 
 #endif  // EXAMPLES_ML_MODELGRADIENT_H_

@@ -2,7 +2,7 @@
 #include <Utils.h>
 #include <Checksum.h>
 
-Matrix::Matrix(std::vector<std::vector<double>> m) :
+Matrix::Matrix(std::vector<std::vector<FEATURE_TYPE>> m) :
   rows(0), cols(0), data(0) {
     if (!m.size()) {
       throw std::runtime_error("Wrong vector size in Matrix");
@@ -11,7 +11,7 @@ Matrix::Matrix(std::vector<std::vector<double>> m) :
     rows = m.size();
     cols = m[0].size();
 
-    double* new_array = new double[rows * cols];
+    FEATURE_TYPE* new_array = new FEATURE_TYPE[rows * cols];
 
     uint64_t index = 0;
     for (const auto& v : m) {
@@ -21,57 +21,57 @@ Matrix::Matrix(std::vector<std::vector<double>> m) :
     }
 
     // bug here
-    data.reset(const_cast<const double*>(new_array),
-        std::default_delete<const double[]>());
+    data.reset(const_cast<const FEATURE_TYPE*>(new_array),
+        std::default_delete<const FEATURE_TYPE[]>());
   }
 
-Matrix::Matrix(const double* d, uint64_t r, uint64_t c) {
+Matrix::Matrix(const FEATURE_TYPE* d, uint64_t r, uint64_t c) {
   rows = r;
   cols = c;
 
   // XXX extra copy here
-  double* copy = new double[rows * cols];
-  memcpy(copy, d, rows * cols * sizeof(double));
+  FEATURE_TYPE* copy = new FEATURE_TYPE[rows * cols];
+  memcpy(copy, d, rows * cols * sizeof(FEATURE_TYPE));
 
-  data.reset(copy, std::default_delete<const double[]>());
+  data.reset(copy, std::default_delete<const FEATURE_TYPE[]>());
 }
 
-Matrix::Matrix(const double* d, uint64_t r, uint64_t c, bool) {
+Matrix::Matrix(const FEATURE_TYPE* d, uint64_t r, uint64_t c, bool) {
   rows = r;
   cols = c;
 
   // XXX extra copy here
-  double* copy = new double[rows * cols];
+  FEATURE_TYPE* copy = new FEATURE_TYPE[rows * cols];
   for (uint64_t j = 0; j < rows; ++j) {
-    const double* data = d + j * (cols + 1);
+    const FEATURE_TYPE* data = d + j * (cols + 1);
     data++;
     std::copy(data,
         data + cols,
         copy + j * cols);
   }
-  data.reset(copy, std::default_delete<const double[]>());
+  data.reset(copy, std::default_delete<const FEATURE_TYPE[]>());
 }
 
-Matrix::Matrix(const std::vector<std::shared_ptr<double>> d,
+Matrix::Matrix(const std::vector<std::shared_ptr<FEATURE_TYPE>> d,
     uint64_t r, uint64_t c) {
 
   rows = d.size() * r;
   cols = c;
 
   // XXX extra copy here
-  double* copy = new double[rows * cols];
+  FEATURE_TYPE* copy = new FEATURE_TYPE[rows * cols];
   for (uint64_t i = 0; i < d.size(); ++i) {
     memcpy(
         copy + i * (r * c),
         d[i].get(),
-        r * c * sizeof(double));
+        r * c * sizeof(FEATURE_TYPE));
   }
 
-  data.reset(copy, std::default_delete<const double[]>());
+  data.reset(copy, std::default_delete<const FEATURE_TYPE[]>());
 }
 
-const double* Matrix::row(uint64_t l) const {
-  const double* data_start = reinterpret_cast<const double*>(data.get());
+const FEATURE_TYPE* Matrix::row(uint64_t l) const {
+  const FEATURE_TYPE* data_start = reinterpret_cast<const FEATURE_TYPE*>(data.get());
   return &data_start[l * cols];
 }
 
@@ -86,13 +86,13 @@ Matrix Matrix::T() const {
 }
 
 uint64_t Matrix::sizeBytes() const {
-  return rows * cols * sizeof(double);
+  return rows * cols * sizeof(FEATURE_TYPE);
 }
 
 void Matrix::check_values() const {
   for (uint64_t i = 0; i < rows; ++i) {
     for (uint64_t j = 0; j < cols; ++j) {
-      double val = data.get()[i * cols + j];
+      FEATURE_TYPE val = data.get()[i * cols + j];
       if (std::isinf(val) || std::isnan(val)) {
         throw std::runtime_error("Matrix has nans");
       }
@@ -110,13 +110,13 @@ void Matrix::check_values() const {
 }
 
 double Matrix::checksum() const {
-  return crc32(data.get(), rows * cols * sizeof(double));
+  return crc32(data.get(), rows * cols * sizeof(FEATURE_TYPE));
 }
 
 void Matrix::print() const {
   for (uint64_t i = 0; i < rows; ++i) {
     for (uint64_t j = 0; j < cols; ++j) {
-      double val = data.get()[i * cols + j];
+      FEATURE_TYPE val = data.get()[i * cols + j];
       std::cout << val << " ";
     }
   }

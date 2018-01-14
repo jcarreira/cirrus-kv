@@ -10,7 +10,7 @@ LRModel::LRModel(uint64_t d) {
     weights_.resize(d);
 }
 
-LRModel::LRModel(const double* w, uint64_t d) {
+LRModel::LRModel(const FEATURE_TYPE* w, uint64_t d) {
     weights_.resize(d);
     std::copy(w, w + d, weights_.begin());
 }
@@ -20,9 +20,9 @@ uint64_t LRModel::size() const {
 }
 
 std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
-    uint64_t d = size / sizeof(double);
+    uint64_t d = size / sizeof(FEATURE_TYPE);
     std::unique_ptr<LRModel> model = std::make_unique<LRModel>(
-            reinterpret_cast<double*>(data), d);
+            reinterpret_cast<FEATURE_TYPE*>(data), d);
     return model;
 }
 
@@ -68,18 +68,18 @@ void LRModel::sgd_update(double learning_rate,
 }
 
 uint64_t LRModel::getSerializedSize() const {
-    return size() * sizeof(double);
+    return size() * sizeof(FEATURE_TYPE);
 }
 
 void LRModel::loadSerialized(const void* data) {
     cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
-    const double* v = reinterpret_cast<const double*>(data);
+    const FEATURE_TYPE* v = reinterpret_cast<const FEATURE_TYPE*>(data);
     std::copy(v, v + size(), weights_.begin());
 }
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
         const Matrix& dataset,
-        double* labels,
+        FEATURE_TYPE* labels,
         uint64_t labels_size,
         double epsilon) const {
     auto w = weights_;
@@ -91,24 +91,28 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
       throw std::runtime_error("Sizes don't match");
     }
 
-    const double* dataset_data = dataset.data.get();
+    const FEATURE_TYPE* dataset_data = dataset.data.get();
     // create Matrix for dataset
-    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
         Eigen::Dynamic, Eigen::RowMajor>>
-          ds(const_cast<double*>(dataset_data), dataset.rows, dataset.cols);
+          ds(const_cast<FEATURE_TYPE*>(dataset_data), dataset.rows, dataset.cols);
 
     // create weight vector
-    Eigen::Map<Eigen::VectorXd> tmp_weights(w.data(), size());
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
+    //Eigen::Map<Eigen::VectorXd> tmp_weights(w.data(), size());
 
     // create vector with labels
-    Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
+    //Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
 
     // apply logistic function to matrix multiplication
     // between dataset and weights
     auto part1_1 = (ds * tmp_weights);
     auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
+    //auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1_float));
 
-    Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
+    //Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
 
     // compute difference between labels and logistic probability
     auto part2 = lbs - part1;
@@ -116,9 +120,10 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     auto part4 = tmp_weights * 2 * epsilon;
     auto res = part4 + part3;
 
-    std::vector<double> vec_res;
+    std::vector<FEATURE_TYPE> vec_res;
     vec_res.resize(res.size());
-    Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
+    Eigen::Matrix<FEATURE_TYPE, -1, 1>::Map(vec_res.data(), res.size()) = res;
+    //Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
@@ -137,22 +142,23 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
   dataset.check();
 #endif
 
-  const double* ds_data =
-    reinterpret_cast<const double*>(dataset.samples_.data.get());
+  const FEATURE_TYPE* ds_data =
+    reinterpret_cast<const FEATURE_TYPE*>(dataset.samples_.data.get());
 
-  Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic,
+  Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
     Eigen::Dynamic, Eigen::RowMajor>>
-      ds(const_cast<double*>(ds_data),
+      ds(const_cast<FEATURE_TYPE*>(ds_data),
           dataset.samples_.rows, dataset.samples_.cols);
 
-  Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
+  Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> weights_eig(w.data(), size());
+  //Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
 
   // count how many samples are wrongly classified
   uint64_t wrong_count = 0;
   for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
     // get labeled class for the ith sample
-    double class_i =
-      reinterpret_cast<const double*>(dataset.labels_.get())[i];
+    FEATURE_TYPE class_i =
+      reinterpret_cast<const FEATURE_TYPE*>(dataset.labels_.get())[i];
 
     assert(is_integer(class_i));
 
@@ -166,10 +172,10 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
       wrong_count++;
     }
 
-    double v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
-    double v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
+    FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
+    FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
 
-    double value = class_i *
+    FEATURE_TYPE value = class_i *
       mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
       (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
             ds.row(i) * weights_eig));
@@ -193,7 +199,7 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
     throw std::runtime_error("total_loss < 0");
   }
 
-  double accuracy = (1.0 - (1.0 * wrong_count / dataset.num_samples()));
+  FEATURE_TYPE accuracy = (1.0 - (1.0 * wrong_count / dataset.num_samples()));
   if (std::isnan(total_loss) || std::isinf(total_loss))
     throw std::runtime_error("calc_log_loss generated nan/inf");
 
@@ -201,25 +207,25 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
 }
 
 uint64_t LRModel::getSerializedGradientSize() const {
-    return size() * sizeof(double);
+    return size() * sizeof(FEATURE_TYPE);
 }
 
 std::unique_ptr<ModelGradient> LRModel::loadGradient(void* mem) const {
     auto grad = std::make_unique<LRGradient>(size());
 
     for (uint64_t i = 0; i < size(); ++i) {
-        grad->weights[i] = reinterpret_cast<double*>(mem)[i];
+        grad->weights[i] = reinterpret_cast<FEATURE_TYPE*>(mem)[i];
     }
 
     return grad;
 }
 
-bool LRModel::is_integer(double n) const {
+bool LRModel::is_integer(FEATURE_TYPE n) const {
     return floor(n) == n;
 }
 
 double LRModel::checksum() const {
-    return crc32(weights_.data(), weights_.size() * sizeof(double));
+    return crc32(weights_.data(), weights_.size() * sizeof(FEATURE_TYPE));
 }
 
 void LRModel::print() const {

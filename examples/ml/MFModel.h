@@ -11,7 +11,7 @@
 
 /**
   * Matrix Factorization model
-  * Model is represented with a vector of doubles
+  * Model is represented with a vector of FEATURE_TYPEs
   */
 
 // XXX Should derive from Model
@@ -83,7 +83,7 @@ class MFModel : public Model {
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
             const Matrix& m,
-            double* labels,
+            FEATURE_TYPE* labels,
             uint64_t labels_size,
             //const SparseDataset& dataset,
             double epsilon) const;
@@ -140,30 +140,30 @@ class MFModel : public Model {
     uint64_t size() const;
 
  public:
-    double& get_user_weights(uint64_t userId, uint64_t factor) const;
-    double& get_item_weights(uint64_t itemId, uint64_t factor) const;
+    FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
+    FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
 
-    double predict(uint32_t userId, uint32_t itemId) const;
+    FEATURE_TYPE predict(uint32_t userId, uint32_t itemId) const;
 
     void initialize_weights(uint64_t, uint64_t, uint64_t);
 
-    double* user_weights_;
-    double* item_weights_;
+    FEATURE_TYPE* user_weights_;
+    FEATURE_TYPE* item_weights_;
 
-    double* user_bias_;
-    double* item_bias_;
+    FEATURE_TYPE* user_bias_;
+    FEATURE_TYPE* item_bias_;
 
-    double user_bias_reg_;
-    double item_bias_reg_;
+    FEATURE_TYPE user_bias_reg_;
+    FEATURE_TYPE item_bias_reg_;
 
-    double item_fact_reg_;
-    double user_fact_reg_;
+    FEATURE_TYPE item_fact_reg_;
+    FEATURE_TYPE user_fact_reg_;
 
     uint64_t nusers_;
     uint64_t nitems_;
     uint64_t nfactors_;
 
-    double global_bias_ = 0;
+    FEATURE_TYPE global_bias_ = 0;
 };
 
 #endif  // EXAMPLES_ML_MFMODEL_H_

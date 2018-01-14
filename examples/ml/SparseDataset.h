@@ -4,10 +4,11 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <config.h>
 
 /**
   * This class is used to hold a sparse dataset
-  * Each sample is a variable size list of pairs <int, double>
+  * Each sample is a variable size list of pairs <int, FEATURE_TYPE>
   */
 class SparseDataset {
   public:
@@ -22,7 +23,7 @@ class SparseDataset {
    * @param samples Vector of samples
    * @param labels Vector of labels
    */
-  SparseDataset(const std::vector<std::vector<std::pair<int, double>>>& samples);
+  SparseDataset(const std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples);
 
   /**
    * Get the number of samples in this dataset
@@ -87,7 +88,7 @@ class SparseDataset {
   SparseDataset sample_from(uint64_t start, uint64_t n_samples) const;
 
   public:
-  std::vector<std::vector<std::pair<int, double>>> data_;
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> data_;
   uint64_t max_features_; // largest number of featuers of any single user
 };
 

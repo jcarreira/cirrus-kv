@@ -4,12 +4,13 @@
 #include <Model.h>
 #include <utility>
 #include <vector>
+#include <config.h>
 
 class SoftmaxModel : public Model {
  public:
     SoftmaxModel(uint64_t classes, uint64_t d);
-    SoftmaxModel(const double* data, uint64_t nclasses, uint64_t d);
-    SoftmaxModel(std::vector<std::vector<double>> data,
+    SoftmaxModel(const FEATURE_TYPE* data, uint64_t nclasses, uint64_t d);
+    SoftmaxModel(std::vector<std::vector<FEATURE_TYPE>> data,
             uint64_t nclasses, uint64_t d);
 
     /**
@@ -72,7 +73,7 @@ class SoftmaxModel : public Model {
       */
     std::unique_ptr<ModelGradient> minibatch_grad(
             const Matrix& dataset,
-            double* labels,
+            FEATURE_TYPE* labels,
             uint64_t labels_size,
             double epsilon) const override;
     /**
@@ -104,7 +105,7 @@ class SoftmaxModel : public Model {
     uint64_t nclasses;  //< number of classes in the dataset
     uint64_t d;         //< number of features for each sample
 
-    std::vector<std::vector<double>> weights;  //< model weights
+    std::vector<std::vector<FEATURE_TYPE>> weights;  //< model weights
 };
 
 #endif  // EXAMPLES_ML_SOFTMAXMODEL_H_

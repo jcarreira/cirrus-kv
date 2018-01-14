@@ -8,7 +8,7 @@ LRGradient::LRGradient(LRGradient&& other) {
     version = other.version;
 }
 
-LRGradient::LRGradient(const std::vector<double>& data) :
+LRGradient::LRGradient(const std::vector<FEATURE_TYPE>& data) :
     weights(data) {
 }
 
@@ -27,19 +27,19 @@ void LRGradient::loadSerialized(const void* mem) {
     version = *reinterpret_cast<const uint32_t*>(mem);
     mem = reinterpret_cast<const void*>(
             (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
-    const double* data = reinterpret_cast<const double*>(mem);
+    const FEATURE_TYPE* data = reinterpret_cast<const FEATURE_TYPE*>(mem);
     std::copy(data, data + weights.size(), weights.begin());
 }
 
 /** Format:
   * version (uint32_t)
-  * vector of weights (double * n)
+  * vector of weights (FEATURE_TYPE * n)
   */
 void LRGradient::serialize(void* mem) const {
     *reinterpret_cast<uint32_t*>(mem) = version;
     mem = reinterpret_cast<void*>(
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
-    double* data = reinterpret_cast<double*>(mem);
+    FEATURE_TYPE* data = reinterpret_cast<FEATURE_TYPE*>(mem);
 
     for (const auto& w : weights) {
       if (w == 0) {
@@ -51,7 +51,7 @@ void LRGradient::serialize(void* mem) const {
 }
 
 uint64_t LRGradient::getSerializedSize() const {
-    return weights.size() * sizeof(double) + sizeof(uint32_t);
+    return weights.size() * sizeof(FEATURE_TYPE) + sizeof(uint32_t);
 }
 
 void LRGradient::print() const {
@@ -83,7 +83,7 @@ SoftmaxGradient::SoftmaxGradient(uint64_t nclasses, uint64_t d) {
     }
 }
 
-SoftmaxGradient::SoftmaxGradient(const std::vector<std::vector<double>>& w) {
+SoftmaxGradient::SoftmaxGradient(const std::vector<std::vector<FEATURE_TYPE>>& w) {
     weights = w;
 }
 
@@ -91,7 +91,7 @@ void SoftmaxGradient::serialize(void* mem) const {
     *reinterpret_cast<uint32_t*>(mem) = version;
     mem = reinterpret_cast<void*>(
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
-    double* data = reinterpret_cast<double*>(mem);
+    FEATURE_TYPE* data = reinterpret_cast<FEATURE_TYPE*>(mem);
 
     for (const auto& v : weights) {
         std::copy(v.begin(), v.end(), data);
@@ -100,7 +100,7 @@ void SoftmaxGradient::serialize(void* mem) const {
 }
 
 uint64_t SoftmaxGradient::getSerializedSize() const {
-    return weights.size() * weights[0].size() * sizeof(double)
+    return weights.size() * weights[0].size() * sizeof(FEATURE_TYPE)
         + sizeof(uint32_t);
 }
 
@@ -108,7 +108,7 @@ void SoftmaxGradient::loadSerialized(const void* mem) {
     version = *reinterpret_cast<const uint32_t*>(mem);
     mem = reinterpret_cast<const void*>(
             (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
-    const double* data = reinterpret_cast<const double*>(mem);
+    const FEATURE_TYPE* data = reinterpret_cast<const FEATURE_TYPE*>(mem);
 
     for (auto& v : weights) {
         std::copy(data, data + v.size(), v.begin());
@@ -151,7 +151,7 @@ MFGradient::MFGradient(uint64_t nclasses, uint64_t d) {
     }
 }
 
-MFGradient::MFGradient(const std::vector<std::vector<double>>& w) {
+MFGradient::MFGradient(const std::vector<std::vector<FEATURE_TYPE>>& w) {
     weights = w;
 }
 
@@ -159,7 +159,7 @@ void MFGradient::serialize(void* mem) const {
     *reinterpret_cast<uint32_t*>(mem) = version;
     mem = reinterpret_cast<void*>(
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
-    double* data = reinterpret_cast<double*>(mem);
+    FEATURE_TYPE* data = reinterpret_cast<FEATURE_TYPE*>(mem);
 
     for (const auto& v : weights) {
         std::copy(v.begin(), v.end(), data);
@@ -168,7 +168,7 @@ void MFGradient::serialize(void* mem) const {
 }
 
 uint64_t MFGradient::getSerializedSize() const {
-    return weights.size() * weights[0].size() * sizeof(double)
+    return weights.size() * weights[0].size() * sizeof(FEATURE_TYPE)
         + sizeof(uint32_t);
 }
 
@@ -176,7 +176,7 @@ void MFGradient::loadSerialized(const void* mem) {
     version = *reinterpret_cast<const uint32_t*>(mem);
     mem = reinterpret_cast<const void*>(
             (reinterpret_cast<const char*>(mem) + sizeof(uint32_t)));
-    const double* data = reinterpret_cast<const double*>(mem);
+    const FEATURE_TYPE* data = reinterpret_cast<const FEATURE_TYPE*>(mem);
 
     for (auto& v : weights) {
         std::copy(data, data + v.size(), v.begin());

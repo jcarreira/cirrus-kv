@@ -9,6 +9,7 @@ namespace mlutils {
   * @return Sigmoid of x
   */
 double s_1(double x);
+float s_1_float(float x);
 
 /**
   * Computes logarithm
