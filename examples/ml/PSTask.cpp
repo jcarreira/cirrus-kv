@@ -6,7 +6,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-// #define DEBUG
+#define DEBUG
 
 void update_publish_gradient(auto& gradient);
 
@@ -20,6 +20,7 @@ namespace PSTaskGlobal {
   static redisAsyncContext* gradient_r;
   static uint64_t MODEL_GRAD_SIZE;
   static std::mutex ps_grad_start;
+  static uint64_t last_gradient_version = 0;
   std::mutex mp_start_lock;
 }
 
@@ -35,12 +36,12 @@ class PSTaskModelProxy {
   }
 
     static void connectCallback(const redisAsyncContext*, int) {
-      std::cout << "ModelProxy::connectCallback" << std::endl;
+      std::cout << "ModelProxy::connectCallback" << "\n";
       PSTaskGlobal::mp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
-      std::cout << "disconnectCallback" << std::endl;
+      std::cout << "disconnectCallback" << "\n";
     }
 
     void thread_fn() {
@@ -117,7 +118,7 @@ void PSTask::put_model(const LRModel& model) {
   lms.serialize(model, data.get());
 
 #ifdef DEBUG
-  std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
+  std::cout << "redisAsyncCommand PUBLISH MODEL" << "\n";
 #endif
   redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
       "PUBLISH model %b", data.get(),
@@ -166,10 +167,12 @@ class PSGradientProxy {
 
       auto now = get_time_us();
       std::cout << "Time since last (us): "
-        << (now - PSTaskGlobal::prev_on_msg_time) << std::endl;
+        << (now - PSTaskGlobal::prev_on_msg_time) << "\n";
       PSTaskGlobal::prev_on_msg_time = now;
 
-      std::cout << "onMessage PSGradientProxy" << std::endl;
+#ifdef DEBUG
+      std::cout << "onMessage PSGradientProxy" << "\n";
+#endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
         uint64_t len = r->element[2]->len;
@@ -179,13 +182,13 @@ class PSGradientProxy {
           << r->element[0]->len << " "
           << r->element[1]->len << " "
           << r->element[2]->len << " "
-          << std::endl;
+          << "\n";
 
         if (r->element[0]->str) {
-          std::cout <<"str0: " << r->element[0]->str << std::endl;
+          std::cout <<"str0: " << r->element[0]->str << "\n";
         }
         if (r->element[1]->str) {
-          std::cout <<"str1: " << r->element[1]->str << std::endl;
+          std::cout <<"str1: " << r->element[1]->str << "\n";
         }
 #endif
         // r->element[0]->str == "message"
@@ -198,8 +201,14 @@ class PSGradientProxy {
 #ifdef DEBUG
           std::cout << "Updating model at time: " << get_time_us()
             << " version: " << gradient.getVersion()
-            << std::endl;
+            << "\n";
+          if (gradient.getVersion() < PSTaskGlobal::last_gradient_version) {
+            std::cout << "Received gradient in the wrong order. Returning." << std::endl;
+            return;
+            throw std::runtime_error("Received gradient in the wrong order");
+          }
 #endif
+          PSTaskGlobal::last_gradient_version = gradient.getVersion();
 
           update_publish_gradient(gradient);
           PSTaskGlobal::first_time = false;
@@ -281,7 +290,7 @@ void PSTask::run(const Configuration& config) {
   publish_model(*PSTaskGlobal::model);
 
   while (1) {
-    sleep(1);
+    sleep(100);
   }
 }
 
@@ -307,7 +316,7 @@ void PSTask::update_gradient_version(
 
 #ifdef DEBUG
   std::cout << "[PS] " << "PS task received new gradient version: "
-    << gradient.getVersion() << std::endl;
+    << gradient.getVersion() << "\n";
 #endif
   // if it's new
   gradientVersions[worker] = gradient.getVersion();
@@ -319,9 +328,11 @@ void PSTask::update_gradient_version(
 
   PSTaskGlobal::model->sgd_update(config.get_learning_rate(), &gradient);
 
+#ifdef DEBUG
   std::cout << "[PS] "
     << "Publishing model at: " << get_time_us()
-    << std::endl;
+    << "\n";
+#endif
     //<< " checksum: " << model.checksum()
   // publish the model back to the store so workers can use it
 #ifdef USE_CIRRUS
@@ -334,19 +345,21 @@ void PSTask::update_gradient_version(
 }
 
 void update_publish_gradient(auto& gradient) {
-  static int count = 0;
   // do a gradient step and update model
 #ifdef DEBUG
-  std::cout << "[PS] " << "Updating model" << std::endl;
+  static int count = 0;
+  std::cout << "[PS] " << "Updating model" << "\n";
 #endif
 
   PSTaskGlobal::model->sgd_update(
       PSTaskGlobal::config.get_learning_rate(), &gradient);
 
+#ifdef DEBUG
   std::cout << "[PS] "
     << "Publishing model at: " << get_time_us()
     << " count: " << (++count)
-    << std::endl;
+    << "\n";
+#endif
 
   lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
