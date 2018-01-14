@@ -164,32 +164,12 @@ void ErrorTask::run(const Configuration& config) {
   c_array_deserializer<double> cad_labels(samples_per_batch,
       "error labels_store", false);
 
-#if defined(USE_CIRRUS)
-  cirrus::TCPClient client;
-  lr_model_serializer lms(MODEL_GRAD_SIZE);
-  // this is used to access the most up to date model
-  cirrus::ostore::FullBladeObjectStoreTempl<LRModel>
-    model_store(IP, PORT, &client, lms, lmd);
-
-  c_array_serializer<double> cas_samples(batch_size);
-  // this is used to access the training data sample
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-    samples_store(IP, PORT, &client, cas_samples, cad_samples);
-
-  c_array_serializer<double> cas_labels(samples_per_batch);
-  // this is used to access the training labels
-  cirrus::ostore::FullBladeObjectStoreTempl<std::shared_ptr<double>>
-    labels_store(IP, PORT, &client, cas_labels, cad_labels);
-
-  wait_for_start(ERROR_TASK_RANK, client, nworkers);
-#elif defined(USE_REDIS)
   std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
   auto r  = redis_connect(REDIS_IP, REDIS_PORT);
   if (r == NULL || r -> err) { 
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-#endif
 
 #ifdef DATASET_IN_S3
   std::cout << "Creating S3Iterator" << std::endl;
@@ -218,9 +198,6 @@ start:
     std::cout << "[ERROR_TASK] unpacking"
       << std::endl;
     unpack_minibatch(minibatch, samples, labels);
-#elif defined(USE_CIRRUS)
-      samples = samples_store.get(SAMPLE_BASE + i);
-      labels = labels_store.get(LABEL_BASE + i);
 #elif defined(USE_REDIS)
       get_samples_labels_redis(r, i, samples, labels, cad_samples, cad_labels);
 #endif
