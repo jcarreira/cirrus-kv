@@ -6,11 +6,12 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
+//#define DEBUG
 
 void update_publish_gradient(auto& gradient);
 void publish_model2();
 void update_model(auto& gradient);
+void print_progress();
 
 namespace PSTaskGlobal {
   static std::unique_ptr<lr_gradient_deserializer> lgd;
@@ -22,7 +23,6 @@ namespace PSTaskGlobal {
   static redisAsyncContext* model_r;
   static redisAsyncContext* gradient_r;
   static uint64_t MODEL_GRAD_SIZE;
-  static uint64_t last_gradient_version = 0;
   
   static std::mutex ps_grad_start_lock; // used as barrier
   static std::mutex mp_start_lock; // used as barrier
@@ -136,6 +136,7 @@ void PSTask::put_model(const LRModel& model) {
 }
 #endif
 
+#if 0
 void PSTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
   int len_grad;
   lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
@@ -147,6 +148,7 @@ void PSTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
   gradient = lgd(data, len_grad);
   free(data);
 }
+#endif
 
 void PSTask::publish_model(const LRModel& model) {
   put_model(model);
@@ -204,7 +206,7 @@ class PSGradientProxy {
         // r->element[0]->str == "message"
         char* str_1 = r->element[1]->str;
         char* str_0 = r->element[0]->str;
-        if (str_0 && strcmp(str_0, "message") == 0 &&
+        if ( str_0 && strcmp(str_0, "message") == 0 &&
             str_1 && strcmp(str_1, "gradients") == 0) {
           auto gradient = PSTaskGlobal::lgd->operator()(str, len);
 
@@ -212,14 +214,11 @@ class PSGradientProxy {
           std::cout << "Updating model at time: " << get_time_us()
             << " version: " << gradient.getVersion()
             << "\n";
-          if (gradient.getVersion() < PSTaskGlobal::last_gradient_version) {
-            // it's possible when using multiple workers
-          }
 #endif
-          PSTaskGlobal::last_gradient_version = gradient.getVersion();
 
           // update the model
           update_model(gradient);
+          print_progress();
           sem_post(&PSTaskGlobal::sem_new_model);
         }
       } else {
@@ -312,9 +311,9 @@ void print_progress() {
   static auto start = get_time_us();
 
   // if it's the first time we record the timestamp
-  if (count == 0) {
+  if (count == 2000) {
     start = get_time_us();
-  } else if (count % 10 == 0) {
+  } else if (count > 2000 && count % 1000 == 0) {
     auto now = get_time_us();
     auto elapsed_us = now - start;
     double iterations_per_us = 1.0 * count / elapsed_us;
@@ -335,7 +334,6 @@ void update_model(auto& gradient) {
   PSTaskGlobal::model->sgd_update(
       PSTaskGlobal::config.get_learning_rate(), &gradient);
   PSTaskGlobal::model_lock.unlock();
-  print_progress();
 }
 
 void publish_model2() {
