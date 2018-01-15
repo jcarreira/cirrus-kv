@@ -214,9 +214,6 @@ class PSGradientProxy {
             << "\n";
           if (gradient.getVersion() < PSTaskGlobal::last_gradient_version) {
             // it's possible when using multiple workers
-            //std::cout << "Received gradient in the wrong order. Returning." << std::endl;
-            //return;
-            //throw std::runtime_error("Received gradient in the wrong order");
           }
 #endif
           PSTaskGlobal::last_gradient_version = gradient.getVersion();
@@ -224,7 +221,6 @@ class PSGradientProxy {
           // update the model
           update_model(gradient);
           sem_post(&PSTaskGlobal::sem_new_model);
-          //update_publish_gradient(gradient);
         }
       } else {
         std::cout << "Not an array" << std::endl;
@@ -328,41 +324,6 @@ void print_progress() {
   count++;
 }
 
-#if 0
-void PSTask::update_gradient_version(
-    auto& gradient, int worker, LRModel& model, Configuration config ) {
-
-#ifdef DEBUG
-  std::cout << "[PS] " << "PS task received new gradient version: "
-    << gradient.getVersion() << "\n";
-#endif
-  // if it's new
-  gradientVersions[worker] = gradient.getVersion();
-
-  // do a gradient step and update model
-#ifdef DEBUG
-  std::cout << "[PS] " << "Updating model" << std::endl;
-#endif
-
-  PSTaskGlobal::model->sgd_update(config.get_learning_rate(), &gradient);
-
-#ifdef DEBUG
-  std::cout << "[PS] "
-    << "Publishing model at: " << get_time_us()
-    << "\n";
-#endif
-    //<< " checksum: " << model.checksum()
-  // publish the model back to the store so workers can use it
-#ifdef USE_CIRRUS
-  model_store.put(MODEL_BASE, model);
-#elif defined(USE_REDIS)
-  put_model(model);
-#endif
-
-  print_progress();
-}
-#endif
-
 void update_model(auto& gradient) {
   // do a gradient step and update model
 #ifdef DEBUG
@@ -370,8 +331,10 @@ void update_model(auto& gradient) {
   std::cout << "[PS] " << "Updating model updating_count: " << update_count << "\n";
 #endif
 
+  PSTaskGlobal::model_lock.lock();
   PSTaskGlobal::model->sgd_update(
       PSTaskGlobal::config.get_learning_rate(), &gradient);
+  PSTaskGlobal::model_lock.unlock();
   print_progress();
 }
 
@@ -393,31 +356,26 @@ void publish_model2() {
       new char[lms.size(model_copy)]);
   lms.serialize(model_copy, data.get());
 
-#if 0
-#ifdef DEBUG
-  std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
-#endif
-  redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
-      "PUBLISH model %b", data.get(),
-      lms.size(*PSTaskGlobal::model));
-#else
 #ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;
 #endif
   redisReply* reply = (redisReply*)redisCommand(PSTaskGlobal::redis_con, "PUBLISH model %b", data.get(), lms.size(model_copy));
   freeReplyObject(reply);
-#endif
 }
 
 void update_publish_gradient(auto& gradient) {
+  throw std::runtime_error("Not supported. Review code");
   // do a gradient step and update model
 #ifdef DEBUG
   static int count = 0;
   std::cout << "[PS] " << "Updating model" << "\n";
 #endif
 
+  PSTaskGlobal::model_lock.lock();
   PSTaskGlobal::model->sgd_update(
       PSTaskGlobal::config.get_learning_rate(), &gradient);
+  auto model_copy = *PSTaskGlobal::model;
+  PSTaskGlobal::model_lock.lock();
 
 #ifdef DEBUG
   std::cout << "[PS] "
@@ -428,15 +386,15 @@ void update_publish_gradient(auto& gradient) {
 
   lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
-      new char[lms.size(*PSTaskGlobal::model)]);
-  lms.serialize(*PSTaskGlobal::model, data.get());
+      new char[lms.size(model_copy)]);
+  lms.serialize(model_copy, data.get());
 
 #ifdef DEBUG
   std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
 #endif
   redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
       "PUBLISH model %b", data.get(),
-      lms.size(*PSTaskGlobal::model));
+      lms.size(model_copy));
 
   print_progress();
 }
