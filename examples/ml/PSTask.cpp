@@ -30,6 +30,8 @@ namespace PSTaskGlobal {
   sem_t sem_new_model;
   static std::unique_ptr<LRModel> model; // last computed model
   std::mutex model_lock; // used to coordinate access to the last computed model
+
+  redisContext* redis_con;
 }
 
 /**
@@ -86,12 +88,12 @@ class PSTaskModelProxy {
 
 
 auto PSTask::connect_redis() {
-  auto r  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (r == NULL || r -> err) {
+  auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
+  if (redis_con == NULL || redis_con -> err) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
-  return r;
+  return redis_con;
 }
 
 PSTask::PSTask(const std::string& redis_ip, uint64_t redis_port,
@@ -298,8 +300,8 @@ void PSTask::run(const Configuration& config) {
   gp.run();
   PSTaskGlobal::ps_grad_start_lock.lock();
 
-  auto r = connect_redis();
-  wait_for_start(PS_TASK_RANK, r, nworkers);
+  PSTaskGlobal::redis_con = connect_redis();
+  wait_for_start(PS_TASK_RANK, PSTaskGlobal::redis_con, nworkers);
 
   publish_model(*PSTaskGlobal::model);
 
@@ -382,17 +384,29 @@ void publish_model2() {
     << "\n";
 #endif
 
+  PSTaskGlobal::model_lock.lock();
+  auto model_copy = *PSTaskGlobal::model;
+  PSTaskGlobal::model_lock.unlock();
+
   lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
   auto data = std::unique_ptr<char[]>(
-      new char[lms.size(*PSTaskGlobal::model)]);
-  lms.serialize(*PSTaskGlobal::model, data.get());
+      new char[lms.size(model_copy)]);
+  lms.serialize(model_copy, data.get());
 
+#if 0
 #ifdef DEBUG
   std::cout << "redisAsyncCommand PUBLISH MODEL" << std::endl;
 #endif
   redisAsyncCommand(PSTaskGlobal::model_r, NULL, NULL,
       "PUBLISH model %b", data.get(),
       lms.size(*PSTaskGlobal::model));
+#else
+#ifdef DEBUG
+  std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+#endif
+  redisReply* reply = (redisReply*)redisCommand(PSTaskGlobal::redis_con, "PUBLISH model %b", data.get(), lms.size(model_copy));
+  freeReplyObject(reply);
+#endif
 }
 
 void update_publish_gradient(auto& gradient) {
