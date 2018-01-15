@@ -243,8 +243,8 @@ start:
       std::cout << "[ERROR_TASK] computing loss" << std::endl;
       std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model.calc_loss(dataset);
       std::cout
-        << "Loss: " << ret.first << " Accuracy: " << ret.second
-        << "Avg Loss: " << (ret.first / dataset.num_samples())
+        << "Loss (Total/Avg): " << ret.first << "/" << (ret.first / dataset.num_samples())
+        << " Accuracy: " << ret.second
         << " time(us): " << get_time_us()
         << " time from start (us): " << (get_time_us() - ErrorTaskGlobal::start_time)
         << std::endl;

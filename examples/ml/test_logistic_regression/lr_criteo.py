@@ -148,3 +148,4 @@ print("Evaluating algorithm")
 scores = evaluate_algorithm(dataset, logistic_regression, n_folds, l_rate, n_epoch)
 print('Scores: %s' % scores)
 print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+

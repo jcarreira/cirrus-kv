@@ -45,10 +45,10 @@ class ModelProxy {
     ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new()) {
-    LogisticTaskS3Global::mp_start_lock.lock();
-    LogisticTaskS3Global::model.reset(new LRModel(mgs));
-    LogisticTaskS3Global::lmd.reset(new lr_model_deserializer(mgs));
-  }
+      LogisticTaskS3Global::mp_start_lock.lock();
+      LogisticTaskS3Global::model.reset(new LRModel(mgs));
+      LogisticTaskS3Global::lmd.reset(new lr_model_deserializer(mgs));
+    }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "ModelProxy::connectCallback" << std::endl;
