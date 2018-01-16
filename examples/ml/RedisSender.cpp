@@ -34,6 +34,56 @@ static auto connect_redis() {
 std::mutex start_lock;
 redisAsyncContext* gradient_r;
 
+class ModelProxy {
+  public:
+    ModelProxy(auto redis_ip, auto redis_port) :
+      redis_ip(redis_ip), redis_port(redis_port),
+      base(event_base_new()) {
+    }
+
+    static void connectCallback(const redisAsyncContext*, int) {
+      std::cout << "ModelProxy::connectCallback" << std::endl;
+    }
+
+    static void disconnectCallback(const redisAsyncContext*, int) {
+      std::cout << "disconnectCallback" << std::endl;
+    }
+
+    static void onMessage(redisAsyncContext*, void* /**reply*/, void*) {
+    }
+
+    void thread_fn() {
+      std::cout << "ModelProxy connecting to redis.." << std::endl;
+      redisAsyncContext* model_r =
+        redis_async_connect(redis_ip.c_str(), redis_port);
+      if (!model_r) {
+        throw std::runtime_error("ModelProxy::Error connecting to redis");
+      }
+      std::cout << "ModelProxy::connected to redis.." << model_r << std::endl;
+
+      std::cout << "libevent attached" << std::endl;
+      redisLibeventAttach(model_r, base);
+      redis_connect_callback(model_r, connectCallback);
+      redis_disconnect_callback(model_r, disconnectCallback);
+      redis_subscribe_callback(model_r, onMessage, "model");
+      
+      std::cout << "eventbase dispatch" << std::endl;
+      event_base_dispatch(base);
+    }
+
+    void run() {
+      std::cout << "Starting ModelProxy thread" << std::endl;
+      thread = std::make_unique<std::thread>(
+          std::bind(&ModelProxy::thread_fn, this));
+    }
+
+  private:
+    std::string redis_ip;
+    int redis_port;
+    struct event_base *base;
+    std::unique_ptr<std::thread> thread;
+};
+
 /**
   * Works as a cache for remote model
   */
@@ -91,6 +141,10 @@ class SenderProxy {
 void run() {
   std::cout << "Connecting to redis.." << std::endl;
   redisContext* redis_con = connect_redis();
+  
+  //std::cout << "Starting ModelProxy" << std::endl;
+  //ModelProxy mp(REDIS_IP, REDIS_PORT);
+  //mp.run();
 
   std::cout << "Starting GradientProxy" << std::endl;
   SenderProxy gp(REDIS_IP, REDIS_PORT);

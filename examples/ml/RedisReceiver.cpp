@@ -7,7 +7,7 @@
 
 static redisAsyncContext* gradient_r;
 std::mutex start_lock;
-volatile uint64_t onMessageCount = 0;
+volatile uint64_t onMessageCount_ = 0;
 
 class GradientProxy {
   public:
@@ -33,7 +33,7 @@ class GradientProxy {
         char* str_0 = r->element[0]->str;
         if ( str_0 && strcmp(str_0, "message") == 0 &&
             str_1 && strcmp(str_1, "gradients") == 0) {
-          onMessageCount++;
+          onMessageCount_++;
         }
       }
     }
@@ -83,8 +83,8 @@ void run() {
   while (1) {
     sleep(1);
     auto elapsed_us = get_time_us() - start;
-    std::cout << "Iters/sec: " << 1.0 * onMessageCount / elapsed_us * 1000 * 1000 << std::endl;
-    onMessageCount = 0;
+    std::cout << "Iters/sec: " << 1.0 * onMessageCount_ / elapsed_us * 1000 * 1000 << std::endl;
+    onMessageCount_ = 0;
     start = get_time_us();
   }
 }
