@@ -100,7 +100,7 @@ void run() {
   std::cout << "[WORKER] starting loop" << std::endl;
 
   char data[10000];
-  uint64_t data_size = 14 * 8;
+  uint64_t data_size = 14 * 8 - 4;
   uint64_t count = 0;
   while (1) {
     count++;

@@ -154,6 +154,8 @@ void PSTask::publish_model(const LRModel& model) {
   put_model(model);
 }
 
+volatile uint64_t onMessageCount = 0;
+
 class PSGradientProxy {
   public:
     PSGradientProxy(auto redis_ip, auto redis_port, auto MODEL_GRAD_SIZE) :
@@ -174,13 +176,17 @@ class PSGradientProxy {
     }
 
     static void onMessage(redisAsyncContext*, void *reply, void*) {
+      onMessageCount++;
+      //sem_post(&PSTaskGlobal::sem_new_model);
+      //return;
+
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
-      auto now = get_time_us();
-      std::cout << "Time since last (us): "
-        << (now - PSTaskGlobal::prev_on_msg_time) << "\n";
-      PSTaskGlobal::prev_on_msg_time = now;
+      //auto now = get_time_us();
+      //std::cout << "Time since last (us): "
+      //  << (now - PSTaskGlobal::prev_on_msg_time) << "\n";
+      //PSTaskGlobal::prev_on_msg_time = now;
 
 #ifdef DEBUG
       std::cout << "onMessage PSGradientProxy" << "\n";
@@ -217,8 +223,8 @@ class PSGradientProxy {
 #endif
 
           // update the model
-          update_model(gradient);
-          print_progress();
+          //update_model(gradient);
+          //print_progress();
           sem_post(&PSTaskGlobal::sem_new_model);
         }
       } else {
@@ -300,9 +306,19 @@ void PSTask::run(const Configuration& config) {
 
   publish_model(*PSTaskGlobal::model);
 
+  uint64_t start = get_time_us();
   while (1) {
     sem_wait(&PSTaskGlobal::sem_new_model);
     publish_model2();
+
+    auto now = get_time_us();
+    auto elapsed_us = now - start;
+    if (elapsed_us > 1000000) {
+      start = now;
+      //std::cout << "onMessageCount: " << onMessageCount << std::endl;
+      std::cout << "Events in the last sec: " << 1.0 * onMessageCount / elapsed_us * 1000 * 1000 << std::endl;
+      onMessageCount = 0;
+    }
   }
 }
 

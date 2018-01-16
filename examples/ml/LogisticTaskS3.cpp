@@ -81,8 +81,8 @@ class ModelProxy {
       if (reply == NULL) return;
 
       auto now = get_time_us();
-      std::cout << "Time since last (us): "
-        << (now - LogisticTaskS3Global::prev_on_msg_time) << "\n";
+      //std::cout << "Time since last (us): "
+      //  << (now - LogisticTaskS3Global::prev_on_msg_time) << "\n";
       LogisticTaskS3Global::prev_on_msg_time = now;
 #ifdef DEBUG
       printf("onMessage\n");
