@@ -119,7 +119,7 @@ class Configuration {
     uint64_t n_workers = 0;  //< number of system workers
 
     uint64_t minibatch_size = 0;  //< size of minibatch
-    uint64_t s3_size = 0;  //< size of samples chunk stored in each s3 object
+    uint64_t s3_size = 0;         //< size of samples chunk stored in each s3 object
 
     double learning_rate = 0;     //< sgd learning rate
     double epsilon = 0;           //< regularization rate
