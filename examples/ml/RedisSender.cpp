@@ -138,10 +138,43 @@ class SenderProxy {
     std::unique_ptr<std::thread> thread;
 };
 
+class ModelGet {
+  public:
+    ModelGet(auto MODEL_BASE) : MODEL_BASE(MODEL_BASE){}
+
+    void thread_fn() {
+      uint64_t count = 0;
+      while (1) {
+        usleep(50);
+        int len_model;
+        char* data = redis_get_numid(redis_con, MODEL_BASE, &len_model);
+        free(data);
+        std::cout << "Get " << count << std::endl;
+      }
+    }
+
+    void run() {
+      redis_con = connect_redis();
+      thread = std::make_unique<std::thread>(
+          std::bind(&ModelGet::thread_fn, this));
+    }
+  private:
+    uint64_t MODEL_BASE;
+    redisContext* redis_con;
+    std::string redis_ip;
+    int redis_port;
+    std::unique_ptr<std::thread> thread;
+};
+
+#define BILLION (1000000000UL)
+#define MODEL_BASE (1 * BILLION)
 void run() {
   std::cout << "Connecting to redis.." << std::endl;
   redisContext* redis_con = connect_redis();
-  
+
+
+  ModelGet mg(MODEL_BASE);
+  mg.run();
   //std::cout << "Starting ModelProxy" << std::endl;
   //ModelProxy mp(REDIS_IP, REDIS_PORT);
   //mp.run();

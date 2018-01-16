@@ -10,6 +10,7 @@
 
 void update_publish_gradient(auto& gradient);
 void publish_model2();
+void publish_model3();
 void update_model(auto& gradient);
 void print_progress();
 
@@ -42,8 +43,8 @@ class PSTaskModelProxy {
     PSTaskModelProxy(auto redis_ip, auto redis_port) :
       redis_ip(redis_ip), redis_port(redis_port),
       base(event_base_new()) {
-    PSTaskGlobal::mp_start_lock.lock();
-  }
+        PSTaskGlobal::mp_start_lock.lock();
+      }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "ModelProxy::connectCallback" << "\n";
@@ -309,7 +310,8 @@ void PSTask::run(const Configuration& config) {
   uint64_t start = get_time_us();
   while (1) {
     sem_wait(&PSTaskGlobal::sem_new_model);
-    publish_model2();
+    //publish_model2();
+    publish_model3();
 
     auto now = get_time_us();
     auto elapsed_us = now - start;
@@ -350,6 +352,31 @@ void update_model(auto& gradient) {
   PSTaskGlobal::model->sgd_update(
       PSTaskGlobal::config.get_learning_rate(), &gradient);
   PSTaskGlobal::model_lock.unlock();
+}
+
+// publish model in redis
+void PSTask::publish_model3() {
+#ifdef DEBUG
+  static int publish_count = 0;
+  std::cout << "[PS] "
+    << "Publishing model at: " << get_time_us()
+    << " publish_count: " << (++publish_count)
+    << "\n";
+#endif
+
+  PSTaskGlobal::model_lock.lock();
+  auto model_copy = *PSTaskGlobal::model;
+  PSTaskGlobal::model_lock.unlock();
+
+  lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
+  auto data = std::unique_ptr<char[]>(
+      new char[lms.size(model_copy)]);
+  lms.serialize(model_copy, data.get());
+
+#ifdef DEBUG
+  std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+#endif
+  redis_put_binary_numid(PSTaskGlobal::redis_con, MODEL_BASE, data.get(), lms.size(model_copy));
 }
 
 void publish_model2() {

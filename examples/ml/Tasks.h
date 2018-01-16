@@ -164,6 +164,8 @@ class PSTask : public MLTask {
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
+    
+    void publish_model3();
     //void print_progress() const;
 
     /**
