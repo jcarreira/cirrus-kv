@@ -41,11 +41,13 @@ void LRGradient::serialize(void* mem) const {
             (reinterpret_cast<char*>(mem) + sizeof(uint32_t)));
     FEATURE_TYPE* data = reinterpret_cast<FEATURE_TYPE*>(mem);
 
+#if 0
     for (const auto& w : weights) {
       if (w == 0) {
         throw std::runtime_error("0 weight");
       }
     }
+#endif
 
     std::copy(weights.begin(), weights.end(), data);
 }

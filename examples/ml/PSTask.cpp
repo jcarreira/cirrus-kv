@@ -7,11 +7,9 @@
 #include "adapters/libevent.h"
 
 //#define DEBUG
-
-void update_publish_gradient(auto& gradient);
-void publish_model2();
-void update_model(auto& gradient);
-void print_progress();
+    
+static void update_model(auto&);
+static void print_progress();
 
 namespace PSTaskGlobal {
   static std::unique_ptr<lr_gradient_deserializer> lgd;
@@ -32,6 +30,7 @@ namespace PSTaskGlobal {
   std::mutex model_lock; // used to coordinate access to the last computed model
 
   redisContext* redis_con;
+  volatile uint64_t onMessageCount = 0;
 }
 
 /**
@@ -174,13 +173,14 @@ class PSGradientProxy {
     }
 
     static void onMessage(redisAsyncContext*, void *reply, void*) {
+      PSTaskGlobal::onMessageCount++;
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
-      auto now = get_time_us();
-      std::cout << "Time since last (us): "
-        << (now - PSTaskGlobal::prev_on_msg_time) << "\n";
-      PSTaskGlobal::prev_on_msg_time = now;
+      //auto now = get_time_us();
+      //std::cout << "Time since last (us): "
+      //  << (now - PSTaskGlobal::prev_on_msg_time) << "\n";
+      //PSTaskGlobal::prev_on_msg_time = now;
 
 #ifdef DEBUG
       std::cout << "onMessage PSGradientProxy" << "\n";
@@ -300,9 +300,20 @@ void PSTask::run(const Configuration& config) {
 
   publish_model(*PSTaskGlobal::model);
 
+  publish_model_redis();
+  uint64_t start = get_time_us();
   while (1) {
     sem_wait(&PSTaskGlobal::sem_new_model);
-    publish_model2();
+    publish_model_redis();
+
+    auto now = get_time_us();
+    auto elapsed_us = now - start;
+    if (elapsed_us > 1000000) {
+      start = now;
+      std::cout << "Events in the last sec: " 
+        << 1.0 * PSTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000 << std::endl;
+      PSTaskGlobal::onMessageCount = 0;
+    }
   }
 }
 
@@ -336,7 +347,32 @@ void update_model(auto& gradient) {
   PSTaskGlobal::model_lock.unlock();
 }
 
-void publish_model2() {
+void PSTask::publish_model_redis() {
+#ifdef DEBUG
+  static int publish_count = 0;
+  std::cout << "[PS] "
+    << "Publishing model at: " << get_time_us()
+    << " publish_count: " << (++publish_count)
+    << "\n";
+#endif
+
+  PSTaskGlobal::model_lock.lock();
+  auto model_copy = *PSTaskGlobal::model;
+  PSTaskGlobal::model_lock.unlock();
+  
+  lr_model_serializer lms(PSTaskGlobal::MODEL_GRAD_SIZE);
+  auto data = std::unique_ptr<char[]>(
+      new char[lms.size(model_copy)]);
+  lms.serialize(model_copy, data.get());
+
+#ifdef DEBUG
+  std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+#endif
+  redis_put_binary_numid(PSTaskGlobal::redis_con, MODEL_BASE, data.get(), lms.size(model_copy));
+}
+
+
+void PSTask::publish_model_pubsub() {
 #ifdef DEBUG
   static int publish_count = 0;
   std::cout << "[PS] "
@@ -361,7 +397,7 @@ void publish_model2() {
   freeReplyObject(reply);
 }
 
-void update_publish_gradient(auto& gradient) {
+void PSTask::update_publish_gradient(auto& gradient) {
   throw std::runtime_error("Not supported. Review code");
   // do a gradient step and update model
 #ifdef DEBUG

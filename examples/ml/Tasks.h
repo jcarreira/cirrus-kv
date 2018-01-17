@@ -104,8 +104,8 @@ class LogisticTaskS3 : public MLTask {
 
   private:
     bool run_phase1(
-        auto& dataset, auto& model,
-        auto& s3_iter, uint64_t /*features_per_sample*/, auto& mp, auto& prev_model_version);
+        auto& dataset,
+        auto& s3_iter);
     auto get_model(auto r, auto lmd);
     void push_gradient(auto r, LRGradient*);
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
@@ -164,7 +164,11 @@ class PSTask : public MLTask {
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
-    //void print_progress() const;
+
+    void update_publish(auto&);
+    void publish_model_pubsub();
+    void publish_model_redis();
+    void update_publish_gradient(auto&);
 
     /**
       * Attributes

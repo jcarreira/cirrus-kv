@@ -19,6 +19,13 @@ uint64_t LRModel::size() const {
   return weights_.size();
 }
 
+/**
+  * Serialization / deserialization routines
+  */
+
+/** FORMAT
+  * weights
+  */
 std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
     uint64_t d = size / sizeof(FEATURE_TYPE);
     std::unique_ptr<LRModel> model = std::make_unique<LRModel>(
@@ -41,6 +48,20 @@ LRModel::serialize() const {
 void LRModel::serializeTo(void* mem) const {
     std::memcpy(mem, weights_.data(), getSerializedSize());
 }
+
+uint64_t LRModel::getSerializedSize() const {
+    return size() * sizeof(FEATURE_TYPE);
+}
+
+void LRModel::loadSerialized(const void* data) {
+    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
+    const FEATURE_TYPE* v = reinterpret_cast<const FEATURE_TYPE*>(data);
+    std::copy(v, v + size(), weights_.begin());
+}
+
+/***
+   *
+   */
 
 void LRModel::randomize() {
     for (uint64_t i = 0; i < size(); ++i) {
@@ -65,16 +86,6 @@ void LRModel::sgd_update(double learning_rate,
     for (uint64_t i = 0; i < size(); ++i) {
        weights_[i] += learning_rate * grad->weights[i];
     }
-}
-
-uint64_t LRModel::getSerializedSize() const {
-    return size() * sizeof(FEATURE_TYPE);
-}
-
-void LRModel::loadSerialized(const void* data) {
-    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
-    const FEATURE_TYPE* v = reinterpret_cast<const FEATURE_TYPE*>(data);
-    std::copy(v, v + size(), weights_.begin());
 }
 
 std::unique_ptr<ModelGradient> LRModel::minibatch_grad(

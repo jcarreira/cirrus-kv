@@ -103,6 +103,12 @@ class Model {
        * @return This model's checksum
        */
      virtual double checksum() const = 0;
+
+     // get the model's version
+     uint64_t getVersion() const { return version_; }
+     void setVersion(uint64_t v) { version_ = v; }
+ private:
+    uint64_t version_;
 };
 
 #endif  // EXAMPLES_ML_MODEL_H_

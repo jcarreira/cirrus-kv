@@ -127,6 +127,7 @@ class LRModel : public Model {
       */
     uint64_t size() const;
 
+
  private:
     /**
       * Check whether value n is an integer
