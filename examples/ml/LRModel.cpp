@@ -110,20 +110,16 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
     // create weight vector
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
-    //Eigen::Map<Eigen::VectorXd> tmp_weights(w.data(), size());
 
     // create vector with labels
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
-    //Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
 
     // apply logistic function to matrix multiplication
     // between dataset and weights
     auto part1_1 = (ds * tmp_weights);
-    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
-    //auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1_float));
+    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1)); // XXX fix this
 
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
-    //Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
 
     // compute difference between labels and logistic probability
     auto part2 = lbs - part1;
@@ -134,7 +130,6 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     std::vector<FEATURE_TYPE> vec_res;
     vec_res.resize(res.size());
     Eigen::Matrix<FEATURE_TYPE, -1, 1>::Map(vec_res.data(), res.size()) = res;
-    //Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
@@ -162,7 +157,6 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
           dataset.samples_.rows, dataset.samples_.cols);
 
   Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> weights_eig(w.data(), size());
-  //Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
 
   // count how many samples are wrongly classified
   uint64_t wrong_count = 0;

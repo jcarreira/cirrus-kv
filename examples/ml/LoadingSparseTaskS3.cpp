@@ -79,8 +79,8 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
   Configuration new_config = config;
-  //new_config.limit_samples = 1000000; // XXX fix this
-  new_config.s3_size = 100000; // XXX fix this
+  new_config.limit_samples = 10000000; // XXX fix this
+  new_config.s3_size = 50000; // this should give objects with roughly size of 20MB
   // number of samples in one s3 object 
   uint64_t s3_obj_num_samples = new_config.get_s3_size();
   // each object is going to have features and 1 label
