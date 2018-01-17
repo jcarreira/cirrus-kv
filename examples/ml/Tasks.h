@@ -7,6 +7,7 @@
 #include "config.h"
 #include "Redis.h"
 #include "LRModel.h"
+#include "SparseLRModel.h"
 
 #include <string>
 #include <vector>
@@ -189,6 +190,31 @@ class PSTask : public MLTask {
 class ErrorTask : public MLTask {
   public:
     ErrorTask(const std::string& redis_ip, uint64_t redis_port,
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id) :
+      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+          batch_size, samples_per_batch, features_per_sample,
+          nworkers, worker_id)
+  {}
+    void run(const Configuration& config);
+
+  private:
+    LRModel get_model_redis(auto r, auto lmd);
+    void get_samples_labels_redis(
+        auto r, auto i, auto& samples, auto& labels,
+        auto cad_samples, auto cad_labels);
+    void parse_raw_minibatch(const FEATURE_TYPE* minibatch,
+        auto& samples, auto& labels);
+};
+
+class ErrorSparseTask : public MLTask {
+  public:
+    ErrorSparseTask(const std::string& redis_ip, uint64_t redis_port,
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
