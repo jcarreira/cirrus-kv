@@ -14,7 +14,9 @@
 #include <cassert>
 #include <memory>
 #include <algorithm>
-
+#include "MurmurHash3.h"
+ 
+#define HASH_BITS 20
 #define DEBUG
 
 static const int REPORT_LINES = 10000;  // how often to report readin progress
@@ -23,6 +25,8 @@ static const int STR_SIZE = 10000;        // max size for dataset line
 
 Dataset InputReader::read_input_criteo(const std::string& samples_input_file,
     const std::string& labels_input_file) {
+  throw std::runtime_error("No longer supported");
+
   uint64_t samples_file_size = filesize(samples_input_file);
   uint64_t labels_file_size = filesize(samples_input_file);
 
@@ -545,5 +549,126 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
   ds.check();
   std::cout << "Checking sparse dataset done" << std::endl;
   return ds;
+}
+
+uint64_t hash_f(const char* s) {
+  uint64_t seed = 100;
+  uint64_t hash_otpt[2]= {0};
+  MurmurHash3_x64_128(s, strlen(s), seed, hash_otpt);
+
+  //std::cout << "MurmurHash3_x64_128 hash: " << hash_otpt[0] << std::endl;
+  return hash_otpt[0];
+}
+
+bool InputReader::is_categorical(const char* s) {
+  for (uint64_t i = 0; s[i]; ++i) {
+    if (!isdigit(s[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Parse a line from the training dataset
+ * containg numerical and/or categorical variables
+ */
+void InputReader::parse_sparse_line(
+    const std::string& line, const std::string& delimiter,
+    std::vector<std::pair<int, FEATURE_TYPE>>& features,
+    FEATURE_TYPE& label) {
+  char str[STR_SIZE];
+
+  if (line.size() > STR_SIZE) {
+    throw std::runtime_error("Input line is too big");
+  }
+
+  strncpy(str, line.c_str(), STR_SIZE);
+  char* s = str;
+
+  std::vector<FEATURE_TYPE> num_features; // numerical features
+  std::vector<uint64_t> cat_features;  // categorical features
+
+  uint64_t hash_size = 1 << HASH_BITS;
+  cat_features.resize(hash_size);
+
+  uint64_t col = 0;
+  while (char* l = strsep(&s, delimiter.c_str())) {
+    if (col++ == 0) { // it's label
+      label = string_to<FEATURE_TYPE>(l);
+      continue;
+    } else {
+      if (is_categorical(l)) {
+        uint64_t hash = hash_f(l) % hash_size;
+        cat_features[hash]++;
+      } else {
+        FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
+        num_features.push_back(v);
+      }
+    }
+  }
+
+  uint64_t feature_index = 0;
+  for (const auto& feat : num_features) {
+    features.push_back(std::make_pair(feature_index++, feat));
+  }
+
+  for (const auto& feat : cat_features) {
+    if (feat == 0) {
+      feature_index++;
+      continue;
+    } else {
+      features.push_back(std::make_pair(feature_index++, feat));
+    }
+  }
+}
+
+/** Handle both numerical and categorical variables
+    * For categorical variables we use the hashing trick
+    */
+SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_file,
+    std::string delimiter,
+    uint64_t limit_lines,
+    bool to_normalize) {
+  std::cout << "Reading input file: " << input_file << std::endl;
+
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file");
+  }
+
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;                                // final result
+
+  uint64_t lines_count = 0;
+  // process each line
+  std::string line;
+  while (getline(fin, line)) {
+    // enforce max number of lines read
+    if (lines_count && lines_count >= limit_lines)
+      break;
+
+    double label;
+    std::vector<std::pair<int, FEATURE_TYPE>> features;
+    parse_sparse_line(line, delimiter, features, label);
+
+    samples.push_back(features);
+    labels.push_back(label);
+
+    if (lines_count % REPORT_LINES == 0) {
+      std::cout << "Read: " << lines_count << " lines." << std::endl;
+    }
+    lines_count++;
+  }
+
+  std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
+
+  SparseDataset ret(std::move(samples), std::move(labels));
+  if (to_normalize) {
+    // pass hash size
+    ret.normalize( (1 << HASH_BITS) + 14);
+  }
+
+  return ret;
 }
 

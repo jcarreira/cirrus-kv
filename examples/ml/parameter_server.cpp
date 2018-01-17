@@ -62,6 +62,12 @@ void run_tasks(int rank, int nworkers,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
     lt.run(config);
+  } else if (rank == LOADING_SPARSE_TASK_RANK) {
+    LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
   } else if (rank == ERROR_TASK_RANK) {
     ErrorTask et(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
