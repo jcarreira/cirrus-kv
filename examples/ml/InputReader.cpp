@@ -665,7 +665,7 @@ void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex
     if (lines_count && lines_count >= limit_lines)
       break;
 
-    double label;
+    FEATURE_TYPE label;
     std::vector<std::pair<int, FEATURE_TYPE>> features;
     parse_criteo_sparse_line(line, delimiter, features, label);
 
