@@ -94,8 +94,6 @@ void SparseLRModel::sgd_update(double learning_rate,
 
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
-        FEATURE_TYPE* /*labels*/,
-        uint64_t /*labels_size*/,
         double epsilon) const {
     auto w = weights_;
 #ifdef DEBUG

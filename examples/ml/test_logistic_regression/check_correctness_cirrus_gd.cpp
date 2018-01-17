@@ -8,7 +8,7 @@
 #include <InputReader.h>
 #include <LRModel.h>
 
-typedef float FEATURE_TYPE;
+//typedef float FEATURE_TYPE;
 const std::string INPUT_PATH = "criteo_data/day_1_100k_filtered";
 
 template<typename Out>

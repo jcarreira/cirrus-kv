@@ -8,8 +8,12 @@
 #include <thread>
 
 #include <InputReader.h>
-#include <LRModel.h>
+#include <SparseLRModel.h>
 
+#include "../config.h"
+
+//typedef float FEATURE_TYPE;
+//const std::string INPUT_PATH = "criteo_data/day_1_100K";
 const std::string INPUT_PATH = "criteo_data/day_1_100k_filtered";
 
 void print_info(const auto& samples) {
@@ -20,21 +24,22 @@ void print_info(const auto& samples) {
 void check_error(auto model, auto dataset) {
   auto ret = model->calc_loss(dataset);
   auto loss = ret.first;
-  std::cout << "loss: " << loss << std::endl;
+  auto acc = ret.second;
+  std::cout << "loss: " << loss << " accuracy: " << acc << std::endl;
 }
 
 std::mutex model_lock;
-std::unique_ptr<LRModel> model;
+std::unique_ptr<SparseLRModel> model;
 double epsilon = 0.00001;
 double learning_rate = 0.00000001;
 
-void learning_function(const Dataset& dataset) {
+void learning_function(const SparseDataset& dataset) {
   for (uint64_t i = 0; 1; ++i) {
-    Dataset ds = dataset.random_sample(20);
+    //std::cout << "iter" << std::endl;
+    SparseDataset ds = dataset.random_sample(20);
 
-    auto gradient = model->minibatch_grad(ds.samples_,
-        const_cast<double*>(ds.labels_.get()),
-        ds.num_samples(), epsilon);
+    auto gradient = model->minibatch_grad(
+        dataset, epsilon);
 
     model_lock.lock();
     model->sgd_update(learning_rate, gradient.get());
@@ -44,18 +49,18 @@ void learning_function(const Dataset& dataset) {
 
 int main() {
   InputReader input;
-  Dataset dataset = input.read_input_csv(
+  SparseDataset dataset = input.read_input_criteo_sparse(
       INPUT_PATH,
-      "\t", 1,
+      "\t",
       10000,
-      14, true); // normalize=true
+      true); // normalize=true
   dataset.check();
   dataset.print_info();
 
-  uint64_t num_cols = 13;
-  model.reset(new LRModel(num_cols));
+  uint64_t model_size = (1 << HASH_BITS) + 13;
+  model.reset(new SparseLRModel(model_size));
 
-  uint64_t num_threads = 20;
+  uint64_t num_threads = 8;
   std::vector<std::shared_ptr<std::thread>> threads;
   for (uint64_t i = 0; i < num_threads; ++i) {
     threads.push_back(std::make_shared<std::thread>(

@@ -18,7 +18,6 @@
 #include <map>
 #include "MurmurHash3.h"
  
-#define HASH_BITS 20
 #define DEBUG
 
 static const int REPORT_LINES = 10000;  // how often to report readin progress
@@ -606,7 +605,7 @@ void InputReader::parse_criteo_sparse_line(
       uint64_t hash = hash_f(l) % hash_size;
       cat_features[hash]++;
     } else {
-      //std::cout << "Adding numerical feature: " << l << std::endl;
+      //std::cout << "Adding numerical feature: " << l << "at col: " << col << std::endl;
       assert(!is_definitely_categorical(l));
       FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
       num_features.push_back(v);
@@ -708,7 +707,7 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   std::vector<FEATURE_TYPE> labels;                                // final result
 
   std::vector<std::shared_ptr<std::thread>> threads;
-  uint64_t nthreads = 8;
+  uint64_t nthreads = 1;
   for (uint64_t i = 0; i < nthreads; ++i) {
     threads.push_back(
         std::make_shared<std::thread>(

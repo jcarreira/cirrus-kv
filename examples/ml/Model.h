@@ -94,14 +94,12 @@ class Model {
        * @returns SGD gradient
        */
      virtual std::unique_ptr<ModelGradient> minibatch_grad(
-                const Matrix& dataset,
-                FEATURE_TYPE* labels,
-                uint64_t labels_size,
-                double epsilon) const = 0;
+                const Matrix& /*dataset*/,
+                FEATURE_TYPE* /*labels*/,
+                uint64_t /*labels_size*/,
+                double /*epsilon*/) const  { throw std::runtime_error("not implemented"); }
      virtual std::unique_ptr<ModelGradient> minibatch_grad(
                 const SparseDataset& ,
-                FEATURE_TYPE* ,
-                uint64_t ,
                 double ) const { throw std::runtime_error("not implemented"); }
 
      /**

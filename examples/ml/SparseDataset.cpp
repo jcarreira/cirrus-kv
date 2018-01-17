@@ -205,13 +205,12 @@ std::shared_ptr<char> SparseDataset::build_serialized_s3_obj(uint64_t l, uint64_
 SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
   std::random_device rd;
   std::default_random_engine re(rd());
-  std::uniform_int_distribution<int> sampler(0, num_samples());
+  std::uniform_int_distribution<int> sampler(0, num_samples() - 1);
 
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
 
   for (uint64_t i = 0; i < n_samples; ++i) {
     int index = sampler(re);
-
     samples.push_back(data_[index]);
   }
 

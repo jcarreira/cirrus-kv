@@ -85,15 +85,7 @@ class SparseLRModel : public Model {
      * @return Newly computed gradient
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            const Matrix& dataset,
-            FEATURE_TYPE* labels,
-            uint64_t labels_size,
-            double epsilon) const override;
-    
-    std::unique_ptr<ModelGradient> minibatch_grad(
             const SparseDataset& dataset,
-            FEATURE_TYPE* labels,
-            uint64_t labels_size,
             double epsilon) const override;
     /**
      * Compute the logistic loss of a given dataset on the current model
