@@ -14,6 +14,8 @@
 #include <cassert>
 #include <memory>
 #include <algorithm>
+#include <atomic>
+#include <map>
 #include "MurmurHash3.h"
  
 #define HASH_BITS 20
@@ -560,9 +562,9 @@ uint64_t hash_f(const char* s) {
   return hash_otpt[0];
 }
 
-bool InputReader::is_categorical(const char* s) {
+bool InputReader::is_definitely_categorical(const char* s) {
   for (uint64_t i = 0; s[i]; ++i) {
-    if (!isdigit(s[i])) {
+    if (!isdigit(s[i]) && s[i]!='-') {
       return true;
     }
   }
@@ -573,11 +575,13 @@ bool InputReader::is_categorical(const char* s) {
  * Parse a line from the training dataset
  * containg numerical and/or categorical variables
  */
-void InputReader::parse_sparse_line(
+void InputReader::parse_criteo_sparse_line(
     const std::string& line, const std::string& delimiter,
     std::vector<std::pair<int, FEATURE_TYPE>>& features,
     FEATURE_TYPE& label) {
   char str[STR_SIZE];
+
+  //std::cout << "PARSE line: " << line << std::endl;
 
   if (line.size() > STR_SIZE) {
     throw std::runtime_error("Input line is too big");
@@ -587,47 +591,109 @@ void InputReader::parse_sparse_line(
   char* s = str;
 
   std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::vector<uint64_t> cat_features;  // categorical features
+  std::map<uint64_t, int> cat_features;
 
   uint64_t hash_size = 1 << HASH_BITS;
-  cat_features.resize(hash_size);
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
-    if (col++ == 0) { // it's label
+    //std::cout << "l: " << l << std::endl;
+    if (col == 0) { // it's label
       label = string_to<FEATURE_TYPE>(l);
-      continue;
+    } else if (col >= 14) {
+      //std::cout << "Adding cat feature: " << l << std::endl;
+      //assert(is_categorical(l) || std::string(l).size() == 0);
+      uint64_t hash = hash_f(l) % hash_size;
+      cat_features[hash]++;
     } else {
-      if (is_categorical(l)) {
-        uint64_t hash = hash_f(l) % hash_size;
-        cat_features[hash]++;
-      } else {
-        FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-        num_features.push_back(v);
-      }
+      //std::cout << "Adding numerical feature: " << l << std::endl;
+      assert(!is_definitely_categorical(l));
+      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
+      num_features.push_back(v);
     }
+    col++;
   }
 
   uint64_t feature_index = 0;
   for (const auto& feat : num_features) {
-    features.push_back(std::make_pair(feature_index++, feat));
+    if (feat != 0.0)
+      features.push_back(std::make_pair(feature_index, feat));
+    feature_index++;
+    //std::cout << "Adding numerical feature index: " << feature_index - 1 << " feat: " << feat << std::endl;
   }
 
   for (const auto& feat : cat_features) {
-    if (feat == 0) {
-      feature_index++;
-      continue;
-    } else {
-      features.push_back(std::make_pair(feature_index++, feat));
-    }
+    int index = feat.first;
+    FEATURE_TYPE value = feat.second;
+    features.push_back(std::make_pair(13 + index, value));
+    //std::cout << "Adding cat feature index: " << feature_index + index << " feat: " << value << std::endl;
   }
+
+#if 0
+  std::cout << "Parse line" << std::endl;
+  for (const auto& feat : num_features) {
+    std::cout << feat << " ";
+  }
+  for (const auto& feat : cat_features) {
+    int index = feat.first;
+    FEATURE_TYPE value = feat.second;
+    std::cout << index << "/" << value << " ";
+  }
+  std::cout << std::endl;
+#endif
+}
+
+void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex& fin_lock,
+    const std::string& delimiter,
+    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples_res,
+    std::vector<FEATURE_TYPE>& labels_res,
+    uint64_t limit_lines, std::atomic<unsigned int>& lines_count) {
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;                                // final result
+  std::string line;
+  uint64_t lines_count_thread = 0;
+  while (1) {
+    fin_lock.lock();
+    getline(fin, line);
+    fin_lock.unlock();
+
+    // break if we reach end of file
+    if (fin.eof())
+      break;
+
+    // enforce max number of lines read
+    if (lines_count && lines_count >= limit_lines)
+      break;
+
+    double label;
+    std::vector<std::pair<int, FEATURE_TYPE>> features;
+    parse_criteo_sparse_line(line, delimiter, features, label);
+
+    samples.push_back(features);
+    labels.push_back(label);
+
+    if (lines_count % 100000 == 0) {
+      std::cout << "Read: " << lines_count << "/" << lines_count_thread << " lines." << std::endl;
+    }
+    ++lines_count;
+    lines_count_thread++;
+  }
+
+  fin_lock.lock(); // XXX fix this
+  for (const auto& l : labels) {
+    labels_res.push_back(l);
+  }
+  for (const auto& s : samples) {
+    samples_res.push_back(s);
+  }
+  fin_lock.unlock();
 }
 
 /** Handle both numerical and categorical variables
     * For categorical variables we use the hashing trick
     */
 SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_file,
-    std::string delimiter,
+    const std::string& delimiter,
     uint64_t limit_lines,
     bool to_normalize) {
   std::cout << "Reading input file: " << input_file << std::endl;
@@ -636,31 +702,31 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   if (!fin) {
     throw std::runtime_error("Error opening input file");
   }
-
+  std::mutex fin_lock;
+  std::atomic<unsigned int> lines_count(0);
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
   std::vector<FEATURE_TYPE> labels;                                // final result
 
-  uint64_t lines_count = 0;
-  // process each line
-  std::string line;
-  while (getline(fin, line)) {
-    // enforce max number of lines read
-    if (lines_count && lines_count >= limit_lines)
-      break;
-
-    double label;
-    std::vector<std::pair<int, FEATURE_TYPE>> features;
-    parse_sparse_line(line, delimiter, features, label);
-
-    samples.push_back(features);
-    labels.push_back(label);
-
-    if (lines_count % REPORT_LINES == 0) {
-      std::cout << "Read: " << lines_count << " lines." << std::endl;
-    }
-    lines_count++;
+  std::vector<std::shared_ptr<std::thread>> threads;
+  uint64_t nthreads = 8;
+  for (uint64_t i = 0; i < nthreads; ++i) {
+    threads.push_back(
+        std::make_shared<std::thread>(
+          std::bind(&InputReader::read_input_criteo_sparse_thread, this,
+            std::placeholders::_1, std::placeholders::_2,
+            std::placeholders::_3, std::placeholders::_4,
+            std::placeholders::_5, std::placeholders::_6,
+            std::placeholders::_7),
+          std::ref(fin), std::ref(fin_lock),
+          std::ref(delimiter), std::ref(samples),
+          std::ref(labels), limit_lines, std::ref(lines_count)));
   }
 
+  for (auto& t : threads) {
+    t->join();
+  }
+
+  // process each line
   std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
 
   SparseDataset ret(std::move(samples), std::move(labels));
@@ -668,7 +734,6 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
     // pass hash size
     ret.normalize( (1 << HASH_BITS) + 14);
   }
-
   return ret;
 }
 

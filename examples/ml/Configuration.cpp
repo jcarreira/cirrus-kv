@@ -24,7 +24,9 @@ void Configuration::read(const std::string& path) {
 
     std::string line;
     while (getline(fin, line)) {
-        parse_line(line);
+      if (line.size() && line[0] == '#')
+        continue;
+      parse_line(line);
     }
 
     print();

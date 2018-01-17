@@ -8,6 +8,7 @@
 #include <queue>
 #include <mutex>
 #include <config.h>
+#include <MurmurHash3.h>
 
 class InputReader {
   public:
@@ -89,7 +90,7 @@ class InputReader {
       bool to_normalize);
 
   SparseDataset read_input_criteo_sparse(const std::string& input_file,
-      std::string delimiter,
+      const std::string& delimiter,
       uint64_t limit_lines,
       bool /*to_normalize*/);
 
@@ -142,20 +143,26 @@ class InputReader {
   /** Parse a training dataset sample that can contain
    * categorical variables
    */
-  void parse_sparse_line(
+  void parse_criteo_sparse_line(
       const std::string& line, const std::string& delimiter,
       std::vector<std::pair<int, FEATURE_TYPE>>& features,
       FEATURE_TYPE& label);
 
   /** Check if feature is categorical (contains character that is not diigt)
     +    */
-  bool is_categorical(const char* s);
+  bool is_definitely_categorical(const char* s);
 
   /** Shuffle both samples and labels
     +    */
   void shuffle_samples_labels(
       std::vector<std::vector<FEATURE_TYPE>>& samples,
       std::vector<FEATURE_TYPE>& labels);
+
+  void read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex& lock,
+    const std::string& delimiter,
+    std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
+    std::vector<FEATURE_TYPE>& labels_res,
+    uint64_t limit_lines, std::atomic<unsigned int>&);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

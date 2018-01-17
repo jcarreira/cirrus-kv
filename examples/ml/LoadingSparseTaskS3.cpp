@@ -8,16 +8,23 @@
 #include "config.h"
 
 #define READ_INPUT_THREADS (10)
-const std::string INPUT_DELIMITER = " ";
-
 SparseDataset LoadingSparseTaskS3::read_dataset(
     const Configuration& config) {
   InputReader input;
 
+  std::string delimiter;
+  if (config.get_input_type() == "csv_space") {
+    delimiter = "";
+  } else if (config.get_input_type() == "csv_tab") {
+    delimiter = "\t";
+  } else {
+    throw std::runtime_error("unknown input type");
+  }
+
   bool normalize = config.get_normalize();
   SparseDataset dataset = input.read_input_criteo_sparse(
       config.get_input_path(),
-      INPUT_DELIMITER,
+      delimiter,
       config.get_limit_samples(),
       //config.get_limit_cols(),
       normalize);
@@ -46,13 +53,21 @@ void LoadingSparseTaskS3::check_loading(
   //std::cout << "[LOADER] Checking label values.." << std::endl;
   //check_label(sample.get()[0]);
 
-#ifdef DEBUG
-  std::cout << "[LOADER] " << "Print sample 0" << std::endl;
-  for (unsigned int i = 1; i <= features_per_sample; ++i) {
-    FEATURE_TYPE val = sample.get()[i];
-    std::cout << val << " ";
+  const auto& s = dataset.get_row(0);
+  std::cout << "[LOADER] " << "Print sample 0 with size: " << s.size() << std::endl;
+  for (const auto& feature : s) {
+    int index = feature.first;
+    FEATURE_TYPE value = feature.second;
+    std::cout << index << "/" << value << " ";
   }
-#endif
+
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    //const auto& s = dataset.get_row(i);
+    const auto& label = dataset.labels_[i];
+    if (label != 0.0 && label != 1.0) {
+      throw std::runtime_error("Wrong label");
+    }
+  }
 }
 
 /**
@@ -64,8 +79,8 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
   Configuration new_config = config;
-  new_config.limit_samples = 10000;
-  new_config.s3_size = 10000;
+  //new_config.limit_samples = 1000000; // XXX fix this
+  new_config.s3_size = 100000; // XXX fix this
   // number of samples in one s3 object 
   uint64_t s3_obj_num_samples = new_config.get_s3_size();
   // each object is going to have features and 1 label

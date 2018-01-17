@@ -71,6 +71,23 @@ void SparseDataset::check() const {
       }
 
       FEATURE_TYPE rating = v.second;
+      if (std::isnan(rating) || std::isinf(rating)) {
+        throw std::runtime_error(
+            "SparseDataset::check_values nan/inf rating");
+      }
+    }
+  }
+}
+
+void SparseDataset::check_ratings() const {
+  for (const auto& w : data_) {
+    for (const auto& v : w) {
+      // check index value
+      if (v.first < 0) {
+        throw std::runtime_error("Input error");
+      }
+
+      FEATURE_TYPE rating = v.second;
       if (rating < -100 || rating > 100) {
         throw std::runtime_error(
             "SparseDataset::check_values wrong rating value: " + std::to_string(rating));
@@ -244,5 +261,12 @@ void SparseDataset::normalize(uint64_t hash_size) {
         (max_val_feature[index] - min_val_feature[index]);
     }
   }
+}
+
+const std::vector<std::pair<int, FEATURE_TYPE>>& SparseDataset::get_row(uint64_t n) const {
+  if (n >= data_.size()) {
+    throw std::runtime_error("Wrong index");
+  }
+  return data_[n];
 }
 
