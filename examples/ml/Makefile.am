@@ -53,7 +53,7 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
-              PSTask.cpp TasksWait.cpp MurmurHash3.cpp \
+              PSTask.cpp PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
 	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
 	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp

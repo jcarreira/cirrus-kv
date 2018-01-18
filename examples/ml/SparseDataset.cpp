@@ -29,14 +29,6 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
   build_max_features();
 }
 
-template<typename T>
-T load_value(const char*& data) {
-  const T* v_ptr = reinterpret_cast<const T*>(data);
-  T ret = *v_ptr;
-  data += sizeof(T);
-  return ret;
-}
-
 SparseDataset::SparseDataset(const char* data, uint64_t /*size*/) {
   (void)load_value<int>(data);
   uint64_t n_samples = load_value<int>(data);
@@ -143,13 +135,6 @@ void SparseDataset::print_info() const {
 
   //std::cout << "Average rating: " << (avg / count) << std::endl;
 
-}
-
-template<typename T>
-void store_value(char*& data, T value) {
-  T* v_ptr = reinterpret_cast<T*>(data);
-  *v_ptr = value;
-  data += sizeof(T);
 }
 
 /** FORMAT OF S3 object
