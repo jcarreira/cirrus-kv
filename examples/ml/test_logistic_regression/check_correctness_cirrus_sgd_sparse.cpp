@@ -12,6 +12,7 @@
 #include <S3SparseIterator.h>
 
 #include "../config.h"
+#include "../Utils.h"
 
 //typedef float FEATURE_TYPE;
 //const std::string INPUT_PATH = "criteo_data/day_1_100K";
@@ -28,7 +29,8 @@ void check_error(auto model, auto dataset) {
   auto avg_loss = 1.0 * total_loss / dataset.num_samples();
   auto acc = ret.second;
   std::cout
-    << "total/avg loss: " << total_loss << "/" << avg_loss
+    << "time: " << get_time_us()
+    << " total/avg loss: " << total_loss << "/" << avg_loss
     << " accuracy: " << acc
     << std::endl;
 }
