@@ -20,13 +20,13 @@ void SparseDataset::build_max_features() {
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples) :
     data_(samples), max_features_(0) {
-  build_max_features();
+  //build_max_features();
 }
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
     data_(samples), labels_(labels), max_features_(0) {
-  build_max_features();
+  //build_max_features();
 }
 
 SparseDataset::SparseDataset(const char* data, uint64_t /*size*/) {
@@ -47,7 +47,7 @@ SparseDataset::SparseDataset(const char* data, uint64_t /*size*/) {
     labels_.push_back(label);
   }
   
-  build_max_features();
+  //build_max_features();
 }
 
 uint64_t SparseDataset::num_samples() const {
@@ -122,7 +122,7 @@ void SparseDataset::print() const {
 
 void SparseDataset::print_info() const {
   std::cout << "SparseDataset #samples: " << data_.size() << std::endl;
-  std::cout << "SparseDataset max features: " << max_features_ << std::endl;
+  //std::cout << "SparseDataset max features: " << max_features_ << std::endl;
 
   //double avg = 0;
   //uint64_t count = 0;
@@ -217,6 +217,7 @@ SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) con
 }
 
 uint64_t SparseDataset::max_features() const {
+  throw std::runtime_error("Not supported");
   return max_features_;
 }
 
