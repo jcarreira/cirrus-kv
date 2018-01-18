@@ -118,11 +118,19 @@ void store_value(char*& data, T value) {
   data += sizeof(T);
 }
 
+// advance ptr a number of bytes forward
 template<typename T>
-T load_value(const char*& data) {
+void advance_ptr(const T*& p, uint64_t bytes) {
+  const char*ptr = reinterpret_cast<const char*>(p);
+  ptr += bytes;
+  p = reinterpret_cast<T*>(const_cast<char*>(ptr));
+}
+
+template<typename T, typename C>
+T load_value(const C*& data) {
   const T* v_ptr = reinterpret_cast<const T*>(data);
   T ret = *v_ptr;
-  data += sizeof(T);
+  advance_ptr(data, sizeof(T));
   return ret;
 }
 
