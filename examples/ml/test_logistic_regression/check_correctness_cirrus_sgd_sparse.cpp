@@ -9,6 +9,7 @@
 
 #include <InputReader.h>
 #include <SparseLRModel.h>
+#include <S3SparseIterator.h>
 
 #include "../config.h"
 
@@ -47,6 +48,25 @@ void learning_function(const SparseDataset& dataset) {
   }
 }
 
+void learning_function_from_s3(const SparseDataset& dataset) {
+  Configuration config;
+  config.read("criteo_aws_lambdas_s3.cfg");
+  S3SparseIterator s3_iter(0, 10, config,
+      config.get_s3_size(),
+      config.get_minibatch_size());
+
+  for (uint64_t i = 0; 1; ++i) {
+    SparseDataset ds = dataset.random_sample(20);
+
+    auto gradient = model->minibatch_grad(
+        dataset, epsilon);
+
+    model_lock.lock();
+    model->sgd_update(learning_rate, gradient.get());
+    model_lock.unlock();
+  }
+}
+
 int main() {
   InputReader input;
   SparseDataset dataset = input.read_input_criteo_sparse(
@@ -57,7 +77,7 @@ int main() {
   dataset.check();
   dataset.print_info();
 
-  uint64_t model_size = (1 << HASH_BITS) + 13;
+  uint64_t model_size = (1 << CRITEO_HASH_BITS) + 13;
   model.reset(new SparseLRModel(model_size));
 
   uint64_t num_threads = 8;
@@ -73,7 +93,6 @@ int main() {
     check_error(model.get(), dataset);
     model_lock.unlock();
   }
-
-
   return 0;
 }
+
