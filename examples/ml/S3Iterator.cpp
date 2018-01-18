@@ -148,13 +148,9 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
 }
 
 void S3Iterator::thread_function() {
-
   std::cout << "Building S3 deser. with size: "
     << s3_rows << " x " << (s3_cols + 1) << " = " << (s3_rows * (s3_cols + 1))
     << std::endl;
-  c_array_deserializer<FEATURE_TYPE> cad_samples(
-      s3_rows * (s3_cols + 1), // also count labels
-      "S3 deserializer");
 
   uint64_t count = 0;
   while (1) {
