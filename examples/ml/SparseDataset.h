@@ -35,7 +35,7 @@ class SparseDataset {
 
   /** Load sparse dataset from serialized format
     */
-  SparseDataset(const char*, uint64_t);
+  SparseDataset(const char*, bool from_s3);
 
   /**
    * Get the number of samples in this dataset

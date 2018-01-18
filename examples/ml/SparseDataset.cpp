@@ -29,16 +29,23 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
   //build_max_features();
 }
 
-SparseDataset::SparseDataset(const char* data, uint64_t /*size*/) {
-  (void)load_value<int>(data);
-  uint64_t n_samples = load_value<int>(data);
+SparseDataset::SparseDataset(const char* data, bool from_s3) {
+  if (from_s3) { // comes from s3 so get rid of object size
+    (void)load_value<int>(data); // read object size
+  }
 
-  for (uint64_t i = 0; i < n_samples; ++i) {
+  int n_samples = load_value<int>(data);
+  assert(n_samples > 0 && n_samples < 1000000); // sanity check
+
+  for (int i = 0; i < n_samples; ++i) {
     FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
-    uint64_t num_sample_values = load_value<int>(data);
+    int num_sample_values = load_value<int>(data);
+
+    assert(label == 0.0 || label == 1.0);
+    assert(num_sample_values > 0 && num_sample_values < 1000000);
 
     std::vector<std::pair<int, FEATURE_TYPE>> sample;
-    for (uint64_t j = 0; j < num_sample_values; ++j) {
+    for (int j = 0; j < num_sample_values; ++j) {
       int index = load_value<int>(data);
       FEATURE_TYPE value = load_value<FEATURE_TYPE>(data);
       sample.push_back(std::make_pair(index, value));
