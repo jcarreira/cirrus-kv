@@ -111,4 +111,20 @@ void print_statistics(const T& begin, const T& end) {
 
 void sleep_forever();
 
+template<typename T>
+void store_value(char*& data, T value) {
+  T* v_ptr = reinterpret_cast<T*>(data);
+  *v_ptr = value;
+  data += sizeof(T);
+}
+
+template<typename T>
+T load_value(const char*& data) {
+  const T* v_ptr = reinterpret_cast<const T*>(data);
+  T ret = *v_ptr;
+  data += sizeof(T);
+  return ret;
+}
+
+
 #endif  // EXAMPLES_ML_UTILS_H_
