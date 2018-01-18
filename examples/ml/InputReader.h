@@ -84,10 +84,10 @@ class InputReader {
   void normalize(std::vector<std::vector<FEATURE_TYPE>>& data);
 
 
-  Dataset read_input_csv_sparse(const std::string& input_file,
-      std::string delimiter, uint64_t nthreads,
-      uint64_t limit_lines, uint64_t limit_cols,
-      bool to_normalize);
+  SparseDataset read_input_rcv1_sparse(const std::string& input_file,
+      const std::string& delimiter,
+      uint64_t limit_lines,
+      bool /*to_normalize*/);
 
   SparseDataset read_input_criteo_sparse(const std::string& input_file,
       const std::string& delimiter,
@@ -159,6 +159,12 @@ class InputReader {
       std::vector<FEATURE_TYPE>& labels);
 
   void read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex& lock,
+    const std::string& delimiter,
+    std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
+    std::vector<FEATURE_TYPE>& labels_res,
+    uint64_t limit_lines, std::atomic<unsigned int>&);
+  
+  void read_input_rcv1_sparse_thread(std::ifstream& fin, std::mutex& lock,
     const std::string& delimiter,
     std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
     std::vector<FEATURE_TYPE>& labels_res,

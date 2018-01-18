@@ -592,7 +592,7 @@ void InputReader::parse_criteo_sparse_line(
   std::vector<FEATURE_TYPE> num_features; // numerical features
   std::map<uint64_t, int> cat_features;
 
-  uint64_t hash_size = 1 << HASH_BITS;
+  uint64_t hash_size = 1 << CRITEO_HASH_BITS;
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
@@ -731,7 +731,62 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   SparseDataset ret(std::move(samples), std::move(labels));
   if (to_normalize) {
     // pass hash size
-    ret.normalize( (1 << HASH_BITS) + 14);
+    ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
+  }
+  return ret;
+}
+
+void InputReader::read_input_rcv1_sparse_thread(
+    std::ifstream& /*fin*/,
+    std::mutex& /*fin_lock*/,
+    const std::string& /*delimiter*/,
+    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& /*samples_res*/,
+    std::vector<FEATURE_TYPE>& /*labels_res*/,
+    uint64_t /*limit_lines*/,
+    std::atomic<unsigned int>& /*lines_count*/) {
+}
+
+SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
+    const std::string& delimiter,
+    uint64_t limit_lines,
+    bool to_normalize) {
+  std::cout << "Reading input file: " << input_file << std::endl;
+
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file");
+  }
+  std::mutex fin_lock;
+  std::atomic<unsigned int> lines_count(0);
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;                                // final result
+
+  std::vector<std::shared_ptr<std::thread>> threads;
+  uint64_t nthreads = 1;
+  for (uint64_t i = 0; i < nthreads; ++i) {
+    threads.push_back(
+        std::make_shared<std::thread>(
+          std::bind(&InputReader::read_input_criteo_sparse_thread, this,
+            std::placeholders::_1, std::placeholders::_2,
+            std::placeholders::_3, std::placeholders::_4,
+            std::placeholders::_5, std::placeholders::_6,
+            std::placeholders::_7),
+          std::ref(fin), std::ref(fin_lock),
+          std::ref(delimiter), std::ref(samples),
+          std::ref(labels), limit_lines, std::ref(lines_count)));
+  }
+
+  for (auto& t : threads) {
+    t->join();
+  }
+
+  // process each line
+  std::cout << "Read RCV1 a total of " << labels.size() << " samples" << std::endl;
+
+  SparseDataset ret(std::move(samples), std::move(labels));
+  if (to_normalize) {
+    // pass hash size
+    ret.normalize( (1 << RCV1_HASH_BITS) );
   }
   return ret;
 }
