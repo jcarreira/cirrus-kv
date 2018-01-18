@@ -48,6 +48,7 @@ class SparseLRModel : public Model {
       * serializes this model into memory pointed by mem
       */
     void serializeTo(void* mem) const;
+    char* serializeTo2(uint64_t) const;
 
     /**
      * Create new model from serialized weights

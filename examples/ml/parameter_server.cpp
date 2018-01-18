@@ -1,18 +1,12 @@
 #include <stdlib.h>
 #include <cstdint>
 #include <string>
-#include <Checksum.h>
 #include "Utils.h"
-#include "Model.h"
-#include "LRModel.h"
-#include "ModelGradient.h"
 #include "Configuration.h"
-#include "Serializers.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Log.h"
-#include "client/TCPClient.h"
 #include "common/Exception.h"
 #include <Tasks.h>
 
@@ -62,12 +56,6 @@ void run_tasks(int rank, int nworkers,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
     lt.run(config);
-  } else if (rank == LOADING_SPARSE_TASK_RANK) {
-    LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
-        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-        batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
-    lt.run(config);
   } else if (rank == ERROR_TASK_RANK) {
     ErrorTask et(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
@@ -87,6 +75,38 @@ void run_tasks(int rank, int nworkers,
     lt.run(config, rank - WORKER_TASK_RANK);
     sleep_forever();
 
+  } 
+  /**
+    * SPARSE tasks
+    */
+  else if (rank == ERROR_SPARSE_TASK_RANK) {
+    ErrorSparseTask et(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    et.run(config);
+    sleep_forever();
+  } else if (rank == LOADING_SPARSE_TASK_RANK) {
+    LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+  } else if (rank == PS_SPARK_TASK_RANK) {
+    PSSparseTask pt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    pt.run(config);
+    sleep_forever();
+  } else if (rank == WORKER_SPARSE_TASK_RANK) {
+    rank = -rank;
+    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config, rank - WORKER_TASK_RANK);
+    sleep_forever();
   } else {
     throw std::runtime_error("Wrong task rank: " + std::to_string(rank));
   }

@@ -111,19 +111,19 @@ void print_statistics(const T& begin, const T& end) {
 
 void sleep_forever();
 
-template<typename T>
-void store_value(char*& data, T value) {
-  T* v_ptr = reinterpret_cast<T*>(data);
-  *v_ptr = value;
-  data += sizeof(T);
-}
-
 // advance ptr a number of bytes forward
 template<typename T>
-void advance_ptr(const T*& p, uint64_t bytes) {
+void advance_ptr(T*& p, uint64_t bytes) {
   const char*ptr = reinterpret_cast<const char*>(p);
   ptr += bytes;
-  p = reinterpret_cast<T*>(const_cast<char*>(ptr));
+  p = (T*)ptr;
+}
+
+template<typename T, typename C>
+void store_value(C*& data, T value) {
+  T* v_ptr = reinterpret_cast<T*>(data);
+  *v_ptr = value;
+  advance_ptr(data, sizeof(T));
 }
 
 template<typename T, typename C>

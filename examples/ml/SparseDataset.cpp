@@ -29,12 +29,41 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
   //build_max_features();
 }
 
+
+SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
+  for (uint64_t i = 0; i < n_samples; ++i) {
+    FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
+    int num_sample_values = load_value<int>(data);
+
+    assert(label == 0.0 || label == 1.0);
+    assert(num_sample_values > 0 && num_sample_values < 1000000);
+
+    std::vector<std::pair<int, FEATURE_TYPE>> sample;
+    for (int j = 0; j < num_sample_values; ++j) {
+      int index = load_value<int>(data);
+      FEATURE_TYPE value = load_value<FEATURE_TYPE>(data);
+      sample.push_back(std::make_pair(index, value));
+    }
+    data_.push_back(sample);
+    labels_.push_back(label);
+  }
+}
+
 SparseDataset::SparseDataset(const char* data, bool from_s3) {
+  int obj_size = 0;
   if (from_s3) { // comes from s3 so get rid of object size
-    (void)load_value<int>(data); // read object size
+    obj_size = load_value<int>(data); // read object size
+  } else {
+    throw std::runtime_error("not supported");
   }
 
   int n_samples = load_value<int>(data);
+  std::cout << "SparseDataset constructor"
+    << " from_s3: " << from_s3
+    << " obj_size: " << obj_size
+    << " n_samples " << n_samples
+    << std::endl;
+
   assert(n_samples > 0 && n_samples < 1000000); // sanity check
 
   for (int i = 0; i < n_samples; ++i) {
@@ -53,8 +82,6 @@ SparseDataset::SparseDataset(const char* data, bool from_s3) {
     data_.push_back(sample);
     labels_.push_back(label);
   }
-  
-  //build_max_features();
 }
 
 uint64_t SparseDataset::num_samples() const {

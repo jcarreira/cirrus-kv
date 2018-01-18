@@ -6,7 +6,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-//#define DEBUG
+#define DEBUG
     
 static void update_model(auto&);
 static void print_progress();
@@ -111,9 +111,10 @@ PSSparseTask::PSSparseTask(const std::string& redis_ip, uint64_t redis_port,
 
 std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size) {
   *model_size = model.getSerializedSize();
-  auto data = std::shared_ptr<char>(
-      new char[*model_size], std::default_delete<char[]>());
-  model.serializeTo(reinterpret_cast<void*>(data.get()));
+  std::cout << "Serializing model with size: " << *model_size
+    << std::endl;
+  char* d = model.serializeTo2(model.getSerializedSize());
+  auto data = std::shared_ptr<char>(d, std::default_delete<char[]>());
   return data;
 }
 
@@ -159,9 +160,9 @@ void PSSparseTask::publish_model(const SparseLRModel& model) {
   put_model(model);
 }
 
-class PSGradientProxy {
+class PSTaskGradientProxy {
   public:
-    PSGradientProxy(auto redis_ip, auto redis_port, auto MODEL_GRAD_SIZE) :
+    PSTaskGradientProxy(auto redis_ip, auto redis_port, auto MODEL_GRAD_SIZE) :
       redis_ip(redis_ip), redis_port(redis_port),
       base(event_base_new()) {
       PSSparseTaskGlobal::MODEL_GRAD_SIZE = MODEL_GRAD_SIZE;
@@ -189,7 +190,7 @@ class PSGradientProxy {
       //PSSparseTaskGlobal::prev_on_msg_time = now;
 
 #ifdef DEBUG
-      std::cout << "onMessage PSGradientProxy" << "\n";
+      std::cout << "onMessage PSTaskGradientProxy" << "\n";
 #endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
@@ -241,7 +242,7 @@ class PSGradientProxy {
 
       if (!PSSparseTaskGlobal::model_r || !PSSparseTaskGlobal::gradient_r) {
         throw std::runtime_error(
-            "PSSparseTask.PSGradientProxy error connecting to redis");
+            "PSSparseTask.PSTaskGradientProxy error connecting to redis");
       }
 
       std::cout << "libevent attached" << std::endl;
@@ -259,7 +260,7 @@ class PSGradientProxy {
 
     void run() {
       thread = std::make_unique<std::thread>(
-          std::bind(&PSGradientProxy::thread_fn, this));
+          std::bind(&PSTaskGradientProxy::thread_fn, this));
     }
 
   private:
@@ -280,7 +281,10 @@ class PSGradientProxy {
   *
   */
 void PSSparseTask::run(const Configuration& config) {
-  std::cout << "[PS] " << "PS task initializing model" << std::endl;
+  std::cout
+    << "PS task initializing model"
+    << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
+    << std::endl;
   
   sem_init(&PSSparseTaskGlobal::sem_new_model, 0, 0);
 
@@ -297,16 +301,16 @@ void PSSparseTask::run(const Configuration& config) {
   mp.run();
   PSSparseTaskGlobal::mp_start_lock.lock();
 
-  PSGradientProxy gp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
+  PSTaskGradientProxy gp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
   gp.run();
   PSSparseTaskGlobal::ps_grad_start_lock.lock();
 
   PSSparseTaskGlobal::redis_con = connect_redis();
+  publish_model_redis();
   wait_for_start(PS_TASK_RANK, PSSparseTaskGlobal::redis_con, nworkers);
 
-  publish_model(*PSSparseTaskGlobal::model);
+  //publish_model(*PSSparseTaskGlobal::model);
 
-  publish_model_redis();
   uint64_t start = get_time_us();
   while (1) {
     sem_wait(&PSSparseTaskGlobal::sem_new_model);

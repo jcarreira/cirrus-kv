@@ -8,13 +8,11 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-
-sem_t semaphore;
-
-int str_version = 0;
-std::map<int, std::string> list_strings; // strings from s3
-
-CircularBuffer<std::pair<const void*, int>> minibatches_list(100000);
+static sem_t semaphore;
+static int str_version = 0;
+static std::map<int, std::string> list_strings; // strings from s3
+static CircularBuffer<std::pair<const void*, int>> minibatches_list(100000);
+static int to_delete = -1;
 
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
@@ -45,8 +43,6 @@ S3SparseIterator::S3SparseIterator(
 
   thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this));
 }
-
-int to_delete = -1;
 
 const void* S3SparseIterator::get_next_fast() {
   // we need to delete entry
@@ -83,7 +79,7 @@ const void* S3SparseIterator::get_next_fast() {
 void S3SparseIterator::push_samples(std::ostringstream* oss) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
 
-  std::cout << "n_minibatches: " << n_minibatches << std::endl;
+  std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
 
   // save s3 object into list of string
   std::chrono::steady_clock::time_point start =
@@ -109,18 +105,22 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   assert(num_samples > 0 && num_samples < 1000000);
   std::cout << "push_samples s3_obj_size: " << s3_obj_size << " num_samples: " << num_samples << std::endl;
   for (uint64_t i = 0; i < n_minibatches; ++i) {
-    (void)load_value<FEATURE_TYPE>(s3_data); // read label
-    int num_values = load_value<int>(s3_data); 
-    assert(num_values > 0 && num_values < 1000000);
-    
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
     minibatches_list.add(std::make_pair(s3_data, is_last));
     sem_post(&semaphore);
+  
+    // advance ptr sample by sample
+    for (uint64_t j = 0; j < minibatch_rows; ++j) {
+      FEATURE_TYPE label = load_value<FEATURE_TYPE>(s3_data); // read label
+      int num_values = load_value<int>(s3_data); 
+      assert(label == 0.0 || label == 1.0);
+      assert(num_values > 0 && num_values < 1000000);
     
-    // advance until the next minibatch
-    advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE))); // every sample has index and value
+      // advance until the next minibatch
+      advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE))); // every sample has index and value
+    }
   }
   ring_lock.unlock();
   str_version++;

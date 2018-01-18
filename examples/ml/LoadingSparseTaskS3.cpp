@@ -26,7 +26,6 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
       config.get_input_path(),
       delimiter,
       config.get_limit_samples(),
-      //config.get_limit_cols(),
       normalize);
   return dataset;
 }
@@ -79,13 +78,9 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
   Configuration new_config = config;
-  new_config.limit_samples = 10000000; // XXX fix this
-  new_config.s3_size = 50000; // this should give objects with roughly size of 20MB
-  // number of samples in one s3 object 
+  //new_config.limit_samples = 10000000; // XXX fix this
+  //new_config.s3_size = 50000; // this should give objects with roughly size of 20MB
   uint64_t s3_obj_num_samples = new_config.get_s3_size();
-  // each object is going to have features and 1 label
-  uint64_t s3_obj_sample_entries = features_per_sample + 1;
-  uint64_t s3_obj_entries = s3_obj_num_samples * s3_obj_sample_entries;
 
   s3_initialize_aws();
   auto s3_client = s3_create_client();
@@ -93,15 +88,15 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   SparseDataset dataset = read_dataset(new_config);
   dataset.check();
 
+  uint64_t num_s3_objs = dataset.num_samples() / s3_obj_num_samples;
   std::cout << "[LOADER-SPARSE] "
     << "Adding " << dataset.num_samples()
-    << " samples in batches of size (s3_obj_entries): " << s3_obj_entries
+    << " #s3 objs: " << num_s3_objs
     << std::endl;
 
   // For each S3 object (group of s3_obj_num_samples samples)
-  uint64_t num_s3_objs = dataset.num_samples() / s3_obj_num_samples;
   for (unsigned int i = 0; i < num_s3_objs; ++i) {
-    std::cout << "[LOADER-SPARSE] Building s3 batches" << std::endl;
+    std::cout << "[LOADER-SPARSE] Building s3 batch #" << (i + 1) << std::endl;
 
     uint64_t first_sample = i * s3_obj_num_samples;
     uint64_t last_sample = (i + 1) * s3_obj_num_samples;

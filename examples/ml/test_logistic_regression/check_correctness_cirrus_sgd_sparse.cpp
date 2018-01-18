@@ -24,9 +24,13 @@ void print_info(const auto& samples) {
 
 void check_error(auto model, auto dataset) {
   auto ret = model->calc_loss(dataset);
-  auto loss = ret.first;
+  auto total_loss = ret.first;
+  auto avg_loss = 1.0 * total_loss / dataset.num_samples();
   auto acc = ret.second;
-  std::cout << "loss: " << loss << " accuracy: " << acc << std::endl;
+  std::cout
+    << "total/avg loss: " << total_loss << "/" << avg_loss
+    << " accuracy: " << acc
+    << std::endl;
 }
 
 std::mutex model_lock;
@@ -63,7 +67,8 @@ void learning_function_from_s3(const SparseDataset& dataset) {
     s3_lock.lock();
     const void* data = s3_iter->get_next_fast();
     s3_lock.unlock();
-    SparseDataset ds(reinterpret_cast<const char*>(data), config.get_minibatch_size()); // construct dataset with data from s3
+    SparseDataset ds(reinterpret_cast<const char*>(data),
+        config.get_minibatch_size()); // construct dataset with data from s3
 
     auto gradient = model->minibatch_grad(dataset, epsilon);
 

@@ -3,7 +3,7 @@
 #include "Serializers.h"
 #include "Redis.h"
 #include "Utils.h"
-#include "S3Iterator.h"
+#include "S3SparseIterator.h"
 #include "async.h"
 #include "adapters/libevent.h"
 
@@ -23,12 +23,11 @@ void check_redis(auto r) {
 }
 
 // we need global variables because of the static callbacks
-namespace LogisticTaskS3Global {
+namespace LogisticSparseTaskGlobal {
   std::mutex mp_start_lock;
   std::mutex gp_start_lock;
   std::mutex model_lock;
   std::unique_ptr<SparseLRModel> model;
-  //std::unique_ptr<lr_model_deserializer> lmd;
   volatile int model_version = 0;
   static auto prev_on_msg_time = get_time_us();
   redisAsyncContext* gradient_r;
@@ -45,14 +44,14 @@ class ModelProxy {
     ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new()) {
-      LogisticTaskS3Global::mp_start_lock.lock();
-      LogisticTaskS3Global::model.reset(new SparseLRModel(mgs));
-      LogisticTaskS3Global::lmd.reset(new lr_model_deserializer(mgs));
+      LogisticSparseTaskGlobal::mp_start_lock.lock();
+      LogisticSparseTaskGlobal::model.reset(new SparseLRModel(mgs));
+      LogisticSparseTaskGlobal::lmd.reset(new lr_model_deserializer(mgs));
     }
 
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "ModelProxy::connectCallback" << std::endl;
-      LogisticTaskS3Global::mp_start_lock.unlock();
+      LogisticSparseTaskGlobal::mp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -64,15 +63,15 @@ class ModelProxy {
       std::cout << "ModelProxy waiting for model" << std::endl;
 #endif
           
-      sem_wait(&LogisticTaskS3Global::new_model_semaphore);
+      sem_wait(&LogisticSparseTaskGlobal::new_model_semaphore);
       
 #ifdef DEBUG
       std::cout << "received model" << "\n";
 #endif
 
-      LogisticTaskS3Global::model_lock.lock();
-      SparseLRModel ret = *LogisticTaskS3Global::model;
-      LogisticTaskS3Global::model_lock.unlock();
+      LogisticSparseTaskGlobal::model_lock.lock();
+      SparseLRModel ret = *LogisticSparseTaskGlobal::model;
+      LogisticSparseTaskGlobal::model_lock.unlock();
       return ret;
     }
 
@@ -82,8 +81,8 @@ class ModelProxy {
 
       //auto now = get_time_us();
       //std::cout << "Time since last (us): "
-      //  << (now - LogisticTaskS3Global::prev_on_msg_time) << "\n";
-      //LogisticTaskS3Global::prev_on_msg_time = now;
+      //  << (now - LogisticSparseTaskGlobal::prev_on_msg_time) << "\n";
+      //LogisticSparseTaskGlobal::prev_on_msg_time = now;
 #ifdef DEBUG
       printf("onMessage\n");
 #endif
@@ -102,14 +101,14 @@ class ModelProxy {
             strcmp(str1, "model") == 0) {
 #ifdef DEBUG
           std::cout << "Updating model at time: " << get_time_us()
-            << " version: " << LogisticTaskS3Global::model_version
+            << " version: " << LogisticSparseTaskGlobal::model_version
             << std::endl;
 #endif
-          LogisticTaskS3Global::model_lock.lock();
-          *LogisticTaskS3Global::model = LogisticTaskS3Global::lmd->operator()(str, len);
-          LogisticTaskS3Global::model_version++;
-          LogisticTaskS3Global::model_lock.unlock();
-          sem_post(&LogisticTaskS3Global::new_model_semaphore);
+          LogisticSparseTaskGlobal::model_lock.lock();
+          *LogisticSparseTaskGlobal::model = LogisticSparseTaskGlobal::lmd->operator()(str, len);
+          LogisticSparseTaskGlobal::model_version++;
+          LogisticSparseTaskGlobal::model_lock.unlock();
+          sem_post(&LogisticSparseTaskGlobal::new_model_semaphore);
         }
       } else {
         std::cout << "Not an array" << std::endl;
@@ -154,17 +153,17 @@ class ModelProxy {
 };
 #endif
 
-class LogisticTaskGradientProxy {
+class LogisticSparseTaskGradientProxy {
   public:
-    LogisticTaskGradientProxy(
+    LogisticSparseTaskGradientProxy(
         auto redis_ip, auto redis_port, auto* redis_lock) :
       redis_ip(redis_ip), redis_port(redis_port),
       redis_lock(redis_lock), base(event_base_new()) {
-        LogisticTaskS3Global::gp_start_lock.lock();
+      LogisticSparseTaskGlobal::gp_start_lock.lock();
   }
     static void connectCallback(const redisAsyncContext*, int) {
       std::cout << "GradientProxy::connectCallback" << std::endl;
-      LogisticTaskS3Global::gp_start_lock.unlock();
+      LogisticSparseTaskGlobal::gp_start_lock.unlock();
     }
 
     static void disconnectCallback(const redisAsyncContext*, int) {
@@ -172,25 +171,25 @@ class LogisticTaskGradientProxy {
     }
 
     static void onMessage(redisAsyncContext*, void *reply, void*) {
-      std::cout << "LogisticTaskGradientProxy onMessage" << std::endl;
+      std::cout << "LogisticSparseTaskGradientProxy onMessage" << std::endl;
       if (reply == NULL) return;
     }
 
     void thread_fn() {
       std::cout << "GradientProxy connecting to redis.." << std::endl;
       redis_lock->lock();
-      LogisticTaskS3Global::gradient_r =
+      LogisticSparseTaskGlobal::gradient_r =
         redis_async_connect(redis_ip.c_str(), redis_port);
-      if (!LogisticTaskS3Global::gradient_r) {
+      if (!LogisticSparseTaskGlobal::gradient_r) {
         throw std::runtime_error("GradientProxy::Error connecting to redis");
       }
-      std::cout << "GradientProxy connected to redis.." << LogisticTaskS3Global::gradient_r
+      std::cout << "GradientProxy connected to redis.." << LogisticSparseTaskGlobal::gradient_r
         << std::endl;
 
       std::cout << "libevent attached" << std::endl;
-      redisLibeventAttach(LogisticTaskS3Global::gradient_r, base);
-      redis_connect_callback(LogisticTaskS3Global::gradient_r, connectCallback);
-      redis_disconnect_callback(LogisticTaskS3Global::gradient_r, disconnectCallback);
+      redisLibeventAttach(LogisticSparseTaskGlobal::gradient_r, base);
+      redis_connect_callback(LogisticSparseTaskGlobal::gradient_r, connectCallback);
+      redis_disconnect_callback(LogisticSparseTaskGlobal::gradient_r, disconnectCallback);
       redis_lock->unlock();
 
       std::cout << "eventbase dispatch" << std::endl;
@@ -199,7 +198,7 @@ class LogisticTaskGradientProxy {
 
     void run() {
       thread = std::make_unique<std::thread>(
-          std::bind(&LogisticTaskGradientProxy::thread_fn, this));
+          std::bind(&LogisticSparseTaskGradientProxy::thread_fn, this));
     }
   private:
     std::string redis_ip;
@@ -209,7 +208,7 @@ class LogisticTaskGradientProxy {
     std::unique_ptr<std::thread> thread;
 };
 
-void LogisticTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
+void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
   lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
 
 #ifdef DEBUG
@@ -228,7 +227,7 @@ void LogisticTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
   //int status = redisAsyncCommand(gradient_r, NULL, NULL,
   //    "PUBLISH gradients %b", data.get(), gradient_size);
   redisReply* reply = (redisReply*)redisCommand(
-      LogisticTaskS3Global::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
+      LogisticSparseTaskGlobal::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
   freeReplyObject(reply);
 
 #ifdef DEBUG
@@ -250,7 +249,7 @@ void LogisticTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
 
 /** We unpack each minibatch into samples and labels
   */
-void LogisticTaskS3::unpack_minibatch(
+void LogisticSparseTaskS3::unpack_minibatch(
     std::shared_ptr<FEATURE_TYPE> minibatch,
     auto& samples, auto& labels) {
   uint64_t num_samples_per_batch = batch_size / features_per_sample;
@@ -276,18 +275,19 @@ void LogisticTaskS3::unpack_minibatch(
 }
 
 // get samples and labels data
-bool LogisticTaskS3::run_phase1(
+bool LogisticSparseTaskS3::run_phase1(
     auto& dataset,
     auto& s3_iter) {
 
   try {
-    const FEATURE_TYPE* minibatch = s3_iter.get_next_fast();
+    const void* minibatch = s3_iter.get_next_fast();
 #ifdef DEBUG
     std::cout << "[WORKER] "
       << "got s3 data"
       << std::endl;
 #endif
-    dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch), 0));
+    dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
+          config.get_minibatch_size()));
 
 #ifdef DEBUG
     std::chrono::steady_clock::time_point finish =
@@ -316,7 +316,7 @@ bool LogisticTaskS3::run_phase1(
   return true;
 }
 
-auto connect_redis() {
+static auto connect_redis() {
   std::cout << "[WORKER] "
     << "Worker task connecting to REDIS. "
     << "IP: " << REDIS_IP << std::endl;
@@ -325,33 +325,37 @@ auto connect_redis() {
   return redis_con;
 }
 
-class ModelGet {
+class SparseModelGet {
   public:
-    ModelGet(auto MODEL_BASE, auto MODEL_GRAD_SIZE) : MODEL_BASE(MODEL_BASE), MODEL_GRAD_SIZE(MODEL_GRAD_SIZE) {}
+    SparseModelGet(auto MODEL_BASE, auto MODEL_GRAD_SIZE) : MODEL_BASE(MODEL_BASE), MODEL_GRAD_SIZE(MODEL_GRAD_SIZE) {}
 
     void thread_fn() {
       //uint64_t count = 0;
       while (1) {
         usleep(50);
         int len_model;
-        char* data = redis_get_numid(redis_con, MODEL_BASE, &len_model);
-        //SparseLRModel model = LogisticTaskS3Global::lmd->operator()(data, len_model);
+        std::string str_id = std::to_string(MODEL_BASE);
+        char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
+        //char* data = redis_get_numid(redis_con, MODEL_BASE, &len_model);
 
-        LogisticTaskS3Global::model_lock.lock();
-        LogisticTaskS3Global::model->loadSerialized(data);
-        //*LogisticTaskS3Global::model = model;
-        LogisticTaskS3Global::model_lock.unlock();
+        if (!data) {
+          throw std::runtime_error("Null value returned from redis (does not exist?)");
+        }
+
+        std::cout << "Received data from redis len: " << len_model << std::endl;
+        LogisticSparseTaskGlobal::model_lock.lock();
+        LogisticSparseTaskGlobal::model->loadSerialized(data);
+        LogisticSparseTaskGlobal::model_lock.unlock();
         
         free(data);
       }
     }
 
     void run() {
-      LogisticTaskS3Global::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
-      //LogisticTaskS3Global::lmd.reset(new lr_model_deserializer(MODEL_GRAD_SIZE));
+      LogisticSparseTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
       redis_con = connect_redis();
       thread = std::make_unique<std::thread>(
-          std::bind(&ModelGet::thread_fn, this));
+          std::bind(&SparseModelGet::thread_fn, this));
     }
   private:
     uint64_t MODEL_BASE;
@@ -361,44 +365,47 @@ class ModelGet {
 };
 
 
-void LogisticTaskS3::run(const Configuration& config, int worker) {
+void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
+  std::cout << "Starting LogisticSparseTaskS3"
+    << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
+    << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
+  this->config = config;
 
-  sem_init(&LogisticTaskS3Global::new_model_semaphore, 0, 0);
+  sem_init(&LogisticSparseTaskGlobal::new_model_semaphore, 0, 0);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
-  LogisticTaskS3Global::redis_con = connect_redis();
+  LogisticSparseTaskGlobal::redis_con = connect_redis();
   redis_lock.unlock();
 
-  ModelGet mg(1000000000UL, MODEL_GRAD_SIZE);
+  SparseModelGet mg(1000000000UL, MODEL_GRAD_SIZE);
   mg.run();
   //std::cout << "Starting ModelProxy" << std::endl;
   //ModelProxy mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE, &redis_lock);
   //mp.run();
-  //LogisticTaskS3Global::mp_start_lock.lock();
+  //LogisticSparseTaskGlobal::mp_start_lock.lock();
   //std::cout << "Started ModelProxy" << std::endl;
 
   std::cout << "Starting GradientProxy" << std::endl;
-  LogisticTaskGradientProxy gp(REDIS_IP, REDIS_PORT, &redis_lock);
+  LogisticSparseTaskGradientProxy gp(REDIS_IP, REDIS_PORT, &redis_lock);
   gp.run();
-  LogisticTaskS3Global::gp_start_lock.lock();
+  std::cout << "GradientProxy locking" << std::endl;
+  LogisticSparseTaskGlobal::gp_start_lock.lock();
   std::cout << "Started GradientProxy" << std::endl;
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(WORKER_TASK_RANK + worker, LogisticTaskS3Global::redis_con, nworkers);
+  wait_for_start(WORKER_TASK_RANK + worker, LogisticSparseTaskGlobal::redis_con, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
-  S3Iterator s3_iter(0, num_s3_batches, config,
-      config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
+  S3SparseIterator s3_iter(0, num_s3_batches, config,
+      config.get_s3_size(), config.get_minibatch_size());
 
   std::cout << "[WORKER] starting loop" << std::endl;
 
   uint64_t version = 1;
   SparseLRModel model(MODEL_GRAD_SIZE);
-  //int prev_model_version = -1;
 
   while (1) {
     // get data, labels and model
@@ -423,9 +430,9 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
     std::cout << "Computing gradient" << std::endl;
 #endif
 
-    LogisticTaskS3Global::model_lock.lock();
-    SparseLRModel model = *LogisticTaskS3Global::model;
-    LogisticTaskS3Global::model_lock.unlock();
+    LogisticSparseTaskGlobal::model_lock.lock();
+    SparseLRModel model = *LogisticSparseTaskGlobal::model;
+    LogisticSparseTaskGlobal::model_lock.unlock();
     try {
       gradient = model.minibatch_grad(*dataset, config.get_epsilon());
     } catch(const std::runtime_error& e) {
@@ -445,7 +452,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
 
     try {
       LRGradient* lrg = dynamic_cast<LRGradient*>(gradient.get());
-      push_gradient(LogisticTaskS3Global::gradient_r, lrg);
+      push_gradient(LogisticSparseTaskGlobal::gradient_r, lrg);
     } catch(...) {
       std::cout << "[WORKER] "
         << "Worker task error doing put of gradient" << "\n";

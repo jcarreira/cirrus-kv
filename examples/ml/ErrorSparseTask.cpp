@@ -3,7 +3,7 @@
 #include "Serializers.h"
 #include "Redis.h"
 #include "config.h"
-#include "S3Iterator.h"
+#include "S3SparseIterator.h"
 #include "Utils.h"
 #include "async.h"
 #include "adapters/libevent.h"
@@ -136,9 +136,8 @@ void ErrorSparseTask::run(const Configuration& config) {
 
   std::cout << "Creating S3Iterator" << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
-  S3Iterator s3_iter(0, num_s3_batches, config,
-      config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
+  S3SparseIterator s3_iter(0, num_s3_batches, config,
+      config.get_s3_size(), config.get_minibatch_size());
 
   // get data first
   // we get up to 10K samples
@@ -151,10 +150,11 @@ start:
     std::cout << "[ERROR_TASK] getting iteration: " << i
       << std::endl;
     try {
-      const FEATURE_TYPE* minibatch_data = s3_iter.get_next_fast();
+      const void* minibatch_data = s3_iter.get_next_fast();
       std::cout << "[ERROR_TASK] unpacking"
         << std::endl;
-      SparseDataset ds(reinterpret_cast<const char*>(minibatch_data), 0);
+      SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
+          config.get_minibatch_size());
       minibatches_vec.push_back(ds);
     } catch(const cirrus::NoSuchIDException& e) {
       if (i == 0)

@@ -27,15 +27,16 @@ uint64_t SparseLRModel::size() const {
   * weights
   */
 std::unique_ptr<Model> SparseLRModel::deserialize(void* data, uint64_t size) const {
-    uint64_t d = size / sizeof(FEATURE_TYPE);
-    std::unique_ptr<SparseLRModel> model = std::make_unique<SparseLRModel>(
-            reinterpret_cast<FEATURE_TYPE*>(data), d);
-    return model;
+  throw std::runtime_error("not supported");
+  uint64_t d = size / sizeof(FEATURE_TYPE);
+  std::unique_ptr<SparseLRModel> model = std::make_unique<SparseLRModel>(
+      reinterpret_cast<FEATURE_TYPE*>(data), d);
+  return model;
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
 SparseLRModel::serialize() const {
-    throw std::runtime_error("Fix. Not implemented");
+    throw std::runtime_error("Fix. Not implemented1");
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
     uint64_t size = getSerializedSize();
     res.first.reset(new char[size]);
@@ -46,21 +47,50 @@ SparseLRModel::serialize() const {
     return res;
 }
 
+char* SparseLRModel::serializeTo2(uint64_t /*size*/) const {
+  void* mem = new char[getSerializedSize()];
+  void *mem_copy = mem;
+  store_value<int>(mem, weights_.size());
+  for (const auto& v : weights_) {
+    store_value<FEATURE_TYPE>(mem, v);
+  }
+  return (char*)mem_copy;
+}
+
 void SparseLRModel::serializeTo(void* mem) const {
-    throw std::runtime_error("Fix. Not implemented");
-    std::memcpy(mem, weights_.data(), getSerializedSize());
+  std::cout << "weight size: " << weights_.size() << std::endl;
+  store_value<int>(mem, weights_.size());
+  for (const auto& v : weights_) {
+    store_value<FEATURE_TYPE>(mem, v);
+  }
 }
 
 uint64_t SparseLRModel::getSerializedSize() const {
-    throw std::runtime_error("Fix. Not implemented");
-    return size() * sizeof(FEATURE_TYPE);
+  auto ret = size() * sizeof(FEATURE_TYPE) + sizeof(int);
+  std::cout << "SparseLRModel::getSerializedSize ret: " << ret << std::endl;
+  return ret;
 }
 
+/** FORMAT
+  * number of weights (int)
+  * list of weights: weight1 (FEATURE_TYPE) | weight2 (FEATURE_TYPE) | ..
+  */
 void SparseLRModel::loadSerialized(const void* data) {
-    throw std::runtime_error("Fix. Not implemented");
-    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
-    const FEATURE_TYPE* v = reinterpret_cast<const FEATURE_TYPE*>(data);
-    std::copy(v, v + size(), weights_.begin());
+  int num_weights = load_value<int>(data);
+  std::cout << "num_weights: " << num_weights << std::endl;
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
+  //char* copy = new char[size];
+  //memcpy(copy, data, size);
+  char* data_begin = (char*)data;
+
+  weights_.resize(num_weights);
+  for (int i = 0; i < num_weights; ++i) {
+    assert(std::distance(data_begin, (char*)data) < size);
+    FEATURE_TYPE w = load_value<FEATURE_TYPE>(data);
+    weights_[i] = w;
+  }
 }
 
 /***
@@ -121,6 +151,11 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
       for (const auto& feat : dataset.get_row(i)) {
         int index = feat.first;
         FEATURE_TYPE value = feat.second;
+        //std::cout <<"index: " << index << " wsize: " << weights_.size() << std::endl;
+        if ((uint64_t)index >= weights_.size()) {
+          throw std::runtime_error("Index too high");
+        }
+        assert(index >= 0 && (uint64_t)index < weights_.size());
         part1[i] += value * weights_[index];
       }
       part1[i] = mlutils::s_1(part1[i]);
