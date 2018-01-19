@@ -170,20 +170,17 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
     int predicted_class = 0;
 
     auto r1 = ds.row(i) *  weights_eig;
-    if (mlutils::s_1(r1) > 0.5) {
+    if (mlutils::s_1((FEATURE_TYPE)r1) > 0.5) {
       predicted_class = 1;
     }
     if (predicted_class != class_i) {
       wrong_count++;
     }
 
-    FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
-    FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
+    FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1((FEATURE_TYPE)(ds.row(i) * weights_eig)));
+    FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1((FEATURE_TYPE)(ds.row(i) *  weights_eig)));
 
-    FEATURE_TYPE value = class_i *
-      mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
-      (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
-            ds.row(i) * weights_eig));
+    FEATURE_TYPE value = class_i * v2 + (1 - class_i) * v1;
 
     // XXX not sure this check is necessary
     if (value > 0 && value < 1e-6)
