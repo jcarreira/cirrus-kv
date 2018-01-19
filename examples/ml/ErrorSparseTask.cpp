@@ -6,7 +6,7 @@
 #include "S3SparseIterator.h"
 #include "Utils.h"
 #include "async.h"
-#include "adapters/libevent.h"
+//#include "adapters/libevent.h"
 #include "SparseLRModel.h"
 
 //#define DEBUG
@@ -27,6 +27,7 @@ namespace ErrorSparseTaskGlobal {
 /**
   * Works as a cache for remote model
   */
+#if 0
 class ModelProxyErrorSparseTask {
   public:
     ModelProxyErrorSparseTask(auto redis_ip, auto redis_port, uint64_t mgs) :
@@ -120,6 +121,7 @@ class ModelProxyErrorSparseTask {
     struct event_base *base;
     std::unique_ptr<std::thread> thread;
 };
+#endif
 
 void ErrorSparseTask::run(const Configuration& config) {
   std::cout << "Compute error task connecting to store" << std::endl;
@@ -128,8 +130,8 @@ void ErrorSparseTask::run(const Configuration& config) {
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
 
   std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
-  auto r  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (r == NULL || r -> err) { 
+  auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
+  if (redis_con == NULL || redis_con -> err) { 
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
@@ -147,12 +149,8 @@ void ErrorSparseTask::run(const Configuration& config) {
 start:
   std::vector<SparseDataset> minibatches_vec;
   for (int i = 0; i < 10000; ++i) {
-    std::cout << "[ERROR_TASK] getting iteration: " << i
-      << std::endl;
     try {
       const void* minibatch_data = s3_iter.get_next_fast();
-      std::cout << "[ERROR_TASK] unpacking"
-        << std::endl;
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
           config.get_minibatch_size());
       minibatches_vec.push_back(ds);
@@ -169,11 +167,11 @@ start:
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
   
-  ModelProxyErrorSparseTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
-  mp.run();
+  //ModelProxyErrorSparseTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
+  //mp.run();
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
-  wait_for_start(ERROR_TASK_RANK, r, nworkers);
+  wait_for_start(ERROR_TASK_RANK, redis_con, nworkers);
   ErrorSparseTaskGlobal::start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"
@@ -189,7 +187,13 @@ start:
         << "\n";
 #endif
       SparseLRModel model(MODEL_GRAD_SIZE);
-      model = mp.get_model();
+      int len_model;
+      std::string str_id = std::to_string(MODEL_BASE);
+      char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
+      model.loadSerialized(data);
+      free(data);
+
+      model.print();
 
 #ifdef DEBUG
       std::cout << "[ERROR_TASK] received the model with id: "
