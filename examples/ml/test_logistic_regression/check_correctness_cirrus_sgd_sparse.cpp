@@ -85,7 +85,7 @@ int main() {
   SparseDataset dataset = input.read_input_criteo_sparse(
       INPUT_PATH,
       "\t",
-      10000,
+      100000,
       true); // normalize=true
   dataset.check();
   dataset.print_info();
