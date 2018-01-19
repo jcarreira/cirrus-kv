@@ -401,7 +401,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(WORKER_TASK_RANK + worker, LogisticSparseTaskGlobal::redis_con, nworkers);
+  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, LogisticSparseTaskGlobal::redis_con, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
   S3SparseIterator s3_iter(0, num_s3_batches, config,

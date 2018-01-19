@@ -248,9 +248,6 @@ void LogisticTask::run(const Configuration& config, int worker) {
             if (!first_time) {
                 exit(0);
 
-                // XXX fix this. We should be able to distribute
-                // how many samples are there
-
                 // wrap around
                 batch_id = 0;
                 continue;

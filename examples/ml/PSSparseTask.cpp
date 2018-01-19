@@ -307,7 +307,7 @@ void PSSparseTask::run(const Configuration& config) {
 
   PSSparseTaskGlobal::redis_con = connect_redis();
   publish_model_redis();
-  wait_for_start(PS_TASK_RANK, PSSparseTaskGlobal::redis_con, nworkers);
+  wait_for_start(PS_SPARSE_TASK_RANK, PSSparseTaskGlobal::redis_con, nworkers);
 
   //publish_model(*PSSparseTaskGlobal::model);
 

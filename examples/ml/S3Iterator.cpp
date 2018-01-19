@@ -173,7 +173,6 @@ try_start:
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             finish-start).count();
 
-      std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0) << std::endl;
       double MBps = (1.0 * (32812.5*1024.0) / elapsed_ns) / 1024 / 1024 * 1000 * 1000 * 1000;
       std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0)
         << " size (KB): " << 32812.5

@@ -148,7 +148,7 @@ void ErrorSparseTask::run(const Configuration& config) {
     << std::endl;
 start:
   std::vector<SparseDataset> minibatches_vec;
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 100000; ++i) {
     try {
       const void* minibatch_data = s3_iter.get_next_fast();
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
@@ -171,7 +171,7 @@ start:
   //mp.run();
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
-  wait_for_start(ERROR_TASK_RANK, redis_con, nworkers);
+  wait_for_start(ERROR_SPARSE_TASK_RANK, redis_con, nworkers);
   ErrorSparseTaskGlobal::start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"
@@ -192,8 +192,6 @@ start:
       char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
       model.loadSerialized(data);
       free(data);
-
-      model.print();
 
 #ifdef DEBUG
       std::cout << "[ERROR_TASK] received the model with id: "

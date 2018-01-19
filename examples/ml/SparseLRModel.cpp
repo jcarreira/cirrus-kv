@@ -99,8 +99,8 @@ void SparseLRModel::loadSerialized(const void* data) {
    */
 
 void SparseLRModel::randomize() {
-    for (uint64_t i = 0; i < size(); ++i) {
-        weights_[i] = 0.001 + get_rand_between_0_1();
+    for (auto& w : weights_) {
+        w = 0.001 + get_rand_between_0_1();
     }
 }
 
@@ -306,7 +306,7 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
       (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(r1));
 
     if (value > 0 && value < 1e-6) {
-      // XXX not sure this check is necessary
+      // XXX this should be investigated
       //throw std::runtime_error("This code is actually used huh");
       value = 0;
     }

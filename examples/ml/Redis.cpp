@@ -257,10 +257,6 @@ char* redis_pop_list(redisContext* r, const char* list_name) {
     char* ret = (char*)malloc(reply->len);
     memcpy(ret, reply->str, reply->len);
 
-    //if (len != nullptr) {
-    //    *len = reply->len;
-    //}
-
     freeReplyObject(reply);
     return ret;
 }

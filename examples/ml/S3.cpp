@@ -95,19 +95,15 @@ std::string s3_get_object(uint64_t id, Aws::S3::S3Client& s3_client,
 
 std::ostringstream* s3_get_object_fast(uint64_t id, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name) {
-  std::cout << "s3_get_object_fast" << std::endl;
   std::string key_name = "CIRRUS" + std::to_string(id);
   Aws::S3::Model::GetObjectRequest object_request;
   object_request.WithBucket(bucket_name).WithKey(key_name);
 
   auto get_object_outcome = s3_client.GetObject(object_request);
 
-  std::cout << "s3_get_object_fast2" << "\n";
   if (get_object_outcome.IsSuccess()) {
     std::ostringstream* ss = new std::ostringstream;
-    std::cout << "s3_get_object_fast3" << "\n";
     *ss << get_object_outcome.GetResult().GetBody().rdbuf();
-    std::cout << "s3_get_object_fast4" << "\n";
     return ss;
   } else {
     std::cout << "GetObject error: " <<

@@ -64,8 +64,8 @@ void LRModel::loadSerialized(const void* data) {
    */
 
 void LRModel::randomize() {
-    for (uint64_t i = 0; i < size(); ++i) {
-        weights_[i] = 0.001 + get_rand_between_0_1();
+    for (auto& w : weights_) {
+        w = 0.001 + get_rand_between_0_1();
     }
 }
 

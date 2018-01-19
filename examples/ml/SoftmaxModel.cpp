@@ -37,11 +37,11 @@ SoftmaxModel::SoftmaxModel(
 }
 
 void SoftmaxModel::randomize() {
-    for (uint64_t i = 0; i < d; ++i) {
-        for (uint64_t j = 0; j < nclasses; ++j) {
-            weights[i][j] = 0.01 * (get_rand_between_0_1() - 0.5);
-        }
+  for (auto& vv : weights) {
+    for (auto& v : vv) {
+      v = 0.01 * (get_rand_between_0_1() - 0.5);
     }
+  }
 }
 
 /** Serialization Format:

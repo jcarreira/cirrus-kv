@@ -462,19 +462,20 @@ double InputReader::compute_stddev(double mean, std::vector<std::pair<int, FEATU
 }
 
 void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds) {
-  // for every use we compute the mean and stddev
+  // for every user we compute the mean and stddev of his ratings
   // then we normalize each entry
-  for (uint64_t i = 0; i < sparse_ds.size(); ++i) {
-    if (sparse_ds[i].size() == 0)
+  for (auto& sample : sparse_ds) {
+    if (sample.size() == 0)
       continue;
 
-    double mean = compute_mean(sparse_ds[i]);
-    double stddev = compute_stddev(mean, sparse_ds[i]);
+    double mean = compute_mean(sample);
+    double stddev = compute_stddev(mean, sample);
 
     // check if all ratings of an user have same value
     // if so we 'discard' this user
     if (stddev == 0.0) {
-      sparse_ds[i].clear();
+      throw std::runtime_error("I think this is not well implemented");
+      sample.clear();
       continue;
     }
      
@@ -485,7 +486,7 @@ void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<i
       throw std::runtime_error("wrong stddev");
 #endif
 
-    for (auto& v : sparse_ds[i]) {
+    for (auto& v : sample) {
       if (stddev) {
         v.second = (v.second - mean) / stddev;
       } else {

@@ -14,7 +14,7 @@ class Dataset {
   public:
   Dataset(const FEATURE_TYPE* minibatch,
       uint64_t n_samples,
-      uint64_t n_features); // XXX FIX
+      uint64_t n_features);
   /**
    * Construct empty dataset
    */

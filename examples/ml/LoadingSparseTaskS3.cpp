@@ -78,8 +78,6 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
   Configuration new_config = config;
-  //new_config.limit_samples = 10000000; // XXX fix this
-  //new_config.s3_size = 50000; // this should give objects with roughly size of 20MB
   uint64_t s3_obj_num_samples = new_config.get_s3_size();
 
   s3_initialize_aws();
