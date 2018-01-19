@@ -6,6 +6,8 @@
 #include <Checksum.h>
 #include <algorithm>
 
+#undef DEBUG
+
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);
 }
@@ -67,7 +69,6 @@ void SparseLRModel::serializeTo(void* mem) const {
 
 uint64_t SparseLRModel::getSerializedSize() const {
   auto ret = size() * sizeof(FEATURE_TYPE) + sizeof(int);
-  std::cout << "SparseLRModel::getSerializedSize ret: " << ret << std::endl;
   return ret;
 }
 
@@ -125,27 +126,28 @@ void SparseLRModel::sgd_update(double learning_rate,
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
-    auto w = weights_;
+    std::cout << "<Minibatch grad" << std::endl;
 #ifdef DEBUG
     dataset.check();
+    //print();
 #endif
 
-    //const FEATURE_TYPE* dataset_data = dataset.data.get();
-    //// create Matrix for dataset
-    //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
-    //    Eigen::Dynamic, Eigen::RowMajor>>
-    //      ds(const_cast<FEATURE_TYPE*>(dataset_data), dataset.rows, dataset.cols);
+#if 0
+    const FEATURE_TYPE* dataset_data = dataset.data.get();
+    // create Matrix for dataset
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
+        Eigen::Dynamic, Eigen::RowMajor>>
+          ds(const_cast<FEATURE_TYPE*>(dataset_data), dataset.rows, dataset.cols);
+     create weight vector
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
+     create vector with labels
+    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
+     apply logistic function to matrix multiplication
+     between dataset and weights
+    auto part1_1 = (ds * tmp_weights);
+    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
+#endif
 
-    // create weight vector
-    //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
-
-    // create vector with labels
-    //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
-
-    // apply logistic function to matrix multiplication
-    // between dataset and weights
-    //auto part1_1 = (ds * tmp_weights);
-    //auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1)); // XXX fix this
     std::vector<FEATURE_TYPE> part1(dataset.num_samples());
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       for (const auto& feat : dataset.get_row(i)) {
@@ -157,8 +159,24 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         }
         assert(index >= 0 && (uint64_t)index < weights_.size());
         part1[i] += value * weights_[index];
+#ifdef DEBUG
+        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
+          std::cout << "part1[i]: " << part1[i] << std::endl;
+          std::cout << "i: " << i << std::endl;
+          std::cout << "index: " << index << " value: " << value << std::endl;
+          std::cout << "weights_[index]: " << weights_[index] << std::endl;
+          exit(-1);
+        }
+#endif
       }
+
       part1[i] = mlutils::s_1(part1[i]);
+#ifdef DEBUG
+        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
+          std::cout << "isnan" << std::endl;
+          exit(-1);
+        }
+#endif
     }
 
 
@@ -169,6 +187,12 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     std::vector<FEATURE_TYPE> part2(dataset.num_samples());
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       part2[i] = dataset.labels_[i] - part1[i];
+#ifdef DEBUG
+        if (std::isnan(part2[i]) || std::isinf(part2[i])) {
+          std::cout << "part2 isnan" << std::endl;
+          exit(-1);
+        }
+#endif
     }
 
     //auto part3 = ds.transpose() * part2;
@@ -178,6 +202,16 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         int index = feat.first;
         FEATURE_TYPE value = feat.second;
         part3[index] += value * part2[i];
+#ifdef DEBUG
+        if (std::isnan(part3[index]) || std::isinf(part3[index])) {
+          std::cout << "part3 isnan" << std::endl;
+          std::cout << "part2[i]: " << part2[i] << std::endl;
+          std::cout << "i: " << i << std::endl;
+          std::cout << "value: " << value << std::endl;
+          std::cout << "index: " << index << " value: " << value << std::endl;
+          exit(-1);
+        }
+#endif
       }
     }
 
@@ -185,12 +219,27 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     std::vector<FEATURE_TYPE> part4(weights_.size());
     for (uint64_t i = 0; i < weights_.size(); ++i) {
       part4[i] = weights_[i] * 2 * epsilon;
+#ifdef DEBUG
+        if (std::isnan(part4[i]) || std::isinf(part4[i])) {
+          std::cout << "part4 isnan" << std::endl;
+          std::cout << "weights_[i]: " << weights_[i] << std::endl;
+          std::cout << "i: " << i << std::endl;
+          std::cout << "epsilon: " << epsilon << std::endl;
+          exit(-1);
+        }
+#endif
     }
     
     //auto res = part4 + part3;
     std::vector<FEATURE_TYPE> res(weights_.size());
     for (uint64_t i = 0; i < weights_.size(); ++i) {
       res[i] = part4[i] + part3[i];
+#ifdef DEBUG
+        if (std::isnan(res[i]) || std::isinf(res[i])) {
+          std::cout << "res isnan" << std::endl;
+          exit(-1);
+        }
+#endif
     }
 
     //std::vector<FEATURE_TYPE> vec_res;
@@ -258,7 +307,7 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
 
     if (value > 0 && value < 1e-6) {
       // XXX not sure this check is necessary
-      throw std::runtime_error("This code is actually used huh");
+      //throw std::runtime_error("This code is actually used huh");
       value = 0;
     }
 
@@ -314,4 +363,11 @@ void SparseLRModel::print() const {
     std::cout << std::endl;
 }
 
-
+void SparseLRModel::check() const {
+  for (const auto& w : weights_) {
+    if (std::isnan(w) || std::isinf(w)) {
+      std::cout << "Wrong model weight" << std::endl;
+      exit(-1);
+    }
+  }
+}

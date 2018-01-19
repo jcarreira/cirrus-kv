@@ -335,8 +335,13 @@ class SparseModelGet {
         usleep(50);
         int len_model;
         std::string str_id = std::to_string(MODEL_BASE);
+        auto before_us = get_time_us();
         char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
-        //char* data = redis_get_numid(redis_con, MODEL_BASE, &len_model);
+        auto elapsed_us = get_time_us() - before_us;
+        std::cout
+          << "Get model elapsed (us): " << elapsed_us
+          << " bw (MB/s): " << (1.0 * len_model / elapsed_us * 1000 * 1000 / 1024 / 1024 )
+          << std::endl;
 
         if (!data) {
           throw std::runtime_error("Null value returned from redis (does not exist?)");
@@ -433,6 +438,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     LogisticSparseTaskGlobal::model_lock.lock();
     SparseLRModel model = *LogisticSparseTaskGlobal::model;
     LogisticSparseTaskGlobal::model_lock.unlock();
+
+#ifdef DEBUG
+    std::cout << "Checking model" << std::endl;
+    model.check();
+#endif
+
     try {
       gradient = model.minibatch_grad(*dataset, config.get_epsilon());
     } catch(const std::runtime_error& e) {

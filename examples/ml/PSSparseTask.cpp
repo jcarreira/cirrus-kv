@@ -6,7 +6,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-#define DEBUG
+//#define DEBUG
     
 static void update_model(auto&);
 static void print_progress();
@@ -369,6 +369,11 @@ void PSSparseTask::publish_model_redis() {
   PSSparseTaskGlobal::model_lock.lock();
   auto model_copy = *PSSparseTaskGlobal::model;
   PSSparseTaskGlobal::model_lock.unlock();
+
+#ifdef DEBUG
+  std::cout << "Checking model" << std::endl;
+  model_copy.check();
+#endif
   
   uint64_t model_size;
   std::shared_ptr<char> data = serialize_model(model_copy, &model_size);
@@ -376,8 +381,15 @@ void PSSparseTask::publish_model_redis() {
 #ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;
 #endif
+
+  auto before_us = get_time_us();
   redis_put_binary_numid(PSSparseTaskGlobal::redis_con, MODEL_BASE,
       reinterpret_cast<const char*>(data.get()), model_size);
+  auto elapsed_us = get_time_us() - before_us;
+  std::cout 
+    << "Put model elapsed (us): " << elapsed_us
+    << " bw (MB/s): " << (1.0 * model_size / 1024 / 1024 * 1000 * 1000)
+    << std::endl;
 }
 
 void PSSparseTask::publish_model_pubsub() {

@@ -125,6 +125,10 @@ class SparseLRModel : public Model {
       */
     uint64_t size() const;
 
+    /** Check if model weights are good
+      */
+    void check() const;
+
 
  private:
     /**
