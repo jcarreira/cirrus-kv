@@ -55,7 +55,7 @@ int main() {
 
   for (uint64_t i = 0; 1; ++i) {
     auto gradient = model.minibatch_grad(dataset.samples_,
-        const_cast<double*>(dataset.labels_.get()),
+        const_cast<FEATURE_TYPE*>(dataset.labels_.get()),
         dataset.num_samples(), epsilon);
     model.sgd_update(learning_rate, gradient.get());
 

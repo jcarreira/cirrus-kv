@@ -33,7 +33,7 @@ void learning_function(const Dataset& dataset) {
     Dataset ds = dataset.random_sample(20);
 
     auto gradient = model->minibatch_grad(ds.samples_,
-        const_cast<double*>(ds.labels_.get()),
+        const_cast<FEATURE_TYPE*>(ds.labels_.get()),
         ds.num_samples(), epsilon);
 
     model_lock.lock();

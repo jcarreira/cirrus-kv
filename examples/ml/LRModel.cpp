@@ -117,7 +117,7 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     // apply logistic function to matrix multiplication
     // between dataset and weights
     auto part1_1 = (ds * tmp_weights);
-    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1)); // XXX fix this
+    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1_float)); // XXX fix this
 
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
 
