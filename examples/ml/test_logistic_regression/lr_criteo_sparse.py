@@ -11,16 +11,12 @@ HASH_SIZE = 2000
 
 # result is a list of tuples (label, list of tuples (index, value))
 # Load a CSV file
-def load_csv_sparse(filename):
+def load_csv_sparse_tab(filename):
     dataset = list()
     with open(filename, 'r') as file:
         csv_reader = reader(file, dialect="excel-tab")
         for row in csv_reader:
             tuples_list = list()
-
-            #row = row[0:14]
-            #if not row:
-            #    continue
 
             # add numerical values to list
             for i in range(1, 14):
@@ -55,7 +51,6 @@ def load_csv_sparse(filename):
 # Convert string column to float
 def str_column_to_float(dataset, column):
     for row in dataset:
-        # XXX joao
         if row[column] == '':
             row[column] = "0"
         row[column] = float(row[column].strip())
@@ -208,7 +203,7 @@ seed(1)
 filename = 'criteo_data/day_1_400K_shuffled'
 
 print("Loading dataset")
-dataset = load_csv_sparse(filename)
+dataset = load_csv_sparse_tab(filename)
 
 #print("Processing dataset")
 #for i in range(len(dataset[0])):

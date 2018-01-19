@@ -14,8 +14,6 @@
 #include "../config.h"
 #include "../Utils.h"
 
-//typedef float FEATURE_TYPE;
-//const std::string INPUT_PATH = "criteo_data/day_1_100K";
 const std::string INPUT_PATH = "criteo_data/day_1_100k_filtered";
 
 void print_info(const auto& samples) {

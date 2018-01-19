@@ -6,16 +6,12 @@ from math import exp
 import sys
 
 # Load a CSV file
-def load_csv(filename):
+def load_csv_tab(filename):
     dataset = list()
     with open(filename, 'r') as file:
-        # XXX joao
         csv_reader = reader(file, dialect="excel-tab")
-        #csv_reader = reader(file)
         for row in csv_reader:
-            # XXX joao
-            row = row[0:14]
-            #print("row: ", row)
+            row = row[0:14] # this file only uses the numerical features
             if not row:
                 continue
             row[0], row[-1] = row[-1],row[0]
@@ -25,8 +21,7 @@ def load_csv(filename):
 # Convert string column to float
 def str_column_to_float(dataset, column):
     for row in dataset:
-        # XXX joao
-        if row[column] == '':
+        if row[column] == '': # some features are missing
             row[column] = "0"
         row[column] = float(row[column].strip())
 
@@ -123,12 +118,10 @@ def logistic_regression(train, test, l_rate, n_epoch):
 # Test the logistic regression algorithm on the diabetes dataset
 seed(1)
 # load and prepare data
-#filename = 'day_1_1K.csv'
-#filename = 'filtered_data_shuffled.csv'
 filename = 'criteo_data/day_1_100k_filtered'
 
 print("Loading dataset")
-dataset = load_csv(filename)
+dataset = load_csv_tab(filename)
 
 print("Processing dataset")
 for i in range(len(dataset[0])):
