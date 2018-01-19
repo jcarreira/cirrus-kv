@@ -696,6 +696,7 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
     uint64_t limit_lines,
     bool to_normalize) {
   std::cout << "Reading input file: " << input_file << std::endl;
+  std::cout << "Limit_line: " << limit_lines << std::endl;
 
   std::ifstream fin(input_file, std::ifstream::in);
   if (!fin) {
@@ -707,7 +708,7 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   std::vector<FEATURE_TYPE> labels;                                // final result
 
   std::vector<std::shared_ptr<std::thread>> threads;
-  uint64_t nthreads = 1;
+  uint64_t nthreads = 8;
   for (uint64_t i = 0; i < nthreads; ++i) {
     threads.push_back(
         std::make_shared<std::thread>(

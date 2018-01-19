@@ -136,7 +136,10 @@ void S3SparseIterator::thread_function() {
     // in the ring
     std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
-    std::cout << "Getting object. count: " << count++ << std::endl;
+    std::cout << "Getting object. "
+      << "count: " << count++
+      << " last: " << last
+      << std::endl;
 
     std::ostringstream* s3_obj;
 try_start:
@@ -165,8 +168,9 @@ try_start:
     
     // update index
     last++;
-    if (last == right_id)
+    if (last == right_id) {
       last = left_id;
+    }
 
     std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();

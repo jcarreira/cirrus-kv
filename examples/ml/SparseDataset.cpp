@@ -35,7 +35,7 @@ SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
     FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
     int num_sample_values = load_value<int>(data);
 
-    assert(label == 0.0 || label == 1.0);
+    assert(FLOAT_EQ(label, 0.0) || FLOAT_EQ(label, 1.0));
     assert(num_sample_values > 0 && num_sample_values < 1000000);
 
     std::vector<std::pair<int, FEATURE_TYPE>> sample;
