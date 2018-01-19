@@ -45,7 +45,7 @@ void LoadingSparseTaskS3::check_loading(
 
   std::string data = s3_get_object(SAMPLE_BASE, s3_client, S3_SPARSE_BUCKET);
   
-  SparseDataset dataset(data.data(), data.size());
+  SparseDataset dataset(data.data(), true);
   dataset.check();
   dataset.check_labels();
 
