@@ -83,7 +83,8 @@ class Model {
        * @param dataset Dataset to be used to calculate loss
        * @return Pair <Total loss, accuracy> when applying model to dataset
        */
-     virtual std::pair<double,double> calc_loss(Dataset& dataset) const = 0;
+     virtual std::pair<double,double> calc_loss(Dataset&) const { throw std::runtime_error("not implemented"); }
+     virtual std::pair<double,double> calc_loss(SparseDataset&) const { throw std::runtime_error("not implemented"); }
 
      /**
        * Compute gradient for minibatch
@@ -93,10 +94,13 @@ class Model {
        * @returns SGD gradient
        */
      virtual std::unique_ptr<ModelGradient> minibatch_grad(
-                const Matrix& dataset,
-                FEATURE_TYPE* labels,
-                uint64_t labels_size,
-                double epsilon) const = 0;
+                const Matrix& /*dataset*/,
+                FEATURE_TYPE* /*labels*/,
+                uint64_t /*labels_size*/,
+                double /*epsilon*/) const  { throw std::runtime_error("not implemented"); }
+     virtual std::unique_ptr<ModelGradient> minibatch_grad(
+                const SparseDataset& ,
+                double ) const { throw std::runtime_error("not implemented"); }
 
      /**
        * Compute the checksum of this model's weights

@@ -110,20 +110,16 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
 
     // create weight vector
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
-    //Eigen::Map<Eigen::VectorXd> tmp_weights(w.data(), size());
 
     // create vector with labels
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
-    //Eigen::Map<Eigen::VectorXd> lab(labels, labels_size);
 
     // apply logistic function to matrix multiplication
     // between dataset and weights
     auto part1_1 = (ds * tmp_weights);
-    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
-    //auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1_float));
+    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1_float)); // XXX fix this
 
     Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
-    //Eigen::Map<Eigen::VectorXd> lbs(labels, labels_size);
 
     // compute difference between labels and logistic probability
     auto part2 = lbs - part1;
@@ -134,7 +130,6 @@ std::unique_ptr<ModelGradient> LRModel::minibatch_grad(
     std::vector<FEATURE_TYPE> vec_res;
     vec_res.resize(res.size());
     Eigen::Matrix<FEATURE_TYPE, -1, 1>::Map(vec_res.data(), res.size()) = res;
-    //Eigen::VectorXd::Map(vec_res.data(), res.size()) = res;
 
     std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
 
@@ -162,7 +157,6 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
           dataset.samples_.rows, dataset.samples_.cols);
 
   Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> weights_eig(w.data(), size());
-  //Eigen::Map<Eigen::VectorXd> weights_eig(w.data(), size());
 
   // count how many samples are wrongly classified
   uint64_t wrong_count = 0;
@@ -176,20 +170,17 @@ std::pair<double, double> LRModel::calc_loss(Dataset& dataset) const {
     int predicted_class = 0;
 
     auto r1 = ds.row(i) *  weights_eig;
-    if (mlutils::s_1(r1) > 0.5) {
+    if (mlutils::s_1((FEATURE_TYPE)r1) > 0.5) {
       predicted_class = 1;
     }
     if (predicted_class != class_i) {
       wrong_count++;
     }
 
-    FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1(ds.row(i) * weights_eig));
-    FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig));
+    FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1((FEATURE_TYPE)(ds.row(i) * weights_eig)));
+    FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1((FEATURE_TYPE)(ds.row(i) *  weights_eig)));
 
-    FEATURE_TYPE value = class_i *
-      mlutils::log_aux(mlutils::s_1(ds.row(i) *  weights_eig)) +
-      (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(
-            ds.row(i) * weights_eig));
+    FEATURE_TYPE value = class_i * v2 + (1 - class_i) * v1;
 
     // XXX not sure this check is necessary
     if (value > 0 && value < 1e-6)

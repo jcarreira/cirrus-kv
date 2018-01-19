@@ -62,6 +62,7 @@ class ModelGradient {
 class LRGradient : public ModelGradient {
  public:
     friend class LRModel;
+    friend class SparseLRModel;
 
     virtual ~LRGradient() = default;
 

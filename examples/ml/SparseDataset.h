@@ -21,9 +21,23 @@ class SparseDataset {
    * Construct a dataset given a vector of samples and a vector of labels
    * This method copies all the inputs
    * @param samples Vector of samples
+   */
+  SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples);
+  
+  /**
+   * Construct a dataset given a vector of samples and a vector of labels
+   * This method copies all the inputs
+   * @param samples Vector of samples
    * @param labels Vector of labels
    */
-  SparseDataset(const std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples);
+  SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples, std::vector<FEATURE_TYPE>&& labels);
+  
+
+  /** Load sparse dataset from serialized format
+    */
+  SparseDataset(const char*, bool from_s3);
+  
+  SparseDataset(const char*, uint64_t);
 
   /**
    * Get the number of samples in this dataset
@@ -56,6 +70,12 @@ class SparseDataset {
    * Sanity check values in the dataset
    */
   void check() const;
+  void check_ratings() const;
+  
+  /**
+   * Sanity check labels in the dataset
+   */
+  void check_labels() const;
 
   /**
    * Compute checksum of values in the dataset
@@ -75,8 +95,9 @@ class SparseDataset {
 
   /** Build data for S3 object
    * from feature and label data from samples in range [l,r)
+   * output size of object in the uint64_t*
    */
-  //std::shared_ptr<FEATURE_TYPE> build_s3_obj(uint64_t, uint64_t);
+  std::shared_ptr<char> build_serialized_s3_obj(uint64_t, uint64_t, uint64_t*);
 
   /**
    * Return random subset of samples
@@ -87,9 +108,17 @@ class SparseDataset {
   
   SparseDataset sample_from(uint64_t start, uint64_t n_samples) const;
 
+  void normalize(uint64_t hash_size);
+
+  const std::vector<std::pair<int, FEATURE_TYPE>>& get_row(uint64_t) const;
+
   public:
+  void build_max_features();
+
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> data_;
-  uint64_t max_features_; // largest number of featuers of any single user
+  std::vector<FEATURE_TYPE> labels_;
+
+  uint64_t max_features_; // largest number of features of any single user
 };
 
 #endif  // EXAMPLES_ML_SPARSEDATASET_H_

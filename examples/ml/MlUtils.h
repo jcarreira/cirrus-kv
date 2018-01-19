@@ -1,6 +1,10 @@
 #ifndef EXAMPLES_ML_MLUTILS_H_
 #define EXAMPLES_ML_MLUTILS_H_
 
+#include <cmath>
+#include <string>
+#include <stdexcept>
+
 namespace mlutils {
 
 /**
@@ -8,8 +12,18 @@ namespace mlutils {
   * @param x Input value
   * @return Sigmoid of x
   */
-double s_1(double x);
 float s_1_float(float x);
+
+template<typename T>
+T s_1(T x) {
+    double res = 1.0 / (1.0 + std::exp(-x));
+    if (std::isnan(res) || std::isinf(res)) {
+        throw std::runtime_error(
+                std::string("s_1 generated nan/inf x: " + std::to_string(x)
+                    + " res: " + std::to_string(res)));
+    }
+    return res;
+}
 
 /**
   * Computes logarithm

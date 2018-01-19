@@ -24,7 +24,9 @@ void Configuration::read(const std::string& path) {
 
     std::string line;
     while (getline(fin, line)) {
-        parse_line(line);
+      if (line.size() && line[0] == '#')
+        continue;
+      parse_line(line);
     }
 
     print();
@@ -53,8 +55,14 @@ void Configuration::parse_line(const std::string& line) {
 
     if (s == "minibatch_size:") {
         iss >> minibatch_size;
+        if (s3_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
     } else if (s == "s3_size:") {
         iss >> s3_size;
+        if (minibatch_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
     } else if (s == "num_features:") {
         iss >> num_features;
     } else if (s == "input_path:") {

@@ -30,6 +30,8 @@ void redis_subscribe_callback(redisAsyncContext*, sub_handler,
 void redis_connect_callback(redisAsyncContext*, conn_handler);
 void redis_disconnect_callback(redisAsyncContext*, conn_handler);
 
+char* redis_binary_get(redisContext* c, const char* id, int* len);
+
 // Lists
 #if 0
 void redis_push_list(redisContext*, const char* list_name, const char* data);

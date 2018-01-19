@@ -8,6 +8,7 @@
 #include <queue>
 #include <mutex>
 #include <config.h>
+#include <MurmurHash3.h>
 
 class InputReader {
   public:
@@ -82,6 +83,17 @@ class InputReader {
    */
   void normalize(std::vector<std::vector<FEATURE_TYPE>>& data);
 
+
+  SparseDataset read_input_rcv1_sparse(const std::string& input_file,
+      const std::string& delimiter,
+      uint64_t limit_lines,
+      bool /*to_normalize*/);
+
+  SparseDataset read_input_criteo_sparse(const std::string& input_file,
+      const std::string& delimiter,
+      uint64_t limit_lines,
+      bool /*to_normalize*/);
+
   private:
   /**
    * Thread worker that reads raw lines of text from queue and appends labels and features
@@ -116,13 +128,47 @@ class InputReader {
       std::vector<std::vector<FEATURE_TYPE>>&,
       std::vector<FEATURE_TYPE>&);
 
-  void shuffle_samples_labels(
-    std::vector<std::vector<FEATURE_TYPE>>& samples,
-    std::vector<FEATURE_TYPE>& labels);
-
+  /* Computes mean of a sparse list of features
+   */
   double compute_mean(std::vector<std::pair<int, FEATURE_TYPE>>&);
+  
+  /* Computes stddev of a sparse list of features
+   */
   double compute_stddev(double, std::vector<std::pair<int, FEATURE_TYPE>>&);
+  
+  /* Computes standardizes sparse dataset
+   */
   void standardize_sparse_dataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&);
+
+  /** Parse a training dataset sample that can contain
+   * categorical variables
+   */
+  void parse_criteo_sparse_line(
+      const std::string& line, const std::string& delimiter,
+      std::vector<std::pair<int, FEATURE_TYPE>>& features,
+      FEATURE_TYPE& label);
+
+  /** Check if feature is categorical (contains character that is not diigt)
+    +    */
+  bool is_definitely_categorical(const char* s);
+
+  /** Shuffle both samples and labels
+    +    */
+  void shuffle_samples_labels(
+      std::vector<std::vector<FEATURE_TYPE>>& samples,
+      std::vector<FEATURE_TYPE>& labels);
+
+  void read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex& lock,
+    const std::string& delimiter,
+    std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
+    std::vector<FEATURE_TYPE>& labels_res,
+    uint64_t limit_lines, std::atomic<unsigned int>&);
+  
+  void read_input_rcv1_sparse_thread(std::ifstream& fin, std::mutex& lock,
+    const std::string& delimiter,
+    std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
+    std::vector<FEATURE_TYPE>& labels_res,
+    uint64_t limit_lines, std::atomic<unsigned int>&);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

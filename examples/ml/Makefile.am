@@ -8,10 +8,6 @@ CXX = g++
 
 bin_PROGRAMS = parameter_server parameter_server_softmax
 
-#performance_lambda
-#two_clients_test bug_regression \
-#               parameter_server_softmax
-
 LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
@@ -53,16 +49,18 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
-              PSTask.cpp TasksWait.cpp \
+              PSTask.cpp PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
-	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp
+	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
+	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp LogisticSparseTaskS3.cpp \
+	      S3SparseIterator.cpp
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              Redis.cpp SparseDataset.cpp
+              Redis.cpp SparseDataset.cpp MurmurHash3.cpp
 
 #PerformanceLambdaTask.cpp S3Iterator.cpp
 

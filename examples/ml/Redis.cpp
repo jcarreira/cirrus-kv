@@ -128,7 +128,7 @@ char* redis_binary_get(redisContext* c, const char* id, int* len) {
     std::cout << "[REDIS] "
         << "redis binary get id: " << id << std::endl;
 #endif
-    redisReply* reply = (redisReply*)redisCommand(c,"GET %b", id);
+    redisReply* reply = (redisReply*)redisCommand(c,"GET %b", id, (size_t)strlen(id));
 
     if (reply->type == REDIS_REPLY_NIL) {
 #ifdef REDIS_DEBUG
@@ -178,28 +178,19 @@ char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
 #ifdef REDIS_DEBUG
         std::cout << "[REDIS] "
             << "redis get failed"
+            << " redis return nullptr"
             << std::endl;
 #endif
         free(id_str);
-#ifdef REDIS_DEBUG
-        std::cout << "[REDIS] "
-            << "redis return nullptr"
-            << std::endl;
-#endif
         return nullptr;
     }
 
 #ifdef REDIS_DEBUG
     std::cout << "[REDIS] "
-        << "freeing id_str"
-        << std::endl;
-#endif
-    free(id_str);
-#ifdef REDIS_DEBUG
-    std::cout << "[REDIS] "
         << "return ret"
         << std::endl;
 #endif
+    free(id_str);
     return ret;
 }
 

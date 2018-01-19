@@ -1,4 +1,4 @@
-#include "S3Iterator.h"
+#include "S3SparseIterator.h"
 #include "Utils.h"
 #include <unistd.h>
 #include <vector>
@@ -8,25 +8,23 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-
-sem_t semaphore;
-
-int str_version = 0;
-std::map<int, std::string> list_strings; // strings from s3
-
-CircularBuffer<std::pair<const FEATURE_TYPE*, int>> minibatches_list(100000);
+static sem_t semaphore;
+static int str_version = 0;
+static std::map<int, std::string> list_strings; // strings from s3
+static CircularBuffer<std::pair<const void*, int>> minibatches_list(100000);
+static int to_delete = -1;
 
 // s3_cad_size nmber of samples times features per sample
-S3Iterator::S3Iterator(
+S3SparseIterator::S3SparseIterator(
         uint64_t left_id, uint64_t right_id,
         const Configuration& c,
-        uint64_t s3_rows, uint64_t s3_cols,
+        uint64_t s3_rows,
         uint64_t minibatch_rows) :
     left_id(left_id), right_id(right_id),
-    conf(c), s3_rows(s3_rows), s3_cols(s3_cols),
+    conf(c), s3_rows(s3_rows),
     minibatch_rows(minibatch_rows) {
       
-  std::cout << "Creating S3Iterator"
+  std::cout << "Creating S3SparseIterator"
     << " left_id: " << left_id
     << " right_id: " << right_id
     << std::endl;
@@ -43,12 +41,10 @@ S3Iterator::S3Iterator(
 
   sem_init(&semaphore, 0, 0);
 
-  thread = new std::thread(std::bind(&S3Iterator::thread_function, this));
+  thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this));
 }
 
-int to_delete = -1;
-
-const FEATURE_TYPE* S3Iterator::get_next_fast() {
+const void* S3SparseIterator::get_next_fast() {
   // we need to delete entry
   if (to_delete != -1) {
     std::cout << "get_next_fast::Deleting entry: " << to_delete
@@ -80,42 +76,10 @@ const FEATURE_TYPE* S3Iterator::get_next_fast() {
   return ret.first;
 }
 
-std::shared_ptr<FEATURE_TYPE> S3Iterator::get_next() {
-  throw std::runtime_error("No longer supported");
-  //std::cout << "Get next "
-  //  << " last: " << last
-  //  << "\n";
-#if 0
-  while (1) {
-    ring_lock.lock();
-    if (ring.empty()) {
-      ring_lock.unlock();
-      usleep(1000);
-    } else {
-      break;
-    }
-  }
-
-  std::shared_ptr<FEATURE_TYPE> ret = ring.front();
-  ring.pop_front();
-
-  uint64_t ring_size = ring.size();
-  ring_lock.unlock();
-
-  if (ring_size < 500 && pref_sem.getvalue() < (int)read_ahead) {
-    pref_sem.signal();
-  }
-
-  return ret;
-#endif
-  return std::shared_ptr<FEATURE_TYPE>(); // dummy
-}
-
-void S3Iterator::push_samples(std::ostringstream* oss) {
+void S3SparseIterator::push_samples(std::ostringstream* oss) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
-  uint64_t minibatch_n_entries = minibatch_rows * (s3_cols + 1);
 
-  std::cout << "n_minibatches: " << n_minibatches << std::endl;
+  std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
 
   // save s3 object into list of string
   std::chrono::steady_clock::time_point start =
@@ -133,23 +97,37 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
 
   ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
-  for (uint64_t i = 0; i < n_minibatches; ++i) {
-    const FEATURE_TYPE* data = reinterpret_cast<const FEATURE_TYPE*>(str_iter->second.c_str()) + i * minibatch_n_entries;
 
+  const void* s3_data = reinterpret_cast<const void*>(str_iter->second.c_str());
+  int s3_obj_size = load_value<int>(s3_data);
+  assert(s3_obj_size > 0 && s3_obj_size < 100 * 1024 * 1024);
+  int num_samples = load_value<int>(s3_data);
+  assert(num_samples > 0 && num_samples < 1000000);
+  std::cout << "push_samples s3_obj_size: " << s3_obj_size << " num_samples: " << num_samples << std::endl;
+  for (uint64_t i = 0; i < n_minibatches; ++i) {
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
-    minibatches_list.add(std::make_pair(data, is_last));
+    minibatches_list.add(std::make_pair(s3_data, is_last));
     sem_post(&semaphore);
+  
+    // advance ptr sample by sample
+    for (uint64_t j = 0; j < minibatch_rows; ++j) {
+      FEATURE_TYPE label = load_value<FEATURE_TYPE>(s3_data); // read label
+      int num_values = load_value<int>(s3_data); 
+      assert(label == 0.0 || label == 1.0);
+      assert(num_values > 0 && num_values < 1000000);
+    
+      // advance until the next minibatch
+      advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE))); // every sample has index and value
+    }
   }
   ring_lock.unlock();
-  
   str_version++;
 }
 
-void S3Iterator::thread_function() {
+void S3SparseIterator::thread_function() {
   std::cout << "Building S3 deser. with size: "
-    << s3_rows << " x " << (s3_cols + 1) << " = " << (s3_rows * (s3_cols + 1))
     << std::endl;
 
   uint64_t count = 0;
@@ -158,12 +136,15 @@ void S3Iterator::thread_function() {
     // in the ring
     std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
-    std::cout << "Getting object. count: " << count++ << std::endl;
+    std::cout << "Getting object. "
+      << "count: " << count++
+      << " last: " << last
+      << std::endl;
 
     std::ostringstream* s3_obj;
 try_start:
     try {
-      std::cout << "S3Iterator: getting object" << std::endl;
+      std::cout << "S3SparseIterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
       s3_obj = s3_get_object_fast(last, *s3_client, S3_SPARSE_BUCKET);
@@ -180,15 +161,16 @@ try_start:
         << " bandwidth (MB/s): " << MBps
         << std::endl;
     } catch(...) {
-      std::cout << "S3Iterator: error in s3_get_object" << std::endl;
+      std::cout << "S3SparseIterator: error in s3_get_object" << std::endl;
       goto try_start;
       exit(-1);
     }
     
     // update index
     last++;
-    if (last == right_id)
+    if (last == right_id) {
       last = left_id;
+    }
 
     std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
