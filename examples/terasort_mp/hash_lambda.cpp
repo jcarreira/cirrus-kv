@@ -10,27 +10,86 @@
 
 namespace cirrus_terasort {
 
-hash_lambda::hash_lambda(INT_TYPE p, INT_TYPE s, INT_TYPE e) : _start(s),
-        _end(e), _write_buffer(std::vector<std::vector<char*>>{}),
-        _write_buffer_indices(std::vector<std::vector<INT_TYPE>>{}),
+hash_lambda::hash_lambda(
+        std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                <std::string>> store,
+        INT_TYPE p, INT_TYPE s, INT_TYPE e) : _start(s),
+        _end(e), _write_buffer
+                (std::vector<std::shared_ptr<std::vector<char*>>>{}),
+        _write_buffer_indices
+                (std::vector<std::shared_ptr<std::vector<INT_TYPE>>>{}),
         _write_buffer_sizes(std::vector<INT_TYPE>{}),
         _write_mutexes(std::vector<std::shared_ptr<std::mutex>>{}),
-        _process_index(p), _counter_list(std::vector<INT_TYPE>{}) {
+        _process_index(p), _counter_list(std::vector<INT_TYPE>{}),
+        _background_buffer(std::queue<std::pair<
+                std::shared_ptr<std::vector<INT_TYPE>>,
+                std::shared_ptr<std::vector<char*>>
+                >>{}), _finished(false),
+        _background_threads(std::vector<std::thread>{}) {
         _read_counter = _start;
 
         for (INT_TYPE i = 0; i < config_instance::sort_nodes; i++) {
                 _counter_list.push_back(0);
 
-                _write_buffer.push_back(std::vector<char*>{});
-                _write_buffer_indices.push_back(std::vector<INT_TYPE>{});
+                _write_buffer.push_back(
+                        std::make_shared<std::vector<char*>>());
+                _write_buffer_indices.push_back(
+                        std::make_shared<std::vector<INT_TYPE>>());
                 for(INT_TYPE _ = 0; _ < config_instance::hash_bulk_transfer;
                         _++)
-                        _write_buffer[i].push_back((char*)
+                        _write_buffer[i]->push_back((char*)
                                 calloc((config_instance::record_size + 1)
                                 * config_instance::read_chunk_size + 2,
                                 sizeof(char)));
                 _write_buffer_sizes.push_back(0);
                 _write_mutexes.push_back(std::make_shared<std::mutex>());
+        }
+        
+        for(INT_TYPE _ = 0; _ < config_instance::hash_num_background_threads;
+                _++)
+                _background_threads.push_back(std::thread(
+                        &hash_lambda::background_buffer_writer, this, store));
+}
+
+void hash_lambda::background_buffer_writer(
+        std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                <std::string>> store) {
+        while(!_finished || _background_buffer.size() > 0) {
+                std::unique_lock<std::mutex> lock(_background_lock);
+                while(_background_buffer.size() == 0) {
+                        if(_finished) {
+                                lock.unlock();
+                                return;
+                        }
+                        _background_cv.wait_for(lock, std::chrono::milliseconds(
+                                config_instance::hash_background_timeout_ms),
+                                [this]() { return
+                                        _finished ||
+                                        _background_buffer.size() > 0; });
+                        if(_finished && _background_buffer.size() == 0) {
+                                lock.unlock();
+                                return;
+                        }
+                }
+                std::pair<std::shared_ptr<std::vector<INT_TYPE>>,
+                        std::shared_ptr<std::vector<char*>>> p =
+                        _background_buffer.front();
+
+                _background_buffer.pop();
+                
+                lock.unlock();
+                _background_cv.notify_one();
+
+                std::vector<std::string> to_ins;
+                for(const char* c : *p.second)
+                        to_ins.push_back(c);
+
+                store->put_bulk_fast(*p.first, to_ins);
+                
+                p.first.reset();
+                for(char* c : *p.second)
+                        free(c);
+                p.second.reset();
         }
 }
 
@@ -46,15 +105,23 @@ void hash_lambda::finish(
                 INT_TYPE key_offset2 = _counter_list[k]++ *
                         config_instance::sort_nodes;
 
-                _write_buffer_indices[k].push_back(start_offset + key_offset);
+                _write_buffer_indices[k]->push_back(start_offset + key_offset);
                 std::vector<std::string> to_ins;
-                for(INT_TYPE i = 0; i < _write_buffer_indices[k].size(); i++)
-                        to_ins.push_back(_write_buffer[k][i]);
+                for(INT_TYPE i = 0; i < _write_buffer_indices[k]->size(); i++)
+                        to_ins.push_back((*_write_buffer[k])[i]);
 
-                _write_buffer_indices[k].push_back(start_offset + key_offset2);
+                for(char* c : *_write_buffer[k])
+                        free(c);
+
+                _write_buffer_indices[k]->push_back(start_offset + key_offset2);
                 to_ins.push_back(config_instance::sentinel);
-                store->put_bulk_fast(_write_buffer_indices[k], to_ins);
+                store->put_bulk_fast(*_write_buffer_indices[k], to_ins);
         }
+
+        _finished = true;
+        for(INT_TYPE _ = 0; _ < config_instance::hash_num_background_threads;
+                _++)
+                _background_threads[_].join();
 }
 
 void hash_lambda::write(
@@ -72,31 +139,37 @@ void hash_lambda::write(
                         config_instance::total_read_keys + k;
                 INT_TYPE key_offset = _counter_list[k]++ *
                         config_instance::sort_nodes;
-                _write_buffer_indices[k].push_back(start_offset +
+                _write_buffer_indices[k]->push_back(start_offset +
                         key_offset);
-                if(_write_buffer_indices[k].size() >=
+                if(_write_buffer_indices[k]->size() >=
                         config_instance::hash_bulk_transfer) {
-                        std::vector<std::string> to_ins;
-                        for(char* v: _write_buffer[k])
-                                to_ins.push_back(v);
-                        
-                        store->put_bulk_fast(_write_buffer_indices[k], to_ins);
+                        std::unique_lock<std::mutex> lock(_background_lock);
+                        _background_buffer.push(std::make_pair(
+                                _write_buffer_indices[k],
+                                _write_buffer[k]));
+                        lock.unlock();
+                        _background_cv.notify_all();
 
-                        _write_buffer_indices[k].clear();
+                        _write_buffer_indices[k] =
+                                std::make_shared<std::vector<INT_TYPE>>();
 
-                        for(INT_TYPE _ = 0; _ <
-                                config_instance::hash_bulk_transfer; _++)
-                                std::memset(_write_buffer[k][_], 0, (
-                                        config_instance::record_size + 1) * 
-                                        config_instance::read_chunk_size + 2);
+                        _write_buffer[k] =
+                                std::make_shared<std::vector<char*>>();
+                        for(INT_TYPE _ = 0;
+                                _ < config_instance::hash_bulk_transfer; _++)
+                                _write_buffer[k]->push_back((char*)
+                                        calloc(
+                                        (config_instance::record_size + 1)
+                                        * config_instance::read_chunk_size + 2,
+                                        sizeof(char)));
                 }
 
                 _write_buffer_sizes[k] = 0;
         }
-        std::memcpy(_write_buffer[k][_write_buffer_indices[k].size()] +
+        std::memcpy((*_write_buffer[k])[_write_buffer_indices[k]->size()] +
                 _write_buffer_sizes[k] * (config_instance::record_size + 1),
                 v.data() + substr_start, substr_len);
-        _write_buffer[k][_write_buffer_indices[k].size()][
+        (*_write_buffer[k])[_write_buffer_indices[k]->size()][
                 _write_buffer_sizes[k] * (config_instance::record_size + 1)
                 + substr_len] = '\n';
         _write_buffer_sizes[k]++;

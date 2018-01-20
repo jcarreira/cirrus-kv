@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
 
                 std::shared_ptr<cirrus_terasort::hash_lambda> hl =
                         std::make_shared<cirrus_terasort::hash_lambda>
-                        (process_index, start, end);
+                        (store, process_index, start, end);
 
                 std::vector<std::thread> all;
                 for (INT_TYPE i = 0; i < hash_threads; i++)

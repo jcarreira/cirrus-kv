@@ -29,11 +29,13 @@ static std::unordered_map<char, INT_TYPE> key_map = {
         { 'x', 59 }, { 'y', 60 }, { 'z', 61 },
 };
 
-static constexpr INT_TYPE total_processes = 37;  // must match runtime
-static constexpr INT_TYPE hash_nodes = 4;
+static constexpr INT_TYPE total_processes = 53;  // must match runtime
+static constexpr INT_TYPE hash_nodes = 20;
 static constexpr INT_TYPE hash_bytes = 1;
-static constexpr INT_TYPE hash_threads = 8;
-static constexpr INT_TYPE hash_bulk_transfer = 50;
+static constexpr INT_TYPE hash_threads = 1;
+static constexpr INT_TYPE hash_bulk_transfer = 100;
+static constexpr INT_TYPE hash_background_timeout_ms = 10;
+static constexpr INT_TYPE hash_num_background_threads = 4;
 static constexpr char hash_output_dir[] = "/nscratch/nathreya/hash_output_dir";
 
 static constexpr char cirrus_port[] = "12345";
