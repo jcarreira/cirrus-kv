@@ -6,7 +6,7 @@ extern "C" {
 #include <string.h>
 #include "Redis.h"
 
-//#define REDIS_DEBUG
+#undef REDIS_DEBUG
 
 redisContext* redis_connect(const char* hostname, int port) {
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds

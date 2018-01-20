@@ -16,7 +16,8 @@ class S3Iterator {
         uint64_t left_id, uint64_t right_id,
         const Configuration& c,
         uint64_t s3_rows, uint64_t s3_cols,
-        uint64_t minibatch_rows);
+        uint64_t minibatch_rows,
+        const std::string&);
 
     std::shared_ptr<FEATURE_TYPE> get_next();
     const FEATURE_TYPE* get_next_fast();
@@ -49,6 +50,8 @@ class S3Iterator {
   uint64_t s3_cols;
   uint64_t minibatch_rows;
   uint64_t features_per_sample;
+
+  std::string s3_bucket_name;
 };
 
 #endif  // _S3_ITERATOR_H_

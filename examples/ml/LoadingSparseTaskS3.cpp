@@ -17,16 +17,26 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
     delimiter = "";
   } else if (config.get_input_type() == "csv_tab") {
     delimiter = "\t";
+  } else if (config.get_input_type() == "csv") {
+    delimiter = ",";
   } else {
     throw std::runtime_error("unknown input type");
   }
 
+  //SparseDataset dataset = input.read_input_criteo_sparse(
+  //    config.get_input_path(),
+  //    delimiter,
+  //    config.get_limit_samples(),
+  //    normalize);
+
+  // READ the kaggle criteo dataset
   bool normalize = config.get_normalize();
-  SparseDataset dataset = input.read_input_criteo_sparse(
+  SparseDataset dataset = input.read_input_criteo_kaggle_sparse(
       config.get_input_path(),
       delimiter,
       config.get_limit_samples(),
       normalize);
+
   return dataset;
 }
 
@@ -40,10 +50,11 @@ void LoadingSparseTaskS3::check_label(FEATURE_TYPE label) {
   * Check if loading was well done
   */
 void LoadingSparseTaskS3::check_loading(
+    const Configuration& config,
     auto& s3_client) {
   std::cout << "[LOADER] Trying to get sample with id: " << 0 << std::endl;
 
-  std::string data = s3_get_object(SAMPLE_BASE, s3_client, S3_SPARSE_BUCKET);
+  std::string data = s3_get_object(SAMPLE_BASE, s3_client, config.get_s3_bucket());
   
   SparseDataset dataset(data.data(), true);
   dataset.check();
@@ -104,11 +115,10 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
     std::shared_ptr<char> s3_obj = dataset.build_serialized_s3_obj(first_sample, last_sample, &len);
 
     std::cout << "Putting object in S3 with size: " << len << std::endl;
-    s3_put_object(SAMPLE_BASE + i, s3_client, S3_SPARSE_BUCKET,
+    s3_put_object(SAMPLE_BASE + i, s3_client, config.get_s3_bucket(),
         std::string(s3_obj.get(), len));
   }
-
-  check_loading(s3_client);
+  check_loading(config, s3_client);
 
   std::cout << "LOADER-SPARSE terminated successfully" << std::endl;
 }

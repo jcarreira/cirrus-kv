@@ -63,19 +63,19 @@ void run_tasks(int rank, int nworkers,
         nworkers, rank);
     et.run(config);
     sleep_forever();
-  } else if (rank >= WORKER_TASK_RANK && rank < WORKER_TASK_RANK + nworkers) {
+  } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
     /**
      * Worker tasks run here
      * Number of tasks is determined by the value of nworkers
      */
-    LogisticTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
-    lt.run(config, rank - WORKER_TASK_RANK);
+    lt.run(config, rank - WORKERS_BASE);
     sleep_forever();
 
-  } 
+  }
   /**
     * SPARSE tasks
     */
@@ -100,12 +100,11 @@ void run_tasks(int rank, int nworkers,
     pt.run(config);
     sleep_forever();
   } else if (rank == WORKER_SPARSE_TASK_RANK) {
-    rank = -rank;
     LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
-    lt.run(config, rank - WORKER_TASK_RANK);
+    lt.run(config, rank - WORKERS_BASE);
     sleep_forever();
   } else {
     throw std::runtime_error("Wrong task rank: " + std::to_string(rank));

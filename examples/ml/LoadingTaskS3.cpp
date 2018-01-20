@@ -43,11 +43,12 @@ void check_label(FEATURE_TYPE label) {
   * Check if loading was well done
   */
 void LoadingTaskS3::check_loading(
+    const Configuration& config,
     auto& s3_client,
     uint64_t s3_obj_entries) {
   std::cout << "[LOADER] Trying to get sample with id: " << 0 << std::endl;
 
-  std::string data = s3_get_object(SAMPLE_BASE, s3_client, S3_BUCKET);
+  std::string data = s3_get_object(SAMPLE_BASE, s3_client, config.get_s3_bucket());
   
   c_array_deserializer<FEATURE_TYPE> cad_samples(
       s3_obj_entries, "loader samples_store");
@@ -127,11 +128,11 @@ void LoadingTaskS3::run(const Configuration& config) {
     std::unique_ptr<char[]> data = std::unique_ptr<char[]>(new char[len]);
     cas_samples.serialize(s3_obj, data.get());
     std::cout << "Putting object in S3 with size: " << len << std::endl;
-    s3_put_object(SAMPLE_BASE + i, s3_client, S3_BUCKET,
+    s3_put_object(SAMPLE_BASE + i, s3_client, config.get_s3_bucket(),
         std::string(data.get(), len));
   }
 
-  check_loading(s3_client, s3_obj_entries);
+  check_loading(config, s3_client, s3_obj_entries);
   wait_for_start(LOADING_TASK_RANK, r, nworkers);
 }
 

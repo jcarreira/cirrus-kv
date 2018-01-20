@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <atomic>
 #include <map>
+#include <iomanip>
 #include "MurmurHash3.h"
  
 #define DEBUG
@@ -23,6 +24,7 @@
 static const int REPORT_LINES = 10000;  // how often to report readin progress
 static const int REPORT_THREAD = 100000;  // how often proc. threads report
 static const int STR_SIZE = 10000;        // max size for dataset line
+static const int RCV1_STR_SIZE = 20000;        // max size for dataset line
 
 Dataset InputReader::read_input_criteo(const std::string& samples_input_file,
     const std::string& labels_input_file) {
@@ -227,6 +229,7 @@ void InputReader::split_data_labels(
     if (input[0].size() < label_col) {
       throw std::runtime_error("Error: label column is too big");
     }
+
 
     // for every sample split it into labels and training data
     for (unsigned int i = 0; i < input.size(); ++i) {
@@ -581,10 +584,9 @@ void InputReader::parse_criteo_sparse_line(
     FEATURE_TYPE& label) {
   char str[STR_SIZE];
 
-  //std::cout << "PARSE line: " << line << std::endl;
-
   if (line.size() > STR_SIZE) {
-    throw std::runtime_error("Input line is too big");
+    throw std::runtime_error(
+        "Criteo input line is too big: " + std::to_string(line.size()) + " " + std::to_string(STR_SIZE)) ;
   }
 
   strncpy(str, line.c_str(), STR_SIZE);
@@ -597,16 +599,13 @@ void InputReader::parse_criteo_sparse_line(
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
-    //std::cout << "l: " << l << std::endl;
     if (col == 0) { // it's label
       label = string_to<FEATURE_TYPE>(l);
     } else if (col >= 14) {
-      //std::cout << "Adding cat feature: " << l << std::endl;
       //assert(is_categorical(l) || std::string(l).size() == 0);
       uint64_t hash = hash_f(l) % hash_size;
       cat_features[hash]++;
     } else {
-      //std::cout << "Adding numerical feature: " << l << "at col: " << col << std::endl;
       assert(!is_definitely_categorical(l));
       FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
       num_features.push_back(v);
@@ -619,35 +618,22 @@ void InputReader::parse_criteo_sparse_line(
     if (feat != 0.0)
       features.push_back(std::make_pair(feature_index, feat));
     feature_index++;
-    //std::cout << "Adding numerical feature index: " << feature_index - 1 << " feat: " << feat << std::endl;
   }
 
   for (const auto& feat : cat_features) {
     int index = feat.first;
     FEATURE_TYPE value = feat.second;
     features.push_back(std::make_pair(13 + index, value));
-    //std::cout << "Adding cat feature index: " << feature_index + index << " feat: " << value << std::endl;
   }
-
-#if 0
-  std::cout << "Parse line" << std::endl;
-  for (const auto& feat : num_features) {
-    std::cout << feat << " ";
-  }
-  for (const auto& feat : cat_features) {
-    int index = feat.first;
-    FEATURE_TYPE value = feat.second;
-    std::cout << index << "/" << value << " ";
-  }
-  std::cout << std::endl;
-#endif
 }
 
 void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex& fin_lock,
     const std::string& delimiter,
     std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples_res,
     std::vector<FEATURE_TYPE>& labels_res,
-    uint64_t limit_lines, std::atomic<unsigned int>& lines_count) {
+    uint64_t limit_lines, std::atomic<unsigned int>& lines_count,
+    std::function<void(const std::string&, const std::string&,
+      std::vector<std::pair<int, FEATURE_TYPE>>&, FEATURE_TYPE&)> fun) {
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
   std::vector<FEATURE_TYPE> labels;                                // final result
   std::string line;
@@ -667,7 +653,7 @@ void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex
 
     FEATURE_TYPE label;
     std::vector<std::pair<int, FEATURE_TYPE>> features;
-    parse_criteo_sparse_line(line, delimiter, features, label);
+    fun(line, delimiter, features, label);
 
     samples.push_back(features);
     labels.push_back(label);
@@ -717,10 +703,16 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
             std::placeholders::_1, std::placeholders::_2,
             std::placeholders::_3, std::placeholders::_4,
             std::placeholders::_5, std::placeholders::_6,
-            std::placeholders::_7),
+            std::placeholders::_7, std::placeholders::_8),
           std::ref(fin), std::ref(fin_lock),
           std::ref(delimiter), std::ref(samples),
-          std::ref(labels), limit_lines, std::ref(lines_count)));
+          std::ref(labels), limit_lines, std::ref(lines_count),
+          std::bind(&InputReader::parse_criteo_sparse_line, this, 
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3,
+            std::placeholders::_4)
+          ));
   }
 
   for (auto& t : threads) {
@@ -738,21 +730,113 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   return ret;
 }
 
-void InputReader::read_input_rcv1_sparse_thread(
-    std::ifstream& /*fin*/,
-    std::mutex& /*fin_lock*/,
-    const std::string& /*delimiter*/,
-    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& /*samples_res*/,
-    std::vector<FEATURE_TYPE>& /*labels_res*/,
-    uint64_t /*limit_lines*/,
-    std::atomic<unsigned int>& /*lines_count*/) {
+void pack_label(FEATURE_TYPE& label, const std::vector<int>& classes) {
+  char* ptr = (char*)&label;
+  memset(&label, 0, sizeof(FEATURE_TYPE));
+  for (uint64_t i = 0; i < std::min(classes.size(), sizeof(FEATURE_TYPE)); ++i) {
+    *ptr = (char)classes[i];
+    ptr++;
+  }
+}
+
+std::vector<int> unpack_label(const FEATURE_TYPE& label) {
+  std::vector<int> res;
+  char* ptr = (char*)&label;
+  for (uint64_t i = 0; i < sizeof(FEATURE_TYPE); ++i) {
+    if (*ptr == 0)
+      break;
+    res.push_back((int)*ptr);
+    ++ptr;
+  }
+  return res;
+}
+
+/**
+ * Parse a line from the training dataset
+//9,68 | 33:1.000000 47:1.000000 94:1.000000 104:1.000000 112:3.000000 118:1.000000 141:2.000000 165:2.000000 179:1.000000 251:1.000000 270:1.000000 306:1.000000 307:1.000000 424:1.000000 497:1.000000 529:1.000000 573:1.000000 601:1.000000 626:2.000000 678:2.000000 707:2.000000 710:1.000000 716:3.000000 722:1.000000 773:1.000000 914:1.000000 933:4.000000 1052:1.000000 1067:4.000000 1434:1.000000 1491:1.000000 1586:1.000000 1640:4.000000 1855:1.000000 2674:1.000000 3289:1.000000 3664:1.000000 3806:1.000000 3869:1.000000 4224:1.000000 4346:1.000000 4831:1.000000 15046:1.000000 15688:1.000000 16572:1.000000 29352:1.000000
+ */
+char rcv1_line[RCV1_STR_SIZE];
+void InputReader::parse_rcv1_vw_sparse_line(
+    const std::string& line, const std::string& delimiter,
+    std::vector<std::pair<int, FEATURE_TYPE>>& features,
+    FEATURE_TYPE& label) {
+
+  if (line.size() > RCV1_STR_SIZE) {
+    throw std::runtime_error(
+        "rcv1 input line is too big: " +
+        std::to_string(line.size()) + " " + std::to_string(RCV1_STR_SIZE));
+  }
+
+  //static int static_count = 0;
+  //std::cout << "Parsing line: " << ++static_count << std::endl;
+  strncpy(rcv1_line, line.c_str(), RCV1_STR_SIZE);
+  char* s = rcv1_line;
+
+  std::vector<FEATURE_TYPE> num_features; // numerical features
+  std::map<uint64_t, int> cat_features;
+
+  uint64_t col = 0;
+  while (char* l = strsep(&s, delimiter.c_str())) {
+    if (col == 0) { // the label
+      std::string label_str(l);
+      char str2[RCV1_STR_SIZE];
+      strncpy(str2, label_str.c_str(), RCV1_STR_SIZE);
+      char* s = str2;
+      //std::cout << "label: " << s << std::endl;
+      std::vector<int> classes;
+      while (char* c = strsep(&s, ",")) {
+        classes.push_back(string_to<int>(c) + 1); // we do this to handle class 0
+        //std::cout << "class: " << c << std::endl;
+      }
+      pack_label(label, classes);
+#ifdef DEBUG
+      std::vector<int> cs = unpack_label(label);
+      std::sort(cs.begin(), cs.end());
+      std::sort(classes.begin(), classes.end());
+      if (cs != classes) {
+        if (classes.size() <= sizeof(FEATURE_TYPE)) {
+          for (const auto& v : cs) {
+            std::cout << "c1: " << v << std::endl;
+          }
+          for (const auto& v : classes) {
+            std::cout << "c2: " << v << std::endl;
+          }
+        }
+      }
+      //std::cout << "classes " << static_count++ << " :";
+      for (uint64_t i = 0; i < cs.size(); ++i) {//const auto& v : cs) {
+        std::cout << (i ? ",":"") << (cs[i]-1);
+      }
+      std::cout << " |";
+#endif
+    } else if (col == 1) { // it's the bar between labels and features
+    } else {
+      std::string feat(l);
+      size_t i = feat.find(":");
+      std::string index = feat.substr(0, i);
+      std::string value = feat.substr(i+1);
+      //std::cout << "index: " << index << " value: " << value << std::endl;
+      uint64_t hash = string_to<uint64_t>(index);
+      cat_features[hash] += string_to<uint64_t>(value);
+    }
+    col++;
+  }
+
+    std::cout.precision(6);
+  for (const auto& feat : cat_features) {
+    int index = feat.first;
+    FEATURE_TYPE value = feat.second;
+    features.push_back(std::make_pair(index, value));
+    std::cout << std::fixed << " " << index << ":" << value;
+  }
+  std::cout << "\n";
 }
 
 SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
     const std::string& delimiter,
     uint64_t limit_lines,
     bool to_normalize) {
-  std::cout << "Reading input file: " << input_file << std::endl;
+  std::cout << "Reading RCV1 input file: " << input_file << std::endl;
 
   std::ifstream fin(input_file, std::ifstream::in);
   if (!fin) {
@@ -772,10 +856,16 @@ SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
             std::placeholders::_1, std::placeholders::_2,
             std::placeholders::_3, std::placeholders::_4,
             std::placeholders::_5, std::placeholders::_6,
-            std::placeholders::_7),
+            std::placeholders::_7, std::placeholders::_8),
           std::ref(fin), std::ref(fin_lock),
           std::ref(delimiter), std::ref(samples),
-          std::ref(labels), limit_lines, std::ref(lines_count)));
+          std::ref(labels), limit_lines, std::ref(lines_count),
+          std::bind(&InputReader::parse_rcv1_vw_sparse_line, this, 
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3,
+            std::placeholders::_4)
+          ));
   }
 
   for (auto& t : threads) {
@@ -793,3 +883,119 @@ SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
   return ret;
 }
 
+/**
+ * Parse a line from the training dataset
+ * Id,Label,I1,I2,I3,I4,I5,I6,I7,I8,I9,I10,I11,I12,I13,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21,C22,C23,C24,C25,C26
+ */
+void InputReader::parse_criteo_kaggle_sparse_line(
+    const std::string& line, const std::string& delimiter,
+    std::vector<std::pair<int, FEATURE_TYPE>>& features,
+    FEATURE_TYPE& label) {
+  char str[STR_SIZE];
+
+  //std::cout << "line: " << line << std::endl;
+
+  if (line.size() > STR_SIZE) {
+    throw std::runtime_error(
+        "Criteo input line is too big: " + std::to_string(line.size()) + " " + std::to_string(STR_SIZE)) ;
+  }
+
+  strncpy(str, line.c_str(), STR_SIZE);
+  char* s = str;
+
+  std::vector<FEATURE_TYPE> num_features; // numerical features
+  std::map<uint64_t, int> cat_features;
+
+  uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+
+  uint64_t col = 0;
+  while (char* l = strsep(&s, delimiter.c_str())) {
+    if (col == 0 ) { // it's Id
+    } else if (col == 1) { // it's label
+      label = string_to<FEATURE_TYPE>(l);
+      assert(label == 0.0 || label == 1.0);
+    } else if (col >= 15) {
+      uint64_t hash = hash_f(l) % hash_size;
+      cat_features[hash]++;
+    } else {
+      //std::cout << "l: " << l << std::endl;
+      assert(!is_definitely_categorical(l));
+      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
+      num_features.push_back(v);
+    }
+    col++;
+  }
+
+  uint64_t feature_index = 0;
+  for (const auto& feat : num_features) {
+    if (feat != 0.0)
+      features.push_back(std::make_pair(feature_index, feat));
+    feature_index++;
+  }
+
+  for (const auto& feat : cat_features) {
+    int index = feat.first;
+    FEATURE_TYPE value = feat.second;
+    features.push_back(std::make_pair(13 + index, value));
+  }
+}
+
+SparseDataset InputReader::read_input_criteo_kaggle_sparse(
+    const std::string& input_file,
+    const std::string& delimiter,
+    uint64_t limit_lines,
+    bool to_normalize) {
+  std::cout << "Reading criteo kaggle sparse input file: " << input_file << std::endl;
+  std::cout << "Limit_line: " << limit_lines << std::endl;
+
+  assert(delimiter == ",");
+
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file");
+  }
+
+  // we read the first line because it contains the header
+  std::string line;
+  getline(fin, line);
+
+  std::mutex fin_lock;
+  std::atomic<unsigned int> lines_count(0);
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;  // final result
+  std::vector<FEATURE_TYPE> labels;                                // final result
+
+  std::vector<std::shared_ptr<std::thread>> threads;
+  uint64_t nthreads = 8;
+  for (uint64_t i = 0; i < nthreads; ++i) {
+    threads.push_back(
+        std::make_shared<std::thread>(
+          std::bind(&InputReader::read_input_criteo_sparse_thread, this,
+            std::placeholders::_1, std::placeholders::_2,
+            std::placeholders::_3, std::placeholders::_4,
+            std::placeholders::_5, std::placeholders::_6,
+            std::placeholders::_7, std::placeholders::_8),
+          std::ref(fin), std::ref(fin_lock),
+          std::ref(delimiter), std::ref(samples),
+          std::ref(labels), limit_lines, std::ref(lines_count),
+          std::bind(&InputReader::parse_criteo_kaggle_sparse_line, this, 
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3,
+            std::placeholders::_4)
+          ));
+  }
+
+  for (auto& t : threads) {
+    t->join();
+  }
+
+  // process each line
+  std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
+
+  SparseDataset ret(std::move(samples), std::move(labels));
+  if (to_normalize) {
+    // pass hash size
+    ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
+  }
+  return ret;
+}

@@ -320,7 +320,7 @@ class LoadingTaskS3 : public MLTask {
     void run(const Configuration& config);
     Dataset read_dataset(const Configuration& config);
     auto connect_redis();
-    void check_loading(auto& s3_client, uint64_t s3_obj_entries);
+    void check_loading(const Configuration&, auto& s3_client, uint64_t s3_obj_entries);
 
   private:
 };
@@ -368,7 +368,7 @@ class LoadingSparseTaskS3 : public MLTask {
   {}
     void run(const Configuration& config);
     SparseDataset read_dataset(const Configuration& config);
-    void check_loading(auto& s3_client);
+    void check_loading(const Configuration&, auto& s3_client);
     void check_label(FEATURE_TYPE label);
 
   private:

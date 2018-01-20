@@ -65,7 +65,7 @@ void MLTask::wait_for_start(int index, redisContext* r, int nworkers) {
   const char data = 1;  // bit used to indicate start
   redis_put_binary_numid(r, START_BASE + index, &data, 1);
 
-  int num_waiting_tasks = WORKER_TASK_RANK + nworkers;
+  int num_waiting_tasks = WORKERS_BASE + nworkers;
   while (1) {
     int i = 1;
     for (; i < num_waiting_tasks; ++i) {

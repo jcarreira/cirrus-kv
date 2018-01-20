@@ -344,7 +344,8 @@ class SparseModelGet {
           << std::endl;
 
         if (!data) {
-          throw std::runtime_error("Null value returned from redis (does not exist?)");
+          throw std::runtime_error(
+              "Null value returned from redis model (does not exist?)");
         }
 
         std::cout << "Received data from redis len: " << len_model << std::endl;
@@ -384,7 +385,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   LogisticSparseTaskGlobal::redis_con = connect_redis();
   redis_lock.unlock();
 
-  SparseModelGet mg(1000000000UL, MODEL_GRAD_SIZE);
+  uint64_t MODEL_BASE = (1000000000ULL);
+  SparseModelGet mg(MODEL_BASE, MODEL_GRAD_SIZE);
   mg.run();
   //std::cout << "Starting ModelProxy" << std::endl;
   //ModelProxy mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE, &redis_lock);

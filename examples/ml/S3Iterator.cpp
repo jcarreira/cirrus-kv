@@ -21,10 +21,11 @@ S3Iterator::S3Iterator(
         uint64_t left_id, uint64_t right_id,
         const Configuration& c,
         uint64_t s3_rows, uint64_t s3_cols,
-        uint64_t minibatch_rows) :
+        uint64_t minibatch_rows,
+        const std::string& s3_bucket_name) :
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows), s3_cols(s3_cols),
-    minibatch_rows(minibatch_rows) {
+    minibatch_rows(minibatch_rows), s3_bucket_name(s3_bucket_name) {
       
   std::cout << "Creating S3Iterator"
     << " left_id: " << left_id
@@ -72,7 +73,7 @@ const FEATURE_TYPE* S3Iterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 20000 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 20 && pref_sem.getvalue() < (int)read_ahead) {
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }
@@ -166,7 +167,7 @@ try_start:
       std::cout << "S3Iterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
-      s3_obj = s3_get_object_fast(last, *s3_client, S3_SPARSE_BUCKET);
+      s3_obj = s3_get_object_fast(last, *s3_client, s3_bucket_name);
       std::chrono::steady_clock::time_point finish =
         std::chrono::steady_clock::now();
       uint64_t elapsed_ns =

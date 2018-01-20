@@ -41,7 +41,7 @@ S3SparseIterator::S3SparseIterator(
 
   sem_init(&semaphore, 0, 0);
 
-  thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this));
+  thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this, c));
 }
 
 const void* S3SparseIterator::get_next_fast() {
@@ -68,7 +68,7 @@ const void* S3SparseIterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 20000 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 20 && pref_sem.getvalue() < (int)read_ahead) {
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }
@@ -126,7 +126,7 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   str_version++;
 }
 
-void S3SparseIterator::thread_function() {
+void S3SparseIterator::thread_function(const Configuration& config) {
   std::cout << "Building S3 deser. with size: "
     << std::endl;
 
@@ -147,7 +147,7 @@ try_start:
       std::cout << "S3SparseIterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
-      s3_obj = s3_get_object_fast(last, *s3_client, S3_SPARSE_BUCKET);
+      s3_obj = s3_get_object_fast(last, *s3_client, config.get_s3_bucket());
       std::chrono::steady_clock::time_point finish =
         std::chrono::steady_clock::now();
       uint64_t elapsed_ns =

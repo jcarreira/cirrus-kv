@@ -391,7 +391,7 @@ void LogisticTaskS3::run(const Configuration& config, int worker) {
   // Create iterator that goes from 0 to num_s3_batches
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
+      config.get_minibatch_size(), config.get_s3_bucket());
 
   std::cout << "[WORKER] starting loop" << std::endl;
 

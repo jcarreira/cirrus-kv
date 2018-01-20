@@ -93,6 +93,11 @@ class InputReader {
       const std::string& delimiter,
       uint64_t limit_lines,
       bool /*to_normalize*/);
+  
+  SparseDataset read_input_criteo_kaggle_sparse(const std::string& input_file,
+      const std::string& delimiter,
+      uint64_t limit_lines,
+      bool /*to_normalize*/);
 
   private:
   /**
@@ -162,13 +167,25 @@ class InputReader {
     const std::string& delimiter,
     std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
     std::vector<FEATURE_TYPE>& labels_res,
-    uint64_t limit_lines, std::atomic<unsigned int>&);
+    uint64_t limit_lines, std::atomic<unsigned int>&,
+    std::function<void(const std::string&, const std::string&,
+      std::vector<std::pair<int, FEATURE_TYPE>>&, FEATURE_TYPE&)> fun);
   
   void read_input_rcv1_sparse_thread(std::ifstream& fin, std::mutex& lock,
     const std::string& delimiter,
     std::vector<std::vector<std::pair<int,FEATURE_TYPE>>>& samples_res,
     std::vector<FEATURE_TYPE>& labels_res,
     uint64_t limit_lines, std::atomic<unsigned int>&);
+
+  void parse_criteo_kaggle_sparse_line(
+      const std::string& line, const std::string& delimiter,
+      std::vector<std::pair<int, FEATURE_TYPE>>& features,
+      FEATURE_TYPE& label);
+
+  void parse_rcv1_vw_sparse_line(
+    const std::string& line, const std::string& delimiter,
+    std::vector<std::pair<int, FEATURE_TYPE>>& features,
+    FEATURE_TYPE& label);
 };
 
 #endif  // EXAMPLES_ML_INPUT_H_

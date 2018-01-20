@@ -176,7 +176,7 @@ void ErrorTask::run(const Configuration& config) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,
-      config.get_minibatch_size());
+      config.get_minibatch_size(), config.get_s3_bucket());
 
   // get data first
   // we get up to 10K samples

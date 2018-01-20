@@ -388,7 +388,7 @@ void PSSparseTask::publish_model_redis() {
   auto elapsed_us = get_time_us() - before_us;
   std::cout 
     << "Put model elapsed (us): " << elapsed_us
-    << " bw (MB/s): " << (1.0 * model_size / 1024 / 1024 * 1000 * 1000)
+    << " bw (MB/s): " << (1.0 * model_size / 1024 / 1024 / elapsed_us * 1000 * 1000)
     << std::endl;
 }
 

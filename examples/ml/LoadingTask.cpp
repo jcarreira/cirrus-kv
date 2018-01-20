@@ -99,7 +99,7 @@ void LoadingTask::run(const Configuration& config) {
             new char[len]);
         cas_samples.serialize(sample, data.get());
         s3_put_object(SAMPLE_BASE + i, s3_client,
-            S3_BUCKET,
+            config.get_s3_bucket(),
             std::string(data.get(), cas_samples.size(sample)));
       }
 #elif defined(USE_CIRRUS)
@@ -122,7 +122,7 @@ void LoadingTask::run(const Configuration& config) {
             new char[cas_labels.size(label)]);
         cas_labels.serialize(label, data.get());
         s3_put_object(LABEL_BASE + i, s3_client,
-            S3_BUCKET,
+            config.get_s3_bucket(),
             std::string(data.get(), cas_labels.size(label)));
       }
 #elif defined(USE_CIRRUS)

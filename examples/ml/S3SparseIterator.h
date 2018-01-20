@@ -20,7 +20,7 @@ class S3SparseIterator {
 
     const void* get_next_fast();
 
-    void thread_function();
+    void thread_function(const Configuration&);
 
  private:
   void push_samples(std::ostringstream* oss);
