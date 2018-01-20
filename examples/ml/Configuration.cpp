@@ -30,6 +30,7 @@ void Configuration::read(const std::string& path) {
     }
 
     print();
+    check();
 }
 
 void Configuration::print() const {
@@ -39,6 +40,12 @@ void Configuration::print() const {
     std::cout << "S3 size: " << get_s3_size() << std::endl;
     std::cout << "learning rate: " << get_learning_rate() << std::endl;
     std::cout << "limit_samples: " << get_limit_samples() << std::endl;
+}
+
+void Configuration::check() const {
+  if (s3_bucket_name == "") {
+    throw std::runtime_error("S3 bucket name missing from config file");
+  }
 }
 
 /**
@@ -87,6 +94,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> limit_cols;
     } else if (s == "limit_samples:") {
         iss >> limit_samples;
+    } else if (s == "s3_bucket:") {
+        iss >> s3_bucket_name;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -217,4 +226,11 @@ uint64_t Configuration::get_limit_samples() const {
   */
 uint64_t Configuration::get_num_features() const {
     return num_features;
+}
+
+/**
+  * Get S3 bucket name
+  */
+std::string Configuration::get_s3_bucket() const {
+    return s3_bucket_name;
 }
