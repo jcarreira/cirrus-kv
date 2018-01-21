@@ -9,6 +9,7 @@
 #include <list>
 #include <mutex>
 #include "Serializers.h"
+#include "ProgressMonitor.h"
 
 class S3SparseIterator {
  public:
@@ -46,6 +47,8 @@ class S3SparseIterator {
   uint64_t s3_rows;
   uint64_t minibatch_rows;
   uint64_t features_per_sample;
+
+  ProgressMonitor pm;
 };
 
 #endif  // _S3_SPARSEITERATOR_H_

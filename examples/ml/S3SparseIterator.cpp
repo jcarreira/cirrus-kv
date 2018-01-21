@@ -16,7 +16,7 @@ static int to_delete = -1;
 
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
-        uint64_t left_id, uint64_t right_id,
+        uint64_t left_id, uint64_t right_id, // right id is exclusive
         const Configuration& c,
         uint64_t s3_rows,
         uint64_t minibatch_rows) :
@@ -32,8 +32,6 @@ S3SparseIterator::S3SparseIterator(
   // initialize s3
   s3_initialize_aws();
   s3_client.reset(s3_create_client_ptr());
-
-  last = left_id;  // last is exclusive
 
   for (uint64_t i = 0; i < read_ahead; ++i) {
     pref_sem.signal();
@@ -126,6 +124,13 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   str_version++;
 }
 
+uint64_t get_random_obj_id(uint64_t left, uint64_t right) {
+  std::random_device rd;
+  std::default_random_engine re(rd());
+  std::uniform_int_distribution<int> sampler(left, right - 1);
+  return sampler(re);
+}
+
 void S3SparseIterator::thread_function(const Configuration& config) {
   std::cout << "Building S3 deser. with size: "
     << std::endl;
@@ -136,9 +141,12 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     // in the ring
     std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
+
+    uint64_t obj_id = get_random_obj_id(left_id, right_id);
+
     std::cout << "Getting object. "
       << "count: " << count++
-      << " last: " << last
+      << " random obj id: " << obj_id
       << std::endl;
 
     std::ostringstream* s3_obj;
@@ -147,12 +155,13 @@ try_start:
       std::cout << "S3SparseIterator: getting object" << std::endl;
       std::chrono::steady_clock::time_point start =
         std::chrono::steady_clock::now();
-      s3_obj = s3_get_object_fast(last, *s3_client, config.get_s3_bucket());
+      s3_obj = s3_get_object_fast(obj_id, *s3_client, config.get_s3_bucket());
       std::chrono::steady_clock::time_point finish =
         std::chrono::steady_clock::now();
       uint64_t elapsed_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             finish-start).count();
+      pm.increment_counter(); // increment number of batches we have processed
 
       double MBps = (1.0 * (32812.5*1024.0) / elapsed_ns) / 1024 / 1024 * 1000 * 1000 * 1000;
       std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0)
@@ -165,10 +174,9 @@ try_start:
       exit(-1);
     }
     
-    // update index
-    last++;
-    if (last == right_id) {
-      last = left_id;
+    uint64_t num_passes = (count / (right_id - left_id));
+    if (num_passes == LIMIT_NUMBER_PASSES) {
+      exit(0);
     }
 
     std::chrono::steady_clock::time_point start =
