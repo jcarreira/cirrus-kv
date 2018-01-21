@@ -4,6 +4,7 @@
 extern "C" {
 
 #include <string.h>
+#include <assert.h>
 #include "Redis.h"
 
 #undef REDIS_DEBUG
@@ -296,6 +297,20 @@ void redis_connect_callback(redisAsyncContext* c, conn_handler h) {
 
 void redis_disconnect_callback(redisAsyncContext* c, conn_handler h) {
     redisAsyncSetDisconnectCallback(c, h);
+}
+
+void redis_increment_counter(redisContext* r, const char* id, int* prev) {
+    redisReply* reply = (redisReply*) redisCommand(r,"INCR %s", id);
+    if (reply->type == REDIS_REPLY_ERROR) {
+      throw std::runtime_error("Error incrementing counter");
+    } 
+    
+    assert(reply->type == REDIS_REPLY_INTEGER);
+
+    if (prev != nullptr) {
+      *prev = reply->integer;
+    }
+    freeReplyObject(reply);
 }
 
 }

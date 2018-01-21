@@ -32,6 +32,8 @@ void redis_disconnect_callback(redisAsyncContext*, conn_handler);
 
 char* redis_binary_get(redisContext* c, const char* id, int* len);
 
+void redis_increment_counter(redisContext*, const char*, int* = nullptr);
+
 // Lists
 #if 0
 void redis_push_list(redisContext*, const char* list_name, const char* data);
