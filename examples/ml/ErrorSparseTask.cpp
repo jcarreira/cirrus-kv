@@ -198,7 +198,11 @@ start:
         << MODEL_BASE << "\n";
 #endif
 
-      std::cout << "[ERROR_TASK] computing loss" << std::endl;
+      int nb = mp.get_number_batches();
+      std::cout 
+        << "[ERROR_TASK] computing loss."
+        << " number_batches: " << nb
+        << std::endl;
       FEATURE_TYPE total_loss = 0;
       FEATURE_TYPE total_accuracy = 0;
       uint64_t total_num_samples = 0;

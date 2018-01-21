@@ -8,6 +8,7 @@
 #include "Redis.h"
 #include "LRModel.h"
 #include "SparseLRModel.h"
+#include "ProgressMonitor.h"
 
 #include <string>
 #include <vector>
@@ -271,7 +272,8 @@ class ErrorSparseTask : public MLTask {
       MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
-          nworkers, worker_id)
+          nworkers, worker_id),
+      mp(redis_ip, redis_port)
   {}
     void run(const Configuration& config);
 
@@ -282,6 +284,8 @@ class ErrorSparseTask : public MLTask {
         auto cad_samples, auto cad_labels);
     void parse_raw_minibatch(const FEATURE_TYPE* minibatch,
         auto& samples, auto& labels);
+
+    ProgressMonitor mp;
 };
 
 class LoadingTask : public MLTask {

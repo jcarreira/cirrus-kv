@@ -22,7 +22,9 @@ S3SparseIterator::S3SparseIterator(
         uint64_t minibatch_rows) :
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows),
-    minibatch_rows(minibatch_rows) {
+    minibatch_rows(minibatch_rows),
+    pm(REDIS_IP, REDIS_PORT)
+{
       
   std::cout << "Creating S3SparseIterator"
     << " left_id: " << left_id
@@ -161,7 +163,7 @@ try_start:
       uint64_t elapsed_ns =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             finish-start).count();
-      pm.increment_counter(); // increment number of batches we have processed
+      pm.increment_batches(); // increment number of batches we have processed
 
       double MBps = (1.0 * (32812.5*1024.0) / elapsed_ns) / 1024 / 1024 * 1000 * 1000 * 1000;
       std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0)
@@ -175,7 +177,7 @@ try_start:
     }
     
     uint64_t num_passes = (count / (right_id - left_id));
-    if (num_passes == LIMIT_NUMBER_PASSES) {
+    if (LIMIT_NUMBER_PASSES > 0 && num_passes == LIMIT_NUMBER_PASSES) {
       exit(0);
     }
 
