@@ -68,7 +68,7 @@ const void* S3SparseIterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 20 && pref_sem.getvalue() < (int)read_ahead) {
+  if (ring_size < 200 && pref_sem.getvalue() < (int)read_ahead) {
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }

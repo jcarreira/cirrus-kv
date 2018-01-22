@@ -90,7 +90,7 @@ LRSparseGradient::LRSparseGradient(LRSparseGradient&& other) {
 }
 
 LRSparseGradient::LRSparseGradient(
-    const std::vector<std::pair<int, FEATURE_TYPE>>& data) :
+    const std::vector<std::pair<int, FEATURE_TYPE>>&& data) :
     weights(data) {
 }
 
@@ -109,12 +109,20 @@ LRSparseGradient& LRSparseGradient::operator=(LRSparseGradient&& other) {
   *
   */
 void LRSparseGradient::loadSerialized(const void* mem) {
+  // load version and number of weights
   version = load_value<int>(mem);
   int num_weights = load_value<int>(mem);
   assert(num_weights > 0 && num_weights < 10000000);
 
-  int size = num_weights * sizeof(FEATURE_TYPE) + 2 * sizeof(int);
+  int size = num_weights * (sizeof(FEATURE_TYPE)+sizeof(int)) + 2 * sizeof(int);
   char* data_begin = (char*)mem;
+
+  //std::cout << "Number of weights: " << num_weights << std::endl;
+  //std::cout << "Version: " << version << std::endl;
+  //std::cout << "size: " << size << std::endl;
+
+  // clear weights
+  weights.resize(0);
 
   for (int i = 0; i < num_weights; ++i) {
     assert(std::distance(data_begin, (char*)mem) < size);

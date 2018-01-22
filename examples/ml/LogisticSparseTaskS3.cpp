@@ -90,48 +90,56 @@ class LogisticSparseTaskGradientProxy {
     std::unique_ptr<std::thread> thread;
 };
 
-void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
-  lr_gradient_serializer lgs(MODEL_GRAD_SIZE);
-
+void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRSparseGradient* lrg) {
 #ifdef DEBUG
+  auto before_push_us = get_time_us();
   std::cout << "Pushing gradient" << std::endl;
 #endif
 
-  uint64_t gradient_size = lgs.size(*lrg);
-  auto data = std::unique_ptr<char[]>(new char[gradient_size]);
-  lgs.serialize(*lrg, data.get());
+  uint64_t gradient_size = lrg->getSerializedSize();
+  std::shared_ptr<char> data = std::shared_ptr<char>(new char[gradient_size],
+      std::default_delete<char[]>());
+  lrg->serialize(data.get());
+#ifdef DEBUG
+  auto after_1 = get_time_us();
+#endif
 
 #ifdef DEBUG
   std::cout << "Publishing gradients" << std::endl;
 #endif
 
-  auto before_push_us = get_time_us();
   redis_lock.lock();
-  //int status = redisAsyncCommand(gradient_r, NULL, NULL,
-  //    "PUBLISH gradients %b", data.get(), gradient_size);
   redisReply* reply = (redisReply*)redisCommand(
       LogisticSparseTaskGlobal::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
+#ifdef DEBUG
+  auto after_2 = get_time_us();
+#endif
   freeReplyObject(reply);
-  auto elapsed_push_us = get_time_us() - before_push_us;
+  redis_lock.unlock();
 
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
 #endif
-  redis_lock.unlock();
 
-  //if (status == REDIS_ERR) {
-  //  throw std::runtime_error("Error in redisAsyncCommand");
-  //}
 
-//#ifdef DEBUG
+#ifdef DEBUG
+  auto elapsed_push_us = get_time_us() - before_push_us;
+  static uint64_t before = 0;
+  if (before == 0)
+    before = get_time_us();
+  auto now = get_time_us();
   std::cout << "[WORKER] "
       << "Worker task published gradient"
       << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us()
+      << " part1 (us): " << (after_1 - before_push_us)
+      << " part2 (us): " << (after_2 - after_1)
       << " took(us): " << elapsed_push_us
       << " bw(MB/s): " << std::fixed << (1.0 * gradient_size / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
+      << " since last(us): " << (now - before)
       << "\n";
-//#endif
+  before = now;
+#endif
 }
 
 /** We unpack each minibatch into samples and labels
@@ -168,29 +176,26 @@ bool LogisticSparseTaskS3::run_phase1(
 
   try {
 #ifdef DEBUG
-    std::chrono::steady_clock::time_point start =
-      std::chrono::steady_clock::now();
+    auto start = get_time_us();
 #endif
 
     const void* minibatch = s3_iter.get_next_fast();
+#ifdef DEBUG
+    auto finish1 = get_time_us();
+#endif
     dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
-          config.get_minibatch_size()));
+          config.get_minibatch_size())); // this takes 11 us
 
 #ifdef DEBUG
-    std::chrono::steady_clock::time_point start =
-    std::chrono::steady_clock::time_point finish =
-      std::chrono::steady_clock::now();
-    uint64_t elapsed_ns =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(
-          finish - start).count();
+    auto finish2 = get_time_us();
     double bw = 1.0 * dataset->getSizeBytes() /
-      elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
+      (finish2-start) * 1000.0 * 1000 / 1024 / 1024;
     std::cout << "[WORKER] Get Sample Elapsed (S3) "
       << " minibatch size: " << config.get_minibatch_size()
-      << " ns: " << elapsed_ns
+      << " part1(us): " << (finish1 - start)
+      << " part2(us): " << (finish2 - finish1)
       << " BW (MB/s): " << bw
       << " at time: " << get_time_us()
-      //<< " prev_model_version: " << prev_model_version
       << "\n";
 #endif
   } catch(const cirrus::NoSuchIDException& e) {
@@ -220,7 +225,6 @@ class SparseModelGet {
     void thread_fn() {
       //uint64_t count = 0;
       while (1) {
-        usleep(500);
         int len_model;
         std::string str_id = std::to_string(MODEL_BASE);
         auto before_us = get_time_us();
@@ -229,19 +233,20 @@ class SparseModelGet {
         std::cout
           << "Get model elapsed (us): " << elapsed_us
           << " bw (MB/s): " << (1.0 * len_model / elapsed_us * 1000 * 1000 / 1024 / 1024 )
-          << std::endl;
+          << "\n";
 
         if (!data) {
           throw std::runtime_error(
               "Null value returned from redis model (does not exist?)");
         }
 
-        std::cout << "Received data from redis len: " << len_model << std::endl;
+        //std::cout << "Received data from redis len: " << len_model << "\n";
         LogisticSparseTaskGlobal::model_lock.lock();
         LogisticSparseTaskGlobal::model->loadSerialized(data);
         LogisticSparseTaskGlobal::model_lock.unlock();
         
         free(data);
+        usleep(50);
       }
     }
 
@@ -313,17 +318,11 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     }
 #ifdef DEBUG
     std::cout << "[WORKER] phase 1 done" << std::endl;
+    //dataset->check();
+    //dataset->print_info();
 #endif
-
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
-
-#ifdef DEBUG
-    auto now = get_time_us();
-    dataset->check();
-    dataset->print_info();
-    std::cout << "Computing gradient" << std::endl;
-#endif
 
     LogisticSparseTaskGlobal::model_lock.lock();
     SparseLRModel model = *LogisticSparseTaskGlobal::model;
@@ -331,7 +330,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
 #ifdef DEBUG
     std::cout << "Checking model" << std::endl;
-    model.check();
+    //model.check();
+    std::cout << "Computing gradient" << "\n";
+    auto now = get_time_us();
 #endif
 
     try {
@@ -352,7 +353,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     gradient->setVersion(version++);
 
     try {
-      LRGradient* lrg = dynamic_cast<LRGradient*>(gradient.get());
+      LRSparseGradient* lrg = dynamic_cast<LRSparseGradient*>(gradient.get());
       push_gradient(LogisticSparseTaskGlobal::gradient_r, lrg);
     } catch(...) {
       std::cout << "[WORKER] "

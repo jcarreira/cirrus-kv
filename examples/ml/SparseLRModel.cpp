@@ -6,6 +6,7 @@
 #include <Checksum.h>
 #include <algorithm>
 #include <map>
+#include <unordered_map>
 
 #undef DEBUG
 
@@ -82,15 +83,13 @@ void SparseLRModel::loadSerialized(const void* data) {
   //std::cout << "num_weights: " << num_weights << std::endl;
   assert(num_weights > 0 && num_weights < 10000000);
 
-  int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
+  //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
   char* data_begin = (char*)data;
 
   weights_.resize(num_weights);
-  for (int i = 0; i < num_weights; ++i) {
-    assert(std::distance(data_begin, (char*)data) < size);
-    FEATURE_TYPE w = load_value<FEATURE_TYPE>(data);
-    weights_[i] = w;
-  }
+  std::copy(reinterpret_cast<FEATURE_TYPE*>(data_begin),
+      (reinterpret_cast<FEATURE_TYPE*>(data_begin)) + num_weights,
+      weights_.data());
 }
 
 /***
@@ -111,22 +110,25 @@ std::unique_ptr<Model> SparseLRModel::copy() const {
 
 void SparseLRModel::sgd_update(double learning_rate,
         const ModelGradient* gradient) {
-    const LRGradient* grad = dynamic_cast<const LRGradient*>(gradient);
+    const LRSparseGradient* grad = dynamic_cast<const LRSparseGradient*>(gradient);
+    //const LRGradient* grad = dynamic_cast<const LRGradient*>(gradient);
 
     if (grad == nullptr) {
         throw std::runtime_error("Error in dynamic cast");
     }
 
-    for (uint64_t i = 0; i < size(); ++i) {
-       weights_[i] += learning_rate * grad->weights[i];
+    for (const auto& w : grad->weights) {
+      int index = w.first;
+      FEATURE_TYPE value = w.second;
+      weights_[index] += learning_rate * value;
     }
 }
 
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
-    std::cout << "<Minibatch grad" << std::endl;
 #ifdef DEBUG
+    std::cout << "<Minibatch grad" << std::endl;
     dataset.check();
     //print();
 #endif
@@ -145,10 +147,14 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
      between dataset and weights
     auto part1_1 = (ds * tmp_weights);
     auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
+    auto before_1 = get_time_us();
 #endif
 
-    std::vector<FEATURE_TYPE> part1(dataset.num_samples());
+
+    //std::vector<FEATURE_TYPE> part1(dataset.num_samples());
+    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+      double part1_i = 0;
       for (const auto& feat : dataset.get_row(i)) {
         int index = feat.first;
         FEATURE_TYPE value = feat.second;
@@ -157,10 +163,13 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
           throw std::runtime_error("Index too high");
         }
         assert(index >= 0 && (uint64_t)index < weights_.size());
-        part1[i] += value * weights_[index];
+        part1_i += value * weights_[index];
+        //part1[i] += value * weights_[index];
 #ifdef DEBUG
-        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
-          std::cout << "part1[i]: " << part1[i] << std::endl;
+        if (std::isnan(part1_i) || std::isinf(part1_i)) {
+        //if (std::isnan(part1[i]) || std::isinf(part1[i])) {
+          std::cout << "part1_i: " << part1_i << std::endl;
+          //std::cout << "part1[i]: " << part1[i] << std::endl;
           std::cout << "i: " << i << std::endl;
           std::cout << "index: " << index << " value: " << value << std::endl;
           std::cout << "weights_[index]: " << weights_[index] << std::endl;
@@ -169,34 +178,38 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
 #endif
       }
 
-      part1[i] = mlutils::s_1(part1[i]);
-#ifdef DEBUG
-        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
-          std::cout << "isnan" << std::endl;
-          exit(-1);
-        }
-#endif
+      part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
+      //part1[i] = mlutils::s_1(part1[i]);
+//#ifdef DEBUG
+//        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
+//          std::cout << "isnan" << std::endl;
+//          exit(-1);
+//        }
+//#endif
     }
+#ifdef DEBUG
+    auto after_1 = get_time_us();
+#endif
 
 
     //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
 
     // compute difference between labels and logistic probability
     //auto part2 = lbs - part1;
-    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
-    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-      part2[i] = dataset.labels_[i] - part1[i];
-#ifdef DEBUG
-        if (std::isnan(part2[i]) || std::isinf(part2[i])) {
-          std::cout << "part2 isnan" << std::endl;
-          exit(-1);
-        }
-#endif
-    }
+//    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
+//    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+//      part2[i] = dataset.labels_[i] - part1[i];
+//#ifdef DEBUG
+//        if (std::isnan(part2[i]) || std::isinf(part2[i])) {
+//          std::cout << "part2 isnan" << std::endl;
+//          exit(-1);
+//        }
+//#endif
+//    }
 
     //auto part3 = ds.transpose() * part2;
     //std::vector<FEATURE_TYPE> part3(weights_.size());
-    std::map<uint64_t, FEATURE_TYPE> part3;
+    std::unordered_map<uint64_t, FEATURE_TYPE> part3;
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       for (const auto& feat : dataset.get_row(i)) {
         int index = feat.first;
@@ -214,13 +227,23 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
 #endif
       }
     }
+#ifdef DEBUG
+    auto after_2 = get_time_us();
+#endif
 
-    std::vector<FEATURE_TYPE> res(weights_);
+    std::vector<std::pair<int, FEATURE_TYPE>> res;
+    res.reserve(part3.size());
+    //std::vector<FEATURE_TYPE> res(weights_);
     for (const auto& v : part3) {
       uint64_t index = v.first;
       FEATURE_TYPE value = v.second;
-      res[index] = res[index] * 2 * epsilon + value;
+      res.push_back(std::make_pair(index, value + weights_[index] * 2 * epsilon));
+      //res[index] = res[index] * 2 * epsilon + value;
     }
+#ifdef DEBUG
+    auto after_3 = get_time_us();
+#endif
+
     //for (uint64_t i = 0; i < weights_.size(); ++i) {
     //  //res[i] = part3[i] + weights_[i] * 2 * epsilon;
     //}
@@ -257,12 +280,21 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     //Eigen::Matrix<FEATURE_TYPE, -1, 1>::Map(vec_res.data(), res.size()) = res;
 
     //std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
-    std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(res);
+    std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
+#ifdef DEBUG
+    auto after_4 = get_time_us();
+#endif
+    //std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(res);
 
 #ifdef DEBUG
     ret->check_values();
+    std::cout
+      << " Elapsed1: " << (after_1 - before_1)
+      << " Elapsed2: " << (after_2 - after_1)
+      << " Elapsed3: " << (after_3 - after_2)
+      << " Elapsed4: " << (after_4 - after_3)
+      << std::endl;
 #endif
-
     return ret;
 }
 
@@ -329,8 +361,11 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
       throw std::runtime_error("Error: logistic loss is > 0");
     }
 
+  //std::cout << "value: " << value << std::endl;
     total_loss -= value;
   }
+
+  //std::cout << "wrong_count: " << wrong_count << std::endl;
 
   if (total_loss < 0) {
     throw std::runtime_error("total_loss < 0");
@@ -348,6 +383,7 @@ uint64_t SparseLRModel::getSerializedGradientSize() const {
 }
 
 std::unique_ptr<ModelGradient> SparseLRModel::loadGradient(void* mem) const {
+  throw std::runtime_error("Not supported");
     auto grad = std::make_unique<LRGradient>(size());
 
     for (uint64_t i = 0; i < size(); ++i) {

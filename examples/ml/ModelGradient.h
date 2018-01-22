@@ -86,12 +86,11 @@ class LRSparseGradient : public ModelGradient {
  public:
     friend class LRModel;
     friend class SparseLRModel;
-    friend class SparseLRModel;
 
     virtual ~LRSparseGradient() = default;
 
     LRSparseGradient(LRSparseGradient&& data);
-    explicit LRSparseGradient(const std::vector<std::pair<int, FEATURE_TYPE>>& data);
+    explicit LRSparseGradient(const std::vector<std::pair<int, FEATURE_TYPE>>&& data);
     explicit LRSparseGradient(int d);
 
     LRSparseGradient& operator=(LRSparseGradient&& other);

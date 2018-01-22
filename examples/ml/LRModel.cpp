@@ -54,7 +54,6 @@ uint64_t LRModel::getSerializedSize() const {
 }
 
 void LRModel::loadSerialized(const void* data) {
-    cirrus::LOG<cirrus::INFO>("loadSerialized d: ", size());
     const FEATURE_TYPE* v = reinterpret_cast<const FEATURE_TYPE*>(data);
     std::copy(v, v + size(), weights_.begin());
 }

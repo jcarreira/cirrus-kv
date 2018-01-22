@@ -12,8 +12,6 @@ static void update_model(auto&);
 static void print_progress();
 
 namespace PSSparseTaskGlobal {
-  static std::unique_ptr<lr_gradient_deserializer> lgd;
-
   // used to monitor how much since last received gradient
   static auto prev_on_msg_time = get_time_us();
 
@@ -111,8 +109,8 @@ PSSparseTask::PSSparseTask(const std::string& redis_ip, uint64_t redis_port,
 
 std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size) {
   *model_size = model.getSerializedSize();
-  std::cout << "Serializing model with size: " << *model_size
-    << std::endl;
+  //std::cout << "Serializing model with size: " << *model_size
+  //  << std::endl;
   char* d = model.serializeTo2(model.getSerializedSize());
   auto data = std::shared_ptr<char>(d, std::default_delete<char[]>());
   return data;
@@ -142,20 +140,6 @@ void PSSparseTask::put_model(const SparseLRModel& model) {
 }
 #endif
 
-#if 0
-void PSSparseTask::get_gradient(auto r, auto& gradient, auto gradient_id) {
-  int len_grad;
-  lr_gradient_deserializer lgd(MODEL_GRAD_SIZE);
-
-  char* data = redis_get_numid(r, gradient_id, &len_grad);
-  if (data == nullptr) {
-    throw cirrus::NoSuchIDException("");
-  }
-  gradient = lgd(data, len_grad);
-  free(data);
-}
-#endif
-
 void PSSparseTask::publish_model(const SparseLRModel& model) {
   put_model(model);
 }
@@ -166,8 +150,6 @@ class PSTaskGradientProxy {
       redis_ip(redis_ip), redis_port(redis_port),
       base(event_base_new()) {
       PSSparseTaskGlobal::MODEL_GRAD_SIZE = MODEL_GRAD_SIZE;
-      PSSparseTaskGlobal::lgd.reset(
-          new lr_gradient_deserializer(MODEL_GRAD_SIZE));
       PSSparseTaskGlobal::ps_grad_start_lock.lock();
     }
 
@@ -194,7 +176,7 @@ class PSTaskGradientProxy {
 #endif
       if (r->type == REDIS_REPLY_ARRAY) {
         const char* str = r->element[2]->str;
-        uint64_t len = r->element[2]->len;
+        //uint64_t len = r->element[2]->len;
 
 #ifdef DEBUG
         std::cout << "len: "
@@ -213,9 +195,11 @@ class PSTaskGradientProxy {
         // r->element[0]->str == "message"
         char* str_1 = r->element[1]->str;
         char* str_0 = r->element[0]->str;
-        if ( str_0 && strcmp(str_0, "message") == 0 &&
-            str_1 && strcmp(str_1, "gradients") == 0) {
-          auto gradient = PSSparseTaskGlobal::lgd->operator()(str, len);
+        if ( str_0 && strncmp(str_0, "mes", 3) == 0 && // message
+            str_1 && strncmp(str_1, "grad", 4) == 0) { // grad
+
+          LRSparseGradient gradient(0);
+          gradient.loadSerialized(str);
 
 #ifdef DEBUG
           std::cout << "Updating model at time: " << get_time_us()
@@ -380,16 +364,18 @@ void PSSparseTask::publish_model_redis() {
 
 #ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;
+  auto before_us = get_time_us();
 #endif
 
-  auto before_us = get_time_us();
   redis_put_binary_numid(PSSparseTaskGlobal::redis_con, MODEL_BASE,
       reinterpret_cast<const char*>(data.get()), model_size);
+#ifdef DEBUG
   auto elapsed_us = get_time_us() - before_us;
   std::cout 
     << "Put model elapsed (us): " << elapsed_us
     << " bw (MB/s): " << (1.0 * model_size / 1024 / 1024 / elapsed_us * 1000 * 1000)
-    << std::endl;
+    << "\n";
+#endif
 }
 
 void PSSparseTask::publish_model_pubsub() {
