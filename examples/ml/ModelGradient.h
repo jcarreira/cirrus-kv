@@ -79,7 +79,31 @@ class LRGradient : public ModelGradient {
     void print() const override;
     void check_values() const override;
  protected:
-    std::vector<FEATURE_TYPE> weights;  //< gradients of the LR gradient
+    std::vector<FEATURE_TYPE> weights;  //< weights of the LR gradient
+};
+
+class LRSparseGradient : public ModelGradient {
+ public:
+    friend class LRModel;
+    friend class SparseLRModel;
+    friend class SparseLRModel;
+
+    virtual ~LRSparseGradient() = default;
+
+    LRSparseGradient(LRSparseGradient&& data);
+    explicit LRSparseGradient(const std::vector<std::pair<int, FEATURE_TYPE>>& data);
+    explicit LRSparseGradient(int d);
+
+    LRSparseGradient& operator=(LRSparseGradient&& other);
+
+    void loadSerialized(const void*);
+    void serialize(void*) const override;
+    uint64_t getSerializedSize() const override;
+
+    void print() const override;
+    void check_values() const override;
+ protected:
+    std::vector<std::pair<int, FEATURE_TYPE>> weights;  //< weights
 };
 
 class SoftmaxGradient : public ModelGradient {

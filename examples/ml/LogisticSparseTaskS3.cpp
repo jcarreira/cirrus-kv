@@ -35,124 +35,6 @@ namespace LogisticSparseTaskGlobal {
   redisContext* redis_con;
 }
 
-#if 0
-/**
-  * Works as a cache for remote model
-  */
-class ModelProxy {
-  public:
-    ModelProxy(auto redis_ip, auto redis_port, uint64_t mgs, auto* redis_lock) :
-      redis_ip(redis_ip), redis_port(redis_port),
-      redis_lock(redis_lock), base(event_base_new()) {
-      LogisticSparseTaskGlobal::mp_start_lock.lock();
-      LogisticSparseTaskGlobal::model.reset(new SparseLRModel(mgs));
-      LogisticSparseTaskGlobal::lmd.reset(new lr_model_deserializer(mgs));
-    }
-
-    static void connectCallback(const redisAsyncContext*, int) {
-      std::cout << "ModelProxy::connectCallback" << std::endl;
-      LogisticSparseTaskGlobal::mp_start_lock.unlock();
-    }
-
-    static void disconnectCallback(const redisAsyncContext*, int) {
-      std::cout << "disconnectCallback" << std::endl;
-    }
-
-    SparseLRModel get_model() {
-#ifdef DEBUG
-      std::cout << "ModelProxy waiting for model" << std::endl;
-#endif
-          
-      sem_wait(&LogisticSparseTaskGlobal::new_model_semaphore);
-      
-#ifdef DEBUG
-      std::cout << "received model" << "\n";
-#endif
-
-      LogisticSparseTaskGlobal::model_lock.lock();
-      SparseLRModel ret = *LogisticSparseTaskGlobal::model;
-      LogisticSparseTaskGlobal::model_lock.unlock();
-      return ret;
-    }
-
-    static void onMessage(redisAsyncContext*, void *reply, void*) {
-      redisReply *r = reinterpret_cast<redisReply*>(reply);
-      if (reply == NULL) return;
-
-      //auto now = get_time_us();
-      //std::cout << "Time since last (us): "
-      //  << (now - LogisticSparseTaskGlobal::prev_on_msg_time) << "\n";
-      //LogisticSparseTaskGlobal::prev_on_msg_time = now;
-#ifdef DEBUG
-      printf("onMessage\n");
-#endif
-      if (r->type == REDIS_REPLY_ARRAY) {
-        const char* str = r->element[2]->str;
-        uint64_t len = r->element[2]->len;
-
-#ifdef DEBUG
-        printf("len: %lu\n", len);
-#endif
-
-        const char* str0 = r->element[0]->str;
-        const char* str1 = r->element[1]->str;
-
-        if (strcmp(str0, "message") == 0 &&
-            strcmp(str1, "model") == 0) {
-#ifdef DEBUG
-          std::cout << "Updating model at time: " << get_time_us()
-            << " version: " << LogisticSparseTaskGlobal::model_version
-            << std::endl;
-#endif
-          LogisticSparseTaskGlobal::model_lock.lock();
-          *LogisticSparseTaskGlobal::model = LogisticSparseTaskGlobal::lmd->operator()(str, len);
-          LogisticSparseTaskGlobal::model_version++;
-          LogisticSparseTaskGlobal::model_lock.unlock();
-          sem_post(&LogisticSparseTaskGlobal::new_model_semaphore);
-        }
-      } else {
-        std::cout << "Not an array" << std::endl;
-      }
-    }
-
-    void thread_fn() {
-      std::cout << "ModelProxy connecting to redis.." << std::endl;
-      redis_lock->lock();
-      redisAsyncContext* model_r =
-        redis_async_connect(redis_ip.c_str(), redis_port);
-      if (!model_r) {
-        throw std::runtime_error("ModelProxy::Error connecting to redis");
-      }
-      std::cout << "ModelProxy::connected to redis.." << model_r << std::endl;
-
-      std::cout << "libevent attached" << std::endl;
-      redisLibeventAttach(model_r, base);
-      redis_connect_callback(model_r, connectCallback);
-      redis_disconnect_callback(model_r, disconnectCallback);
-      redis_subscribe_callback(model_r, onMessage, "model");
-      redis_lock->unlock();
-      
-      std::cout << "eventbase dispatch" << std::endl;
-      event_base_dispatch(base);
-    }
-
-    void run() {
-      std::cout << "Starting ModelProxy thread" << std::endl;
-      thread = std::make_unique<std::thread>(
-          std::bind(&ModelProxy::thread_fn, this));
-    }
-
-  private:
-    std::string redis_ip;
-    int redis_port;
-
-    std::mutex* redis_lock;
-    struct event_base *base;
-
-    std::unique_ptr<std::thread> thread;
-};
-#endif
-
 class LogisticSparseTaskGradientProxy {
   public:
     LogisticSparseTaskGradientProxy(
@@ -223,12 +105,14 @@ void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
   std::cout << "Publishing gradients" << std::endl;
 #endif
 
+  auto before_push_us = get_time_us();
   redis_lock.lock();
   //int status = redisAsyncCommand(gradient_r, NULL, NULL,
   //    "PUBLISH gradients %b", data.get(), gradient_size);
   redisReply* reply = (redisReply*)redisCommand(
       LogisticSparseTaskGlobal::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
   freeReplyObject(reply);
+  auto elapsed_push_us = get_time_us() - before_push_us;
 
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
@@ -239,12 +123,15 @@ void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRGradient* lrg) {
   //  throw std::runtime_error("Error in redisAsyncCommand");
   //}
 
-#ifdef DEBUG
+//#ifdef DEBUG
   std::cout << "[WORKER] "
       << "Worker task published gradient"
       << " with version: " << lrg->getVersion()
-      << " at time (us): " << get_time_us() << "\n";
-#endif
+      << " at time (us): " << get_time_us()
+      << " took(us): " << elapsed_push_us
+      << " bw(MB/s): " << std::fixed << (1.0 * gradient_size / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
+      << "\n";
+//#endif
 }
 
 /** We unpack each minibatch into samples and labels
@@ -280,25 +167,26 @@ bool LogisticSparseTaskS3::run_phase1(
     auto& s3_iter) {
 
   try {
-    const void* minibatch = s3_iter.get_next_fast();
 #ifdef DEBUG
-    std::cout << "[WORKER] "
-      << "got s3 data"
-      << std::endl;
+    std::chrono::steady_clock::time_point start =
+      std::chrono::steady_clock::now();
 #endif
+
+    const void* minibatch = s3_iter.get_next_fast();
     dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
           config.get_minibatch_size()));
 
 #ifdef DEBUG
+    std::chrono::steady_clock::time_point start =
     std::chrono::steady_clock::time_point finish =
       std::chrono::steady_clock::now();
     uint64_t elapsed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
           finish - start).count();
-    double bw = 1.0 * batch_size * sizeof(double) /
+    double bw = 1.0 * dataset->getSizeBytes() /
       elapsed_ns * 1000.0 * 1000 * 1000 / 1024 / 1024;
     std::cout << "[WORKER] Get Sample Elapsed (S3) "
-      << " batch size: " << batch_size
+      << " minibatch size: " << config.get_minibatch_size()
       << " ns: " << elapsed_ns
       << " BW (MB/s): " << bw
       << " at time: " << get_time_us()
@@ -332,7 +220,7 @@ class SparseModelGet {
     void thread_fn() {
       //uint64_t count = 0;
       while (1) {
-        usleep(50);
+        usleep(500);
         int len_model;
         std::string str_id = std::to_string(MODEL_BASE);
         auto before_us = get_time_us();

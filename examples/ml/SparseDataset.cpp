@@ -31,6 +31,7 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
 
 
 SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
+  const char* data_begin = data;
   for (uint64_t i = 0; i < n_samples; ++i) {
     FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
     int num_sample_values = load_value<int>(data);
@@ -47,6 +48,8 @@ SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
     data_.push_back(sample);
     labels_.push_back(label);
   }
+
+  size_bytes = std::distance(data_begin, data);
 }
 
 SparseDataset::SparseDataset(const char* data, bool from_s3) {

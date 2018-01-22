@@ -1,7 +1,13 @@
 #include <examples/ml/ModelGradient.h>
 #include <iostream>
 #include <algorithm>
+#include <Utils.h>
+#include <cassert>
 #include "utils/Log.h"
+
+/**
+  * LRGradient
+  */
 
 LRGradient::LRGradient(LRGradient&& other) {
     weights = std::move(other.weights);
@@ -72,9 +78,94 @@ void LRGradient::check_values() const {
     }
 }
 
+
+
+/**
+  * LRSparseGradient
+  */
+
+LRSparseGradient::LRSparseGradient(LRSparseGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
+}
+
+LRSparseGradient::LRSparseGradient(
+    const std::vector<std::pair<int, FEATURE_TYPE>>& data) :
+    weights(data) {
+}
+
+LRSparseGradient::LRSparseGradient(int d) {
+    weights.resize(d);
+    version = 0;
+}
+
+LRSparseGradient& LRSparseGradient::operator=(LRSparseGradient&& other) {
+    weights = std::move(other.weights);
+    version = other.version;
+    return *this;
+}
+
+/**
+  *
+  */
+void LRSparseGradient::loadSerialized(const void* mem) {
+  version = load_value<int>(mem);
+  int num_weights = load_value<int>(mem);
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  int size = num_weights * sizeof(FEATURE_TYPE) + 2 * sizeof(int);
+  char* data_begin = (char*)mem;
+
+  for (int i = 0; i < num_weights; ++i) {
+    assert(std::distance(data_begin, (char*)mem) < size);
+    int index = load_value<int>(mem);
+    FEATURE_TYPE w = load_value<FEATURE_TYPE>(mem);
+    weights.push_back(std::make_pair(index, w));
+  }
+}
+
+/** Format:
+  * version (int)
+  * number of weights (int)
+  * list of weights: index1 (int) weight1 (FEATURE_TYPE) | index2 (int) weight2 (FEATURE_TYPE) | ..
+  */
+void LRSparseGradient::serialize(void* mem) const {
+  store_value<int>(mem, version);
+  store_value<int>(mem, weights.size());
+
+  for (const auto& w : weights) {
+    int index = w.first;
+    FEATURE_TYPE v = w.second;
+    store_value<int>(mem, index);
+    store_value<FEATURE_TYPE>(mem, v);
+  }
+}
+
+uint64_t LRSparseGradient::getSerializedSize() const {
+    return weights.size() * (sizeof(FEATURE_TYPE) + sizeof(int)) + // pairs (index, weight value)
+      sizeof(int) * 2; // version + number of weights
+}
+
+void LRSparseGradient::print() const {
+    std::cout << "Printing LRSparseGradient. version: " << version << std::endl;
+    for (const auto &v : weights) {
+        std::cout << "(" << v.first << "," << v.second << ") ";
+    }
+    std::cout << std::endl;
+}
+
+void LRSparseGradient::check_values() const {
+  for (const auto& w : weights) {
+    if (std::isnan(w.second) || std::isinf(w.second)) {
+      throw std::runtime_error("LRSparseGradient::check_values error");
+    }
+  }
+}
+
+
+
 /** 
   * SOFTMAX
-  *
   *
   */
 

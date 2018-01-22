@@ -112,6 +112,8 @@ class SparseDataset {
 
   const std::vector<std::pair<int, FEATURE_TYPE>>& get_row(uint64_t) const;
 
+  uint64_t getSizeBytes() const { return size_bytes; }
+
   public:
   void build_max_features();
 
@@ -119,6 +121,8 @@ class SparseDataset {
   std::vector<FEATURE_TYPE> labels_;
 
   uint64_t max_features_; // largest number of features of any single user
+
+  uint64_t size_bytes = 0; // size of data when read from serialized format
 };
 
 #endif  // EXAMPLES_ML_SPARSEDATASET_H_

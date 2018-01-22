@@ -5,6 +5,7 @@
 #include <utils/Log.h>
 #include <Checksum.h>
 #include <algorithm>
+#include <map>
 
 #undef DEBUG
 
@@ -78,12 +79,10 @@ uint64_t SparseLRModel::getSerializedSize() const {
   */
 void SparseLRModel::loadSerialized(const void* data) {
   int num_weights = load_value<int>(data);
-  std::cout << "num_weights: " << num_weights << std::endl;
+  //std::cout << "num_weights: " << num_weights << std::endl;
   assert(num_weights > 0 && num_weights < 10000000);
 
   int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
-  //char* copy = new char[size];
-  //memcpy(copy, data, size);
   char* data_begin = (char*)data;
 
   weights_.resize(num_weights);
@@ -196,7 +195,8 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     }
 
     //auto part3 = ds.transpose() * part2;
-    std::vector<FEATURE_TYPE> part3(weights_.size());
+    //std::vector<FEATURE_TYPE> part3(weights_.size());
+    std::map<uint64_t, FEATURE_TYPE> part3;
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       for (const auto& feat : dataset.get_row(i)) {
         int index = feat.first;
@@ -215,13 +215,23 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
       }
     }
 
-    //auto part4 = tmp_weights * 2 * epsilon;
-    std::vector<FEATURE_TYPE> part4(weights_.size());
+    std::vector<FEATURE_TYPE> res(weights_);
+    for (const auto& v : part3) {
+      uint64_t index = v.first;
+      FEATURE_TYPE value = v.second;
+      res[index] = res[index] * 2 * epsilon + value;
+    }
+    //for (uint64_t i = 0; i < weights_.size(); ++i) {
+    //  //res[i] = part3[i] + weights_[i] * 2 * epsilon;
+    //}
+#if 0
+    std::vector<FEATURE_TYPE> res(weights_.size());
     for (uint64_t i = 0; i < weights_.size(); ++i) {
-      part4[i] = weights_[i] * 2 * epsilon;
+      //part4[i] = weights_[i] * 2 * epsilon;
+      res[i] = part3[i] + weights_[i] * 2 * epsilon;
 #ifdef DEBUG
-        if (std::isnan(part4[i]) || std::isinf(part4[i])) {
-          std::cout << "part4 isnan" << std::endl;
+        if (std::isnan(part3[i]) || std::isinf(part3[i])) {
+          std::cout << "part3 isnan" << std::endl;
           std::cout << "weights_[i]: " << weights_[i] << std::endl;
           std::cout << "i: " << i << std::endl;
           std::cout << "epsilon: " << epsilon << std::endl;
@@ -229,18 +239,18 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         }
 #endif
     }
-    
-    //auto res = part4 + part3;
-    std::vector<FEATURE_TYPE> res(weights_.size());
-    for (uint64_t i = 0; i < weights_.size(); ++i) {
-      res[i] = part4[i] + part3[i];
-#ifdef DEBUG
-        if (std::isnan(res[i]) || std::isinf(res[i])) {
-          std::cout << "res isnan" << std::endl;
-          exit(-1);
-        }
 #endif
-    }
+    
+//    std::vector<FEATURE_TYPE> res(weights_.size());
+//    for (uint64_t i = 0; i < weights_.size(); ++i) {
+//      res[i] = part4[i] + part3[i];
+//#ifdef DEBUG
+//        if (std::isnan(res[i]) || std::isinf(res[i])) {
+//          std::cout << "res isnan" << std::endl;
+//          exit(-1);
+//        }
+//#endif
+//    }
 
     //std::vector<FEATURE_TYPE> vec_res;
     //vec_res.resize(res.size());

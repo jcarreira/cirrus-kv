@@ -73,8 +73,6 @@ void run_tasks(int rank, int nworkers,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
     lt.run(config, rank - WORKERS_BASE);
-    sleep_forever();
-
   }
   /**
     * SPARSE tasks
