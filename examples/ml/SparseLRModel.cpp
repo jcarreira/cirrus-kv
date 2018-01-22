@@ -55,9 +55,8 @@ char* SparseLRModel::serializeTo2(uint64_t /*size*/) const {
   void* mem = new char[getSerializedSize()];
   void *mem_copy = mem;
   store_value<int>(mem, weights_.size());
-  for (const auto& v : weights_) {
-    store_value<FEATURE_TYPE>(mem, v);
-  }
+  std::copy(weights_.data(), weights_.data() + weights_.size(),
+      reinterpret_cast<FEATURE_TYPE*>(mem));
   return (char*)mem_copy;
 }
 

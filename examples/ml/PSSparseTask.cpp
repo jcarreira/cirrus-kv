@@ -162,7 +162,6 @@ class PSTaskGradientProxy {
     }
 
     static void onMessage(redisAsyncContext*, void *reply, void*) {
-      PSSparseTaskGlobal::onMessageCount++;
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
@@ -175,6 +174,7 @@ class PSTaskGradientProxy {
       std::cout << "onMessage PSTaskGradientProxy" << "\n";
 #endif
       if (r->type == REDIS_REPLY_ARRAY) {
+        PSSparseTaskGlobal::onMessageCount++;
         const char* str = r->element[2]->str;
         //uint64_t len = r->element[2]->len;
 

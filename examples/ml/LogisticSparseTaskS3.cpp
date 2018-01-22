@@ -227,13 +227,17 @@ class SparseModelGet {
       while (1) {
         int len_model;
         std::string str_id = std::to_string(MODEL_BASE);
+#ifdef DEBUG
         auto before_us = get_time_us();
+#endif
         char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
+#ifdef DEBUG
         auto elapsed_us = get_time_us() - before_us;
         std::cout
           << "Get model elapsed (us): " << elapsed_us
           << " bw (MB/s): " << (1.0 * len_model / elapsed_us * 1000 * 1000 / 1024 / 1024 )
           << "\n";
+#endif
 
         if (!data) {
           throw std::runtime_error(
