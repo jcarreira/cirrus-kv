@@ -1,6 +1,7 @@
 #include "sort_lambda.hpp"
 
 #include <cmath>
+#include <cstring>
 
 #include <iostream>
 #include <stdexcept>
@@ -27,8 +28,10 @@ std::pair<std::vector<std::shared_ptr<std::string>>, bool> sort_lambda::smart_ge
         try {
                 std::vector<std::string> vals = _store->get_bulk_fast(keys);
                 std::vector<std::shared_ptr<std::string>> ret;
-                for(const std::string& s : vals)
+                for (const std::string& s : vals)
                         ret.push_back(std::make_shared<std::string>(s));
+                for (const INT_TYPE& i : keys)
+                        _store->remove(i);
                 return std::make_pair(ret, false);
         }
         catch(...) {  // fall to back serial
@@ -39,12 +42,13 @@ std::pair<std::vector<std::shared_ptr<std::string>>, bool> sort_lambda::smart_ge
                                 std::string chunk = _store->get(k);
                                 ret.push_back(
                                         std::make_shared<std::string>(chunk));
+                                _store->remove(k);
                                 if(chunk == config_instance::sentinel) {
                                         retry = false;
                                         break;
                                 }
                         }
-                        catch(...) {
+                        catch (...) {
                                 retry = true;
                                 break;
                         }

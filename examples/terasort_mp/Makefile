@@ -27,7 +27,7 @@ build/read_lambda.o: read_lambda.hpp read_lambda.cpp config_instance.hpp
 build/hash_lambda.o: config_instance.hpp hash_lambda.cpp hash_lambda.hpp
 	$(CC) $(CC_FLAGS) -c hash_lambda.cpp -o build/hash_lambda.o
 
-build/sort_lambda.o: config_instance.hpp sort_lambda.cpp sort_lambda.hpp
+build/sort_lambda.o: config_instance.hpp sort_lambda.cpp sort_lambda.hpp timsort.hpp
 	$(CC) $(CC_FLAGS) -c sort_lambda.cpp -o build/sort_lambda.o
 
 outputs/main: main.cpp build/serialization.o build/read_lambda.o build/hash_lambda.o build/sort_lambda.o

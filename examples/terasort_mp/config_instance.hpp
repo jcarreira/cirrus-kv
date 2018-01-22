@@ -35,6 +35,7 @@ static constexpr INT_TYPE hash_bytes = 1;
 static constexpr INT_TYPE hash_threads = 1;
 static constexpr INT_TYPE hash_bulk_transfer = 100;
 static constexpr INT_TYPE hash_background_timeout_ms = 10;
+static constexpr INT_TYPE hash_get_retry_ms = 10;
 static constexpr INT_TYPE hash_num_background_threads = 4;
 static constexpr char hash_output_dir[] = "/nscratch/nathreya/hash_output_dir";
 
@@ -54,7 +55,7 @@ static constexpr INT_TYPE total_read_keys = num_records / read_chunk_size;
 static constexpr INT_TYPE sort_nodes = 32;
 static constexpr INT_TYPE sort_threads = 2;
 static constexpr INT_TYPE sort_bulk_transfer = 50;
-static constexpr INT_TYPE sort_transfer_wait_ms = 1000;
+static constexpr INT_TYPE sort_transfer_wait_ms = 100;
 static constexpr char sort_output_dir[] = "/nscratch/nathreya/sort_output_dir";
 
 static constexpr INT_TYPE chars = 62;

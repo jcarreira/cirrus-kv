@@ -75,14 +75,7 @@ int main(int argc, char* argv[]) {
                         std::chrono::duration_cast<std::chrono::seconds>
                                 (read_end - read_start).count() << " seconds" <<
                                 std::endl;
-                for (INT_TYPE i = num_input_files; i < total_processes; i++)
-                        MPI_Send(&sync, 1, MPI_INT, i, proc_rank,
-                                MPI_COMM_WORLD);
         } else if (proc_rank < num_input_files + hash_nodes) {  // hash nodes
-                for (INT_TYPE i = 0; i < num_input_files; i++)
-                        MPI_Recv(&sync, 1, MPI_INT, i, i, MPI_COMM_WORLD,
-                                MPI_STATUS_IGNORE);
-
                 std::cout << "Starting hashing for process " <<
                         proc_rank - num_input_files << "..." << std::endl;
                 auto hash_start = std::chrono::high_resolution_clock::now();
@@ -118,10 +111,6 @@ int main(int argc, char* argv[]) {
                 hl->print_avg_stats();
 
         } else if (proc_rank < total_processes) {  // sort nodes
-                for (INT_TYPE i = 0; i < num_input_files; i++)
-                        MPI_Recv(&sync, 1, MPI_INT, i, i, MPI_COMM_WORLD,
-                                MPI_STATUS_IGNORE);
-
                 std::cout << "Starting sorting/merging for process " <<
                         proc_rank - num_input_files - hash_nodes << "..." <<
                         std::endl;

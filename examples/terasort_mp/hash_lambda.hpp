@@ -67,6 +67,10 @@ class hash_lambda {
                         <std::string>> store);
 };
 
+bool hasher_smart_get(std::shared_ptr<hash_lambda> hl,
+        std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                <std::string>> store, const INT_TYPE& start,
+        const INT_TYPE& end, std::string* data);
 void hasher(std::shared_ptr<hash_lambda> hl,
         std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
                 <std::string>> store);

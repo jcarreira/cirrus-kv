@@ -237,6 +237,20 @@ static inline INT_TYPE hash_helper(const std::string& s, INT_TYPE start) {
         return ret;
 }
 
+
+bool hasher_smart_get(std::shared_ptr<hash_lambda> hl,
+        std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
+                <std::string>> store, const INT_TYPE& start,
+        const INT_TYPE& end, std::string* data) {
+        try {
+                store->get_bulk(start, end, data);
+                return true;
+        }
+        catch (...) {
+                return false;
+        }
+}
+
 void hasher(std::shared_ptr<hash_lambda> hl,
         std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl<std::string>>
                 store) {
@@ -254,7 +268,9 @@ void hasher(std::shared_ptr<hash_lambda> hl,
                         end = std::min(
                                 curr + config_instance::hash_bulk_transfer,
                                 hl->end()) - 1;
-                store->get_bulk(start, end, data_array);
+                while(!hasher_smart_get(hl, store, start, end, data_array))
+                        std::this_thread::sleep_for(std::chrono::milliseconds(
+                                config_instance::hash_get_retry_ms));
                 auto get_end = std::chrono::high_resolution_clock::now();
                 long double get_time = std::chrono::duration_cast
                         <std::chrono::microseconds>(get_end - get_start)
