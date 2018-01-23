@@ -5,7 +5,8 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "adapters/libevent.h"
+//#include "adapters/libevent.h"
+#include "PSSparseServerInterface.h"
 
 #include <pthread.h>
 
@@ -33,8 +34,10 @@ namespace LogisticSparseTaskGlobal {
   redisAsyncContext* gradient_r;
   sem_t new_model_semaphore;
   redisContext* redis_con;
+  PSSparseServerInterface* psint;
 }
 
+#if 0
 class LogisticSparseTaskGradientProxy {
   public:
     LogisticSparseTaskGradientProxy(
@@ -89,6 +92,7 @@ class LogisticSparseTaskGradientProxy {
     struct event_base *base;
     std::unique_ptr<std::thread> thread;
 };
+#endif
 
 void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRSparseGradient* lrg) {
 #ifdef DEBUG
@@ -96,10 +100,10 @@ void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRSparseGradient* 
   std::cout << "Pushing gradient" << std::endl;
 #endif
 
-  uint64_t gradient_size = lrg->getSerializedSize();
-  std::shared_ptr<char> data = std::shared_ptr<char>(new char[gradient_size],
-      std::default_delete<char[]>());
-  lrg->serialize(data.get());
+//  uint64_t gradient_size = lrg->getSerializedSize();
+//  std::shared_ptr<char> data = std::shared_ptr<char>(new char[gradient_size],
+//      std::default_delete<char[]>());
+//  lrg->serialize(data.get());
 #ifdef DEBUG
   auto after_1 = get_time_us();
 #endif
@@ -108,14 +112,15 @@ void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRSparseGradient* 
   std::cout << "Publishing gradients" << std::endl;
 #endif
 
-  redis_lock.lock();
-  redisReply* reply = (redisReply*)redisCommand(
-      LogisticSparseTaskGlobal::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
+//  redis_lock.lock();
+//  redisReply* reply = (redisReply*)redisCommand(
+//      LogisticSparseTaskGlobal::redis_con, "PUBLISH gradients %b", data.get(), gradient_size);
 #ifdef DEBUG
   auto after_2 = get_time_us();
 #endif
-  freeReplyObject(reply);
-  redis_lock.unlock();
+//  freeReplyObject(reply);
+//  redis_lock.unlock();
+  LogisticSparseTaskGlobal::psint->send_gradient(*lrg);
 
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
@@ -144,6 +149,7 @@ void LogisticSparseTaskS3::push_gradient(auto /*gradient_r*/, LRSparseGradient* 
 
 /** We unpack each minibatch into samples and labels
   */
+#if 0
 void LogisticSparseTaskS3::unpack_minibatch(
     std::shared_ptr<FEATURE_TYPE> minibatch,
     auto& samples, auto& labels) {
@@ -168,6 +174,7 @@ void LogisticSparseTaskS3::unpack_minibatch(
         samples.get() + j * features_per_sample);
   }
 }
+#endif
 
 // get samples and labels data
 bool LogisticSparseTaskS3::run_phase1(
@@ -275,6 +282,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
+  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface("172.31.0.28", 1337);
+
   sem_init(&LogisticSparseTaskGlobal::new_model_semaphore, 0, 0);
 
   std::cout << "Connecting to redis.." << std::endl;
@@ -291,12 +300,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   //LogisticSparseTaskGlobal::mp_start_lock.lock();
   //std::cout << "Started ModelProxy" << std::endl;
 
-  std::cout << "Starting GradientProxy" << std::endl;
-  LogisticSparseTaskGradientProxy gp(REDIS_IP, REDIS_PORT, &redis_lock);
-  gp.run();
-  std::cout << "GradientProxy locking" << std::endl;
-  LogisticSparseTaskGlobal::gp_start_lock.lock();
-  std::cout << "Started GradientProxy" << std::endl;
+  //std::cout << "Starting GradientProxy" << std::endl;
+  //LogisticSparseTaskGradientProxy gp(REDIS_IP, REDIS_PORT, &redis_lock);
+  //gp.run();
+  //std::cout << "GradientProxy locking" << std::endl;
+  //LogisticSparseTaskGlobal::gp_start_lock.lock();
+  //std::cout << "Started GradientProxy" << std::endl;
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
