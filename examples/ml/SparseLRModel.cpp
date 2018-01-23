@@ -324,31 +324,32 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
     //auto r1 = ds.row(i) *  weights_eig;
 
     const auto& sample = dataset.get_row(i);
-    FEATURE_TYPE r1 = 0;
+    double r1 = 0;
     for (const auto& feat : sample) {
       int index = feat.first;
       FEATURE_TYPE value = feat.second;
       r1 += weights_[index] * value;
     }
-
+    
+    double s1 = mlutils::s_1(r1);
     FEATURE_TYPE predicted_class = 0;
-    if (mlutils::s_1(r1) > 0.5) {
+    if (s1 > 0.5) {
       predicted_class = 1.0;
     }
     if (predicted_class != class_i) {
       wrong_count++;
     }
 
-    //FEATURE_TYPE v1 = mlutils::log_aux(1 - mlutils::s_1(r1));
-    //FEATURE_TYPE v2 = mlutils::log_aux(mlutils::s_1(r1));
+#define CROSS_ENTROPY_LOSS
+#ifdef CROSS_ENTROPY_LOSS
 
-    FEATURE_TYPE value = class_i *
-      mlutils::log_aux(mlutils::s_1(r1)) +
-      (1 - class_i) * mlutils::log_aux(1 - mlutils::s_1(r1));
+    double value = class_i *
+      mlutils::log_aux(s1) +
+      (1 - class_i) * mlutils::log_aux(1 - s1);
 
     if (value > 0 && value < 1e-6) {
       // XXX this should be investigated
-      //throw std::runtime_error("This code is actually used huh");
+      throw std::runtime_error("This code is actually used huh");
       value = 0;
     }
 
@@ -362,6 +363,7 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
 
   //std::cout << "value: " << value << std::endl;
     total_loss -= value;
+#endif
   }
 
   //std::cout << "wrong_count: " << wrong_count << std::endl;
