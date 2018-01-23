@@ -148,7 +148,7 @@ void ErrorSparseTask::run(const Configuration& config) {
     << std::endl;
 start:
   std::vector<SparseDataset> minibatches_vec;
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 1000; ++i) {
     try {
       const void* minibatch_data = s3_iter.get_next_fast();
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
