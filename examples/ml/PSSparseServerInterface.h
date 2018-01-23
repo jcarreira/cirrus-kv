@@ -9,12 +9,15 @@
 #include <iostream>
 #include "ModelGradient.h"
 #include "Utils.h"
+#include "SparseLRModel.h"
 
 class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
 
   void send_gradient(const LRSparseGradient&);
+  
+  void get_model(SparseLRModel& model);
 
  private:
   std::string ip;
@@ -54,16 +57,58 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = 1;
   int ret = send(sock, &operation, sizeof(uint32_t), 0);
+  if (ret == -1) {
+    throw std::runtime_error("Error sending operation");
+  }
   //std::cout << "Sent ret: " << ret << std::endl;
 
   uint32_t size = gradient.getSerializedSize();
   //std::cout << "Sending grad size: " << size << std::endl;
   ret = send(sock, &size, sizeof(uint32_t), 0);
+  if (ret == -1) {
+    throw std::runtime_error("Error sending grad size");
+  }
   //std::cout << "Sent ret: " << ret << std::endl;
   char data[size];
   gradient.serialize(data);
   ret = send(sock, data, size, 0);
-  (void)ret;
-  //std::cout << "ret: " << ret << std::endl;
+  if (ret == -1) {
+    throw std::runtime_error("Error sending grad");
+  }
+}
+
+ssize_t read_all(int sock, void* data, size_t len) {
+  uint64_t bytes_read = 0;
+
+  while (bytes_read < len) {
+    int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
+        len - bytes_read);
+
+    if (retval == -1) {
+      throw std::runtime_error("Error reading from client");
+    }
+
+    bytes_read += retval;
+  }   
+
+  return bytes_read;
+}
+
+void PSSparseServerInterface::get_model(SparseLRModel& model) {
+  (void)model;
+  uint32_t operation = 2;
+  int ret = send(sock, &operation, sizeof(uint32_t), 0);
+  if (ret == -1) {
+    throw std::runtime_error("Error sending operation");
+  }
+
+  uint32_t size;
+  ret = read_all(sock, &size, sizeof(size));
+  std::cout << "Model with size: " << size << std::endl;
+
+  char* data = new char[size];
+  read_all(sock, data, size);
+  model.loadSerialized(data);
+  delete[] data;
 }
 

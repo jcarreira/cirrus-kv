@@ -119,6 +119,7 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   return x.fd == -1;
 }
 
+static
 ssize_t read_all(int sock, void* data, size_t len) {
   uint64_t bytes_read = 0;
 
@@ -184,7 +185,11 @@ bool PSSparseServerTask::process(int sock) {
 
   if (operation == 1) { // GRADIENT
     bytes_read = 0;
-    read_from_client(buffer, sock, bytes_read);
+    bool ret = read_from_client(buffer, sock, bytes_read);
+    if (!ret) {
+      return false;
+    }
+
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = *incoming_size_ptr;
 #ifdef DEBUG 
@@ -193,7 +198,12 @@ bool PSSparseServerTask::process(int sock) {
     if (incoming_size > current_buf_size) {
       buffer.resize(incoming_size);
     }
-    read_all(sock, buffer.data(), incoming_size);
+
+    try {
+      read_all(sock, buffer.data(), incoming_size);
+    } catch(...) {
+      return false;
+    }
 
     to_process_lock.lock();
     to_process.push(std::move(buffer));
@@ -204,7 +214,6 @@ bool PSSparseServerTask::process(int sock) {
   } else {
     throw std::runtime_error("Unknown");
   }
-
   return true;
 }
 
@@ -221,6 +230,8 @@ bool PSSparseServerTask::read_from_client(
       return false;
     }
     if (retval < 0) {
+      close(sock);
+      return false; // likely because lambda worker died after 5 minutes
       throw std::runtime_error("Server issue in reading socket during size read.");
     }
     bytes_read += retval;
@@ -370,7 +381,7 @@ void PSSparseServerTask::run(const Configuration& config) {
 
   PSSparseServerTaskGlobal::redis_con = connect_redis();
   publish_model_redis();
-  wait_for_start(PS_SPARSE_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
+  wait_for_start(PS_SPARSE_SERVER_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
 
   uint64_t start = get_time_us();
   while (1) {
@@ -388,40 +399,6 @@ void PSSparseServerTask::run(const Configuration& config) {
     }
   }
 }
-
-#if 0
-void print_progress() {
-  static uint64_t count = 0;
-  static auto start = get_time_us();
-
-  // if it's the first time we record the timestamp
-  if (count == 2000) {
-    start = get_time_us();
-  } else if (count > 2000 && count % 1000 == 0) {
-    auto now = get_time_us();
-    auto elapsed_us = now - start;
-    double iterations_per_us = 1.0 * count / elapsed_us;
-    double iterations_per_sec = iterations_per_us * 1000 * 1000;
-    std::cout << "Iterations per sec: " << iterations_per_sec << "\n";
-  }
-  count++;
-}
-#endif
-
-#if 0
-void update_model(auto& gradient) {
-  // do a gradient step and update model
-#ifdef DEBUG
-  static int update_count = 0;
-  std::cout << "[PS] " << "Updating model updating_count: " << update_count << "\n";
-#endif
-
-  PSSparseServerTaskGlobal::model_lock.lock();
-  PSSparseServerTaskGlobal::model->sgd_update(
-      PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
-  PSSparseServerTaskGlobal::model_lock.unlock();
-}
-#endif
 
 void PSSparseServerTask::publish_model_redis() {
 #ifdef DEBUG
@@ -460,30 +437,3 @@ void PSSparseServerTask::publish_model_redis() {
 #endif
 }
 
-#if 0
-void PSSparseServerTask::publish_model_pubsub() {
-#ifdef DEBUG
-  static int publish_count = 0;
-  std::cout << "[PS] "
-    << "Publishing model at: " << get_time_us()
-    << " publish_count: " << (++publish_count)
-    << "\n";
-#endif
-
-  PSSparseServerTaskGlobal::model_lock.lock();
-  auto model_copy = *PSSparseServerTaskGlobal::model;
-  PSSparseServerTaskGlobal::model_lock.unlock();
-
-  uint64_t model_size;
-  std::shared_ptr<char> data = serialize_model(model_copy, &model_size);
-
-#ifdef DEBUG
-  std::cout << "redisCommand PUBLISH MODEL" << std::endl;
-#endif
-  redisReply* reply = 
-    (redisReply*)redisCommand(PSSparseServerTaskGlobal::redis_con,
-        "PUBLISH model %b", data.get(), model_size);
-  freeReplyObject(reply);
-}
-
-#endif
