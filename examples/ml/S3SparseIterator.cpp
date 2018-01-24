@@ -3,16 +3,9 @@
 #include <unistd.h>
 #include <vector>
 #include <iostream>
-#include <CircularBuffer.h>
 
 #include <pthread.h>
 #include <semaphore.h>
-
-static sem_t semaphore;
-static int str_version = 0;
-static std::map<int, std::string> list_strings; // strings from s3
-static CircularBuffer<std::pair<const void*, int>> minibatches_list(100000);
-static int to_delete = -1;
 
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
@@ -23,7 +16,8 @@ S3SparseIterator::S3SparseIterator(
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows),
     minibatch_rows(minibatch_rows),
-    pm(REDIS_IP, REDIS_PORT)
+    pm(REDIS_IP, REDIS_PORT),
+    minibatches_list(100000)
 {
       
   std::cout << "Creating S3SparseIterator"

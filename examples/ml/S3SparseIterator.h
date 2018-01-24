@@ -10,6 +10,7 @@
 #include <mutex>
 #include "Serializers.h"
 #include "ProgressMonitor.h"
+#include <CircularBuffer.h>
 
 class S3SparseIterator {
  public:
@@ -49,6 +50,12 @@ class S3SparseIterator {
   uint64_t features_per_sample;
 
   ProgressMonitor pm;
+
+  sem_t semaphore;
+  int str_version = 0;
+  std::map<int, std::string> list_strings; // strings from s3
+  CircularBuffer<std::pair<const void*, int>> minibatches_list;//(100000);
+  int to_delete = -1;
 };
 
 #endif  // _S3_SPARSEITERATOR_H_
