@@ -17,14 +17,16 @@ INCLUDES=-I.. \
 	 -I../../../src/ \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/ \
-	 -I$(TOP_DIR)/third_party/eigen_source
+	 -I$(TOP_DIR)/third_party/eigen_source \
+	 -I$(TOP_DIR)/third_party/hiredis
 
 PROJ1=check_correctness_cirrus_gd
 PROJ2=check_correctness_cirrus_sgd
 PROJ3=check_correctness_cirrus_sgd_sparse
 PROJ4=check_correctness_cirrus_sgd_rcv1
+PROJ5=sgd_sparse_kaggle
 
-all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
+all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
 
 check_correctness_cirrus_gd: $(PROJ1).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
@@ -48,7 +50,7 @@ check_correctness_cirrus_sgd_sparse: $(PROJ3).cpp
 	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
 	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
 	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
-	  ../S3.cpp \
+	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
 	  -o $@ $(LIBFLAGS) 
 
 check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp ../InputReader.cpp
@@ -57,8 +59,17 @@ check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp ../InputReader.cpp
 	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
 	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
 	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
-	  ../S3.cpp \
+	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
+	  -o $@ $(LIBFLAGS) 
+
+sgd_sparse_kaggle: $(PROJ5).cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) \
+	  $(PROJ5).cpp \
+	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
+	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
+	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
+	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
 	  -o $@ $(LIBFLAGS) 
 
 clean:
-	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
+	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)

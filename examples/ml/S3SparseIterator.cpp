@@ -3,16 +3,9 @@
 #include <unistd.h>
 #include <vector>
 #include <iostream>
-#include <CircularBuffer.h>
 
 #include <pthread.h>
 #include <semaphore.h>
-
-static sem_t semaphore;
-static int str_version = 0;
-static std::map<int, std::string> list_strings; // strings from s3
-static CircularBuffer<std::pair<const void*, int>> minibatches_list(100000);
-static int to_delete = -1;
 
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
@@ -23,7 +16,8 @@ S3SparseIterator::S3SparseIterator(
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows),
     minibatch_rows(minibatch_rows),
-    pm(REDIS_IP, REDIS_PORT)
+    pm(REDIS_IP, REDIS_PORT),
+    minibatches_list(100000)
 {
       
   std::cout << "Creating S3SparseIterator"
@@ -47,11 +41,11 @@ S3SparseIterator::S3SparseIterator(
 const void* S3SparseIterator::get_next_fast() {
   // we need to delete entry
   if (to_delete != -1) {
-    std::cout << "get_next_fast::Deleting entry: " << to_delete
-      << std::endl;
+    //std::cout << "get_next_fast::Deleting entry: " << to_delete
+    //  << std::endl;
     list_strings.erase(to_delete);
-    std::cout << "get_next_fast::Deleted entry: " << to_delete
-      << std::endl;
+    //std::cout << "get_next_fast::Deleted entry: " << to_delete
+    //  << std::endl;
   }
   
   sem_wait(&semaphore);
@@ -63,13 +57,13 @@ const void* S3SparseIterator::get_next_fast() {
   ring_lock.unlock();
 
   if (ret.second != -1) {
-    std::cout << "get_next_fast::ret.second: " << ret.second << std::endl;
+    //std::cout << "get_next_fast::ret.second: " << ret.second << std::endl;
   }
 
   to_delete = ret.second;
 
   if (ring_size < 200 && pref_sem.getvalue() < (int)read_ahead) {
-    std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
+    //std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
     pref_sem.signal();
   }
 
@@ -79,19 +73,14 @@ const void* S3SparseIterator::get_next_fast() {
 void S3SparseIterator::push_samples(std::ostringstream* oss) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
 
-  std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
+  //std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
 
   // save s3 object into list of string
-  std::chrono::steady_clock::time_point start =
-    std::chrono::steady_clock::now();
+  //auto start = get_time_us();
   list_strings[str_version] = oss->str();
   delete oss;
-  std::chrono::steady_clock::time_point finish =
-    std::chrono::steady_clock::now();
-  uint64_t elapsed_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(
-        finish-start).count();
-  std::cout << "oss->str() time (ns): " << elapsed_ns << std::endl;
+  //uint64_t elapsed_us = (get_time_us() - start);
+  //std::cout << "oss->str() time (us): " << elapsed_ns << std::endl;
 
   auto str_iter = list_strings.find(str_version);
 
@@ -103,7 +92,7 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   assert(s3_obj_size > 0 && s3_obj_size < 100 * 1024 * 1024);
   int num_samples = load_value<int>(s3_data);
   assert(num_samples > 0 && num_samples < 1000000);
-  std::cout << "push_samples s3_obj_size: " << s3_obj_size << " num_samples: " << num_samples << std::endl;
+  //std::cout << "push_samples s3_obj_size: " << s3_obj_size << " num_samples: " << num_samples << std::endl;
   for (uint64_t i = 0; i < n_minibatches; ++i) {
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
@@ -154,22 +143,17 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     std::ostringstream* s3_obj;
 try_start:
     try {
-      std::cout << "S3SparseIterator: getting object" << std::endl;
-      std::chrono::steady_clock::time_point start =
-        std::chrono::steady_clock::now();
+      //std::cout << "S3SparseIterator: getting object" << std::endl;
+      //auto start = get_time_us();
       s3_obj = s3_get_object_fast(obj_id, *s3_client, config.get_s3_bucket());
-      std::chrono::steady_clock::time_point finish =
-        std::chrono::steady_clock::now();
-      uint64_t elapsed_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            finish-start).count();
+      //auto elapsed_us = (get_time_us() - start);
       pm.increment_batches(); // increment number of batches we have processed
 
-      double MBps = (1.0 * (32812.5*1024.0) / elapsed_ns) / 1024 / 1024 * 1000 * 1000 * 1000;
-      std::cout << "Get s3 obj took (us): " << (elapsed_ns / 1000.0)
-        << " size (KB): " << 32812.5
-        << " bandwidth (MB/s): " << MBps
-        << std::endl;
+      //double MBps = (1.0 * (32812.5*1024.0) / elapsed_us) / 1024 / 1024 * 1000 * 1000;
+      //std::cout << "Get s3 obj took (us): " << (elapsed_us)
+      //  << " size (KB): " << 32812.5
+      //  << " bandwidth (MB/s): " << MBps
+      //  << std::endl;
     } catch(...) {
       std::cout << "S3SparseIterator: error in s3_get_object" << std::endl;
       goto try_start;
@@ -181,15 +165,10 @@ try_start:
       exit(0);
     }
 
-    std::chrono::steady_clock::time_point start =
-        std::chrono::steady_clock::now();
+    //auto start = get_time_us();
     push_samples(s3_obj);
-    std::chrono::steady_clock::time_point finish2 =
-      std::chrono::steady_clock::now();
-    uint64_t elapsed_ns2 =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(
-          finish2-start).count();
-    std::cout << "pushing took (ns): " << elapsed_ns2 << " at (us) " << get_time_us() << std::endl;
+    //auto elapsed_us = (get_time_us() - start);
+    //std::cout << "pushing took (us): " << elapsed_us << " at (us) " << get_time_us() << std::endl;
   }
 }
 

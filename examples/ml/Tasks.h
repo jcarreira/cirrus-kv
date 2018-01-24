@@ -13,6 +13,13 @@
 #include <string>
 #include <vector>
 
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <unistd.h>
+
 class MLTask {
   public:
     MLTask(const std::string& redis_ip,
@@ -376,6 +383,52 @@ class LoadingSparseTaskS3 : public MLTask {
     void check_label(FEATURE_TYPE label);
 
   private:
+};
+
+class PSSparseServerTask : public MLTask {
+  public:
+    PSSparseServerTask(const std::string& redis_ip, uint64_t redis_port,
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id);
+
+    void run(const Configuration& config);
+
+  private:
+    auto connect_redis();
+    void thread_fn();
+    void publish_model_pubsub();
+    void publish_model_redis();
+    void start_server();
+    void start_server2();
+    bool testRemove(struct pollfd x);
+    void loop();
+    bool process(int);
+    bool read_from_client(std::vector<char>& buffer, int sock, uint64_t& bytes_read);
+    std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size);
+    void gradient_f();
+
+    /**
+      * Attributes
+      */
+#if defined(USE_REDIS)
+    std::vector<unsigned int> gradientVersions;
+#endif
+    uint64_t curr_index = 0;
+    uint64_t server_clock = 0;  // minimum of all worker clocks
+    std::unique_ptr<std::thread> thread;
+
+    int port_ = 1337;
+    int server_sock_ = 0;
+    const uint64_t max_fds = 100;
+    int timeout = 60 * 1000 * 3;
+    std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
+
+    std::unique_ptr<std::thread> server_thread;
+    std::unique_ptr<std::thread> gradient_thread;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

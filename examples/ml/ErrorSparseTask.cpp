@@ -148,7 +148,7 @@ void ErrorSparseTask::run(const Configuration& config) {
     << std::endl;
 start:
   std::vector<SparseDataset> minibatches_vec;
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 1000; ++i) {
     try {
       const void* minibatch_data = s3_iter.get_next_fast();
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
@@ -216,7 +216,8 @@ start:
         << "Loss (Total/Avg): " << total_loss << "/" << (total_loss / total_num_samples)
         << " Accuracy: " << (total_accuracy / minibatches_vec.size())
         << " time(us): " << get_time_us()
-        << " time from start (us): " << (get_time_us() - ErrorSparseTaskGlobal::start_time)
+        << " time from start (sec): "
+        << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
         << std::endl;
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;

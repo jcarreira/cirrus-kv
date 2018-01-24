@@ -18,8 +18,8 @@ float s_1_float(float x) {
 }
 
 double log_aux(double v) {
-    if (std::abs(v) < 10e-9) {
-        return 10e-9;
+    if (v == 0) {
+        return -10e-50;
     }
 
     double res = log(v);

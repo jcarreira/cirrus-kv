@@ -347,11 +347,11 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
       mlutils::log_aux(s1) +
       (1 - class_i) * mlutils::log_aux(1 - s1);
 
-    if (value > 0 && value < 1e-6) {
-      // XXX this should be investigated
-      throw std::runtime_error("This code is actually used huh");
-      value = 0;
-    }
+    //if (value > 0 && value < 1e-6) {
+    //  // XXX this should be investigated
+    //  throw std::runtime_error("This code is actually used huh");
+    //  value = 0;
+    //}
 
     if (value > 0) {
       //std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;

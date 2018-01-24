@@ -43,6 +43,13 @@ void run_tasks(int rank, int nworkers,
         nworkers, rank);
     lt.run(config);
     sleep_forever();
+  } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
+    PSSparseServerTask st(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    st.run(config);
+    sleep_forever();
   } else if (rank == PS_TASK_RANK) {
     PSTask pt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
