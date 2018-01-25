@@ -7,6 +7,9 @@
 #include "adapters/libevent.h"
 
 //#define DEBUG
+
+#define GET_MODEL_REQ (2)
+#define APPLY_GRADIENT_REQ (1)
     
 static void update_model(auto&);
 //static void print_progress();
@@ -138,26 +141,42 @@ ssize_t read_all(int sock, void* data, size_t len) {
 }
 
 std::mutex to_process_lock;
-sem_t sem_new_grad;
-std::queue<std::vector<char>> to_process;
+sem_t sem_new_req;
+std::queue<std::pair<int, std::vector<char>>> to_process;
 
 void PSSparseServerTask::gradient_f() {
   while (1) {
-    sem_wait(&sem_new_grad);
+    sem_wait(&sem_new_req);
     to_process_lock.lock();
-    std::vector<char>& buffer = to_process.front();
+    std::pair<int, std::vector<char>>& req = to_process.front();
     to_process_lock.unlock();
-    
-    LRSparseGradient gradient(0);
-    gradient.loadSerialized(buffer.data());
 
-    PSSparseServerTaskGlobal::model_lock.lock();
-    PSSparseServerTaskGlobal::model->sgd_update(
-        PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
-    PSSparseServerTaskGlobal::model_lock.unlock();
-    sem_post(&PSSparseServerTaskGlobal::sem_new_model);
-    PSSparseServerTaskGlobal::onMessageCount++;
-    
+    if (req.first == APPLY_GRADIENT_REQ) {
+      std::vector<char>& buffer = req.second;
+      LRSparseGradient gradient(0);
+      gradient.loadSerialized(buffer.data());
+
+      PSSparseServerTaskGlobal::model_lock.lock();
+      PSSparseServerTaskGlobal::model->sgd_update(
+          PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
+      PSSparseServerTaskGlobal::model_lock.unlock();
+      sem_post(&PSSparseServerTaskGlobal::sem_new_model);
+      PSSparseServerTaskGlobal::onMessageCount++;
+    } else if (req.first == GET_MODEL_REQ) {
+      // need to parse the buffer to get the indices of the model we want 
+      // to send back to the client
+      std::vector<char>& buffer = req.second;
+      const char* data = buffer.data();
+      uint64_t num_entries = load_value<uint32_t>(data);
+      std::cout << "Sending back: " << num_entries << " from model" << std::endl;
+      char* data_to_send = new char[num_entries * sizeof(FEATURE_TYPE)];
+      for (uint32_t i = 0; i < num_entries; ++i) {
+        uint32_t entry_index = load_value<uint32_t>(data);
+        store_value<FEATURE_TYPE>(
+            data_to_send, 
+            PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
+      }
+    }
     to_process_lock.lock();
     to_process.pop();
     to_process_lock.unlock();
@@ -169,8 +188,8 @@ bool PSSparseServerTask::process(int sock) {
   std::vector<char> buffer;
   uint64_t current_buf_size = sizeof(uint32_t);
   buffer.reserve(current_buf_size);
+  
   uint64_t bytes_read = 0;
-
   bool ret = read_from_client(buffer, sock, bytes_read);
   if (!ret) {
     return false;
@@ -183,8 +202,8 @@ bool PSSparseServerTask::process(int sock) {
   std::cout << "Operation: " << operation << std::endl;
 #endif
 
-  if (operation == 1) { // GRADIENT
-    bytes_read = 0;
+  if (operation == APPLY_GRADIENT_REQ || operation == GET_MODEL_REQ) { // GRADIENT
+    uint64_t bytes_read = 0;
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
       return false;
@@ -206,11 +225,9 @@ bool PSSparseServerTask::process(int sock) {
     }
 
     to_process_lock.lock();
-    to_process.push(std::move(buffer));
+    to_process.push(std::make_pair(operation, std::move(buffer)));
     to_process_lock.unlock();
-    sem_post(&sem_new_grad);
-  } else if (operation == 2) { // GET
-   throw std::runtime_error("Not implemented"); 
+    sem_post(&sem_new_req);
   } else {
     throw std::runtime_error("Unknown");
   }
@@ -244,7 +261,7 @@ void PSSparseServerTask::start_server() {
   PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
   PSSparseServerTaskGlobal::model->randomize();
   
-  sem_init(&sem_new_grad, 0, 0);
+  sem_init(&sem_new_req, 0, 0);
 
   server_thread = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::start_server2, this));
