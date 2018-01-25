@@ -47,7 +47,7 @@ class SparseLRModel : public Model {
     /**
       * serializes this model into memory pointed by mem
       */
-    void serializeTo(void* mem) const;
+    void serializeTo(void* mem) const override;
     char* serializeTo2(uint64_t) const;
 
     /**
@@ -128,6 +128,10 @@ class SparseLRModel : public Model {
     /** Check if model weights are good
       */
     void check() const;
+
+    FEATURE_TYPE get_nth_weight(uint64_t n) const override {
+      return weights_.at(n);
+    }
 
 
  private:
