@@ -31,13 +31,11 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
 
   // READ the kaggle criteo dataset
   bool normalize = config.get_normalize();
-  SparseDataset dataset = input.read_input_criteo_kaggle_sparse(
+  return input.read_input_criteo_kaggle_sparse(
       config.get_input_path(),
       delimiter,
       config.get_limit_samples(),
       normalize);
-
-  return dataset;
 }
 
 void LoadingSparseTaskS3::check_label(FEATURE_TYPE label) {
@@ -112,14 +110,14 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
 
     uint64_t len;
     // this function already returns a nicely packed object
-    std::shared_ptr<char> s3_obj = dataset.build_serialized_s3_obj(first_sample, last_sample, &len);
+    std::shared_ptr<char> s3_obj =
+      dataset.build_serialized_s3_obj(first_sample, last_sample, &len);
 
     std::cout << "Putting object in S3 with size: " << len << std::endl;
     s3_put_object(SAMPLE_BASE + i, s3_client, config.get_s3_bucket(),
         std::string(s3_obj.get(), len));
   }
   check_loading(config, s3_client);
-
   std::cout << "LOADER-SPARSE terminated successfully" << std::endl;
 }
 

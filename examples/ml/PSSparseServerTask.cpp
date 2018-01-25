@@ -384,16 +384,19 @@ void PSSparseServerTask::run(const Configuration& config) {
   wait_for_start(PS_SPARSE_SERVER_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
 
   uint64_t start = get_time_us();
+  uint64_t last_tick = get_time_us();
   while (1) {
     sem_wait(&PSSparseServerTaskGlobal::sem_new_model);
     publish_model_redis();
 
     auto now = get_time_us();
-    auto elapsed_us = now - start;
+    auto elapsed_us = now - last_tick;
+    auto since_start_sec = 1.0 * (now - start) / 1000000;
     if (elapsed_us > 1000000) {
-      start = now;
+      last_tick = now;
       std::cout << "Events in the last sec: " 
         << 1.0 * PSSparseServerTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000
+        << " since (sec): " << since_start_sec
         << std::endl;
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }

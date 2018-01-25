@@ -55,8 +55,6 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
 	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp LogisticSparseTaskS3.cpp \
 	      S3SparseIterator.cpp ProgressMonitor.cpp PSSparseServerTask.cpp
 
-#PSSparseServerInterface.cpp
-
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
@@ -64,9 +62,6 @@ CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
               Redis.cpp SparseDataset.cpp MurmurHash3.cpp
 
-#PerformanceLambdaTask.cpp S3Iterator.cpp
-
-#performance_lambda_SOURCES  = PerformanceLambdaTask.cpp $(CPP_SOURCES)
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
 				$(CPP_SOURCES_SOFTMAX)

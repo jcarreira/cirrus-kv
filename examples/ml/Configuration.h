@@ -111,6 +111,9 @@ class Configuration {
 
     void check() const;
 
+    std::pair<int, int> get_train_range() const;
+    std::pair<int, int> get_test_range() const;
+
  public:
     /**
       * Parse a specific line in the config file
@@ -147,6 +150,9 @@ class Configuration {
     uint64_t num_features = 0;   //< number of features in each sample
 
     std::string s3_bucket_name; //< bucket used for training dataset
+
+    std::pair<int, int> train_set_range;
+    std::pair<int, int> test_set_range;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

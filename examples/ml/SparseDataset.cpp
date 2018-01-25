@@ -25,7 +25,7 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
-    data_(samples), labels_(labels), max_features_(0) {
+    data_(std::move(samples)), labels_(std::move(labels)), max_features_(0) {
   //build_max_features();
 }
 

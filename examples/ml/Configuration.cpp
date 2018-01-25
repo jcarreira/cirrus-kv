@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <Utils.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
@@ -40,6 +41,12 @@ void Configuration::print() const {
     std::cout << "S3 size: " << get_s3_size() << std::endl;
     std::cout << "learning rate: " << get_learning_rate() << std::endl;
     std::cout << "limit_samples: " << get_limit_samples() << std::endl;
+    std::cout << "epsilon: " << epsilon << std::endl;
+    std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
+    std::cout << "train_set_range: "
+      << train_set_range.first << "-" << train_set_range.second << std::endl;
+    std::cout << "test_set_range: "
+      << test_set_range.first << "-" << test_set_range.second << std::endl;
 }
 
 void Configuration::check() const {
@@ -110,6 +117,22 @@ void Configuration::parse_line(const std::string& line) {
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
+    } else if (s == "train_set") {
+        std::string range;
+        iss >> range;
+        std::string left = range.substr(0, range.find(":"));
+        std::string right = range.substr(range.find(":") + 1);
+        train_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
+    } else if (s == "test_set") {
+        std::string range;
+        iss >> range;
+        std::string left = range.substr(0, range.find(":"));
+        std::string right = range.substr(range.find(":") + 1);
+        test_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
     } else {
         throw std::runtime_error("Unrecognized option: " + line);
     }
@@ -234,3 +257,12 @@ uint64_t Configuration::get_num_features() const {
 std::string Configuration::get_s3_bucket() const {
     return s3_bucket_name;
 }
+
+std::pair<int, int> Configuration::get_train_range() const {
+  return train_set_range;
+}
+
+std::pair<int, int> Configuration::get_test_range() const {
+  return test_set_range;
+}
+

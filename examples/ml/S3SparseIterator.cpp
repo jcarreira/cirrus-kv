@@ -41,11 +41,15 @@ S3SparseIterator::S3SparseIterator(
 const void* S3SparseIterator::get_next_fast() {
   // we need to delete entry
   if (to_delete != -1) {
-    //std::cout << "get_next_fast::Deleting entry: " << to_delete
-    //  << std::endl;
+#ifdef DEBUG
+    std::cout << "get_next_fast::Deleting entry: " << to_delete
+      << std::endl;
+#endif
     list_strings.erase(to_delete);
-    //std::cout << "get_next_fast::Deleted entry: " << to_delete
-    //  << std::endl;
+#ifdef DEBUG
+    std::cout << "get_next_fast::Deleted entry: " << to_delete
+      << std::endl;
+#endif
   }
   
   sem_wait(&semaphore);
@@ -56,14 +60,18 @@ const void* S3SparseIterator::get_next_fast() {
   uint64_t ring_size = minibatches_list.size();
   ring_lock.unlock();
 
+#ifdef DEBUG
   if (ret.second != -1) {
-    //std::cout << "get_next_fast::ret.second: " << ret.second << std::endl;
+    std::cout << "get_next_fast::ret.second: " << ret.second << std::endl;
   }
+#endif
 
   to_delete = ret.second;
 
   if (ring_size < 200 && pref_sem.getvalue() < (int)read_ahead) {
-    //std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
+#ifdef DEBUG
+    std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
+#endif
     pref_sem.signal();
   }
 
@@ -73,14 +81,17 @@ const void* S3SparseIterator::get_next_fast() {
 void S3SparseIterator::push_samples(std::ostringstream* oss) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
 
-  //std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
-
+#ifdef DEBUG
+  std::cout << "push_samples n_minibatches: " << n_minibatches << std::endl;
+  auto start = get_time_us();
+#endif
   // save s3 object into list of string
-  //auto start = get_time_us();
   list_strings[str_version] = oss->str();
   delete oss;
-  //uint64_t elapsed_us = (get_time_us() - start);
-  //std::cout << "oss->str() time (us): " << elapsed_ns << std::endl;
+#ifdef DEBUG
+  uint64_t elapsed_us = (get_time_us() - start);
+  std::cout << "oss->str() time (us): " << elapsed_ns << std::endl;
+#endif
 
   auto str_iter = list_strings.find(str_version);
 
@@ -108,7 +119,8 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
       assert(num_values > 0 && num_values < 1000000);
     
       // advance until the next minibatch
-      advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE))); // every sample has index and value
+      // every sample has index and value
+      advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE)));
     }
   }
   ring_lock.unlock();
