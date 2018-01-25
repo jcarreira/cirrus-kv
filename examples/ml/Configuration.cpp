@@ -43,9 +43,9 @@ void Configuration::print() const {
     std::cout << "limit_samples: " << get_limit_samples() << std::endl;
     std::cout << "epsilon: " << epsilon << std::endl;
     std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
-    std::cout << "train_set_range: "
+    std::cout << "train_set: "
       << train_set_range.first << "-" << train_set_range.second << std::endl;
-    std::cout << "test_set_range: "
+    std::cout << "test_set: "
       << test_set_range.first << "-" << test_set_range.second << std::endl;
 }
 
@@ -117,19 +117,25 @@ void Configuration::parse_line(const std::string& line) {
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
-    } else if (s == "train_set") {
+    } else if (s == "train_set:") {
         std::string range;
         iss >> range;
-        std::string left = range.substr(0, range.find(":"));
-        std::string right = range.substr(range.find(":") + 1);
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
         train_set_range = std::make_pair(
             string_to<int>(left),
             string_to<int>(right));
-    } else if (s == "test_set") {
+    } else if (s == "test_set:") {
         std::string range;
         iss >> range;
-        std::string left = range.substr(0, range.find(":"));
-        std::string right = range.substr(range.find(":") + 1);
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
         test_set_range = std::make_pair(
             string_to<int>(left),
             string_to<int>(right));
