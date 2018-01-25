@@ -90,6 +90,10 @@ class SparseLRModel : public Model {
     std::unique_ptr<ModelGradient> minibatch_grad(
             const SparseDataset& dataset,
             double epsilon) const override;
+
+    std::unique_ptr<ModelGradient> minibatch_grad_sparse(
+        const SparseDataset& dataset,
+        double epsilon) const;
     /**
      * Compute the logistic loss of a given dataset on the current model
      * @param dataset Dataset to calculate loss on
@@ -145,7 +149,7 @@ class SparseLRModel : public Model {
     bool is_sparse_ = false;
 
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
-    std::vector<std::pair<int, FEATURE_TYPE>> weights_sparse_;
+    std::vector<std::pair<uint32_t, FEATURE_TYPE>> weights_sparse_;
 };
 
 #endif  // EXAMPLES_ML_SPARSE_LRMODEL_H_

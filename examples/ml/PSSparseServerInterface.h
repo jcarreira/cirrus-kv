@@ -18,6 +18,7 @@ class PSSparseServerInterface {
   void send_gradient(const LRSparseGradient&);
   
   void get_model(SparseLRModel& model);
+  SparseLRModel get_sparse_model(const SparseDataset& ds);
 
  private:
   std::string ip;
@@ -98,8 +99,8 @@ ssize_t send_all(int sock, void* data, size_t len) {
   uint64_t bytes_sent = 0;
 
   while (bytes_sent < len) {
-    int64_t retval = send(sock, reinterpret_cast<char*>(data) + bytes_read,
-        len - bytes_read);
+    int64_t retval = send(sock, reinterpret_cast<char*>(data) + bytes_sent,
+        len - bytes_sent, 0);
 
     if (retval == -1) {
       throw std::runtime_error("Error sending from client");
@@ -138,7 +139,7 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
 
   store_value<uint32_t>(msg, num_weights);
   for (const auto& sample : ds.data_) {
-    for (const auto& w : ds.data_) {
+    for (const auto& w : sample) {
       store_value<uint32_t>(msg, w.first); // encode the index
     }
   }
@@ -158,7 +159,8 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
 
   // build a truly sparse model and return
   SparseLRModel model(0);
-  model.loadSerializedSparse(buffer.data(), num_weights);
-  return std::mode(model);
+  model.loadSerializedSparse(buffer, num_weights);
+  delete[] buffer;
+  return std::move(model);
 }
 

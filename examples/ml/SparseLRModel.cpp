@@ -127,6 +127,9 @@ void SparseLRModel::sgd_update(double learning_rate,
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
+  if (is_sparse_) {
+    throw std::runtime_error("This model is sparse");
+  }
 #ifdef DEBUG
     std::cout << "<Minibatch grad" << std::endl;
     dataset.check();
@@ -339,108 +342,59 @@ void SparseLRModel::check() const {
   }
 }
 
-void loadSerializedSparse(const void* mem, uint64_t num_weights) {
+void SparseLRModel::loadSerializedSparse(const void* mem, uint64_t num_weights) {
   is_sparse_ = true;
   
   assert(num_weights > 0 && num_weights < 10000000);
 
-  char* data_begin = (char*)data;
   weights_sparse_.resize(num_weights);
-  for (uint64_t i = 0
-  std::copy(reinterpret_cast<FEATURE_TYPE*>(data_begin),
-      (reinterpret_cast<FEATURE_TYPE*>(data_begin)) + num_weights,
-      weights_.data());
+  for (uint64_t i = 0; i < num_weights; ++i) {
+    uint32_t index = load_value<uint32_t>(mem);
+    FEATURE_TYPE value = load_value<FEATURE_TYPE>(mem);
+    weights_sparse_.push_back(std::make_pair(index, value));
+  }
 }
 
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
         const SparseDataset& dataset,
         double epsilon) const {
-#ifdef DEBUG
-    std::cout << "<Minibatch grad" << std::endl;
-    dataset.check();
-    //print();
-#endif
+  if (!is_sparse_) {
+    throw std::runtime_error("This model is not sparse");
+  }
 
-    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
-    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-      double part1_i = 0;
-      for (const auto& feat : dataset.get_row(i)) {
-        int index = feat.first;
-        FEATURE_TYPE value = feat.second;
-        //std::cout <<"index: " << index << " wsize: " << weights_.size() << std::endl;
-        if ((uint64_t)index >= weights_.size()) {
-          throw std::runtime_error("Index too high");
-        }
-        assert(index >= 0 && (uint64_t)index < weights_.size());
-        part1_i += value * weights_[index];
-#ifdef DEBUG
-        if (std::isnan(part1_i) || std::isinf(part1_i)) {
-        //if (std::isnan(part1[i]) || std::isinf(part1[i])) {
-          std::cout << "part1_i: " << part1_i << std::endl;
-          //std::cout << "part1[i]: " << part1[i] << std::endl;
-          std::cout << "i: " << i << std::endl;
-          std::cout << "index: " << index << " value: " << value << std::endl;
-          std::cout << "weights_[index]: " << weights_[index] << std::endl;
-          exit(-1);
-        }
-#endif
+  std::vector<FEATURE_TYPE> part2(dataset.num_samples());
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    double part1_i = 0;
+    for (const auto& feat : dataset.get_row(i)) {
+      int index = feat.first;
+      FEATURE_TYPE value = feat.second;
+      //std::cout <<"index: " << index << " wsize: " << weights_.size() << std::endl;
+      if ((uint64_t)index >= weights_.size()) {
+        throw std::runtime_error("Index too high");
       }
-
-      part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
+      assert(index >= 0 && (uint64_t)index < weights_.size());
+      part1_i += value * weights_[index];
     }
-#ifdef DEBUG
-    auto after_1 = get_time_us();
-#endif
+    part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
+  }
 
-    std::unordered_map<uint64_t, FEATURE_TYPE> part3;
-    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-      for (const auto& feat : dataset.get_row(i)) {
-        int index = feat.first;
-        FEATURE_TYPE value = feat.second;
-        part3[index] += value * part2[i];
-#ifdef DEBUG
-        if (std::isnan(part3[index]) || std::isinf(part3[index])) {
-          std::cout << "part3 isnan" << std::endl;
-          std::cout << "part2[i]: " << part2[i] << std::endl;
-          std::cout << "i: " << i << std::endl;
-          std::cout << "value: " << value << std::endl;
-          std::cout << "index: " << index << " value: " << value << std::endl;
-          exit(-1);
-        }
-#endif
-      }
+  std::unordered_map<uint64_t, FEATURE_TYPE> part3;
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    for (const auto& feat : dataset.get_row(i)) {
+      int index = feat.first;
+      FEATURE_TYPE value = feat.second;
+      part3[index] += value * part2[i];
     }
-#ifdef DEBUG
-    auto after_2 = get_time_us();
-#endif
+  }
 
-    std::vector<std::pair<int, FEATURE_TYPE>> res;
-    res.reserve(part3.size());
-    //std::vector<FEATURE_TYPE> res(weights_);
-    for (const auto& v : part3) {
-      uint64_t index = v.first;
-      FEATURE_TYPE value = v.second;
-      res.push_back(std::make_pair(index, value + weights_[index] * 2 * epsilon));
-      //res[index] = res[index] * 2 * epsilon + value;
-    }
-#ifdef DEBUG
-    auto after_3 = get_time_us();
-#endif
-
-    std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
-#ifdef DEBUG
-    auto after_4 = get_time_us();
-#endif
-    //std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(res);
-
-#ifdef DEBUG
-    ret->check_values();
-    std::cout
-      << " Elapsed1: " << (after_1 - before_1)
-      << " Elapsed2: " << (after_2 - after_1)
-      << " Elapsed3: " << (after_3 - after_2)
-      << " Elapsed4: " << (after_4 - after_3)
-      << std::endl;
-#endif
-    return ret;
+  std::vector<std::pair<int, FEATURE_TYPE>> res;
+  res.reserve(part3.size());
+  for (const auto& v : part3) {
+    uint64_t index = v.first;
+    FEATURE_TYPE value = v.second;
+    res.push_back(std::make_pair(index, value + weights_[index] * 2 * epsilon));
+  }
+  std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
+  return ret;
 }
+
