@@ -20,13 +20,11 @@ void SparseDataset::build_max_features() {
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples) :
     data_(samples), max_features_(0) {
-  //build_max_features();
 }
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
     data_(std::move(samples)), labels_(std::move(labels)), max_features_(0) {
-  //build_max_features();
 }
 
 

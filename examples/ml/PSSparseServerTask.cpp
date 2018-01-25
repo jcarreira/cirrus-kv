@@ -4,7 +4,6 @@
 #include "Redis.h"
 #include "Utils.h"
 #include "async.h"
-#include "adapters/libevent.h"
 
 //#define DEBUG
 
@@ -28,61 +27,7 @@ namespace PSSparseServerTaskGlobal {
 
   redisContext* redis_con;
   volatile uint64_t onMessageCount = 0;
-  static redisAsyncContext* model_r;
 }
-
-/**
-  * Works as a cache for remote model
-  */
-class PSSparseServerTaskModelProxy {
-  public:
-    PSSparseServerTaskModelProxy(auto redis_ip, auto redis_port) :
-      redis_ip(redis_ip), redis_port(redis_port),
-      base(event_base_new()) {
-    PSSparseServerTaskGlobal::mp_start_lock.lock();
-  }
-
-    static void connectCallback(const redisAsyncContext*, int) {
-      std::cout << "ModelProxy::connectCallback" << "\n";
-      PSSparseServerTaskGlobal::mp_start_lock.unlock();
-    }
-
-    static void disconnectCallback(const redisAsyncContext*, int) {
-      std::cout << "disconnectCallback" << "\n";
-    }
-
-    void thread_fn() {
-      std::cout << "ModelProxy connecting to redis.." << std::endl;
-      PSSparseServerTaskGlobal::model_r =
-        redis_async_connect(redis_ip.c_str(), redis_port);
-      if (!PSSparseServerTaskGlobal::model_r) {
-        throw std::runtime_error("ModelProxy::Error connecting to redis");
-      }
-      std::cout << "ModelProxy::connected to redis.."
-        << PSSparseServerTaskGlobal::model_r
-        << std::endl;
-
-      std::cout << "libevent attached" << std::endl;
-      redisLibeventAttach(PSSparseServerTaskGlobal::model_r, base);
-      redis_connect_callback(PSSparseServerTaskGlobal::model_r, connectCallback);
-      redis_disconnect_callback(PSSparseServerTaskGlobal::model_r, disconnectCallback);
-
-      std::cout << "eventbase dispatch" << std::endl;
-      event_base_dispatch(base);
-    }
-
-    void run() {
-      std::cout << "Starting ModelProxy thread" << std::endl;
-      thread = std::make_unique<std::thread>(
-          std::bind(&PSSparseServerTaskModelProxy::thread_fn, this));
-    }
-
-  private:
-    std::string redis_ip;
-    int redis_port;
-    struct event_base *base;
-    std::unique_ptr<std::thread> thread;
-};
 
 auto PSSparseServerTask::connect_redis() {
   auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -340,7 +285,6 @@ void PSSparseServerTask::loop() {
 	  }
 	} else if (curr_fd.fd == server_sock_) {
           std::cout << "PS new connection!" << std::endl;
-
 	  int newsock = accept(server_sock_,
 	      reinterpret_cast<struct sockaddr*>(&cli_addr),
 	      &clilen);
@@ -411,7 +355,7 @@ void PSSparseServerTask::run(const Configuration& config) {
   PSSparseServerTaskGlobal::config = config;
 
   PSSparseServerTaskGlobal::redis_con = connect_redis();
-  publish_model_redis();
+  //publish_model_redis();
   wait_for_start(PS_SPARSE_SERVER_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
 
   uint64_t start = get_time_us();
@@ -460,8 +404,8 @@ void PSSparseServerTask::publish_model_redis() {
   auto before_us = get_time_us();
 #endif
 
-  redis_put_binary_numid(PSSparseServerTaskGlobal::redis_con, MODEL_BASE,
-      reinterpret_cast<const char*>(data.get()), model_size);
+  //redis_put_binary_numid(PSSparseServerTaskGlobal::redis_con, MODEL_BASE,
+  //    reinterpret_cast<const char*>(data.get()), model_size);
 #ifdef DEBUG
   auto elapsed_us = get_time_us() - before_us;
   std::cout 

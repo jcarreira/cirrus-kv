@@ -419,3 +419,17 @@ void SparseLRModel::check() const {
     }
   }
 }
+
+void loadSerializedSparse(const void* mem, uint64_t num_weights) {
+  is_sparse_ = true;
+  
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  char* data_begin = (char*)data;
+  weights_sparse_.resize(num_weights);
+  for (uint64_t i = 0
+  std::copy(reinterpret_cast<FEATURE_TYPE*>(data_begin),
+      (reinterpret_cast<FEATURE_TYPE*>(data_begin)) + num_weights,
+      weights_.data());
+}
+
