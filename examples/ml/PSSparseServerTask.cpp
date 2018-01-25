@@ -12,7 +12,6 @@
 #define APPLY_GRADIENT_REQ (1)
     
 static void update_model(auto&);
-//static void print_progress();
 
 namespace PSSparseServerTaskGlobal {
   // used to monitor how much since last received gradient
@@ -136,7 +135,6 @@ ssize_t read_all(int sock, void* data, size_t len) {
 
     bytes_read += retval;
   }   
-
   return bytes_read;
 }
 
@@ -307,6 +305,8 @@ void PSSparseServerTask::start_server2() {
   loop();
 }
 
+uint32_t num_connections = 0;
+
 void PSSparseServerTask::loop() {
   struct sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
@@ -329,13 +329,16 @@ void PSSparseServerTask::loop() {
 	if (curr_fd.revents != POLLIN) {
 	  //LOG<ERROR>("Non read event on socket: ", curr_fd.fd);
 	  if (curr_fd.revents & POLLHUP) {
+            std::cout << "PS closing connection " << num_connections << std::endl;
+            num_connections--;
 	    //LOG<INFO>("Connection was closed by client");
 	    //LOG<INFO>("Closing socket: ", curr_fd.fd);
 	    close(curr_fd.fd);
 	    curr_fd.fd = -1;
 	  }
 	} else if (curr_fd.fd == server_sock_) {
-	  //LOG<INFO>("New connection incoming");
+          std::cout << "PS new connection!" << std::endl;
+
 	  int newsock = accept(server_sock_,
 	      reinterpret_cast<struct sockaddr*>(&cli_addr),
 	      &clilen);
@@ -343,16 +346,23 @@ void PSSparseServerTask::loop() {
 	    throw std::runtime_error("Error accepting socket");
 	  }
 	  // If at capacity, reject connection
-	  if (curr_index == max_fds) {
+          if (num_connections > 0) {
+            std::cout << "Rejecting connection " << num_connections << std::endl;
+            close(newsock);
+          } else if (curr_index == max_fds) {
+            throw std::runtime_error("We reached capacity");
 	    close(newsock);
 	  } else {
 	    //LOG<INFO>("Created new socket: ", newsock);
 	    fds.at(curr_index).fd = newsock;
 	    fds.at(curr_index).events = POLLIN;
 	    curr_index++;
+            num_connections++;
 	  }
 	} else {
 	  if (!process(curr_fd.fd)) {
+            num_connections--;
+            std::cout << "PS closing connection " << num_connections << std::endl;
 	    //LOG<INFO>("Processing failed on socket: ", curr_fd.fd);
 	    // do not make future alerts on this fd
 	    curr_fd.fd = -1;
