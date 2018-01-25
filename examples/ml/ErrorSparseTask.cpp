@@ -144,11 +144,12 @@ void ErrorSparseTask::run(const Configuration& config) {
   // get data first
   // we get up to 10K samples
   // what we are going to use as a test set
-  std::cout << "[ERROR_TASK] getting 10k minibatches"
-    << std::endl;
 start:
   std::vector<SparseDataset> minibatches_vec;
   auto test_range = config.get_test_range();
+  std::cout << "[ERROR_TASK] getting minibatches from "
+    << test_range.first << " to " << test_range.second
+    << std::endl;
   for (int i = test_range.first; i < test_range.second; ++i) {
     try {
       const void* minibatch_data = s3_iter.get_next_fast();
@@ -163,13 +164,12 @@ start:
     }
   }
 
-  std::cout << "[ERROR_TASK] Got " << minibatches_vec.size() << " minibatches"
+  std::cout << "[ERROR_TASK] Got "
+    << minibatches_vec.size() << " minibatches"
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
   
-  //ModelProxyErrorSparseTask mp(REDIS_IP, REDIS_PORT, MODEL_GRAD_SIZE);
-  //mp.run();
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
   wait_for_start(ERROR_SPARSE_TASK_RANK, redis_con, nworkers);

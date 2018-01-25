@@ -131,6 +131,7 @@ uint64_t get_random_obj_id(uint64_t left, uint64_t right) {
   std::random_device rd;
   std::default_random_engine re(rd());
   std::uniform_int_distribution<int> sampler(left, right - 1);
+
   return sampler(re);
 }
 
@@ -167,7 +168,10 @@ try_start:
       //  << " bandwidth (MB/s): " << MBps
       //  << std::endl;
     } catch(...) {
-      std::cout << "S3SparseIterator: error in s3_get_object" << std::endl;
+      std::cout
+        << "S3SparseIterator: error in s3_get_object"
+        << " obj_id: " << obj_id
+        << std::endl;
       goto try_start;
       exit(-1);
     }
