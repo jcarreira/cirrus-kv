@@ -163,9 +163,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   redis_lock.unlock();
 
   uint64_t MODEL_BASE = (1000000000ULL);
-  LogisticSparseTaskGlobal::sparse_model
+  LogisticSparseTaskGlobal::sparse_model_get
     = std::make_unique<SparseModelGet>(MODEL_BASE, MODEL_GRAD_SIZE);
-  mg.run();
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
@@ -199,9 +198,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
-    LogisticSparseTaskGlobal::model_lock.lock();
-    SparseLRModel model = *LogisticSparseTaskGlobal::model;
-    LogisticSparseTaskGlobal::model_lock.unlock();
+    // we get the model subset with just the right amount of weights
+    SparseLRModel model = LogisticSparseTaskGlobal::sparse_model_get->get_new_model(dataset);
 
 #ifdef DEBUG
     std::cout << "Checking model" << std::endl;

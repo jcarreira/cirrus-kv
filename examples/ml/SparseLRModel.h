@@ -37,7 +37,7 @@ class SparseLRModel : public Model {
      */
     void loadSerialized(const void* mem) override;
 
-    void loadSerializedSparse(const void* mem, uint64_t num_weights) override;
+    void loadSerializedSparse(const void* mem, uint64_t num_weights);
 
     /**
       * serializes this model into memory
@@ -142,7 +142,7 @@ class SparseLRModel : public Model {
       */
     bool is_integer(FEATURE_TYPE n) const;
 
-    bool is_sparse = false;
+    bool is_sparse_ = false;
 
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
     std::vector<std::pair<int, FEATURE_TYPE>> weights_sparse_;
