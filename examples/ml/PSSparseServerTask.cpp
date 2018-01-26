@@ -10,6 +10,8 @@
 
 #define GET_MODEL_REQ (2)
 #define APPLY_GRADIENT_REQ (1)
+
+#define MAX_CONNECTIONS (2)
     
 static void update_model(auto&);
 
@@ -346,8 +348,10 @@ void PSSparseServerTask::loop() {
 	    throw std::runtime_error("Error accepting socket");
 	  }
 	  // If at capacity, reject connection
-          if (num_connections > 0) {
-            std::cout << "Rejecting connection " << num_connections << std::endl;
+          if (num_connections > (MAX_CONNECTIONS - 1)) {
+            std::cout << "Rejecting connection "
+              << num_connections
+              << std::endl;
             close(newsock);
           } else if (curr_index == max_fds) {
             throw std::runtime_error("We reached capacity");

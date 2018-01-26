@@ -96,8 +96,9 @@ void SparseLRModel::loadSerialized(const void* data) {
    */
 
 void SparseLRModel::randomize() {
+  // Xavier initialization
     for (auto& w : weights_) {
-        w = 0.001 + get_rand_between_0_1();
+        w = get_random_normal(0, 1.0 / weights_.size());
     }
 }
 

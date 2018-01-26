@@ -76,6 +76,8 @@ unsigned int get_rand();
   */
 double get_rand_between_0_1();
 
+double get_random_normal(double, double);
+
 /**
   * Used to delete arrays of arbitrary teypes
   */

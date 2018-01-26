@@ -74,6 +74,13 @@ double get_rand_between_0_1() {
     return 1.0 * mt_rand() / mt_rand.max();
 }
 
+double get_random_normal(double mean, double var) {
+  static std::default_random_engine generator;
+  std::normal_distribution<double> distribution(mean, std::sqrt(var));
+
+  return distribution(generator);
+}
+
 void sleep_forever() {
     while (1) {
         sleep(1000);
