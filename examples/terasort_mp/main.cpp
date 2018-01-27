@@ -116,8 +116,6 @@ int main(int argc, char* argv[]) {
                         std::endl;
                 auto sort_start = std::chrono::high_resolution_clock::now();
 
-                std::vector<std::string> to_use;
-
                 INT_TYPE process_index =
                         proc_rank - num_input_files - hash_nodes;
 
@@ -126,12 +124,10 @@ int main(int argc, char* argv[]) {
                                 process_index);
 
                 std::vector<std::thread> all;
-                std::deque<std::future<std::vector<std::shared_ptr
-                        <std::string>>>> sorted_futures;
-                std::deque<std::vector<std::shared_ptr<std::string>>> sorted;
+                std::deque<std::future<std::vector<char*>>> sorted_futures;
+                std::deque<std::vector<char*>> sorted;
                 for (INT_TYPE i = 0; i < sort_threads; i++) {
-                        std::promise<std::vector<std::shared_ptr
-                                <std::string>>> p;
+                        std::promise<std::vector<char*>> p;
                         sorted_futures.push_back(p.get_future());
                         all.push_back(std::thread(cirrus_terasort::sorter,
                                 sl, std::move(p)));
@@ -150,17 +146,16 @@ int main(int argc, char* argv[]) {
 
                 auto merge_start = std::chrono::high_resolution_clock::now();
                 std::deque<std::thread> all2;
-                std::deque<std::future<std::vector<std::shared_ptr
-                        <std::string>>>> sorted_merge_futures;
+                std::deque<std::future<std::vector<char*>>>
+                        sorted_merge_futures;
                 while (sorted.size() >= 2) {
                         INT_TYPE k = 0;
                         for (INT_TYPE i = 0; i / 2 < sort_threads &&
                                 i + 1 < sorted.size(); i += 2, k++) {
-                                std::vector<std::shared_ptr<std::string>>
+                                std::vector<char*>
                                         & vec1 = sorted.at(i),
                                         & vec2 = sorted.at(i + 1);
-                                std::promise<std::vector<std::shared_ptr
-                                        <std::string>>> p;
+                                std::promise<std::vector<char*>> p;
                                 sorted_merge_futures.push_back(p.get_future());
                                 all2.push_back(std::thread(
                                         cirrus_terasort::merger,
@@ -188,13 +183,12 @@ int main(int argc, char* argv[]) {
 
                 sl->print_avg_stats();
 
-                std::vector<std::shared_ptr<std::string>>& to_write =
-                        sorted.front();
+                std::vector<char*>& to_write = sorted.front();
                 std::cout << "Validating sort..." << std::endl;
                 if (!std::is_sorted(to_write.begin(), to_write.end(),
-                        [](const std::shared_ptr<std::string>& s1,
-                        const std::shared_ptr<std::string>& s2)
-                                { return *s1 < *s2; }))
+                        [](const char* s1,
+                        const char* s2)
+                                { return std::string(s1) < std::string(s2); }))
                         throw std::runtime_error("expected a sorted output.");
                 else
                         std::cout << "Sorted " << to_write.size() << " records"
@@ -206,8 +200,9 @@ int main(int argc, char* argv[]) {
                         std::to_string(proc_rank - num_input_files - hash_nodes)
                         + ".txt");
                 std::for_each(to_write.begin(), to_write.end(),
-                        [&of](const std::shared_ptr<std::string>& lhs) {
-                        of << *lhs << "\n";
+                        [&of](char* s) {
+                        of << s << "\n";
+                        free(s);
                 });
         }
 

@@ -38,7 +38,7 @@ class sort_lambda {
         sort_lambda(std::shared_ptr<cirrus::ostore::FullBladeObjectStoreTempl
                         <std::string>> s, INT_TYPE p);
 
-        std::tuple<std::vector<std::shared_ptr<std::string>>, bool, bool>
+        std::tuple<std::vector<char*>, bool, bool>
                 get_records();
         std::pair<std::vector<std::shared_ptr<std::string>>, bool> smart_get(
                 const std::vector<INT_TYPE>& keys);
@@ -50,10 +50,10 @@ class sort_lambda {
 };
 
 void sorter(std::shared_ptr<sort_lambda> sl, std::promise<std::vector<
-        std::shared_ptr<std::string>>> p);
-void merger(std::shared_ptr<sort_lambda> sl, const std::vector<std::shared_ptr
-        <std::string>>& vec1, const std::vector<std::shared_ptr<std::string>>&
-        vec2, std::promise<std::vector<std::shared_ptr<std::string>>> p);
+        char*>> p);
+void merger(std::shared_ptr<sort_lambda> sl, const std::vector<
+        char*>& vec1, const std::vector<char*>&
+        vec2, std::promise<std::vector<char*>> p);
 }  // namespace cirrus_terasort
 
 #endif  // EXAMPLES_TERASORT_MP_SORT_LAMBDA_HPP_

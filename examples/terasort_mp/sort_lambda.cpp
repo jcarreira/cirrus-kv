@@ -57,9 +57,9 @@ std::pair<std::vector<std::shared_ptr<std::string>>, bool> sort_lambda::smart_ge
         }
 }
 
-std::tuple<std::vector<std::shared_ptr<std::string>>, bool, bool>
+std::tuple<std::vector<char*>, bool, bool>
          sort_lambda::get_records() {
-        std::vector<std::shared_ptr<std::string>> ret;
+        std::vector<char*> ret;
         bool wait = false;
 
         _read_mutex.lock();
@@ -96,13 +96,15 @@ std::tuple<std::vector<std::shared_ptr<std::string>>, bool, bool>
                                         config_instance::read_chunk_size && 
                                         (i + 1) * (config_instance::record_size
                                         + 1) <= chunk.size(); i++) {
-                                        std::string str = chunk.substr(i *
-                                                (config_instance::record_size +
-                                                1),
+                                        char* temp = (char*) malloc(
+                                                config_instance::record_size
+                                                + 1);
+                                        memcpy(temp, chunk.c_str() + (i *
+                                                (config_instance::record_size
+                                                + 1)),
                                                 config_instance::record_size);
-                                        ret.push_back(
-                                                std::make_shared<std::string>
-                                                        (str));
+                                        temp[config_instance::record_size] = 0;
+                                        ret.push_back(temp);
                                 }
                         }
                         break;
@@ -195,8 +197,8 @@ void sort_lambda::print_avg_stats() {
 }
 
 void sorter(std::shared_ptr<sort_lambda> sl,
-        std::promise<std::vector<std::shared_ptr<std::string>>> p) {
-        std::vector<std::shared_ptr<std::string>> curr, recs;
+        std::promise<std::vector<char*>> p) {
+        std::vector<char*> curr, recs;
         auto sort_get_start = std::chrono::high_resolution_clock::now();
         INT_TYPE target_size = std::ceil(
                 (long double) config_instance::num_records /
@@ -208,11 +210,16 @@ void sorter(std::shared_ptr<sort_lambda> sl,
                 curr = std::get<0>(t), retry = !std::get<1>(t);
                 bool wait = std::get<2>(t);
                 recs.insert(recs.end(), curr.begin(), curr.end());
-                if(wait)
+                if(wait) {
+                        gfx::timsort(recs.begin(), recs.end(),
+                                [](const char* a, const char* b) {
+                                        return strcmp(a, b) < 0;
+                        });
                         std::this_thread::sleep_for(
                                 std::chrono::milliseconds(
                                         config_instance::sort_transfer_wait_ms
                         ));
+                }
         }
         auto sort_get_end = std::chrono::high_resolution_clock::now();
         long double get_time =
@@ -222,11 +229,14 @@ void sorter(std::shared_ptr<sort_lambda> sl,
         sl->add_sort_get_data(get_bytes, get_time);
 
         auto sort_start = std::chrono::high_resolution_clock::now();
-        gfx::timsort(recs.begin(), recs.end(), []
-                (const std::shared_ptr<std::string>& lhs,
-                const std::shared_ptr<std::string>& rhs) {
-                return *lhs < *rhs;
-        });
+        /*qsort(recs.data(), recs.size(), sizeof(char*), [](const void* a,
+                const void* b) -> int {
+                        return strcmp(*(const char**) a, *(const char**) b);
+        });*/
+        gfx::timsort(recs.begin(), recs.end(),
+                [](const char* a, const char* b) {
+                        return strcmp(a, b) < 0;
+                });
         auto sort_end = std::chrono::high_resolution_clock::now();
 
         long double time =
@@ -238,17 +248,16 @@ void sorter(std::shared_ptr<sort_lambda> sl,
 }
 
 void merger(std::shared_ptr<sort_lambda> sl,
-        const std::vector<std::shared_ptr<std::string>>& vec1,
-        const std::vector<std::shared_ptr<std::string>>& vec2,
-        std::promise<std::vector<std::shared_ptr<std::string>>> p) {
+        const std::vector<char*>& vec1,
+        const std::vector<char*>& vec2,
+        std::promise<std::vector<char*>> p) {
         auto merge_start = std::chrono::high_resolution_clock::now();
 
-        std::vector<std::shared_ptr<std::string>> ret;
+        std::vector<char*> ret;
         std::merge(vec1.begin(), vec1.end(), vec2.begin(), vec2.end(),
                 std::back_inserter(ret), []
-                        (const std::shared_ptr<std::string>& lhs,
-                        const std::shared_ptr<std::string>& rhs) {
-                return *lhs < *rhs;
+                        (const char* a, const char* b) {
+                return strcmp(a, b) < 0;
         });
 
         auto merge_end = std::chrono::high_resolution_clock::now();
