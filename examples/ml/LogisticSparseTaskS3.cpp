@@ -28,7 +28,6 @@ class SparseModelGet {
     int ps_port;
 };
 
-
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
     std::cout << "[WORKER] "
@@ -42,13 +41,7 @@ void check_redis(auto r) {
 
 // we need global variables because of the static callbacks
 namespace LogisticSparseTaskGlobal {
-  //std::mutex mp_start_lock;
-  //std::mutex gp_start_lock;
-  //std::mutex model_lock;
   std::unique_ptr<SparseModelGet> sparse_model_get;
-  //volatile int model_version = 0;
-  //static auto prev_on_msg_time = get_time_us();
-  //sem_t new_model_semaphore;
   redisContext* redis_con;
   PSSparseServerInterface* psint;
 }
@@ -56,28 +49,11 @@ namespace LogisticSparseTaskGlobal {
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();
-  std::cout << "Pushing gradient" << std::endl;
-#endif
-
-#ifdef DEBUG
-  auto after_1 = get_time_us();
-#endif
-
-#ifdef DEBUG
   std::cout << "Publishing gradients" << std::endl;
 #endif
-
-#ifdef DEBUG
-  auto after_2 = get_time_us();
-#endif
   LogisticSparseTaskGlobal::psint->send_gradient(*lrg);
-
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
-#endif
-
-
-#ifdef DEBUG
   auto elapsed_push_us = get_time_us() - before_push_us;
   static uint64_t before = 0;
   if (before == 0)
@@ -87,8 +63,6 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
       << "Worker task published gradient"
       << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us()
-      << " part1 (us): " << (after_1 - before_push_us)
-      << " part2 (us): " << (after_2 - after_1)
       << " took(us): " << elapsed_push_us
       << " bw(MB/s): " << std::fixed << (1.0 * gradient_size / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
       << " since last(us): " << (now - before)
@@ -98,42 +72,32 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 }
 
 // get samples and labels data
-bool LogisticSparseTaskS3::run_phase1(
+bool LogisticSparseTaskS3::get_dataset_minibatch(
     auto& dataset,
     auto& s3_iter) {
-
-  try {
 #ifdef DEBUG
-    auto start = get_time_us();
+  auto start = get_time_us();
 #endif
 
-    const void* minibatch = s3_iter.get_next_fast();
+  const void* minibatch = s3_iter.get_next_fast();
 #ifdef DEBUG
-    auto finish1 = get_time_us();
+  auto finish1 = get_time_us();
 #endif
-    dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
-          config.get_minibatch_size())); // this takes 11 us
+  dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
+        config.get_minibatch_size())); // this takes 11 us
 
 #ifdef DEBUG
-    auto finish2 = get_time_us();
-    double bw = 1.0 * dataset->getSizeBytes() /
-      (finish2-start) * 1000.0 * 1000 / 1024 / 1024;
-    std::cout << "[WORKER] Get Sample Elapsed (S3) "
-      << " minibatch size: " << config.get_minibatch_size()
-      << " part1(us): " << (finish1 - start)
-      << " part2(us): " << (finish2 - finish1)
-      << " BW (MB/s): " << bw
-      << " at time: " << get_time_us()
-      << "\n";
+  auto finish2 = get_time_us();
+  double bw = 1.0 * dataset->getSizeBytes() /
+    (finish2-start) * 1000.0 * 1000 / 1024 / 1024;
+  std::cout << "[WORKER] Get Sample Elapsed (S3) "
+    << " minibatch size: " << config.get_minibatch_size()
+    << " part1(us): " << (finish1 - start)
+    << " part2(us): " << (finish2 - finish1)
+    << " BW (MB/s): " << bw
+    << " at time: " << get_time_us()
+    << "\n";
 #endif
-  } catch(const cirrus::NoSuchIDException& e) {
-    // this happens because the ps task
-    // has not uploaded the model yet
-    std::cout << "[WORKER] "
-      << "Model could not be found at id: " << MODEL_BASE << "\n";
-    return false;
-  }
-
   return true;
 }
 
@@ -184,7 +148,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::cout << "[WORKER] running phase 1" << std::endl;
 #endif
     std::unique_ptr<SparseDataset> dataset;
-    if (!run_phase1(dataset, s3_iter)) {
+    if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
 #ifdef DEBUG

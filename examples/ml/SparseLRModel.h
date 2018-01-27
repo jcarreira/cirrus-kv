@@ -6,6 +6,7 @@
 #include <Model.h>
 #include <SparseDataset.h>
 #include <ModelGradient.h>
+#include <unordered_map>
 
 /**
   * Logistic regression model
@@ -149,7 +150,7 @@ class SparseLRModel : public Model {
     bool is_sparse_ = false;
 
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
-    std::vector<std::pair<uint32_t, FEATURE_TYPE>> weights_sparse_;
+    mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
 };
 
 #endif  // EXAMPLES_ML_SPARSE_LRMODEL_H_

@@ -347,11 +347,12 @@ void SparseLRModel::loadSerializedSparse(const void* mem, uint64_t num_weights) 
   
   assert(num_weights > 0 && num_weights < 10000000);
 
-  weights_sparse_.resize(num_weights);
+  //weights_sparse_.resize(num_weights);
+  weights_sparse_.reserve(num_weights);
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(mem);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(mem);
-    weights_sparse_.push_back(std::make_pair(index, value));
+    weights_sparse_[index] = value;
   }
 }
 
@@ -368,12 +369,10 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
     for (const auto& feat : dataset.get_row(i)) {
       int index = feat.first;
       FEATURE_TYPE value = feat.second;
-      //std::cout <<"index: " << index << " wsize: " << weights_.size() << std::endl;
-      if ((uint64_t)index >= weights_.size()) {
-        throw std::runtime_error("Index too high");
+      if (weights_sparse_.find(index) == weights_sparse_.end()) {
+        throw std::runtime_error("Weight not found");
       }
-      assert(index >= 0 && (uint64_t)index < weights_.size());
-      part1_i += value * weights_[index];
+      part1_i += value * weights_sparse_[index];
     }
     part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
   }
@@ -392,7 +391,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
   for (const auto& v : part3) {
     uint64_t index = v.first;
     FEATURE_TYPE value = v.second;
-    res.push_back(std::make_pair(index, value + weights_[index] * 2 * epsilon));
+    res.push_back(std::make_pair(index, value + weights_sparse_[index] * 2 * epsilon));
   }
   std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
   return ret;
