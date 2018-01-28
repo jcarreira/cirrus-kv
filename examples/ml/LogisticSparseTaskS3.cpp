@@ -9,7 +9,7 @@
 
 #include <pthread.h>
 
-//#define DEBUG
+#undef DEBUG
 
 class SparseModelGet {
   public:
@@ -64,7 +64,8 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
       << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us()
       << " took(us): " << elapsed_push_us
-      << " bw(MB/s): " << std::fixed << (1.0 * gradient_size / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
+      << " bw(MB/s): " << std::fixed <<
+         (1.0 * lrg->getSerializedSize() / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
       << " since last(us): " << (now - before)
       << "\n";
   before = now;
@@ -161,14 +162,16 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
+    auto now = get_time_us();
     SparseLRModel model =
       LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
+    std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
 
 #ifdef DEBUG
     std::cout << "Checking model" << std::endl;
     //model.check();
     std::cout << "Computing gradient" << "\n";
-    auto now = get_time_us();
+    now = get_time_us();
 #endif
 
     try {

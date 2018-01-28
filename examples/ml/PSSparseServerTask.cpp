@@ -11,7 +11,7 @@
 #define GET_MODEL_REQ (2)
 #define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (200)
+#define MAX_CONNECTIONS (21)
     
 static void update_model(auto&);
 
@@ -57,9 +57,10 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
 
 std::shared_ptr<char> PSSparseServerTask::serialize_model(const SparseLRModel& model, uint64_t* model_size) {
   *model_size = model.getSerializedSize();
-  char* d = model.serializeTo2(model.getSerializedSize());
-  auto data = std::shared_ptr<char>(d, std::default_delete<char[]>());
-  return data;
+  auto d = std::shared_ptr<char>(
+      new char[*model_size], std::default_delete<char[]>());
+  model.serializeTo(d.get());
+  return d;
 }
 
 bool PSSparseServerTask::testRemove(struct pollfd x) {
@@ -114,8 +115,9 @@ void PSSparseServerTask::gradient_f() {
       uint64_t num_entries = load_value<uint32_t>(data);
 
       uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
-      char* data_to_send = new char[to_send_size];
-      char* data_to_send_begin = data_to_send;
+      auto data_to_send = std::shared_ptr<char>(
+          new char[to_send_size], std::default_delete<char[]>());
+      char* data_to_send_ptr = data_to_send.get();
 #ifdef DEBUG
       std::cout << "Sending back: " << num_entries
         << " weights from model. Size: " << to_send_size
@@ -127,22 +129,24 @@ void PSSparseServerTask::gradient_f() {
         std::cout << entry_index << " ";
 #endif
         store_value<FEATURE_TYPE>(
-            data_to_send, 
+            data_to_send_ptr,
             PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
       }
 #ifdef DEBUG
       std::cout << std::endl;
 #endif
-      send_all(req.sock, data_to_send_begin, to_send_size);
+      send_all(req.sock, data_to_send.get(), to_send_size);
     } else if (req.req_id == GET_FULL_MODEL_REQ) {
       PSSparseServerTaskGlobal::model_lock.lock();
       auto model_copy = *PSSparseServerTaskGlobal::model;
       PSSparseServerTaskGlobal::model_lock.unlock();
       uint32_t model_size = model_copy.getSerializedSize();
-      char* d = model_copy.serializeTo2(model_size);
+
+      auto d = std::shared_ptr<char>(
+          new char[model_size], std::default_delete<char[]>());
+      model_copy.serializeTo(d.get());
       //std::cout << "Sending model message size: " << model_size << std::endl;
-      send_all(req.sock, d, model_size);
-      delete[] d;
+      send_all(req.sock, d.get(), model_size);
     } else {
       throw std::runtime_error("Unknown operation");
     }
@@ -363,6 +367,7 @@ void PSSparseServerTask::loop() {
     // If at max capacity, try to make room
     if (curr_index == max_fds) {
       // Try to purge unused fds, those with fd == -1
+      std::cout << "Purging" << std::endl;
       std::remove_if(fds.begin(), fds.end(),
           std::bind(&PSSparseServerTask::testRemove, this, std::placeholders::_1));
     }
@@ -413,6 +418,7 @@ void PSSparseServerTask::run(const Configuration& config) {
       std::cout << "Events in the last sec: " 
         << 1.0 * PSSparseServerTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000
         << " since (sec): " << since_start_sec
+        << " #conns: " << num_connections
         << std::endl;
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }

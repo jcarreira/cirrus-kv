@@ -51,25 +51,13 @@ SparseLRModel::serialize() const {
     return res;
 }
 
-char* SparseLRModel::serializeTo2(uint64_t /*size*/) const {
-  void* mem = new char[getSerializedSize()];
-  void *mem_copy = mem;
- 
+void SparseLRModel::serializeTo(void* mem) const {
 #ifdef DEBUG 
   //std::cout << "Num weights size: " << weights_.size() << std::endl;
 #endif
   store_value<int>(mem, weights_.size());
   std::copy(weights_.data(), weights_.data() + weights_.size(),
       reinterpret_cast<FEATURE_TYPE*>(mem));
-  return (char*)mem_copy;
-}
-
-void SparseLRModel::serializeTo(void* mem) const {
-  std::cout << "weight size: " << weights_.size() << std::endl;
-  store_value<int>(mem, weights_.size());
-  for (const auto& v : weights_) {
-    store_value<FEATURE_TYPE>(mem, v);
-  }
 }
 
 uint64_t SparseLRModel::getSerializedSize() const {

@@ -1,6 +1,8 @@
 #include "PSSparseServerInterface.h"
 
-#undef DEBUG
+//#define DEBUG
+
+#define MAX_MSG_SIZE (1024*1024)
 
 PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port) :
   ip(ip), port(port) {
@@ -55,28 +57,6 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
 }
 
 
-#if 0
-void PSSparseServerInterface::get_model(SparseLRModel& model) {
-  (void)model;
-  uint32_t operation = 2;
-  int ret = send(sock, &operation, sizeof(uint32_t), 0);
-  if (ret == -1) {
-    throw std::runtime_error("Error sending operation");
-  }
-
-  uint32_t size;
-  ret = read_all(sock, &size, sizeof(size));
-  std::cout << "Model with size: " << size << std::endl;
-
-  char* data = new char[size];
-  read_all(sock, data, size);
-  model.loadSerialized(data);
-  delete[] data;
-}
-#endif
-
-#define MAX_MSG_SIZE (1024*1024)
-
 SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
@@ -88,13 +68,10 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
     for (const auto& w : sample) {
       store_value<uint32_t>(msg, w.first); // encode the index
       num_weights++;
-#ifdef DEBUG
-      std::cout << w.first << " ";
-#endif
-      //assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
     }
   }
 #ifdef DEBUG
+  assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
   std::cout << std::endl;
 #endif
 
@@ -111,13 +88,13 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   store_value<uint32_t>(msg, num_weights);
   //std::cout << "Getting model. Sending weights msg size: " << msg_size << std::endl;
   send_all(sock, msg_begin, msg_size);
-
+  
   //4. receive weights from PS
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
-  std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
+  //std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
 
   char* buffer = new char[to_receive_size];
-  read_all(sock, buffer, to_receive_size);
+  read_all(sock, buffer, to_receive_size); //XXX this takes 2ms once every 5 runs
 
   // build a truly sparse model and return
   SparseLRModel model(0);

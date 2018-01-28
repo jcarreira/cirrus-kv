@@ -109,9 +109,8 @@ PSSparseTask::PSSparseTask(const std::string& redis_ip, uint64_t redis_port,
 
 std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size) {
   *model_size = model.getSerializedSize();
-  //std::cout << "Serializing model with size: " << *model_size
-  //  << std::endl;
-  char* d = model.serializeTo2(model.getSerializedSize());
+  char* d = new char[*model_size];
+  model.serializeTo(d);
   auto data = std::shared_ptr<char>(d, std::default_delete<char[]>());
   return data;
 }
@@ -124,10 +123,6 @@ void PSSparseTask::put_model(const SparseLRModel& model) {
 }
 #else
 void PSSparseTask::put_model(const SparseLRModel& model) {
-  //lr_model_serializer lms(MODEL_GRAD_SIZE);
-  //auto data = std::unique_ptr<char[]>(
-  //    new char[lms.size(model)]);
-  //lms.serialize(model, data.get());
   uint64_t model_size;
   std::shared_ptr<char> data = serialize_model(model, &model_size);
 
@@ -165,18 +160,12 @@ class PSTaskGradientProxy {
       redisReply *r = (redisReply*)reply;
       if (reply == NULL) return;
 
-      //auto now = get_time_us();
-      //std::cout << "Time since last (us): "
-      //  << (now - PSSparseTaskGlobal::prev_on_msg_time) << "\n";
-      //PSSparseTaskGlobal::prev_on_msg_time = now;
-
 #ifdef DEBUG
       std::cout << "onMessage PSTaskGradientProxy" << "\n";
 #endif
       if (r->type == REDIS_REPLY_ARRAY) {
         PSSparseTaskGlobal::onMessageCount++;
         const char* str = r->element[2]->str;
-        //uint64_t len = r->element[2]->len;
 
 #ifdef DEBUG
         std::cout << "len: "
@@ -192,7 +181,6 @@ class PSTaskGradientProxy {
           std::cout <<"str1: " << r->element[1]->str << "\n";
         }
 #endif
-        // r->element[0]->str == "message"
         char* str_1 = r->element[1]->str;
         char* str_0 = r->element[0]->str;
         if ( str_0 && strncmp(str_0, "mes", 3) == 0 && // message
@@ -292,8 +280,6 @@ void PSSparseTask::run(const Configuration& config) {
   PSSparseTaskGlobal::redis_con = connect_redis();
   publish_model_redis();
   wait_for_start(PS_SPARSE_TASK_RANK, PSSparseTaskGlobal::redis_con, nworkers);
-
-  //publish_model(*PSSparseTaskGlobal::model);
 
   uint64_t start = get_time_us();
   while (1) {

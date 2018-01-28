@@ -26,6 +26,7 @@ class S3SparseIterator {
 
  private:
   void push_samples(std::ostringstream* oss);
+  void print_progress(const std::string& s3_obj);
 
   uint64_t left_id;
   uint64_t right_id;
