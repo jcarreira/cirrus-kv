@@ -8,7 +8,7 @@
 #include <map>
 #include <unordered_map>
 
-#undef DEBUG
+#define DEBUG
 
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);
@@ -54,6 +54,10 @@ SparseLRModel::serialize() const {
 char* SparseLRModel::serializeTo2(uint64_t /*size*/) const {
   void* mem = new char[getSerializedSize()];
   void *mem_copy = mem;
+ 
+#ifdef DEBUG 
+  //std::cout << "Num weights size: " << weights_.size() << std::endl;
+#endif
   store_value<int>(mem, weights_.size());
   std::copy(weights_.data(), weights_.data() + weights_.size(),
       reinterpret_cast<FEATURE_TYPE*>(mem));
@@ -79,7 +83,9 @@ uint64_t SparseLRModel::getSerializedSize() const {
   */
 void SparseLRModel::loadSerialized(const void* data) {
   int num_weights = load_value<int>(data);
+#ifdef DEBUG
   //std::cout << "num_weights: " << num_weights << std::endl;
+#endif
   assert(num_weights > 0 && num_weights < 10000000);
 
   //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
@@ -134,6 +140,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     std::cout << "<Minibatch grad" << std::endl;
     dataset.check();
     //print();
+    auto start = get_time_us();
 #endif
 
     std::vector<FEATURE_TYPE> part2(dataset.num_samples());
@@ -150,9 +157,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         part1_i += value * weights_[index];
 #ifdef DEBUG
         if (std::isnan(part1_i) || std::isinf(part1_i)) {
-        //if (std::isnan(part1[i]) || std::isinf(part1[i])) {
           std::cout << "part1_i: " << part1_i << std::endl;
-          //std::cout << "part1[i]: " << part1[i] << std::endl;
           std::cout << "i: " << i << std::endl;
           std::cout << "index: " << index << " value: " << value << std::endl;
           std::cout << "weights_[index]: " << weights_[index] << std::endl;
@@ -211,7 +216,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
 #ifdef DEBUG
     ret->check_values();
     std::cout
-      << " Elapsed1: " << (after_1 - before_1)
+      << " Elapsed1: " << (after_1 - start)
       << " Elapsed2: " << (after_2 - after_1)
       << " Elapsed3: " << (after_3 - after_2)
       << " Elapsed4: " << (after_4 - after_3)
@@ -342,7 +347,9 @@ void SparseLRModel::check() const {
   }
 }
 
-void SparseLRModel::loadSerializedSparse(const void* mem, uint64_t num_weights) {
+void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
+    const uint32_t* weight_indices,
+    uint64_t num_weights) {
   is_sparse_ = true;
   
   assert(num_weights > 0 && num_weights < 10000000);
@@ -350,8 +357,8 @@ void SparseLRModel::loadSerializedSparse(const void* mem, uint64_t num_weights) 
   //weights_sparse_.resize(num_weights);
   weights_sparse_.reserve(num_weights);
   for (uint64_t i = 0; i < num_weights; ++i) {
-    uint32_t index = load_value<uint32_t>(mem);
-    FEATURE_TYPE value = load_value<FEATURE_TYPE>(mem);
+    uint32_t index = load_value<uint32_t>(weight_indices);
+    FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
     weights_sparse_[index] = value;
   }
 }
@@ -369,9 +376,12 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
     for (const auto& feat : dataset.get_row(i)) {
       int index = feat.first;
       FEATURE_TYPE value = feat.second;
+#ifdef DEBUG
       if (weights_sparse_.find(index) == weights_sparse_.end()) {
+        std::cout << "Needed weight with index: " << index << std::endl;
         throw std::runtime_error("Weight not found");
       }
+#endif
       part1_i += value * weights_sparse_[index];
     }
     part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);

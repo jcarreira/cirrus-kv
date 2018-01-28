@@ -113,7 +113,7 @@ class LogisticSparseTaskS3 : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    bool run_phase1(
+    bool get_dataset_minibatch(
         auto& dataset,
         auto& s3_iter);
     auto get_model(auto r, auto lmd);
@@ -145,7 +145,7 @@ class LogisticTaskS3 : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    bool get_dataset_minibatch(
+    bool run_phase1(
         auto& dataset,
         auto& s3_iter);
     auto get_model(auto r, auto lmd);

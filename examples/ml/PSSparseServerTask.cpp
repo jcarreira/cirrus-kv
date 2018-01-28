@@ -5,12 +5,13 @@
 #include "Utils.h"
 #include "async.h"
 
-#define DEBUG
+#undef DEBUG
 
-#define GET_MODEL_REQ (2)
 #define APPLY_GRADIENT_REQ (1)
+#define GET_MODEL_REQ (2)
+#define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (2)
+#define MAX_CONNECTIONS (200)
     
 static void update_model(auto&);
 
@@ -70,23 +71,6 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   return x.fd == -1;
 }
 
-static
-ssize_t read_all(int sock, void* data, size_t len) {
-  uint64_t bytes_read = 0;
-
-  while (bytes_read < len) {
-    int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
-        len - bytes_read);
-
-    if (retval == -1) {
-      throw std::runtime_error("Error reading from client");
-    }
-
-    bytes_read += retval;
-  }   
-  return bytes_read;
-}
-
 std::mutex to_process_lock;
 sem_t sem_new_req;
 struct Request {
@@ -107,7 +91,9 @@ void PSSparseServerTask::gradient_f() {
     Request& req = to_process.front();
     to_process_lock.unlock();
 
+#ifdef DEBUG
     std::cout << "Processing request: " << req.req_id << std::endl;
+#endif
 
     if (req.req_id == APPLY_GRADIENT_REQ) {
       std::vector<char>& buffer = req.vec;
@@ -130,16 +116,35 @@ void PSSparseServerTask::gradient_f() {
       uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
       char* data_to_send = new char[to_send_size];
       char* data_to_send_begin = data_to_send;
+#ifdef DEBUG
       std::cout << "Sending back: " << num_entries
         << " weights from model. Size: " << to_send_size
         << std::endl;
+#endif
       for (uint32_t i = 0; i < num_entries; ++i) {
         uint32_t entry_index = load_value<uint32_t>(data);
+#ifdef DEBUG
+        std::cout << entry_index << " ";
+#endif
         store_value<FEATURE_TYPE>(
             data_to_send, 
             PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
       }
+#ifdef DEBUG
+      std::cout << std::endl;
+#endif
       send_all(req.sock, data_to_send_begin, to_send_size);
+    } else if (req.req_id == GET_FULL_MODEL_REQ) {
+      PSSparseServerTaskGlobal::model_lock.lock();
+      auto model_copy = *PSSparseServerTaskGlobal::model;
+      PSSparseServerTaskGlobal::model_lock.unlock();
+      uint32_t model_size = model_copy.getSerializedSize();
+      char* d = model_copy.serializeTo2(model_size);
+      //std::cout << "Sending model message size: " << model_size << std::endl;
+      send_all(req.sock, d, model_size);
+      delete[] d;
+    } else {
+      throw std::runtime_error("Unknown operation");
     }
 
     to_process_lock.lock();
@@ -155,7 +160,9 @@ void PSSparseServerTask::gradient_f() {
   * buffer with previous size
   */
 bool PSSparseServerTask::process(int sock) {
+#ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
+#endif
   std::vector<char> buffer;
   uint64_t current_buf_size = sizeof(uint32_t);
   buffer.reserve(current_buf_size);
@@ -197,6 +204,11 @@ bool PSSparseServerTask::process(int sock) {
 
     to_process_lock.lock();
     to_process.push(Request(operation, sock, std::move(buffer)));
+    to_process_lock.unlock();
+    sem_post(&sem_new_req);
+  } else if (operation == GET_FULL_MODEL_REQ) {
+    to_process_lock.lock();
+    to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else {
@@ -334,7 +346,9 @@ void PSSparseServerTask::loop() {
             num_connections++;
 	  }
 	} else {
+#ifdef DEBUG
           std::cout << "Calling process" << std::endl;
+#endif
 	  if (!process(curr_fd.fd)) {
             num_connections--;
             std::cout << "PS closing connection " << num_connections << std::endl;
