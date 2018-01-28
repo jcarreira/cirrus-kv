@@ -1,5 +1,10 @@
 #include <examples/ml/Utils.h>
 #include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <unistd.h>
 
 #if 0
 void check_mpi_error(int err, std::string error) {
@@ -87,4 +92,20 @@ void sleep_forever() {
     }
 }
 
+ssize_t send_all(int sock, void* data, size_t len) {
+  uint64_t bytes_sent = 0;
+
+  while (bytes_sent < len) {
+    int64_t retval = send(sock, reinterpret_cast<char*>(data) + bytes_sent,
+        len - bytes_sent, 0);
+
+    if (retval == -1) {
+      throw std::runtime_error("Error sending from client");
+    }
+
+    bytes_sent += retval;
+  }   
+
+  return bytes_sent;
+}
 

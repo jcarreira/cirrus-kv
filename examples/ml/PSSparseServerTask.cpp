@@ -5,7 +5,7 @@
 #include "Utils.h"
 #include "async.h"
 
-//#define DEBUG
+#define DEBUG
 
 #define GET_MODEL_REQ (2)
 #define APPLY_GRADIENT_REQ (1)
@@ -50,6 +50,8 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
       batch_size, samples_per_batch, features_per_sample,
       nworkers, worker_id) {
   gradientVersions.resize(nworkers, 0);
+
+  std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
 std::shared_ptr<char> PSSparseServerTask::serialize_model(const SparseLRModel& model, uint64_t* model_size) {
@@ -87,17 +89,28 @@ ssize_t read_all(int sock, void* data, size_t len) {
 
 std::mutex to_process_lock;
 sem_t sem_new_req;
-std::queue<std::pair<int, std::vector<char>>> to_process;
+struct Request {
+  public:
+    Request(int req_id, int sock, std::vector<char>&& vec) :
+      req_id(req_id), sock(sock), vec(std::move(vec)){}
+
+  int req_id;
+  int sock;
+  std::vector<char> vec;
+};
+std::queue<Request> to_process;
 
 void PSSparseServerTask::gradient_f() {
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
-    std::pair<int, std::vector<char>>& req = to_process.front();
+    Request& req = to_process.front();
     to_process_lock.unlock();
 
-    if (req.first == APPLY_GRADIENT_REQ) {
-      std::vector<char>& buffer = req.second;
+    std::cout << "Processing request: " << req.req_id << std::endl;
+
+    if (req.req_id == APPLY_GRADIENT_REQ) {
+      std::vector<char>& buffer = req.vec;
       LRSparseGradient gradient(0);
       gradient.loadSerialized(buffer.data());
 
@@ -107,29 +120,42 @@ void PSSparseServerTask::gradient_f() {
       PSSparseServerTaskGlobal::model_lock.unlock();
       sem_post(&PSSparseServerTaskGlobal::sem_new_model);
       PSSparseServerTaskGlobal::onMessageCount++;
-    } else if (req.first == GET_MODEL_REQ) {
+    } else if (req.req_id == GET_MODEL_REQ) {
       // need to parse the buffer to get the indices of the model we want 
       // to send back to the client
-      std::vector<char>& buffer = req.second;
+      std::vector<char>& buffer = req.vec;
       const char* data = buffer.data();
       uint64_t num_entries = load_value<uint32_t>(data);
-      std::cout << "Sending back: " << num_entries << " from model" << std::endl;
-      char* data_to_send = new char[num_entries * sizeof(FEATURE_TYPE)];
+
+      uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
+      char* data_to_send = new char[to_send_size];
+      char* data_to_send_begin = data_to_send;
+      std::cout << "Sending back: " << num_entries
+        << " weights from model. Size: " << to_send_size
+        << std::endl;
       for (uint32_t i = 0; i < num_entries; ++i) {
         uint32_t entry_index = load_value<uint32_t>(data);
         store_value<FEATURE_TYPE>(
             data_to_send, 
             PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
       }
+      send_all(req.sock, data_to_send_begin, to_send_size);
     }
+
     to_process_lock.lock();
     to_process.pop();
     to_process_lock.unlock();
   }
 }
 
+/**
+  * FORMAT
+  * operation (uint32_t)
+  * incoming size (uint32_t)
+  * buffer with previous size
+  */
 bool PSSparseServerTask::process(int sock) {
-  //std::cout << "Processing socket: " <<  sock << std::endl;
+  std::cout << "Processing socket: " <<  sock << std::endl;
   std::vector<char> buffer;
   uint64_t current_buf_size = sizeof(uint32_t);
   buffer.reserve(current_buf_size);
@@ -170,11 +196,11 @@ bool PSSparseServerTask::process(int sock) {
     }
 
     to_process_lock.lock();
-    to_process.push(std::make_pair(operation, std::move(buffer)));
+    to_process.push(Request(operation, sock, std::move(buffer)));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else {
-    throw std::runtime_error("Unknown");
+    throw std::runtime_error("Unknown operation");
   }
   return true;
 }
@@ -308,6 +334,7 @@ void PSSparseServerTask::loop() {
             num_connections++;
 	  }
 	} else {
+          std::cout << "Calling process" << std::endl;
 	  if (!process(curr_fd.fd)) {
             num_connections--;
             std::cout << "PS closing connection " << num_connections << std::endl;

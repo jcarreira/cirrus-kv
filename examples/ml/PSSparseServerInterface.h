@@ -87,29 +87,15 @@ ssize_t read_all(int sock, void* data, size_t len) {
 
     if (retval == -1) {
       throw std::runtime_error("Error reading from client");
+    } else if (retval == 0) {
+      // end of file
+      throw std::runtime_error("End of file in socket");
     }
 
     bytes_read += retval;
   }   
 
   return bytes_read;
-}
-
-ssize_t send_all(int sock, void* data, size_t len) {
-  uint64_t bytes_sent = 0;
-
-  while (bytes_sent < len) {
-    int64_t retval = send(sock, reinterpret_cast<char*>(data) + bytes_sent,
-        len - bytes_sent, 0);
-
-    if (retval == -1) {
-      throw std::runtime_error("Error sending from client");
-    }
-
-    bytes_sent += retval;
-  }   
-
-  return bytes_sent;
 }
 
 void PSSparseServerInterface::get_model(SparseLRModel& model) {
@@ -130,37 +116,51 @@ void PSSparseServerInterface::get_model(SparseLRModel& model) {
   delete[] data;
 }
 
-SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
-  // traverse the minibatch and write the weights we need to send out
-  uint32_t num_weights = ds.data_.size();
-  // we send the number of weights and then the weight indices
-  uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
-  char* msg = new char[msg_size];
+#define MAX_MSG_SIZE (1024*1024)
 
-  store_value<uint32_t>(msg, num_weights);
+SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
+  // we don't know the number of weights to start with
+  char* msg = new char[MAX_MSG_SIZE];
+  char* msg_begin = msg; // need to keep this pointer to delete later
+
+  uint32_t num_weights = 0;
+  store_value<uint32_t>(msg, num_weights); // just make space for the number of weights
   for (const auto& sample : ds.data_) {
     for (const auto& w : sample) {
       store_value<uint32_t>(msg, w.first); // encode the index
+      num_weights++;
+      //assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
     }
   }
 
-  uint32_t operation = 2;
-  int ret = send(sock, &operation, sizeof(uint32_t), 0);
-  if (ret == -1) {
-    throw std::runtime_error("Error sending operation");
-  }
-  send_all(sock, msg, msg_size);
-  delete[] msg;
+  // put num_weights in the beginning
 
-  // we receive a bunch of weights back
+  // 1. Send operation
+  uint32_t operation = 2;
+  send_all(sock, &operation, sizeof(uint32_t));
+  // 2. Send msg size
+  uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
+  send_all(sock, &msg_size, sizeof(uint32_t));
+  // 3. Send num_weights + weights
+  msg = msg_begin;
+  store_value<uint32_t>(msg, num_weights);
+  std::cout << "Getting model. Sending weights msg size: " << msg_size << std::endl;
+  send_all(sock, msg_begin, msg_size);
+  delete[] msg_begin;
+
+  //4. receive weights from PS
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
+  std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
+
   char* buffer = new char[to_receive_size];
   read_all(sock, buffer, to_receive_size);
 
   // build a truly sparse model and return
   SparseLRModel model(0);
   model.loadSerializedSparse(buffer, num_weights);
+  
   delete[] buffer;
+
   return std::move(model);
 }
 
