@@ -102,7 +102,6 @@ start:
         << "\n";
 #endif
       SparseLRModel model = get_model();
-      get_model();
 
 #ifdef DEBUG
       std::cout << "[ERROR_TASK] received the model with id: "
