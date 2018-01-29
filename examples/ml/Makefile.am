@@ -53,7 +53,7 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
 	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
 	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp LogisticSparseTaskS3.cpp \
-	      S3SparseIterator.cpp ProgressMonitor.cpp PSSparseServerTask.cpp
+	      S3SparseIterator.cpp ProgressMonitor.cpp PSSparseServerTask.cpp PSSparseServerInterface.cpp
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \

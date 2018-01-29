@@ -113,11 +113,11 @@ class LogisticSparseTaskS3 : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    bool run_phase1(
+    bool get_dataset_minibatch(
         auto& dataset,
         auto& s3_iter);
     auto get_model(auto r, auto lmd);
-    void push_gradient(auto r, LRSparseGradient*);
+    void push_gradient(LRSparseGradient*);
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 

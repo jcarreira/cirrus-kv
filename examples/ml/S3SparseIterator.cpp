@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#define DEBUG
+
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
         uint64_t left_id, uint64_t right_id, // right id is exclusive
@@ -90,10 +92,12 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   delete oss;
 #ifdef DEBUG
   uint64_t elapsed_us = (get_time_us() - start);
-  std::cout << "oss->str() time (us): " << elapsed_ns << std::endl;
+  std::cout << "oss->str() time (us): " << elapsed_us << std::endl;
 #endif
 
   auto str_iter = list_strings.find(str_version);
+  
+  print_progress(str_iter->second);
 
   ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
@@ -135,6 +139,24 @@ uint64_t get_random_obj_id(uint64_t left, uint64_t right) {
   return sampler(re);
 }
 
+void S3SparseIterator::print_progress(const std::string& s3_obj) {
+  static uint64_t start_time = 0;
+  static uint64_t total_received = 0;
+  static uint64_t count = 0;
+
+  if (start_time == 0) {
+    start_time = get_time_us();
+  }
+  total_received += s3_obj.size();
+  count++;
+
+  double elapsed_sec = (get_time_us() - start_time) / 1000.0 / 1000.0;
+  std::cout
+    << "Getting object count: " << count
+    << " s3 e2e bw (MB/s): " << total_received / elapsed_sec / 1024.0 / 1024
+    << std::endl;
+}
+
 void S3SparseIterator::thread_function(const Configuration& config) {
   std::cout << "Building S3 deser. with size: "
     << std::endl;
@@ -147,11 +169,6 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     pref_sem.wait();
 
     uint64_t obj_id = get_random_obj_id(left_id, right_id);
-
-    std::cout << "Getting object. "
-      << "count: " << count++
-      << " random obj id: " << obj_id
-      << std::endl;
 
     std::ostringstream* s3_obj;
 try_start:

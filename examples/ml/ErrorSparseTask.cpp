@@ -8,9 +8,10 @@
 #include "async.h"
 //#include "adapters/libevent.h"
 #include "SparseLRModel.h"
+#include "PSSparseServerInterface.h"
 
-//#define DEBUG
-#define ERROR_INTERVAL_USEC (50) // time between error checks
+#define DEBUG
+#define ERROR_INTERVAL_USEC (1000000) // time between error checks
 
 /**
   * Ugly but necessary for now
@@ -24,104 +25,17 @@ namespace ErrorSparseTaskGlobal {
   uint64_t start_time;
   std::mutex mp_start_lock;
 }
-/**
-  * Works as a cache for remote model
-  */
-#if 0
-class ModelProxyErrorSparseTask {
-  public:
-    ModelProxyErrorSparseTask(auto redis_ip, auto redis_port, uint64_t mgs) :
-      redis_ip(redis_ip), redis_port(redis_port), base(event_base_new())
-    { 
-      ErrorSparseTaskGlobal::model.reset(new SparseLRModel(mgs));
-      ErrorSparseTaskGlobal::lmd.reset(new lr_model_deserializer(mgs));
-      ErrorSparseTaskGlobal::mp_start_lock.lock();
-    }
 
-    static void connectCallback(const redisAsyncContext*, int) {
-      std::cout << "connectCallback" << std::endl;
-      ErrorSparseTaskGlobal::mp_start_lock.unlock();
-    }
+SparseLRModel get_model() {
+  static PSSparseServerInterface* psi;
+  static bool first_time = true;
+  if (first_time) {
+    first_time = false;
+    psi = new PSSparseServerInterface("172.31.0.28", 1337);
+  }
 
-    static void disconnectCallback(const redisAsyncContext*, int) {
-      std::cout << "disconnectCallback" << std::endl;
-    }
-
-    SparseLRModel get_model() {
-      std::cout << "get_model" << std::endl;
-      // wait until first model has arrived
-      while (ErrorSparseTaskGlobal::model_is_here == true) {
-      }
-
-      ErrorSparseTaskGlobal::model_lock.lock();
-      SparseLRModel ret = *ErrorSparseTaskGlobal::model;
-      ErrorSparseTaskGlobal::model_lock.unlock();
-      return ret;
-    }
-
-    static void onMessage(redisAsyncContext*, void *reply, void*) {
-      redisReply *r = reinterpret_cast<redisReply*>(reply);
-
-#ifdef DEBUG
-      std::cout << "onMessage" << std::endl;
-#endif
-      if (r->type == REDIS_REPLY_ARRAY) {
-
-#ifdef DEBUG
-        printf("len: %lu\n", len);
-#endif
-
-        char* str_1 = r->element[1]->str;
-        char* str_0 = r->element[0]->str;
-        if (str_0 && strcmp(str_0, "message") == 0 &&
-            str_1 && strcmp(str_1, "model") == 0) {
-          const char* str = r->element[2]->str;
-          //uint64_t len = r->element[2]->len;
-#ifdef DEBUG
-          std::cout << "Updating model at time: " << get_time_us() << std::endl;
-#endif
-          ErrorSparseTaskGlobal::model_lock.lock();
-          ErrorSparseTaskGlobal::model->loadSerialized(str);
-          //*ErrorSparseTaskGlobal::model = ErrorSparseTaskGlobal::lmd->operator()(str, len);
-          ErrorSparseTaskGlobal::model_lock.unlock();
-          ErrorSparseTaskGlobal::model_is_here = false;
-        }
-      } else {
-        throw std::runtime_error("Not an array");
-      }
-    }
-
-    void thread_fn() {
-      std::cout << "connecting to redis.." << std::endl;
-      redisAsyncContext* model_r = redis_async_connect(redis_ip.c_str(), redis_port);
-      std::cout << "connected to redis.." << model_r << std::endl;
-      if (!model_r) {
-        throw std::runtime_error("ModelProxyErrorSparseTask::error connecting to redis");
-      }
-      
-      std::cout << "ErrorSparseTask: libevent attach" << std::endl;
-      redisLibeventAttach(model_r, base);
-      redis_connect_callback(model_r, connectCallback);
-      redis_disconnect_callback(model_r, disconnectCallback);
-      redis_subscribe_callback(model_r, onMessage, "model");
-      
-      std::cout << "eventbase dispatch" << std::endl;
-      event_base_dispatch(base);
-    }
-
-    void run() {
-      thread = std::make_unique<std::thread>(
-          std::bind(&ModelProxyErrorSparseTask::thread_fn, this));
-    }
-
-  private:
-    std::string redis_ip;
-    int redis_port;
-
-    struct event_base *base;
-    std::unique_ptr<std::thread> thread;
-};
-#endif
+  return psi->get_full_model();
+}
 
 void ErrorSparseTask::run(const Configuration& config) {
   std::cout << "Compute error task connecting to store" << std::endl;
@@ -183,16 +97,11 @@ start:
     try {
       // first we get the model
 #ifdef DEBUG
-      std::cout << "[ERROR_TASK] getting the model at id: "
+      std::cout << "[ERROR_TASK] getting the full model at id: "
         << MODEL_BASE
         << "\n";
 #endif
-      SparseLRModel model(MODEL_GRAD_SIZE);
-      int len_model;
-      std::string str_id = std::to_string(MODEL_BASE);
-      char* data = redis_binary_get(redis_con, str_id.c_str(), &len_model);
-      model.loadSerialized(data);
-      free(data);
+      SparseLRModel model = get_model();
 
 #ifdef DEBUG
       std::cout << "[ERROR_TASK] received the model with id: "

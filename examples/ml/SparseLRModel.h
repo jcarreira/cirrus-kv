@@ -6,6 +6,7 @@
 #include <Model.h>
 #include <SparseDataset.h>
 #include <ModelGradient.h>
+#include <unordered_map>
 
 /**
   * Logistic regression model
@@ -37,6 +38,10 @@ class SparseLRModel : public Model {
      */
     void loadSerialized(const void* mem) override;
 
+    void loadSerializedSparse(const FEATURE_TYPE* weights,
+        const uint32_t* weight_indices,
+        uint64_t num_weights);
+
     /**
       * serializes this model into memory
       * @return pair of memory pointer and size of serialized model
@@ -47,8 +52,7 @@ class SparseLRModel : public Model {
     /**
       * serializes this model into memory pointed by mem
       */
-    void serializeTo(void* mem) const override;
-    char* serializeTo2(uint64_t) const;
+    void serializeTo(void* mem) const;
 
     /**
      * Create new model from serialized weights
@@ -88,6 +92,10 @@ class SparseLRModel : public Model {
     std::unique_ptr<ModelGradient> minibatch_grad(
             const SparseDataset& dataset,
             double epsilon) const override;
+
+    std::unique_ptr<ModelGradient> minibatch_grad_sparse(
+        const SparseDataset& dataset,
+        double epsilon) const;
     /**
      * Compute the logistic loss of a given dataset on the current model
      * @param dataset Dataset to calculate loss on
@@ -140,7 +148,10 @@ class SparseLRModel : public Model {
       */
     bool is_integer(FEATURE_TYPE n) const;
 
+    bool is_sparse_ = false;
+
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
+    mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
 };
 
 #endif  // EXAMPLES_ML_SPARSE_LRMODEL_H_

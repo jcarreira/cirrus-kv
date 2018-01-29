@@ -20,26 +20,31 @@ void SparseDataset::build_max_features() {
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples) :
     data_(samples), max_features_(0) {
-  //build_max_features();
 }
 
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
     data_(std::move(samples)), labels_(std::move(labels)), max_features_(0) {
-  //build_max_features();
 }
 
 
 SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
   const char* data_begin = data;
+
+  data_.reserve(n_samples);
+  labels_.reserve(n_samples);
+
   for (uint64_t i = 0; i < n_samples; ++i) {
     FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
     int num_sample_values = load_value<int>(data);
 
+#ifdef DEBUG
     assert(FLOAT_EQ(label, 0.0) || FLOAT_EQ(label, 1.0));
     assert(num_sample_values > 0 && num_sample_values < 1000000);
+#endif
 
     std::vector<std::pair<int, FEATURE_TYPE>> sample;
+    sample.reserve(num_sample_values);
     for (int j = 0; j < num_sample_values; ++j) {
       int index = load_value<int>(data);
       FEATURE_TYPE value = load_value<FEATURE_TYPE>(data);

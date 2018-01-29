@@ -4,14 +4,14 @@
 #include "Redis.h"
 #include "Utils.h"
 #include "async.h"
-#include "adapters/libevent.h"
 
-//#define DEBUG
+#undef DEBUG
 
-#define GET_MODEL_REQ (2)
 #define APPLY_GRADIENT_REQ (1)
+#define GET_MODEL_REQ (2)
+#define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (2)
+#define MAX_CONNECTIONS (21)
     
 static void update_model(auto&);
 
@@ -28,61 +28,7 @@ namespace PSSparseServerTaskGlobal {
 
   redisContext* redis_con;
   volatile uint64_t onMessageCount = 0;
-  static redisAsyncContext* model_r;
 }
-
-/**
-  * Works as a cache for remote model
-  */
-class PSSparseServerTaskModelProxy {
-  public:
-    PSSparseServerTaskModelProxy(auto redis_ip, auto redis_port) :
-      redis_ip(redis_ip), redis_port(redis_port),
-      base(event_base_new()) {
-    PSSparseServerTaskGlobal::mp_start_lock.lock();
-  }
-
-    static void connectCallback(const redisAsyncContext*, int) {
-      std::cout << "ModelProxy::connectCallback" << "\n";
-      PSSparseServerTaskGlobal::mp_start_lock.unlock();
-    }
-
-    static void disconnectCallback(const redisAsyncContext*, int) {
-      std::cout << "disconnectCallback" << "\n";
-    }
-
-    void thread_fn() {
-      std::cout << "ModelProxy connecting to redis.." << std::endl;
-      PSSparseServerTaskGlobal::model_r =
-        redis_async_connect(redis_ip.c_str(), redis_port);
-      if (!PSSparseServerTaskGlobal::model_r) {
-        throw std::runtime_error("ModelProxy::Error connecting to redis");
-      }
-      std::cout << "ModelProxy::connected to redis.."
-        << PSSparseServerTaskGlobal::model_r
-        << std::endl;
-
-      std::cout << "libevent attached" << std::endl;
-      redisLibeventAttach(PSSparseServerTaskGlobal::model_r, base);
-      redis_connect_callback(PSSparseServerTaskGlobal::model_r, connectCallback);
-      redis_disconnect_callback(PSSparseServerTaskGlobal::model_r, disconnectCallback);
-
-      std::cout << "eventbase dispatch" << std::endl;
-      event_base_dispatch(base);
-    }
-
-    void run() {
-      std::cout << "Starting ModelProxy thread" << std::endl;
-      thread = std::make_unique<std::thread>(
-          std::bind(&PSSparseServerTaskModelProxy::thread_fn, this));
-    }
-
-  private:
-    std::string redis_ip;
-    int redis_port;
-    struct event_base *base;
-    std::unique_ptr<std::thread> thread;
-};
 
 auto PSSparseServerTask::connect_redis() {
   auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
@@ -105,13 +51,16 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
       batch_size, samples_per_batch, features_per_sample,
       nworkers, worker_id) {
   gradientVersions.resize(nworkers, 0);
+
+  std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
 std::shared_ptr<char> PSSparseServerTask::serialize_model(const SparseLRModel& model, uint64_t* model_size) {
   *model_size = model.getSerializedSize();
-  char* d = model.serializeTo2(model.getSerializedSize());
-  auto data = std::shared_ptr<char>(d, std::default_delete<char[]>());
-  return data;
+  auto d = std::shared_ptr<char>(
+      new char[*model_size], std::default_delete<char[]>());
+  model.serializeTo(d.get());
+  return d;
 }
 
 bool PSSparseServerTask::testRemove(struct pollfd x) {
@@ -123,36 +72,32 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   return x.fd == -1;
 }
 
-static
-ssize_t read_all(int sock, void* data, size_t len) {
-  uint64_t bytes_read = 0;
-
-  while (bytes_read < len) {
-    int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
-        len - bytes_read);
-
-    if (retval == -1) {
-      throw std::runtime_error("Error reading from client");
-    }
-
-    bytes_read += retval;
-  }   
-  return bytes_read;
-}
-
 std::mutex to_process_lock;
 sem_t sem_new_req;
-std::queue<std::pair<int, std::vector<char>>> to_process;
+struct Request {
+  public:
+    Request(int req_id, int sock, std::vector<char>&& vec) :
+      req_id(req_id), sock(sock), vec(std::move(vec)){}
+
+  int req_id;
+  int sock;
+  std::vector<char> vec;
+};
+std::queue<Request> to_process;
 
 void PSSparseServerTask::gradient_f() {
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
-    std::pair<int, std::vector<char>>& req = to_process.front();
+    Request& req = to_process.front();
     to_process_lock.unlock();
 
-    if (req.first == APPLY_GRADIENT_REQ) {
-      std::vector<char>& buffer = req.second;
+#ifdef DEBUG
+    std::cout << "Processing request: " << req.req_id << std::endl;
+#endif
+
+    if (req.req_id == APPLY_GRADIENT_REQ) {
+      std::vector<char>& buffer = req.vec;
       LRSparseGradient gradient(0);
       gradient.loadSerialized(buffer.data());
 
@@ -162,29 +107,66 @@ void PSSparseServerTask::gradient_f() {
       PSSparseServerTaskGlobal::model_lock.unlock();
       sem_post(&PSSparseServerTaskGlobal::sem_new_model);
       PSSparseServerTaskGlobal::onMessageCount++;
-    } else if (req.first == GET_MODEL_REQ) {
+    } else if (req.req_id == GET_MODEL_REQ) {
       // need to parse the buffer to get the indices of the model we want 
       // to send back to the client
-      std::vector<char>& buffer = req.second;
+      std::vector<char>& buffer = req.vec;
       const char* data = buffer.data();
       uint64_t num_entries = load_value<uint32_t>(data);
-      std::cout << "Sending back: " << num_entries << " from model" << std::endl;
-      char* data_to_send = new char[num_entries * sizeof(FEATURE_TYPE)];
+
+      uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
+      auto data_to_send = std::shared_ptr<char>(
+          new char[to_send_size], std::default_delete<char[]>());
+      char* data_to_send_ptr = data_to_send.get();
+#ifdef DEBUG
+      std::cout << "Sending back: " << num_entries
+        << " weights from model. Size: " << to_send_size
+        << std::endl;
+#endif
       for (uint32_t i = 0; i < num_entries; ++i) {
         uint32_t entry_index = load_value<uint32_t>(data);
+#ifdef DEBUG
+        std::cout << entry_index << " ";
+#endif
         store_value<FEATURE_TYPE>(
-            data_to_send, 
+            data_to_send_ptr,
             PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
       }
+#ifdef DEBUG
+      std::cout << std::endl;
+#endif
+      send_all(req.sock, data_to_send.get(), to_send_size);
+    } else if (req.req_id == GET_FULL_MODEL_REQ) {
+      PSSparseServerTaskGlobal::model_lock.lock();
+      auto model_copy = *PSSparseServerTaskGlobal::model;
+      PSSparseServerTaskGlobal::model_lock.unlock();
+      uint32_t model_size = model_copy.getSerializedSize();
+
+      auto d = std::shared_ptr<char>(
+          new char[model_size], std::default_delete<char[]>());
+      model_copy.serializeTo(d.get());
+      //std::cout << "Sending model message size: " << model_size << std::endl;
+      send_all(req.sock, d.get(), model_size);
+    } else {
+      throw std::runtime_error("Unknown operation");
     }
+
     to_process_lock.lock();
     to_process.pop();
     to_process_lock.unlock();
   }
 }
 
+/**
+  * FORMAT
+  * operation (uint32_t)
+  * incoming size (uint32_t)
+  * buffer with previous size
+  */
 bool PSSparseServerTask::process(int sock) {
-  //std::cout << "Processing socket: " <<  sock << std::endl;
+#ifdef DEBUG
+  std::cout << "Processing socket: " <<  sock << std::endl;
+#endif
   std::vector<char> buffer;
   uint64_t current_buf_size = sizeof(uint32_t);
   buffer.reserve(current_buf_size);
@@ -225,11 +207,16 @@ bool PSSparseServerTask::process(int sock) {
     }
 
     to_process_lock.lock();
-    to_process.push(std::make_pair(operation, std::move(buffer)));
+    to_process.push(Request(operation, sock, std::move(buffer)));
+    to_process_lock.unlock();
+    sem_post(&sem_new_req);
+  } else if (operation == GET_FULL_MODEL_REQ) {
+    to_process_lock.lock();
+    to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else {
-    throw std::runtime_error("Unknown");
+    throw std::runtime_error("Unknown operation");
   }
   return true;
 }
@@ -340,7 +327,6 @@ void PSSparseServerTask::loop() {
 	  }
 	} else if (curr_fd.fd == server_sock_) {
           std::cout << "PS new connection!" << std::endl;
-
 	  int newsock = accept(server_sock_,
 	      reinterpret_cast<struct sockaddr*>(&cli_addr),
 	      &clilen);
@@ -364,6 +350,9 @@ void PSSparseServerTask::loop() {
             num_connections++;
 	  }
 	} else {
+#ifdef DEBUG
+          std::cout << "Calling process" << std::endl;
+#endif
 	  if (!process(curr_fd.fd)) {
             num_connections--;
             std::cout << "PS closing connection " << num_connections << std::endl;
@@ -378,6 +367,7 @@ void PSSparseServerTask::loop() {
     // If at max capacity, try to make room
     if (curr_index == max_fds) {
       // Try to purge unused fds, those with fd == -1
+      std::cout << "Purging" << std::endl;
       std::remove_if(fds.begin(), fds.end(),
           std::bind(&PSSparseServerTask::testRemove, this, std::placeholders::_1));
     }
@@ -411,7 +401,7 @@ void PSSparseServerTask::run(const Configuration& config) {
   PSSparseServerTaskGlobal::config = config;
 
   PSSparseServerTaskGlobal::redis_con = connect_redis();
-  publish_model_redis();
+  //publish_model_redis();
   wait_for_start(PS_SPARSE_SERVER_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
 
   uint64_t start = get_time_us();
@@ -428,6 +418,7 @@ void PSSparseServerTask::run(const Configuration& config) {
       std::cout << "Events in the last sec: " 
         << 1.0 * PSSparseServerTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000
         << " since (sec): " << since_start_sec
+        << " #conns: " << num_connections
         << std::endl;
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }
@@ -460,8 +451,8 @@ void PSSparseServerTask::publish_model_redis() {
   auto before_us = get_time_us();
 #endif
 
-  redis_put_binary_numid(PSSparseServerTaskGlobal::redis_con, MODEL_BASE,
-      reinterpret_cast<const char*>(data.get()), model_size);
+  //redis_put_binary_numid(PSSparseServerTaskGlobal::redis_con, MODEL_BASE,
+  //    reinterpret_cast<const char*>(data.get()), model_size);
 #ifdef DEBUG
   auto elapsed_us = get_time_us() - before_us;
   std::cout 

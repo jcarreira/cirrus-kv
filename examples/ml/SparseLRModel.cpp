@@ -8,7 +8,7 @@
 #include <map>
 #include <unordered_map>
 
-#undef DEBUG
+#define DEBUG
 
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);
@@ -51,21 +51,13 @@ SparseLRModel::serialize() const {
     return res;
 }
 
-char* SparseLRModel::serializeTo2(uint64_t /*size*/) const {
-  void* mem = new char[getSerializedSize()];
-  void *mem_copy = mem;
+void SparseLRModel::serializeTo(void* mem) const {
+#ifdef DEBUG 
+  //std::cout << "Num weights size: " << weights_.size() << std::endl;
+#endif
   store_value<int>(mem, weights_.size());
   std::copy(weights_.data(), weights_.data() + weights_.size(),
       reinterpret_cast<FEATURE_TYPE*>(mem));
-  return (char*)mem_copy;
-}
-
-void SparseLRModel::serializeTo(void* mem) const {
-  std::cout << "weight size: " << weights_.size() << std::endl;
-  store_value<int>(mem, weights_.size());
-  for (const auto& v : weights_) {
-    store_value<FEATURE_TYPE>(mem, v);
-  }
 }
 
 uint64_t SparseLRModel::getSerializedSize() const {
@@ -79,7 +71,9 @@ uint64_t SparseLRModel::getSerializedSize() const {
   */
 void SparseLRModel::loadSerialized(const void* data) {
   int num_weights = load_value<int>(data);
+#ifdef DEBUG
   //std::cout << "num_weights: " << num_weights << std::endl;
+#endif
   assert(num_weights > 0 && num_weights < 10000000);
 
   //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
@@ -127,31 +121,16 @@ void SparseLRModel::sgd_update(double learning_rate,
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
+  if (is_sparse_) {
+    throw std::runtime_error("This model is sparse");
+  }
 #ifdef DEBUG
     std::cout << "<Minibatch grad" << std::endl;
     dataset.check();
     //print();
+    auto start = get_time_us();
 #endif
 
-#if 0
-    const FEATURE_TYPE* dataset_data = dataset.data.get();
-    // create Matrix for dataset
-    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
-        Eigen::Dynamic, Eigen::RowMajor>>
-          ds(const_cast<FEATURE_TYPE*>(dataset_data), dataset.rows, dataset.cols);
-     create weight vector
-    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> tmp_weights(w.data(), size());
-     create vector with labels
-    Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lab(labels, labels_size);
-     apply logistic function to matrix multiplication
-     between dataset and weights
-    auto part1_1 = (ds * tmp_weights);
-    auto part1 = part1_1.unaryExpr(std::ptr_fun(mlutils::s_1));
-    auto before_1 = get_time_us();
-#endif
-
-
-    //std::vector<FEATURE_TYPE> part1(dataset.num_samples());
     std::vector<FEATURE_TYPE> part2(dataset.num_samples());
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       double part1_i = 0;
@@ -164,12 +143,9 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         }
         assert(index >= 0 && (uint64_t)index < weights_.size());
         part1_i += value * weights_[index];
-        //part1[i] += value * weights_[index];
 #ifdef DEBUG
         if (std::isnan(part1_i) || std::isinf(part1_i)) {
-        //if (std::isnan(part1[i]) || std::isinf(part1[i])) {
           std::cout << "part1_i: " << part1_i << std::endl;
-          //std::cout << "part1[i]: " << part1[i] << std::endl;
           std::cout << "i: " << i << std::endl;
           std::cout << "index: " << index << " value: " << value << std::endl;
           std::cout << "weights_[index]: " << weights_[index] << std::endl;
@@ -179,36 +155,11 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
       }
 
       part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
-      //part1[i] = mlutils::s_1(part1[i]);
-//#ifdef DEBUG
-//        if (std::isnan(part1[i]) || std::isinf(part1[i])) {
-//          std::cout << "isnan" << std::endl;
-//          exit(-1);
-//        }
-//#endif
     }
 #ifdef DEBUG
     auto after_1 = get_time_us();
 #endif
 
-
-    //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> lbs(labels, labels_size);
-
-    // compute difference between labels and logistic probability
-    //auto part2 = lbs - part1;
-//    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
-//    for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-//      part2[i] = dataset.labels_[i] - part1[i];
-//#ifdef DEBUG
-//        if (std::isnan(part2[i]) || std::isinf(part2[i])) {
-//          std::cout << "part2 isnan" << std::endl;
-//          exit(-1);
-//        }
-//#endif
-//    }
-
-    //auto part3 = ds.transpose() * part2;
-    //std::vector<FEATURE_TYPE> part3(weights_.size());
     std::unordered_map<uint64_t, FEATURE_TYPE> part3;
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
       for (const auto& feat : dataset.get_row(i)) {
@@ -244,42 +195,6 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     auto after_3 = get_time_us();
 #endif
 
-    //for (uint64_t i = 0; i < weights_.size(); ++i) {
-    //  //res[i] = part3[i] + weights_[i] * 2 * epsilon;
-    //}
-#if 0
-    std::vector<FEATURE_TYPE> res(weights_.size());
-    for (uint64_t i = 0; i < weights_.size(); ++i) {
-      //part4[i] = weights_[i] * 2 * epsilon;
-      res[i] = part3[i] + weights_[i] * 2 * epsilon;
-#ifdef DEBUG
-        if (std::isnan(part3[i]) || std::isinf(part3[i])) {
-          std::cout << "part3 isnan" << std::endl;
-          std::cout << "weights_[i]: " << weights_[i] << std::endl;
-          std::cout << "i: " << i << std::endl;
-          std::cout << "epsilon: " << epsilon << std::endl;
-          exit(-1);
-        }
-#endif
-    }
-#endif
-    
-//    std::vector<FEATURE_TYPE> res(weights_.size());
-//    for (uint64_t i = 0; i < weights_.size(); ++i) {
-//      res[i] = part4[i] + part3[i];
-//#ifdef DEBUG
-//        if (std::isnan(res[i]) || std::isinf(res[i])) {
-//          std::cout << "res isnan" << std::endl;
-//          exit(-1);
-//        }
-//#endif
-//    }
-
-    //std::vector<FEATURE_TYPE> vec_res;
-    //vec_res.resize(res.size());
-    //Eigen::Matrix<FEATURE_TYPE, -1, 1>::Map(vec_res.data(), res.size()) = res;
-
-    //std::unique_ptr<LRGradient> ret = std::make_unique<LRGradient>(vec_res);
     std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
 #ifdef DEBUG
     auto after_4 = get_time_us();
@@ -289,7 +204,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
 #ifdef DEBUG
     ret->check_values();
     std::cout
-      << " Elapsed1: " << (after_1 - before_1)
+      << " Elapsed1: " << (after_1 - start)
       << " Elapsed2: " << (after_2 - after_1)
       << " Elapsed3: " << (after_3 - after_2)
       << " Elapsed4: " << (after_4 - after_3)
@@ -419,3 +334,64 @@ void SparseLRModel::check() const {
     }
   }
 }
+
+void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
+    const uint32_t* weight_indices,
+    uint64_t num_weights) {
+  is_sparse_ = true;
+  
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  //weights_sparse_.resize(num_weights);
+  weights_sparse_.reserve(num_weights);
+  for (uint64_t i = 0; i < num_weights; ++i) {
+    uint32_t index = load_value<uint32_t>(weight_indices);
+    FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
+    weights_sparse_[index] = value;
+  }
+}
+
+std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
+        const SparseDataset& dataset,
+        double epsilon) const {
+  if (!is_sparse_) {
+    throw std::runtime_error("This model is not sparse");
+  }
+
+  std::vector<FEATURE_TYPE> part2(dataset.num_samples());
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    double part1_i = 0;
+    for (const auto& feat : dataset.get_row(i)) {
+      int index = feat.first;
+      FEATURE_TYPE value = feat.second;
+#ifdef DEBUG
+      if (weights_sparse_.find(index) == weights_sparse_.end()) {
+        std::cout << "Needed weight with index: " << index << std::endl;
+        throw std::runtime_error("Weight not found");
+      }
+#endif
+      part1_i += value * weights_sparse_[index];
+    }
+    part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
+  }
+
+  std::unordered_map<uint64_t, FEATURE_TYPE> part3;
+  for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
+    for (const auto& feat : dataset.get_row(i)) {
+      int index = feat.first;
+      FEATURE_TYPE value = feat.second;
+      part3[index] += value * part2[i];
+    }
+  }
+
+  std::vector<std::pair<int, FEATURE_TYPE>> res;
+  res.reserve(part3.size());
+  for (const auto& v : part3) {
+    uint64_t index = v.first;
+    FEATURE_TYPE value = v.second;
+    res.push_back(std::make_pair(index, value + weights_sparse_[index] * 2 * epsilon));
+  }
+  std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
+  return ret;
+}
+
