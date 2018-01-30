@@ -12,10 +12,12 @@
 
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);
+    weights_hist_.resize(d);
 }
 
 SparseLRModel::SparseLRModel(const FEATURE_TYPE* w, uint64_t d) {
     weights_.resize(d);
+    weights_hist_.resize(d);
     std::copy(w, w + d, weights_.begin());
 }
 
@@ -92,7 +94,7 @@ void SparseLRModel::loadSerialized(const void* data) {
 void SparseLRModel::randomize() {
   // Xavier initialization
     for (auto& w : weights_) {
-        w = get_random_normal(0, 1.0 / weights_.size());
+        w = 0;
     }
 }
 
@@ -102,20 +104,42 @@ std::unique_ptr<Model> SparseLRModel::copy() const {
     return new_model;
 }
 
+void SparseLRModel::sgd_update_adagrad(double learning_rate,
+    const ModelGradient* gradient) {
+  const LRSparseGradient* grad =
+    dynamic_cast<const LRSparseGradient*>(gradient);
+
+  if (grad == nullptr) {
+    throw std::runtime_error("Error in dynamic cast");
+  }
+
+  double adagrad_epsilon = 10e-8;
+
+  for (const auto& w : grad->weights) {
+    int index = w.first;
+    FEATURE_TYPE value = w.second;
+
+    // update history
+    weights_hist_[index] += value * value;
+    weights_[index] += learning_rate * value /
+      (adagrad_epsilon + std::sqrt(weights_hist_[index]));
+  }
+}
+
 void SparseLRModel::sgd_update(double learning_rate,
-        const ModelGradient* gradient) {
-    const LRSparseGradient* grad = dynamic_cast<const LRSparseGradient*>(gradient);
-    //const LRGradient* grad = dynamic_cast<const LRGradient*>(gradient);
+    const ModelGradient* gradient) {
+  const LRSparseGradient* grad =
+    dynamic_cast<const LRSparseGradient*>(gradient);
 
-    if (grad == nullptr) {
-        throw std::runtime_error("Error in dynamic cast");
-    }
+  if (grad == nullptr) {
+    throw std::runtime_error("Error in dynamic cast");
+  }
 
-    for (const auto& w : grad->weights) {
-      int index = w.first;
-      FEATURE_TYPE value = w.second;
-      weights_[index] += learning_rate * value;
-    }
+  for (const auto& w : grad->weights) {
+    int index = w.first;
+    FEATURE_TYPE value = w.second;
+    weights_[index] += learning_rate * value;
+  }
 }
 
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(

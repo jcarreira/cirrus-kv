@@ -76,6 +76,14 @@ class SparseLRModel : public Model {
     void sgd_update(double learning_rate, const ModelGradient* gradient);
 
     /**
+     * Performs an SGD update using ADAGRAD
+     * @param learning_rate Learning rate to be used
+     * @param gradient Gradient to be used for the update
+     */
+    void sgd_update_adagrad(
+        double learning_rate, const ModelGradient* gradient);
+
+    /**
      * Returns the size of the model weights serialized
      * @returns Size of the model when serialized
      */
@@ -151,6 +159,7 @@ class SparseLRModel : public Model {
     bool is_sparse_ = false;
 
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
+    std::vector<FEATURE_TYPE> weights_hist_;  //< vector of the model weights
     mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
 };
 
