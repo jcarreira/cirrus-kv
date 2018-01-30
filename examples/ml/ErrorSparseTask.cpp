@@ -31,7 +31,7 @@ SparseLRModel get_model() {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterface("172.31.0.28", 1337);
+    psi = new PSSparseServerInterface(PS_IP, PS_PORT);
   }
 
   return psi->get_full_model();

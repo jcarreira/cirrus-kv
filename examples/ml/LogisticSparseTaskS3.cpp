@@ -118,7 +118,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface("172.31.0.28", 1337);
+  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
@@ -127,7 +127,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
   //uint64_t MODEL_BASE = (1000000000ULL);
   LogisticSparseTaskGlobal::sparse_model_get =
-    std::make_unique<SparseModelGet>("172.31.0.28", 1337);
+    std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
