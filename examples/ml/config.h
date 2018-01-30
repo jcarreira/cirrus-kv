@@ -40,3 +40,5 @@ using FEATURE_TYPE = float;
 #define LIMIT_NUMBER_PASSES 3
 
 #define SYNC_N_STEPS (100)
+
+#define STALE_THRESHOLD (4)

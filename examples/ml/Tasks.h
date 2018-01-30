@@ -452,8 +452,6 @@ class PSSparseServerTask : public MLTask {
     mutable std::mutex to_process_lock;
     mutable std::mutex fd_to_clock_lock;
     sem_t sem_new_req;
-
-    uint64_t STALE_THRESHOLD = 3;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

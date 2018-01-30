@@ -20,7 +20,6 @@
 #define REGISTER_WORKER_REQ (4)
 #define GET_SERVER_CLOCK_REQ (5)
 
-#define STALE_THRESHOLD (4)
 
 class PSSparseServerInterface {
  public:
