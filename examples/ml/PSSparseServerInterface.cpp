@@ -34,7 +34,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 }
 
 void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
-  uint32_t operation = 1;
+  uint32_t operation = APPLY_GRADIENT_REQ;
   int ret = send(sock, &operation, sizeof(uint32_t), 0);
   if (ret == -1) {
     throw std::runtime_error("Error sending operation");
@@ -56,8 +56,28 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   }
 }
 
+uint64_t PSSparseServerInterface::get_ps_clock() const {
+  uint32_t operation = GET_SERVER_CLOCK_REQ;
+  send_all(sock, &operation, sizeof(uint32_t));
+  uint64_t server_clock;
+  read_all(sock, &server_clock, sizeof(server_clock));
+  return server_clock;
+}
 
 SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
+  while (1) {
+    // get server clock
+    uint64_t server_clock = get_ps_clock();
+    // if we are further away from slowest worker we wait a bit and try again
+    if (worker_clock > server_clock + STALE_THRESHOLD) {
+      usleep(50);
+    } else {
+      return get_sparse_model_aux(ds);
+    }
+  }
+}
+
+SparseLRModel PSSparseServerInterface::get_sparse_model_aux(const SparseDataset& ds) {
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
   char* msg_begin = msg; // need to keep this pointer to delete later
@@ -78,7 +98,7 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   // put num_weights in the beginning
 
   // 1. Send operation
-  uint32_t operation = 2;
+  uint32_t operation = GET_MODEL_REQ;
   send_all(sock, &operation, sizeof(uint32_t));
   // 2. Send msg size
   uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
@@ -108,7 +128,7 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
 
 SparseLRModel PSSparseServerInterface::get_full_model() {
   // 1. Send operation
-  uint32_t operation = 3;
+  uint32_t operation = GET_FULL_MODEL_REQ;
   send_all(sock, &operation, sizeof(uint32_t));
   //2. receive size from PS
   int model_size;
@@ -125,5 +145,14 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
   delete[] model_data;
 
   return std::move(model);
+}
+
+/**
+  * Used to inform the PS that this connection refers to a worker
+  * used for the PS to maintain information on each worker (e.g., clock)
+  */
+void PSSparseServerInterface::register_worker() {
+  uint32_t operation = REGISTER_WORKER_REQ;
+  send_all(sock, &operation, sizeof(uint32_t));
 }
 
