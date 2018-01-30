@@ -102,7 +102,7 @@ void PSSparseServerTask::gradient_f() {
       gradient.loadSerialized(buffer.data());
 
       PSSparseServerTaskGlobal::model_lock.lock();
-      PSSparseServerTaskGlobal::model->sgd_update(
+      PSSparseServerTaskGlobal::model->sgd_update_adagrad(
           PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
       PSSparseServerTaskGlobal::model_lock.unlock();
       sem_post(&PSSparseServerTaskGlobal::sem_new_model);
