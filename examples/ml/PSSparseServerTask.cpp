@@ -188,6 +188,9 @@ void PSSparseServerTask::gradient_f() {
     } else if (req.req_id == REGISTER_WORKER_REQ) {
       onClientStart(req.sock);
     } else if (req.req_id == GET_SERVER_CLOCK_REQ) {
+#ifdef DEBUG
+      std::cout << "Sending clock" << std::endl;
+#endif
       // the PS clock is the minimmum clock among all workers
       uint64_t server_clock = get_clocks_min();
       if (server_clock == INT_MAX) {
@@ -196,7 +199,7 @@ void PSSparseServerTask::gradient_f() {
       }
       send_all(req.sock, &server_clock, sizeof(server_clock));
     } else {
-      throw std::runtime_error("Unknown operation");
+      throw std::runtime_error("Unknown operation: " + std::to_string(req.req_id));
     }
 
     to_process_lock.lock();
@@ -259,10 +262,11 @@ bool PSSparseServerTask::process(int sock) {
     to_process.push(Request(operation, sock, std::move(buffer)));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-  } else if (operation == GET_FULL_MODEL_REQ) {
+  } else if (operation == GET_FULL_MODEL_REQ || operation == GET_SERVER_CLOCK_REQ) {
     to_process_lock.lock();
     to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
+    sem_post(&sem_new_req);
   } else if (operation == REGISTER_WORKER_REQ) {
     if (num_workers >= MAX_WORKERS) {
       std::cout << "Achieved max number of workers. Closing connection" << std::endl;
@@ -272,9 +276,8 @@ bool PSSparseServerTask::process(int sock) {
     to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-    sem_post(&sem_new_req);
   } else {
-    throw std::runtime_error("Unknown operation");
+    throw std::runtime_error("Unknown operation: " + std::to_string(operation));
   }
   return true;
 }

@@ -1,6 +1,7 @@
 #include "PSSparseServerInterface.h"
+#include <cassert>
 
-//#define DEBUG
+#undef DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -34,6 +35,9 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 }
 
 void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
+#ifdef DEBUG
+  std::cout << "Sending gradient" << std::endl;
+#endif
   uint32_t operation = APPLY_GRADIENT_REQ;
   int ret = send(sock, &operation, sizeof(uint32_t), 0);
   if (ret == -1) {
@@ -65,6 +69,9 @@ uint64_t PSSparseServerInterface::get_ps_clock() const {
 }
 
 SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
+#ifdef DEBUG
+  std::cout << "Getting sparse model" << std::endl;
+#endif
   while (1) {
     // get server clock
     uint64_t server_clock = get_ps_clock();
@@ -78,6 +85,9 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
 }
 
 SparseLRModel PSSparseServerInterface::get_sparse_model_aux(const SparseDataset& ds) {
+#ifdef DEBUG
+  std::cout << "Getting sparse model" << std::endl;
+#endif
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
   char* msg_begin = msg; // need to keep this pointer to delete later
@@ -152,6 +162,7 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
   * used for the PS to maintain information on each worker (e.g., clock)
   */
 void PSSparseServerInterface::register_worker() {
+  std::cout << "Registering worker" << std::endl;
   uint32_t operation = REGISTER_WORKER_REQ;
   send_all(sock, &operation, sizeof(uint32_t));
 }

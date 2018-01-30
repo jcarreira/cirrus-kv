@@ -446,6 +446,7 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<std::thread> gradient_thread;
 
     uint32_t num_connections = 0;
+    std::atomic<uint32_t> num_workers;
 
     std::map<int, uint64_t> fd_to_clock; // each worker's clock
     mutable std::mutex to_process_lock;
