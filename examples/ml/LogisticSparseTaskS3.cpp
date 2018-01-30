@@ -119,6 +119,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   this->config = config;
 
   LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
+  LogisticSparseTaskGlobal::psint->register_worker(); // let PS know there is a new worker
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();

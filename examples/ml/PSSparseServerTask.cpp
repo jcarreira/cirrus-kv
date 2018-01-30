@@ -15,6 +15,7 @@
 #define GET_SERVER_CLOCK_REQ (5)
 
 #define MAX_CONNECTIONS (21)
+#define MAX_WORKERS (10)
     
 static void update_model(auto&);
 
@@ -75,11 +76,11 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
 
 uint64_t PSSparseServerTask::get_clocks_average() const {
   uint64_t avg = 0;
-  fd_to_clock_lock.lock();
 
   // this can happen for two reasons:
   // 1. the first time a worker registers
   // 2. if all workers die at the same time
+  fd_to_clock_lock.lock();
   if (fd_to_clock.size() == 0) {
     fd_to_clock_lock.unlock();
     return 0;
@@ -185,13 +186,7 @@ void PSSparseServerTask::gradient_f() {
       //std::cout << "Sending model message size: " << model_size << std::endl;
       send_all(req.sock, d.get(), model_size);
     } else if (req.req_id == REGISTER_WORKER_REQ) {
-      // get average of everyone's clocks
-      uint32_t avg = get_clocks_average();
-
-      if (is_sock_registered(req.sock)) {
-        throw std::runtime_error("This socket is already registered");
-      }
-      fd_to_clock[req.sock] = avg;
+      onClientStart(req.sock);
     } else if (req.req_id == GET_SERVER_CLOCK_REQ) {
       // the PS clock is the minimmum clock among all workers
       uint64_t server_clock = get_clocks_min();
@@ -215,6 +210,7 @@ void PSSparseServerTask::gradient_f() {
   * operation (uint32_t)
   * incoming size (uint32_t)
   * buffer with previous size
+  * return false to close socket
   */
 bool PSSparseServerTask::process(int sock) {
 #ifdef DEBUG
@@ -263,10 +259,19 @@ bool PSSparseServerTask::process(int sock) {
     to_process.push(Request(operation, sock, std::move(buffer)));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-  } else if (operation == GET_FULL_MODEL_REQ || operation == REGISTER_WORKER_REQ) {
+  } else if (operation == GET_FULL_MODEL_REQ) {
     to_process_lock.lock();
     to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
+  } else if (operation == REGISTER_WORKER_REQ) {
+    if (num_workers >= MAX_WORKERS) {
+      std::cout << "Achieved max number of workers. Closing connection" << std::endl;
+      return false;
+    }
+    to_process_lock.lock();
+    to_process.push(Request(operation, sock, std::vector<char>()));
+    to_process_lock.unlock();
+    sem_post(&sem_new_req);
     sem_post(&sem_new_req);
   } else {
     throw std::runtime_error("Unknown operation");
@@ -349,13 +354,27 @@ void PSSparseServerTask::start_server2() {
 
 void PSSparseServerTask::onSocketClose(int fd) {
   std::cout << "onSocketClose fd: " << fd << std::endl;
+  fd_to_clock_lock.lock();
   if (fd_to_clock.find(fd) != fd_to_clock.end()) {
     fd_to_clock.erase(fd);
+    num_workers--;
   }
+  fd_to_clock_lock.unlock();
 }
 
 void PSSparseServerTask::onClientStart(int fd) {
   std::cout << "onClientStart fd: " << fd << std::endl;
+  
+  if (is_sock_registered(fd)) {
+    throw std::runtime_error("This socket is already registered");
+  }
+
+  // get average of everyone's clocks. That becomes this worker's clock
+  uint32_t avg = get_clocks_average();
+  fd_to_clock_lock.lock();
+  fd_to_clock[fd] = avg;
+  fd_to_clock_lock.unlock();
+  num_workers++;
 }
 
 void PSSparseServerTask::loop() {
@@ -478,6 +497,7 @@ void PSSparseServerTask::run(const Configuration& config) {
         << 1.0 * PSSparseServerTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000
         << " since (sec): " << since_start_sec
         << " #conns: " << num_connections
+        << " #workers: " << num_workers
         << std::endl;
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }
