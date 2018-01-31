@@ -18,8 +18,8 @@ class SparseModelGet {
       psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
     }
 
-    SparseLRModel get_new_model(const SparseDataset& ds) {
-      return psi->get_sparse_model(ds);
+    SparseLRModel get_new_model(const SparseDataset& ds, uint32_t& worker_clock) {
+      return psi->get_sparse_model(ds, worker_clock);
     }
 
   private:
@@ -51,7 +51,7 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LogisticSparseTaskGlobal::psint->send_gradient(*lrg);
+  LogisticSparseTaskGlobal::psint->send_gradient(*lrg, worker_clock);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -119,7 +119,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   this->config = config;
 
   LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
-  LogisticSparseTaskGlobal::psint->register_worker(); // let PS know there is a new worker
+  LogisticSparseTaskGlobal::psint->register_worker(worker_clock); // let PS know there is a new worker
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
@@ -165,7 +165,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     // we get the model subset with just the right amount of weights
     auto now = get_time_us();
     SparseLRModel model =
-      LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
+      LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset, worker_clock);
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
 
 #ifdef DEBUG

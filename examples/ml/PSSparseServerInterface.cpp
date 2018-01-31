@@ -1,7 +1,7 @@
 #include "PSSparseServerInterface.h"
 #include <cassert>
 
-#undef DEBUG
+#define DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -34,7 +34,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
   }
 }
 
-void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
+void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient, uint32_t& worker_clock) {
 #ifdef DEBUG
   std::cout << "Sending gradient" << std::endl;
 #endif
@@ -58,25 +58,41 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   if (ret == -1) {
     throw std::runtime_error("Error sending grad");
   }
+
+  worker_clock++;
 }
 
-uint64_t PSSparseServerInterface::get_ps_clock() const {
+/** Return server and worker clock (in this order)
+  */
+std::pair<uint64_t, uint64_t> PSSparseServerInterface::get_ps_clock() const {
   uint32_t operation = GET_SERVER_CLOCK_REQ;
   send_all(sock, &operation, sizeof(uint32_t));
-  uint64_t server_clock;
-  read_all(sock, &server_clock, sizeof(server_clock));
-  return server_clock;
+  uint64_t clocks[2];
+  read_all(sock, &clocks, sizeof(clocks));
+  return std::make_pair(clocks[0], clocks[1]);
 }
 
-SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
+SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds, uint32_t& worker_clock) {
 #ifdef DEBUG
   std::cout << "Getting sparse model" << std::endl;
 #endif
   while (1) {
     // get server clock
-    uint64_t server_clock = get_ps_clock();
+    auto clocks = get_ps_clock();
+    uint64_t server_clock = clocks.first;
+    //uint64_t my_clock = clocks.second;
+#ifdef DEBUG
+      std::cout << "Server clock: " << server_clock << " worker clock: " << worker_clock << std::endl;
+#endif
     // if we are further away from slowest worker we wait a bit and try again
     if (worker_clock > server_clock + STALE_THRESHOLD) {
+#ifdef DEBUG
+      std::cout
+        << "Worker has to wait"
+        << " worker_clock: " << worker_clock
+        << " server_clock: " << server_clock
+        << std::endl;
+#endif
       usleep(50);
     } else {
       return get_sparse_model_aux(ds);
@@ -161,9 +177,10 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
   * Used to inform the PS that this connection refers to a worker
   * used for the PS to maintain information on each worker (e.g., clock)
   */
-void PSSparseServerInterface::register_worker() {
+void PSSparseServerInterface::register_worker(uint32_t& worker_clock) {
   std::cout << "Registering worker" << std::endl;
   uint32_t operation = REGISTER_WORKER_REQ;
   send_all(sock, &operation, sizeof(uint32_t));
+  read_all(sock, &worker_clock, sizeof(uint32_t));
 }
 

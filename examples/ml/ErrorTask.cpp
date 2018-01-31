@@ -8,7 +8,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-//#define DEBUG
+#undef DEBUG
 #define ERROR_INTERVAL_USEC (50) // time between error checks
 
 /**

@@ -74,6 +74,14 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   return x.fd == -1;
 }
 
+void PSSparseServerTask::print_clocks() const {
+  fd_to_clock_lock.lock();
+  for (const auto& v : fd_to_clock) {
+    std::cout << "fd: " << v.first << " clock: " << v.second << std::endl;
+  }
+  fd_to_clock_lock.unlock();
+}
+
 uint64_t PSSparseServerTask::get_clocks_average() const {
   uint64_t avg = 0;
 
@@ -139,7 +147,12 @@ void PSSparseServerTask::gradient_f() {
       PSSparseServerTaskGlobal::onMessageCount++;
 
       if (!is_sock_registered(req.sock)) {
-        throw std::runtime_error("Client not registered");
+        // it can happen that by the time code gets here
+        // this node has died
+        // in that case we just ignore
+        std::cout << "Worker at fd: " << req.sock << " not registered. Ignoring.." << std::endl;
+        return;
+        //throw std::runtime_error("Client not registered");
       } else {
         fd_to_clock_lock.lock();
         fd_to_clock[req.sock]++; // increment worker's clock
@@ -192,16 +205,24 @@ void PSSparseServerTask::gradient_f() {
       std::cout << "Sending clock" << std::endl;
 #endif
       // the PS clock is the minimmum clock among all workers
-      uint64_t server_clock = get_clocks_min();
-      if (server_clock == INT_MAX) {
+      uint64_t clocks[2];
+      clocks[0] = get_clocks_min();
+      clocks[1] = 0;
+      //fd_to_clock_lock.lock();
+      //clocks[1] = fd_to_clock[req.sock];
+      //fd_to_clock_lock.unlock();
+      if (clocks[0] == INT_MAX) {
         // there are no active workers at the moment
-        throw std::runtime_error("Error getting PS clock");
+        // this can happen if by the time this gets executed all workers have died
+        std::cout << "ERROR: getting PS clock" << std::endl;
+        goto end;
       }
-      send_all(req.sock, &server_clock, sizeof(server_clock));
+      send_all(req.sock, &clocks, sizeof(clocks));
     } else {
       throw std::runtime_error("Unknown operation: " + std::to_string(req.req_id));
     }
 
+end:
     to_process_lock.lock();
     to_process.pop();
     to_process_lock.unlock();
@@ -359,6 +380,7 @@ void PSSparseServerTask::onSocketClose(int fd) {
   std::cout << "onSocketClose fd: " << fd << std::endl;
   fd_to_clock_lock.lock();
   if (fd_to_clock.find(fd) != fd_to_clock.end()) {
+    std::cout << "Erasing client fd: " << fd << std::endl;
     fd_to_clock.erase(fd);
     num_workers--;
   }
@@ -377,6 +399,7 @@ void PSSparseServerTask::onClientStart(int fd) {
   fd_to_clock_lock.lock();
   fd_to_clock[fd] = avg;
   fd_to_clock_lock.unlock();
+  send_all(fd, &avg, sizeof(avg)); // send worker's clock to worker
   num_workers++;
 }
 
@@ -502,6 +525,7 @@ void PSSparseServerTask::run(const Configuration& config) {
         << " #conns: " << num_connections
         << " #workers: " << num_workers
         << std::endl;
+      print_clocks();
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }
   }

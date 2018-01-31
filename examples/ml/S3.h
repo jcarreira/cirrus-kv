@@ -11,8 +11,6 @@
 #include <aws/core/client/ClientConfiguration.h>
 #include <string>
 
-// #define DEBUG
-
 using namespace Aws::S3;
 
 void s3_initialize_aws();

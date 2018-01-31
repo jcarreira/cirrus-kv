@@ -25,23 +25,21 @@ class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
 
-  void send_gradient(const LRSparseGradient&);
+  void send_gradient(const LRSparseGradient&, uint32_t& worker_clock);
   
   //void get_model(SparseLRModel& model);
   SparseLRModel get_full_model();
-  SparseLRModel get_sparse_model(const SparseDataset& ds);
+  SparseLRModel get_sparse_model(const SparseDataset& ds, uint32_t& worker_clock);
 
-  void register_worker();
+  void register_worker(uint32_t&);
 
  private:
   SparseLRModel get_sparse_model_aux(const SparseDataset& ds);
-  uint64_t get_ps_clock() const;
+  std::pair<uint64_t, uint64_t> get_ps_clock() const;
 
   std::string ip;
   int port;
   int sock;
-
-  uint64_t worker_clock = 0;
 };
 
 #endif //  PS_SPARSE_SERVER_INTERFACE_H_

@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <ModelGradient.h>
 
-#define DEBUG
+#undef DEBUG
 
 // FORMAT
 // Number of users (32bits)

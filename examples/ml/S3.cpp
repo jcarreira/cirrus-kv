@@ -1,6 +1,6 @@
 #include "S3.h"
 
-//#define DEBUG
+#undef DEBUG
 
 using namespace Aws::S3;
 

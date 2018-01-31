@@ -123,6 +123,7 @@ class LogisticSparseTaskS3 : public MLTask {
         auto& samples, auto& labels);
 
     std::mutex redis_lock;
+    uint32_t worker_clock = 0;
 };
 
 class LogisticTaskS3 : public MLTask {
@@ -415,6 +416,7 @@ class PSSparseServerTask : public MLTask {
 
     uint64_t get_clocks_min() const;
     uint64_t get_clocks_average() const;
+    void print_clocks() const;
 
     bool is_sock_registered(int fd) const;
 
