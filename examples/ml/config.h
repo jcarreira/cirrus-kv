@@ -10,8 +10,8 @@
 
 #ifdef USE_REDIS
 #define REDIS_PORT (6379)
-#define REDIS_IP "172.31.8.168"
-#define PS_IP "172.31.8.168"
+#define REDIS_IP "172.31.1.17"
+#define PS_IP "172.31.1.17"
 #define PS_PORT 1337
 #endif
 
