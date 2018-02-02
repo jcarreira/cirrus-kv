@@ -8,7 +8,7 @@
 #include <map>
 #include <unordered_map>
 
-#define DEBUG
+#undef DEBUG
 
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);

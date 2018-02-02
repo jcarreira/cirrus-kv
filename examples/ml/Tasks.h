@@ -12,6 +12,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -122,6 +123,7 @@ class LogisticSparseTaskS3 : public MLTask {
         auto& samples, auto& labels);
 
     std::mutex redis_lock;
+    uint32_t worker_clock = 0;
 };
 
 class LogisticTaskS3 : public MLTask {
@@ -399,8 +401,6 @@ class PSSparseServerTask : public MLTask {
 
   private:
     auto connect_redis();
-    void thread_fn();
-    void publish_model_pubsub();
     void publish_model_redis();
     void start_server();
     void start_server2();
@@ -411,12 +411,29 @@ class PSSparseServerTask : public MLTask {
     std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size);
     void gradient_f();
 
+    void onSocketClose(int fd);
+    void onClientStart(int fd);
+
+    uint64_t get_clocks_min() const;
+    uint64_t get_clocks_average() const;
+    void print_clocks() const;
+
+    bool is_sock_registered(int fd) const;
+
+    struct Request {
+      public:
+        Request(int req_id, int sock, std::vector<char>&& vec) :
+          req_id(req_id), sock(sock), vec(std::move(vec)){}
+
+        int req_id;
+        int sock;
+        std::vector<char> vec;
+    };
+
     /**
       * Attributes
       */
-#if defined(USE_REDIS)
-    std::vector<unsigned int> gradientVersions;
-#endif
+    std::queue<Request> to_process;
     uint64_t curr_index = 0;
     uint64_t server_clock = 0;  // minimum of all worker clocks
     std::unique_ptr<std::thread> thread;
@@ -429,6 +446,14 @@ class PSSparseServerTask : public MLTask {
 
     std::unique_ptr<std::thread> server_thread;
     std::unique_ptr<std::thread> gradient_thread;
+
+    uint32_t num_connections = 0;
+    std::atomic<uint32_t> num_workers;
+
+    std::map<int, uint64_t> fd_to_clock; // each worker's clock
+    mutable std::mutex to_process_lock;
+    mutable std::mutex fd_to_clock_lock;
+    sem_t sem_new_req;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

@@ -14,17 +14,29 @@
 #include "Utils.h"
 #include "SparseLRModel.h"
 
+#define APPLY_GRADIENT_REQ (1)
+#define GET_MODEL_REQ (2)
+#define GET_FULL_MODEL_REQ (3)
+#define REGISTER_WORKER_REQ (4)
+#define GET_SERVER_CLOCK_REQ (5)
+
+
 class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
 
-  void send_gradient(const LRSparseGradient&);
+  void send_gradient(const LRSparseGradient&, uint32_t& worker_clock);
   
   //void get_model(SparseLRModel& model);
   SparseLRModel get_full_model();
-  SparseLRModel get_sparse_model(const SparseDataset& ds);
+  SparseLRModel get_sparse_model(const SparseDataset& ds, uint32_t& worker_clock);
+
+  void register_worker(uint32_t&);
 
  private:
+  SparseLRModel get_sparse_model_aux(const SparseDataset& ds);
+  std::pair<uint64_t, uint64_t> get_ps_clock() const;
+
   std::string ip;
   int port;
   int sock;

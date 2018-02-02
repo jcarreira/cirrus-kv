@@ -6,7 +6,7 @@
 #include "async.h"
 #include "adapters/libevent.h"
 
-//#define DEBUG
+#undef DEBUG
     
 static void update_model(auto&);
 static void print_progress();
