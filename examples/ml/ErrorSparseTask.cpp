@@ -50,10 +50,10 @@ void ErrorSparseTask::run(const Configuration& config) {
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
 
-  std::cout << "Creating S3Iterator" << std::endl;
+  std::cout << "Creating sequential S3Iterator" << std::endl;
   auto test_range = config.get_test_range();
   S3SparseIterator s3_iter(test_range.first, test_range.second, config,
-      config.get_s3_size(), config.get_minibatch_size(), false);
+      config.get_s3_size(), config.get_minibatch_size(), 0, false);
 
   // get data first
   // what we are going to use as a test set
@@ -62,8 +62,10 @@ start:
   std::cout << "[ERROR_TASK] getting minibatches from "
     << test_range.first << " to " << test_range.second
     << std::endl;
-  for (int i = test_range.first; i < test_range.second; ++i) {
+  for (uint64_t i = 0;
+      i < (test_range.second - test_range.first) * (config.get_s3_size() / config.get_minibatch_size()); ++i) {
     try {
+      std::cout << "Getting object: " << i << std::endl;
       const void* minibatch_data = s3_iter.get_next_fast();
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
           config.get_minibatch_size());
