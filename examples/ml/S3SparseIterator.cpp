@@ -14,12 +14,17 @@ S3SparseIterator::S3SparseIterator(
         uint64_t left_id, uint64_t right_id, // right id is exclusive
         const Configuration& c,
         uint64_t s3_rows,
-        uint64_t minibatch_rows) :
+        uint64_t minibatch_rows,
+        int worker_id,
+        bool random_access) :
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows),
     minibatch_rows(minibatch_rows),
     pm(REDIS_IP, REDIS_PORT),
-    minibatches_list(100000)
+    minibatches_list(100000),
+    worker_id(worker_id),
+    re(worker_id),
+    random_access(random_access)
 {
       
   std::cout << "Creating S3SparseIterator"
@@ -38,6 +43,12 @@ S3SparseIterator::S3SparseIterator(
   sem_init(&semaphore, 0, 0);
 
   thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this, c));
+
+  if (random_access) {
+    srand(42 + worker_id);
+  } else {
+    current = left_id;
+  }
 }
 
 const void* S3SparseIterator::get_next_fast() {
@@ -131,12 +142,23 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   str_version++;
 }
 
-uint64_t get_random_obj_id(uint64_t left, uint64_t right) {
-  std::random_device rd;
-  std::default_random_engine re(rd());
-  std::uniform_int_distribution<int> sampler(left, right - 1);
+uint64_t S3SparseIterator::get_obj_id(uint64_t left, uint64_t right) {
+  if (random_access) {
+    //std::random_device rd;
+    //auto seed = rd();
+    //std::default_random_engine re2(seed);
 
-  return sampler(re);
+    std::uniform_int_distribution<int> sampler(left, right - 1);
+    uint64_t sampled = sampler(re);
+    //uint64_t sampled = rand() % right;
+    std::cout << "Sampled : " << sampled << " worker_id: " << worker_id << " left: " << left << " right: " << right << std::endl;
+    return sampled;
+  } else {
+    auto ret = current++;
+    if (current == right_id)
+      current = left_id;
+    return ret;
+  }
 }
 
 void S3SparseIterator::print_progress(const std::string& s3_obj) {
@@ -168,12 +190,12 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
 
-    uint64_t obj_id = get_random_obj_id(left_id, right_id);
+    uint64_t obj_id = get_obj_id(left_id, right_id);
 
     std::ostringstream* s3_obj;
 try_start:
     try {
-      //std::cout << "S3SparseIterator: getting object" << std::endl;
+      std::cout << "S3SparseIterator: getting object " << obj_id << std::endl;
       //auto start = get_time_us();
       s3_obj = s3_get_object_fast(obj_id, *s3_client, config.get_s3_bucket());
       //auto elapsed_us = (get_time_us() - start);

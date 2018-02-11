@@ -114,6 +114,8 @@ class Configuration {
     std::pair<int, int> get_train_range() const;
     std::pair<int, int> get_test_range() const;
 
+    bool get_use_bias() const;
+
  public:
     /**
       * Parse a specific line in the config file
@@ -153,6 +155,8 @@ class Configuration {
 
     std::pair<int, int> train_set_range;
     std::pair<int, int> test_set_range;
+
+    bool use_bias = false;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

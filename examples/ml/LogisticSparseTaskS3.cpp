@@ -137,7 +137,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   auto train_range = config.get_train_range();
   S3SparseIterator s3_iter(
       train_range.first, train_range.second,
-      config, config.get_s3_size(), config.get_minibatch_size());
+      config, config.get_s3_size(), config.get_minibatch_size(),
+      worker);
 
   std::cout << "[WORKER] starting loop" << std::endl;
 
@@ -157,17 +158,17 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::cout << "[WORKER] phase 1 done" << std::endl;
     //dataset->check();
     //dataset->print_info();
+    auto now = get_time_us();
 #endif
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
-    auto now = get_time_us();
     SparseLRModel model =
       LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
-    std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
 
 #ifdef DEBUG
+    std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
     std::cout << "Checking model" << std::endl;
     //model.check();
     std::cout << "Computing gradient" << "\n";

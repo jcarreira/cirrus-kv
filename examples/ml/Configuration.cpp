@@ -43,6 +43,7 @@ void Configuration::print() const {
     std::cout << "limit_samples: " << get_limit_samples() << std::endl;
     std::cout << "epsilon: " << epsilon << std::endl;
     std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
+    std::cout << "use_bias: " << use_bias << std::endl;
     std::cout << "train_set: "
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "
@@ -103,6 +104,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> limit_samples;
     } else if (s == "s3_bucket:") {
         iss >> s3_bucket_name;
+    } else if (s == "use_bias:") {
+        iss >> use_bias;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -270,5 +273,9 @@ std::pair<int, int> Configuration::get_train_range() const {
 
 std::pair<int, int> Configuration::get_test_range() const {
   return test_set_range;
+}
+
+bool Configuration::get_use_bias() const {
+  return use_bias;
 }
 

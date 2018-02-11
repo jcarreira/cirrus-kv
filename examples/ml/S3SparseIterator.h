@@ -18,7 +18,9 @@ class S3SparseIterator {
         uint64_t left_id, uint64_t right_id,
         const Configuration& c,
         uint64_t s3_rows,
-        uint64_t minibatch_rows);
+        uint64_t minibatch_rows,
+        int worker_id = 0,
+        bool random_access = true);
 
     const void* get_next_fast();
 
@@ -27,6 +29,7 @@ class S3SparseIterator {
  private:
   void push_samples(std::ostringstream* oss);
   void print_progress(const std::string& s3_obj);
+  uint64_t get_obj_id(uint64_t left, uint64_t right);
 
   uint64_t left_id;
   uint64_t right_id;
@@ -57,6 +60,11 @@ class S3SparseIterator {
   std::map<int, std::string> list_strings; // strings from s3
   CircularBuffer<std::pair<const void*, int>> minibatches_list;//(100000);
   int to_delete = -1;
+  int worker_id = 0;
+  
+  std::default_random_engine re;
+  bool random_access = true;
+  uint64_t current = 0;
 };
 
 #endif  // _S3_SPARSEITERATOR_H_

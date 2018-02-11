@@ -23,19 +23,14 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
     throw std::runtime_error("unknown input type");
   }
 
-  //SparseDataset dataset = input.read_input_criteo_sparse(
-  //    config.get_input_path(),
-  //    delimiter,
-  //    config.get_limit_samples(),
-  //    normalize);
-
   // READ the kaggle criteo dataset
   bool normalize = config.get_normalize();
   return input.read_input_criteo_kaggle_sparse(
       config.get_input_path(),
       delimiter,
       config.get_limit_samples(),
-      normalize);
+      normalize,
+      config.get_use_bias());
 }
 
 void LoadingSparseTaskS3::check_label(FEATURE_TYPE label) {
@@ -86,13 +81,11 @@ void LoadingSparseTaskS3::check_loading(
 void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
-  Configuration new_config = config;
-  uint64_t s3_obj_num_samples = new_config.get_s3_size();
-
+  uint64_t s3_obj_num_samples = config.get_s3_size();
   s3_initialize_aws();
   auto s3_client = s3_create_client();
  
-  SparseDataset dataset = read_dataset(new_config);
+  SparseDataset dataset = read_dataset(config);
   dataset.check();
 
   uint64_t num_s3_objs = dataset.num_samples() / s3_obj_num_samples;

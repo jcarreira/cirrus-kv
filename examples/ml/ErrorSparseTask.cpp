@@ -11,7 +11,7 @@
 #include "PSSparseServerInterface.h"
 
 #define DEBUG
-#define ERROR_INTERVAL_USEC (1000000) // time between error checks
+#define ERROR_INTERVAL_USEC (100000) // time between error checks
 
 /**
   * Ugly but necessary for now
@@ -51,16 +51,14 @@ void ErrorSparseTask::run(const Configuration& config) {
   }
 
   std::cout << "Creating S3Iterator" << std::endl;
-  uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
-  S3SparseIterator s3_iter(0, num_s3_batches, config,
-      config.get_s3_size(), config.get_minibatch_size());
+  auto test_range = config.get_test_range();
+  S3SparseIterator s3_iter(test_range.first, test_range.second, config,
+      config.get_s3_size(), config.get_minibatch_size(), false);
 
   // get data first
-  // we get up to 10K samples
   // what we are going to use as a test set
 start:
   std::vector<SparseDataset> minibatches_vec;
-  auto test_range = config.get_test_range();
   std::cout << "[ERROR_TASK] getting minibatches from "
     << test_range.first << " to " << test_range.second
     << std::endl;

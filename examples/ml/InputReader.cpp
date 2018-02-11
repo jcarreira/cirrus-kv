@@ -890,7 +890,7 @@ SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
 void InputReader::parse_criteo_kaggle_sparse_line(
     const std::string& line, const std::string& delimiter,
     std::vector<std::pair<int, FEATURE_TYPE>>& features,
-    FEATURE_TYPE& label) {
+    FEATURE_TYPE& label, bool use_bias) {
   char str[STR_SIZE];
 
   //std::cout << "line: " << line << std::endl;
@@ -926,6 +926,11 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     col++;
   }
 
+  /**
+    * indices 0...12 are for numerical features
+    * 13...hash_size+12 are categorical features
+    * hash_size+13 is for bias
+    */
   uint64_t feature_index = 0;
   for (const auto& feat : num_features) {
     if (feat != 0.0)
@@ -938,13 +943,18 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     FEATURE_TYPE value = feat.second;
     features.push_back(std::make_pair(13 + index, value));
   }
+
+  if (use_bias) { // add bias constant
+    features.push_back(std::make_pair(13 + hash_size, 1));
+  }
 }
 
 SparseDataset InputReader::read_input_criteo_kaggle_sparse(
     const std::string& input_file,
     const std::string& delimiter,
     uint64_t limit_lines,
-    bool to_normalize) {
+    bool to_normalize,
+    bool use_bias) {
   std::cout << "Reading criteo kaggle sparse input file: " << input_file << std::endl;
   std::cout << "Limit_line: " << limit_lines << std::endl;
 
@@ -981,7 +991,8 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
             std::placeholders::_1,
             std::placeholders::_2,
             std::placeholders::_3,
-            std::placeholders::_4)
+            std::placeholders::_4,
+            use_bias)
           ));
   }
 
@@ -995,7 +1006,7 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
   SparseDataset ret(std::move(samples), std::move(labels));
   if (to_normalize) {
     // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
+    ret.normalize( (1 << CRITEO_HASH_BITS) + 13 + use_bias);
   }
   return ret;
 }

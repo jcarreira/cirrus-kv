@@ -97,7 +97,8 @@ class InputReader {
   SparseDataset read_input_criteo_kaggle_sparse(const std::string& input_file,
       const std::string& delimiter,
       uint64_t limit_lines,
-      bool /*to_normalize*/);
+      bool /*to_normalize*/,
+      bool use_bias);
 
   private:
   /**
@@ -180,7 +181,7 @@ class InputReader {
   void parse_criteo_kaggle_sparse_line(
       const std::string& line, const std::string& delimiter,
       std::vector<std::pair<int, FEATURE_TYPE>>& features,
-      FEATURE_TYPE& label);
+      FEATURE_TYPE& label, bool use_bias);
 
   void parse_rcv1_vw_sparse_line(
     const std::string& line, const std::string& delimiter,

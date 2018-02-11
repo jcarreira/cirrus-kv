@@ -10,8 +10,8 @@
 
 #ifdef USE_REDIS
 #define REDIS_PORT (6379)
-#define REDIS_IP "172.31.12.154"
-#define PS_IP "172.31.12.154"
+#define REDIS_IP "172.31.2.140"
+#define PS_IP "172.31.2.140"
 #define PS_PORT 1337
 #endif
 
@@ -31,11 +31,8 @@
 
 using FEATURE_TYPE = float;
 
-//#define S3_BUCKET "cirrusonlambdas"
-//#define S3_SPARSE_BUCKET "cirrusonlambdas-sparse"
-
 #define CRITEO_HASH_BITS 20
-#define RCV1_HASH_BITS 20
+#define RCV1_HASH_BITS 19
 
 #define LIMIT_NUMBER_PASSES 3
 
