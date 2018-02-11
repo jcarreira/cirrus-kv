@@ -5,6 +5,7 @@
 #include "InputReader.h"
 #include "S3.h"
 #include "Utils.h"
+#include "config.h"
 
 #define READ_INPUT_THREADS (10)
 const std::string INPUT_DELIMITER = " ";
@@ -32,7 +33,7 @@ auto LoadingTaskS3::connect_redis() {
   return r;
 }
 
-void check_label(double label) {
+void check_label(FEATURE_TYPE label) {
   if (label != 1.0 && label != 0.0) {
     throw std::runtime_error("Wrong label value");
   }
@@ -42,15 +43,16 @@ void check_label(double label) {
   * Check if loading was well done
   */
 void LoadingTaskS3::check_loading(
+    const Configuration& config,
     auto& s3_client,
     uint64_t s3_obj_entries) {
   std::cout << "[LOADER] Trying to get sample with id: " << 0 << std::endl;
 
-  std::string data = s3_get_object(SAMPLE_BASE, s3_client, "cirrusonlambdas");
+  std::string data = s3_get_object(SAMPLE_BASE, s3_client, config.get_s3_bucket());
   
-  c_array_deserializer<double> cad_samples(
+  c_array_deserializer<FEATURE_TYPE> cad_samples(
       s3_obj_entries, "loader samples_store");
-  std::shared_ptr<double> sample = cad_samples(data.data(), data.size());
+  std::shared_ptr<FEATURE_TYPE> sample = cad_samples(data.data(), data.size());
 
   std::cout << "[LOADER] Checking label values.." << std::endl;
   check_label(sample.get()[0]);
@@ -61,7 +63,7 @@ void LoadingTaskS3::check_loading(
 #ifdef DEBUG
   std::cout << "[LOADER] " << "Print sample 0" << std::endl;
   for (unsigned int i = 1; i <= features_per_sample; ++i) {
-    double val = sample.get()[i];
+    FEATURE_TYPE val = sample.get()[i];
     std::cout << val << " ";
   }
 #endif
@@ -106,13 +108,13 @@ void LoadingTaskS3::run(const Configuration& config) {
 
     uint64_t first_sample = i * s3_obj_num_samples;
     uint64_t last_sample = (i + 1) * s3_obj_num_samples;
-    std::shared_ptr<double> s3_obj = dataset.build_s3_obj(first_sample, last_sample);
+    std::shared_ptr<FEATURE_TYPE> s3_obj = dataset.build_s3_obj(first_sample, last_sample);
 
 #if 0
     for (uint64_t j = 0; j < s3_obj_num_samples; ++j) {
-      double* label = s3_obj.get() + j * s3_obj_sample_entries;
+      FEATURE_TYPE* label = s3_obj.get() + j * s3_obj_sample_entries;
 
-      double* samples = label + 1;
+      FEATURE_TYPE* samples = label + 1;
       if (!FLOAT_EQ(*label, 0.0) && !FLOAT_EQ(*label, 1.0)) {
         throw std::runtime_error(
             "LoadingTaskS3::run Wrong label value " + std::to_string(*label));
@@ -121,16 +123,16 @@ void LoadingTaskS3::run(const Configuration& config) {
 #endif
 
     // serialize and write data into s3
-    c_array_serializer<double> cas_samples(s3_obj_entries);
+    c_array_serializer<FEATURE_TYPE> cas_samples(s3_obj_entries);
     uint64_t len = cas_samples.size(s3_obj);
     std::unique_ptr<char[]> data = std::unique_ptr<char[]>(new char[len]);
     cas_samples.serialize(s3_obj, data.get());
     std::cout << "Putting object in S3 with size: " << len << std::endl;
-    s3_put_object(SAMPLE_BASE + i, s3_client, "cirrusonlambdas",
+    s3_put_object(SAMPLE_BASE + i, s3_client, config.get_s3_bucket(),
         std::string(data.get(), len));
   }
 
-  check_loading(s3_client, s3_obj_entries);
+  check_loading(config, s3_client, s3_obj_entries);
   wait_for_start(LOADING_TASK_RANK, r, nworkers);
 }
 

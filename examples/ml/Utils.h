@@ -76,6 +76,8 @@ unsigned int get_rand();
   */
 double get_rand_between_0_1();
 
+double get_random_normal(double, double);
+
 /**
   * Used to delete arrays of arbitrary teypes
   */
@@ -110,5 +112,32 @@ void print_statistics(const T& begin, const T& end) {
 }
 
 void sleep_forever();
+
+// advance ptr a number of bytes forward
+template<typename T>
+void advance_ptr(T*& p, uint64_t bytes) {
+  const char*ptr = reinterpret_cast<const char*>(p);
+  ptr += bytes;
+  p = (T*)ptr;
+}
+
+template<typename T, typename C>
+void store_value(C*& data, T value) {
+  T* v_ptr = reinterpret_cast<T*>(data);
+  *v_ptr = value;
+  advance_ptr(data, sizeof(T));
+}
+
+template<typename T, typename C>
+T load_value(const C*& data) {
+  const T* v_ptr = reinterpret_cast<const T*>(data);
+  T ret = *v_ptr;
+  advance_ptr(data, sizeof(T));
+  return ret;
+}
+
+ssize_t send_all(int sock, void* data, size_t len);
+
+ssize_t read_all(int sock, void* data, size_t len);
 
 #endif  // EXAMPLES_ML_UTILS_H_

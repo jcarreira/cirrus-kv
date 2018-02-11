@@ -107,7 +107,16 @@ class Configuration {
       */
     uint64_t get_num_features() const;
 
- private:
+    std::string get_s3_bucket() const;
+
+    void check() const;
+
+    std::pair<int, int> get_train_range() const;
+    std::pair<int, int> get_test_range() const;
+
+    bool get_use_bias() const;
+
+ public:
     /**
       * Parse a specific line in the config file
       * @param line Configuration line
@@ -141,6 +150,13 @@ class Configuration {
 
     uint64_t limit_samples = 0;  //< max number of training input samples
     uint64_t num_features = 0;   //< number of features in each sample
+
+    std::string s3_bucket_name; //< bucket used for training dataset
+
+    std::pair<int, int> train_set_range;
+    std::pair<int, int> test_set_range;
+
+    bool use_bias = false;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

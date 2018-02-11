@@ -13,8 +13,7 @@ void s3_initialize_aws() {
 Aws::S3::S3Client s3_create_client() {
   Aws::Client::ClientConfiguration clientConfig;
   clientConfig.region = Aws::Region::US_WEST_2;
-
-  // try big timeout
+  clientConfig.maxConnections = 2;
   clientConfig.connectTimeoutMs = 30000;
   clientConfig.requestTimeoutMs = 60000;
 
@@ -86,6 +85,26 @@ std::string s3_get_object(uint64_t id, Aws::S3::S3Client& s3_client,
     auto buf = get_object_outcome.GetResult().GetBody().rdbuf();
     ss << buf;
     return ss.str();
+  } else {
+    std::cout << "GetObject error: " <<
+       get_object_outcome.GetError().GetExceptionName() << " " <<
+       get_object_outcome.GetError().GetMessage() << std::endl;
+    throw std::runtime_error("Error");
+  }
+}
+
+std::ostringstream* s3_get_object_fast(uint64_t id, Aws::S3::S3Client& s3_client,
+                const std::string& bucket_name) {
+  std::string key_name = "CIRRUS" + std::to_string(id);
+  Aws::S3::Model::GetObjectRequest object_request;
+  object_request.WithBucket(bucket_name).WithKey(key_name);
+
+  auto get_object_outcome = s3_client.GetObject(object_request);
+
+  if (get_object_outcome.IsSuccess()) {
+    std::ostringstream* ss = new std::ostringstream;
+    *ss << get_object_outcome.GetResult().GetBody().rdbuf();
+    return ss;
   } else {
     std::cout << "GetObject error: " <<
        get_object_outcome.GetError().GetExceptionName() << " " <<

@@ -4,9 +4,10 @@
 extern "C" {
 
 #include <string.h>
+#include <assert.h>
 #include "Redis.h"
 
-//#define REDIS_DEBUG
+#undef REDIS_DEBUG
 
 redisContext* redis_connect(const char* hostname, int port) {
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
@@ -128,7 +129,7 @@ char* redis_binary_get(redisContext* c, const char* id, int* len) {
     std::cout << "[REDIS] "
         << "redis binary get id: " << id << std::endl;
 #endif
-    redisReply* reply = (redisReply*)redisCommand(c,"GET %b", id);
+    redisReply* reply = (redisReply*)redisCommand(c,"GET %b", id, (size_t)strlen(id));
 
     if (reply->type == REDIS_REPLY_NIL) {
 #ifdef REDIS_DEBUG
@@ -178,28 +179,19 @@ char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
 #ifdef REDIS_DEBUG
         std::cout << "[REDIS] "
             << "redis get failed"
+            << " redis return nullptr"
             << std::endl;
 #endif
         free(id_str);
-#ifdef REDIS_DEBUG
-        std::cout << "[REDIS] "
-            << "redis return nullptr"
-            << std::endl;
-#endif
         return nullptr;
     }
 
 #ifdef REDIS_DEBUG
     std::cout << "[REDIS] "
-        << "freeing id_str"
-        << std::endl;
-#endif
-    free(id_str);
-#ifdef REDIS_DEBUG
-    std::cout << "[REDIS] "
         << "return ret"
         << std::endl;
 #endif
+    free(id_str);
     return ret;
 }
 
@@ -266,10 +258,6 @@ char* redis_pop_list(redisContext* r, const char* list_name) {
     char* ret = (char*)malloc(reply->len);
     memcpy(ret, reply->str, reply->len);
 
-    //if (len != nullptr) {
-    //    *len = reply->len;
-    //}
-
     freeReplyObject(reply);
     return ret;
 }
@@ -309,6 +297,20 @@ void redis_connect_callback(redisAsyncContext* c, conn_handler h) {
 
 void redis_disconnect_callback(redisAsyncContext* c, conn_handler h) {
     redisAsyncSetDisconnectCallback(c, h);
+}
+
+void redis_increment_counter(redisContext* r, const char* id, int* prev) {
+    redisReply* reply = (redisReply*) redisCommand(r,"INCR %s", id);
+    if (reply->type == REDIS_REPLY_ERROR) {
+      throw std::runtime_error("Error incrementing counter");
+    } 
+    
+    assert(reply->type == REDIS_REPLY_INTEGER);
+
+    if (prev != nullptr) {
+      *prev = reply->integer;
+    }
+    freeReplyObject(reply);
 }
 
 }

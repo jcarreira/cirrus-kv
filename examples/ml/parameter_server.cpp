@@ -1,18 +1,12 @@
 #include <stdlib.h>
 #include <cstdint>
 #include <string>
-#include <Checksum.h>
 #include "Utils.h"
-#include "Model.h"
-#include "LRModel.h"
-#include "ModelGradient.h"
 #include "Configuration.h"
-#include "Serializers.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
 #include "utils/Log.h"
-#include "client/TCPClient.h"
 #include "common/Exception.h"
 #include <Tasks.h>
 
@@ -42,7 +36,21 @@ void run_tasks(int rank, int nworkers,
   int features_per_sample = config.get_num_features();
   int samples_per_batch = config.get_minibatch_size();
 
-  if (rank == PS_TASK_RANK) {
+  if (rank == PERFORMANCE_LAMBDA_RANK) {
+    PerformanceLambdaTask lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+    sleep_forever();
+  } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
+    PSSparseServerTask st(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    st.run(config);
+    sleep_forever();
+  } else if (rank == PS_TASK_RANK) {
     PSTask pt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
@@ -62,18 +70,47 @@ void run_tasks(int rank, int nworkers,
         nworkers, rank);
     et.run(config);
     sleep_forever();
-  } else if (rank >= WORKER_TASK_RANK && rank < WORKER_TASK_RANK + nworkers) {
+  } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
     /**
      * Worker tasks run here
      * Number of tasks is determined by the value of nworkers
      */
-    LogisticTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
-    lt.run(config, rank - WORKER_TASK_RANK);
+    lt.run(config, rank - WORKERS_BASE);
+  }
+  /**
+    * SPARSE tasks
+    */
+  else if (rank == ERROR_SPARSE_TASK_RANK) {
+    ErrorSparseTask et(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    et.run(config);
     sleep_forever();
-
+  } else if (rank == LOADING_SPARSE_TASK_RANK) {
+    LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+  } else if (rank == PS_SPARSE_TASK_RANK) {
+    PSSparseTask pt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    pt.run(config);
+    sleep_forever();
+  } else if (rank == WORKER_SPARSE_TASK_RANK) {
+    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config, rank - WORKERS_BASE);
+    sleep_forever();
   } else {
     throw std::runtime_error("Wrong task rank: " + std::to_string(rank));
   }

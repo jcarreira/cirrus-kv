@@ -6,9 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server parameter_server_softmax
-#two_clients_test bug_regression \
-#               parameter_server_softmax
+bin_PROGRAMS = parameter_server parameter_server_softmax ps_test
 
 LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
@@ -44,24 +42,28 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/ -Itest_aws \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
-	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/
+	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/ 
 
 CPP_SOURCES = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
               ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
-              PSTask.cpp TasksWait.cpp \
-	      RedisIterator.cpp  S3Iterator.cpp \
-	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp
+              PSTask.cpp PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
+	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
+	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
+	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp LogisticSparseTaskS3.cpp \
+	      S3SparseIterator.cpp ProgressMonitor.cpp PSSparseServerTask.cpp PSSparseServerInterface.cpp
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
               Tasks_softmax.cpp Serializers.cpp  \
-              Redis.cpp SparseDataset.cpp
+              Redis.cpp SparseDataset.cpp MurmurHash3.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
 				$(CPP_SOURCES_SOFTMAX)
+
+ps_test_SOURCES = PSSparseServerTaskTest.cpp $(CPP_SOURCES)

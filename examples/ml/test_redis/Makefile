@@ -7,14 +7,17 @@ LDFLAGS=-L../../../third_party/hiredis/ \
 
 LIBFLAGS  = -static-libgcc  -static  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
-all:   test_redis_pubsub
+all:   test_redis_pubsub test_redis_incr
 
 test_redis_pubsub:test_redis_pubsub.cpp
 	g++ $(CXXFLAGS) test_redis_pubsub.cpp $(INCLUDES)  $(LDFLAGS) $(LIBFLAGS) -o test_redis_pubsub
 
+test_redis_incr:test_redis_incr.cpp ../Redis.cpp
+	g++ $(CXXFLAGS) test_redis_incr.cpp ../Redis.cpp $(INCLUDES)  $(LDFLAGS) $(LIBFLAGS) -o test_redis_incr
+
 
 clean:
-	rm -rf a.out test_redis_pubsub
+	rm -rf a.out test_redis_pubsub test_redis_incr
 
 run:
 	LD_LIBRARY_PATH=/usr/local/lib/ ./test

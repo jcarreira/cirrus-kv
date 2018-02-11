@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <Utils.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
@@ -24,10 +25,13 @@ void Configuration::read(const std::string& path) {
 
     std::string line;
     while (getline(fin, line)) {
-        parse_line(line);
+      if (line.size() && line[0] == '#')
+        continue;
+      parse_line(line);
     }
 
     print();
+    check();
 }
 
 void Configuration::print() const {
@@ -37,6 +41,19 @@ void Configuration::print() const {
     std::cout << "S3 size: " << get_s3_size() << std::endl;
     std::cout << "learning rate: " << get_learning_rate() << std::endl;
     std::cout << "limit_samples: " << get_limit_samples() << std::endl;
+    std::cout << "epsilon: " << epsilon << std::endl;
+    std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
+    std::cout << "use_bias: " << use_bias << std::endl;
+    std::cout << "train_set: "
+      << train_set_range.first << "-" << train_set_range.second << std::endl;
+    std::cout << "test_set: "
+      << test_set_range.first << "-" << test_set_range.second << std::endl;
+}
+
+void Configuration::check() const {
+  if (s3_bucket_name == "") {
+    throw std::runtime_error("S3 bucket name missing from config file");
+  }
 }
 
 /**
@@ -53,8 +70,14 @@ void Configuration::parse_line(const std::string& line) {
 
     if (s == "minibatch_size:") {
         iss >> minibatch_size;
+        if (s3_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
     } else if (s == "s3_size:") {
         iss >> s3_size;
+        if (minibatch_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
     } else if (s == "num_features:") {
         iss >> num_features;
     } else if (s == "input_path:") {
@@ -79,6 +102,10 @@ void Configuration::parse_line(const std::string& line) {
         iss >> limit_cols;
     } else if (s == "limit_samples:") {
         iss >> limit_samples;
+    } else if (s == "s3_bucket:") {
+        iss >> s3_bucket_name;
+    } else if (s == "use_bias:") {
+        iss >> use_bias;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -93,6 +120,28 @@ void Configuration::parse_line(const std::string& line) {
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
+    } else if (s == "train_set:") {
+        std::string range;
+        iss >> range;
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
+        train_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
+    } else if (s == "test_set:") {
+        std::string range;
+        iss >> range;
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
+        test_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
     } else {
         throw std::runtime_error("Unrecognized option: " + line);
     }
@@ -210,3 +259,23 @@ uint64_t Configuration::get_limit_samples() const {
 uint64_t Configuration::get_num_features() const {
     return num_features;
 }
+
+/**
+  * Get S3 bucket name
+  */
+std::string Configuration::get_s3_bucket() const {
+    return s3_bucket_name;
+}
+
+std::pair<int, int> Configuration::get_train_range() const {
+  return train_set_range;
+}
+
+std::pair<int, int> Configuration::get_test_range() const {
+  return test_set_range;
+}
+
+bool Configuration::get_use_bias() const {
+  return use_bias;
+}
+

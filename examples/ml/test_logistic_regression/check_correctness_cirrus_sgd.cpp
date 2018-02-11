@@ -10,23 +10,7 @@
 #include <InputReader.h>
 #include <LRModel.h>
 
-typedef float FEATURE_TYPE;
 const std::string INPUT_PATH = "criteo_data/day_1_100k_filtered";
-
-template<typename Out>
-void split(const std::string &s, char delim, Out result) {
-  std::stringstream ss(s);
-  std::string item;
-  while (std::getline(ss, item, delim)) {
-    *(result++) = item;
-  }
-}
-
-std::vector<std::string> split(const std::string &s, char delim) {
-  std::vector<std::string> elems;
-  split(s, delim, std::back_inserter(elems));
-  return elems;
-}
 
 void print_info(const auto& samples) {
   std::cout << "Number of samples: " << samples.size() << std::endl;
@@ -49,7 +33,7 @@ void learning_function(const Dataset& dataset) {
     Dataset ds = dataset.random_sample(20);
 
     auto gradient = model->minibatch_grad(ds.samples_,
-        const_cast<double*>(ds.labels_.get()),
+        const_cast<FEATURE_TYPE*>(ds.labels_.get()),
         ds.num_samples(), epsilon);
 
     model_lock.lock();

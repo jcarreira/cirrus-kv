@@ -64,9 +64,9 @@ void test_s3() {
     std::cout << "Creating client" << std::endl;
     auto client = s3_create_client();
     std::cout << "Putting object" << std::endl;
-    s3_put_object(0, client, "cirrusonlambdas", "JOAO");
+    s3_put_object(0, client, S3_BUCKET, "JOAO");
     std::cout << "Getting object" << std::endl;
-    auto res = s3_get_object(0, client, "cirrusonlambdas");
+    auto res = s3_get_object(0, client, S3_BUCKET);
     std::cout << "Received: " << res << std::endl;
 
     s3_shutdown_aws();

@@ -22,6 +22,8 @@ void s3_put_object(uint64_t id, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name, const std::string& object);
 std::string s3_get_object(uint64_t id, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name);
+std::ostringstream* s3_get_object_fast(uint64_t id, Aws::S3::S3Client& s3_client,
+                const std::string& bucket_name);
 void s3_shutdown_aws();
 
 #endif  // _CIRRUS_S3_H

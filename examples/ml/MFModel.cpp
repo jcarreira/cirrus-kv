@@ -12,15 +12,15 @@
 // FORMAT
 // Number of users (32bits)
 // Number of factors (32bits)
-// Sample1: factor 1 (double) | factor 2 | factor 3 
+// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3 
 // Sample2 : ...
 // ....
 
 void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfactors) {
-  user_weights_ = new double[users * nfactors];
-  item_weights_ = new double[items * nfactors];
-  user_bias_ = new double[users];
-  item_bias_ = new double[items];
+  user_weights_ = new FEATURE_TYPE[users * nfactors];
+  item_weights_ = new FEATURE_TYPE[items * nfactors];
+  user_bias_ = new FEATURE_TYPE[users];
+  item_bias_ = new FEATURE_TYPE[items];
 
   item_fact_reg_ = 0.01;
   user_fact_reg_ = 0.01;
@@ -32,8 +32,8 @@ void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfacto
   nitems_ = items;
   nfactors_ = nfactors;
 
-  memset(user_bias_, 0, users * sizeof(double));
-  memset(item_bias_, 0, items * sizeof(double));
+  memset(user_bias_, 0, users * sizeof(FEATURE_TYPE));
+  memset(item_bias_, 0, items * sizeof(FEATURE_TYPE));
 
   randomize();
 }
@@ -85,7 +85,7 @@ void MFModel::serializeTo(void* mem) const {
     *data_u = nfactors_;
     data_u++;
 
-    double* data_d = reinterpret_cast<double*>(data_u);
+    FEATURE_TYPE* data_d = reinterpret_cast<FEATURE_TYPE*>(data_u);
     std::copy(user_weights_, user_weights_ + nusers_ * nfactors_, data_d);
 
     data_d += nusers_ * nfactors_;
@@ -98,7 +98,7 @@ void MFModel::serializeTo(void* mem) const {
   */
 void MFModel::randomize() {
   std::default_random_engine generator;
-  std::normal_distribution<double> distribution(0, 1.0 / nfactors_); // mean 0 and stddev=1
+  std::normal_distribution<FEATURE_TYPE> distribution(0, 1.0 / nfactors_); // mean 0 and stddev=1
   for (uint64_t i = 0; i < nusers_; ++i) {
     for (uint64_t j = 0; j < nfactors_; ++j) {
       get_user_weights(i, j) = distribution(generator);
@@ -123,7 +123,7 @@ void MFModel::sgd_update(double learning_rate,
 }
 
 uint64_t MFModel::getSerializedSize() const {
-    return size() * sizeof(double);
+    return size() * sizeof(FEATURE_TYPE);
 }
 
 void MFModel::loadSerialized(const void* data) {
@@ -141,8 +141,8 @@ void MFModel::loadSerialized(const void* data) {
     throw std::runtime_error("Not implemented");
 }
 
-double MFModel::predict(uint32_t userId, uint32_t itemId) const {
-  double res = global_bias_ + user_bias_[userId] + item_bias_[itemId];
+FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
+  FEATURE_TYPE res = global_bias_ + user_bias_[userId] + item_bias_[itemId];
   
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
@@ -161,7 +161,7 @@ double MFModel::predict(uint32_t userId, uint32_t itemId) const {
 
 std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
         const Matrix&,
-        double*,
+        FEATURE_TYPE*,
         uint64_t,
         double epsilon) const {
   throw std::runtime_error("Not implemented");
@@ -226,11 +226,11 @@ std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
   return std::make_unique<MFGradient>(10, 10);
 }
 
-double& MFModel::get_user_weights(uint64_t userId, uint64_t factor) const {
+FEATURE_TYPE& MFModel::get_user_weights(uint64_t userId, uint64_t factor) const {
   return *(user_weights_ + userId * nfactors_ + factor);
 }
 
-double& MFModel::get_item_weights(uint64_t itemId, uint64_t factor) const {
+FEATURE_TYPE& MFModel::get_item_weights(uint64_t itemId, uint64_t factor) const {
   return *(item_weights_ + itemId * nfactors_ + factor);
 }
 
@@ -244,10 +244,10 @@ void MFModel::sgd_update(
       for (uint64_t j = 0; j < dataset.data_[i].size(); ++j) {
         uint64_t user = base_user + i;
         uint64_t itemId = dataset.data_[i][j].first;
-        double rating = dataset.data_[i][j].second;
+        FEATURE_TYPE rating = dataset.data_[i][j].second;
 
-        double pred = predict(user, itemId);
-        double error = rating - pred;
+        FEATURE_TYPE pred = predict(user, itemId);
+        FEATURE_TYPE error = rating - pred;
 
         //std::cout 
         //  << "rating: " << rating
@@ -266,7 +266,7 @@ void MFModel::sgd_update(
 
         // update user latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          double delta_user_w = 
+          FEATURE_TYPE delta_user_w = 
             learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
           //std::cout << "delta_user_w: " << delta_user_w << std::endl;
           get_user_weights(user, k) += delta_user_w;
@@ -279,7 +279,7 @@ void MFModel::sgd_update(
 
         // update item latent factors
         for (uint64_t k = 0; k < nfactors_; ++k) {
-          double delta_item_w =
+          FEATURE_TYPE delta_item_w =
             learning_rate * (error * get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
           //std::cout << "delta_item_w: " << delta_item_w << std::endl;
           get_item_weights(itemId, k) += delta_item_w;
@@ -309,10 +309,10 @@ double MFModel::calc_loss(SparseDataset& dataset) const {
   for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
     for (uint64_t j = 0; j < dataset.data_[userId].size(); ++j) {
       uint64_t movieId = dataset.data_[userId][j].first;
-      double rating = dataset.data_[userId][j].second;
+      FEATURE_TYPE rating = dataset.data_[userId][j].second;
 
-      double prediction = predict(userId, movieId);
-      double e = rating - prediction;
+      FEATURE_TYPE prediction = predict(userId, movieId);
+      FEATURE_TYPE e = rating - prediction;
 
       //std::cout << "e: " << e << std::endl;
 
@@ -332,7 +332,7 @@ double MFModel::calc_loss(SparseDataset& dataset) const {
 }
 
 uint64_t MFModel::getSerializedGradientSize() const {
-    return size() * sizeof(double);
+    return size() * sizeof(FEATURE_TYPE);
 }
 
 std::unique_ptr<ModelGradient> MFModel::loadGradient(void* mem) const {
@@ -342,7 +342,7 @@ std::unique_ptr<ModelGradient> MFModel::loadGradient(void* mem) const {
 }
 
 double MFModel::checksum() const {
-    return crc32(user_weights_, nusers_ * nfactors_ * sizeof(double));
+    return crc32(user_weights_, nusers_ * nfactors_ * sizeof(FEATURE_TYPE));
 }
 
 void MFModel::print() const {
