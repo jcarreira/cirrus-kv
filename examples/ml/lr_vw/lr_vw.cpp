@@ -6,20 +6,20 @@
 #include <utility>
 #include <map>
 #include <sstream>
+#include <cassert>
 #include <cmath>
 #include "MurmurHash3.h"
 #include "hash.h"
 
-#define HASH_SIZE (1 << 20)
+#define HASH_BITS (18)
 
 #define TEST_SET_SIZE (2000)
+
+#undef DEBUG
 
 typedef std::vector<float> model_type;
 typedef std::vector<std::pair<int, std::vector<std::pair<int, int>>>> samples_type;
 typedef std::pair<int, std::vector<std::pair<int, int>>> sample_type;
-
-
-
 
 void normalize(uint64_t hash_size, samples_type& samples) {
   std::vector<float> max_val_feature(hash_size);
@@ -29,8 +29,9 @@ void normalize(uint64_t hash_size, samples_type& samples) {
     for (const auto& v : w.second) {
       int index = v.first;
       float value = v.second;
-      max_val_feature[index] = std::max(value, max_val_feature[index]);
-      min_val_feature[index] = std::min(value, min_val_feature[index]);
+      std::cout << "index: " << index << std::endl;
+      max_val_feature.at(index) = std::max(value, max_val_feature[index]);
+      min_val_feature.at(index) = std::min(value, min_val_feature[index]);
     }
   }
   for (auto& w : samples) {
@@ -75,6 +76,7 @@ read_input(const std::string& fname) {
 
     std::vector<std::string> parts;
 
+    // We tokenize the string
     char* str = strdup(s.c_str());
     while (char* p = strsep(&str, " ")) {
       //std::cout << "s: " << p << std::endl;
@@ -89,29 +91,49 @@ read_input(const std::string& fname) {
       throw std::runtime_error("|i not found");
     }
 
-    //std::cout << "Parsing integer values" << std::endl;
+    uint64_t parse_mask = ((1 << HASH_BITS) - 1);
     std::map<int,int> feature_values;
+    // Parsing integer values
     uint64_t i = 3;
+    uint64_t i_seed = hashstring("i", 0);
+    //std::cout << "i_seed: " << i_seed << std::endl;
     while (1) {
       //std::cout << "parts[i]: " << parts[i] << std::endl;
       if (strcmp(parts[i].c_str(), "|c") == 0) {
         break;
       }
-      std::string pair = parts[i].substr(1);
+      std::string pair = parts[i].substr(0);
       size_t sep = pair.find(":");
       std::string index = pair.substr(0, sep);
       std::string value = pair.substr(sep + 1);
-      feature_values[string_to<int>(index)] = string_to<int>(value);
+      uint64_t original_hash = hashstring(index, i_seed);
+      uint64_t h = (original_hash & parse_mask);
+      assert(h < (1 << HASH_BITS));
+      //if (h >= (1 << HASH_BITS)) throw std::runtime_error("");
+      feature_values[h] = string_to<int>(value);
+#ifdef DEBUg
+      std::cout
+        << "index: " << index
+        << " parse_mask: " << parse_mask
+        << " original hash: " << original_hash
+        << "hash: " << h
+        << " value: " << value
+        << std::endl;
+#endif
       ++i;
     }
     ++i; // move to categorical features
     
-    //std::cout << "Parsing categorical values" << std::endl;
+     // Hashing c values
+    uint64_t c_seed = hashstring("c", 0);
+    //std::cout << "c_seed: " << c_seed << std::endl;
     for (; i < parts.size(); ++i) {
-      uint64_t h = hash_f(parts[i].c_str()) % HASH_SIZE;
+      uint64_t h = (hashstring(parts[i], c_seed) & parse_mask);
+      //uint64_t h = hash_f(parts[i].c_str()) % HASH_SIZE;
       feature_values[h]++;
     }
 
+    //
     sample_type l;
     for (const auto& v : feature_values) {
       auto index = v.first;
@@ -130,7 +152,7 @@ read_input(const std::string& fname) {
     }
     line_count++;
 
-    if (line_count > 5000000)
+    if (line_count > 1000000)
       break;
   }
   return result;
@@ -250,15 +272,15 @@ std::pair<samples_type, samples_type> split_samples(const samples_type& samples)
   */
 int main() {
   auto samples = read_input("/mnt/ebs/click.train.vw");
-  normalize(HASH_SIZE, samples);
+  normalize(1 << HASH_BITS, samples);
 
   auto split_data = split_samples(samples);
   auto train_data = split_data.first;
   auto test_data = split_data.second;
 
   std::vector<float> model, w_normalized;
-  model.resize(HASH_SIZE);
-  w_normalized.resize(HASH_SIZE);
+  model.resize(1 << HASH_BITS);
+  w_normalized.resize(1 << HASH_BITS);
   //weights_hist.resize(HASH_SIZE);
 
   for (uint64_t i = 0; i < train_data.size(); ++i) {

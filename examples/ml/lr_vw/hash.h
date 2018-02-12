@@ -1,21 +1,49 @@
-uint64_t uniform_hash(const void * key, size_t len, uint64_t seed);
+#include <stdint.h>   // defines uint32_t etc
+
+#undef DEBUG
+
+inline uint32_t rotl32(uint32_t x, int8_t r) {
+  return (x << r) | (x >> (32 - r));
+}
+
+#define ROTL32(x,y)     rotl32(x,y)
+#define BIG_CONSTANT(x) (x##LLU)
+
+//-----------------------------------------------------------------------------
+// Finalization mix - force all bits of a hash block to avalanche
+
+inline uint32_t fmix(uint32_t h)
+{ h ^= h >> 16; 
+  h *= 0x85ebca6b;
+  h ^= h >> 13; 
+  h *= 0xc2b2ae35;
+  h ^= h >> 16; 
+
+  return h;
+}
+
+uint64_t uniform_hash(const void *key, size_t length, uint64_t seed);
 
 uint64_t hashstring (std::string s, uint64_t h) {
-  std::cout << "hashing string: " << s << " h: " << h << std::endl;
+  s += " ";
+#ifdef DEBUG
+  std::cout << "hashing string: " << s << " seed h: " << h << std::endl;
+#endif
   //trim leading whitespace but not UTF-8
   std::string::iterator it = s.begin();
   for(; it != s.end() && *it <= 0x20 && (int)*it>= 0; it++);
   //trim trailing white space but not UTF-8
   std::string::iterator it_end = s.end() - 1;
   for(; it_end > it && *(it_end-1) <= 0x20 && (int)*(it_end-1) >=0; it_end--);
+  //for(; it_end > it && *(it_end-1) <= 0x20 && (int)*(it_end-1) >=0; it_end--);
 
   size_t ret = 0;
-  char *p = &*it;
+  char *p = &(*it);
   while (p != &*it_end) {
     if (*p >= '0' && *p <= '9')
       ret = 10*ret + *(p++) - '0';
     else
-      return uniform_hash((unsigned char *)&*it, (&*it_end) - (&*it), h); 
+      return uniform_hash((unsigned char *)&(*it), &(*it_end) - &(*it), h); 
   }
   return ret + h;
 }
@@ -40,7 +68,7 @@ uint64_t uniform_hash(const void * key, size_t len, uint64_t seed) {
 
   for (int i = -nblocks; i; i++)
   {
-    uint32_t k1 = MURMUR_HASH_3::getblock(blocks, i); 
+    uint32_t k1 = getblock(blocks, i); 
 
     k1 *= c1; 
     k1 = ROTL32(k1, 15);
@@ -67,6 +95,6 @@ uint64_t uniform_hash(const void * key, size_t len, uint64_t seed) {
   // --- finalization
   h1 ^= len;
 
-  return MURMUR_HASH_3::fmix(h1);
+  return fmix(h1);
 }
 

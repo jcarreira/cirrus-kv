@@ -24,7 +24,7 @@ PROJ=lr_vw
 
 all: $(PROJ)
 
-lr_vw: $(PROJ).cpp
+lr_vw: $(PROJ).cpp hash.h
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
 	$(PROJ).cpp ../MurmurHash3.cpp \
 	-o $@ $(LIBFLAGS) 
