@@ -8,6 +8,7 @@
 #include <sstream>
 #include <cmath>
 #include "MurmurHash3.h"
+#include "hash.h"
 
 #define HASH_SIZE (1 << 20)
 
@@ -16,6 +17,9 @@
 typedef std::vector<float> model_type;
 typedef std::vector<std::pair<int, std::vector<std::pair<int, int>>>> samples_type;
 typedef std::pair<int, std::vector<std::pair<int, int>>> sample_type;
+
+
+
 
 void normalize(uint64_t hash_size, samples_type& samples) {
   std::vector<float> max_val_feature(hash_size);
@@ -40,14 +44,14 @@ void normalize(uint64_t hash_size, samples_type& samples) {
 
 template <class C>
 C string_to(const std::string& s) {
-    if (s == "") {
-        return 0;
-    } else {
-        std::istringstream iss(s);
-        C c;
-        iss >> c;
-        return c;
-    }
+  if (s == "") {
+    return 0;
+  } else {
+    std::istringstream iss(s);
+    C c;
+    iss >> c;
+    return c;
+  }
 }
 
 uint64_t hash_f(const char* s) {
@@ -61,6 +65,8 @@ samples_type
 read_input(const std::string& fname) {
   std::ifstream fin(fname);
   std::string s;
+
+  std::cout << "Reading " << fname << std::endl;
 
   samples_type result;
   uint64_t line_count = 0;
@@ -119,12 +125,12 @@ read_input(const std::string& fname) {
     //std::cout << std::endl;
     result.push_back(l);
 
-    if ((line_count % 1000) == 0) {
+    if ((line_count % 10000) == 0) {
       std::cout << line_count << std::endl;
     }
     line_count++;
 
-    if (line_count > 50000)
+    if (line_count > 5000000)
       break;
   }
   return result;
@@ -143,19 +149,18 @@ float compute_update(const model_type& model, const sample_type& sample) {
     int index = v.first;
     int value = v.second;
     res += model.at(index) * value;
-    std::cout 
-      << "res: " << res
-      << " value: " << value
-      << " model v: " << model.at(index)
-      << std::endl;
+    //std::cout 
+    //  << "res: " << res
+    //  << " value: " << value
+    //  << " model v: " << model.at(index)
+    //  << std::endl;
   }
   return res;
 }
 
-float getUnsafeUpdate(float prediction, float label, float update_scale)
-{
+float getUnsafeUpdate(float prediction, float label, float update_scale) {
   float d = exp(label * prediction);
-  return label*update_scale/(1+d);
+  return label * update_scale / (1 + d);
 }
 
 float s_1_float(float x) {
@@ -170,18 +175,17 @@ float s_1_float(float x) {
 }
 
 double log_aux(double v) {
-    if (v == 0) {
-        return -10000;
-    }
+  if (v == 0) {
+    return -10000;
+  }
 
-    double res = log(v);
-    if (std::isnan(res) || std::isinf(res)) {
-        throw std::runtime_error(
-            std::string("log_aux generated nan/inf v: ") +
-            std::to_string(v));
-    }
-
-    return res;
+  double res = log(v);
+  if (std::isnan(res) || std::isinf(res)) {
+    throw std::runtime_error(
+        std::string("log_aux generated nan/inf v: ") +
+        std::to_string(v));
+  }
+  return res;
 }
 
 float compute_loss(model_type& model, samples_type& samples) {
@@ -227,7 +231,7 @@ void normalize_sample(model_type& model, model_type& w_normalized, sample_type& 
 }
 
 std::pair<samples_type, samples_type> split_samples(const samples_type& samples) {
-  float train_size = 0.9 * samples.size();
+  float train_size = 0.98 * samples.size();
 
   samples_type train_data;
   samples_type test_data;
@@ -246,46 +250,43 @@ std::pair<samples_type, samples_type> split_samples(const samples_type& samples)
   */
 int main() {
   auto samples = read_input("/mnt/ebs/click.train.vw");
+  normalize(HASH_SIZE, samples);
 
   auto split_data = split_samples(samples);
   auto train_data = split_data.first;
   auto test_data = split_data.second;
 
-  normalize(HASH_SIZE, samples);
-
   std::vector<float> model, w_normalized;
   model.resize(HASH_SIZE);
   w_normalized.resize(HASH_SIZE);
+  //weights_hist.resize(HASH_SIZE);
 
   for (uint64_t i = 0; i < train_data.size(); ++i) {
     const auto& train_sample = train_data[i];
     // here before we compute the update we should do the VW normalization
-
-    //normalize_sample(model, w_normalized, samples[i]);
-
     float update = compute_update(model, train_sample);
     std::cout << "update0: " << update << std::endl;
-    clip(update);
+    //clip(update);
 
     std::cout << "update1: " << update << std::endl;
   
-    update = getUnsafeUpdate(update, train_sample.first, 0.1);
+    update = getUnsafeUpdate(update, train_sample.first, 0.01);
     std::cout << "update2: " << update << std::endl;
 
+    double adagrad_epsilon = 10e-8;
     for (const auto& v : train_sample.second) {
       int index = v.first;
       int value = v.second;
       model[index] += update * value;
     }
 
-    if (i % 10 == 0) {
+    if (i % 1000 == 0) {
       float loss = compute_loss(model, test_data);
       std::cout
         << "total loss: " << loss
         << " average loss: " << (loss / TEST_SET_SIZE)
         << std::endl;
     }
-
   }
   // compute ret = model x sample
   // clip ret to [-50, 50]
