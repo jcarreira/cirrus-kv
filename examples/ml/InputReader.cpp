@@ -592,38 +592,35 @@ void InputReader::parse_criteo_sparse_line(
   strncpy(str, line.c_str(), STR_SIZE);
   char* s = str;
 
-  std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::map<uint64_t, int> cat_features;
+  std::map<uint64_t, FEATURE_TYPE> features_map;
 
-  uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+  //uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+  uint64_t hash_mask = (1 << CRITEO_HASH_BITS) - 1;
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
     if (col == 0) { // it's label
       label = string_to<FEATURE_TYPE>(l);
     } else if (col >= 14) {
-      //assert(is_categorical(l) || std::string(l).size() == 0);
-      uint64_t hash = hash_f(l) % hash_size;
-      cat_features[hash]++;
+      uint64_t hash = hash_f(l) & hash_mask;
+      features_map[hash]++;
     } else {
       assert(!is_definitely_categorical(l));
-      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-      num_features.push_back(v);
+      FEATURE_TYPE v = string_to<int>(l);
+      std::string name = "I" + std::to_string(col);
+      uint64_t hash = hash_f(name.c_str()) & hash_mask;
+      features_map[hash] += v;
     }
     col++;
   }
 
-  uint64_t feature_index = 0;
-  for (const auto& feat : num_features) {
-    if (feat != 0.0)
-      features.push_back(std::make_pair(feature_index, feat));
-    feature_index++;
-  }
-
-  for (const auto& feat : cat_features) {
+  //uint64_t feature_index = 0;
+  for (const auto& feat : features_map) {
     int index = feat.first;
     FEATURE_TYPE value = feat.second;
-    features.push_back(std::make_pair(13 + index, value));
+    if (value == 0)
+      continue;
+    features.push_back(std::make_pair(index, value));
   }
 }
 
@@ -681,7 +678,7 @@ void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex
 SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_file,
     const std::string& delimiter,
     uint64_t limit_lines,
-    bool to_normalize) {
+    bool /*to_normalize*/) {
   std::cout << "Reading input file: " << input_file << std::endl;
   std::cout << "Limit_line: " << limit_lines << std::endl;
 
@@ -723,10 +720,11 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
 
   SparseDataset ret(std::move(samples), std::move(labels));
-  if (to_normalize) {
-    // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
-  }
+  // We don't normalize because we use VW's way of normalizing
+  //if (to_normalize) {
+  //  // pass hash size
+  //  ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
+  //}
   return ret;
 }
 
@@ -893,8 +891,6 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     FEATURE_TYPE& label, bool use_bias) {
   char str[STR_SIZE];
 
-  //std::cout << "line: " << line << std::endl;
-
   if (line.size() > STR_SIZE) {
     throw std::runtime_error(
         "Criteo input line is too big: " + std::to_string(line.size()) + " " + std::to_string(STR_SIZE)) ;
@@ -903,10 +899,10 @@ void InputReader::parse_criteo_kaggle_sparse_line(
   strncpy(str, line.c_str(), STR_SIZE);
   char* s = str;
 
-  std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::map<uint64_t, int> cat_features;
+  std::map<uint64_t, FEATURE_TYPE> features_map;
 
   uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+  uint64_t hash_mask = (1 << CRITEO_HASH_BITS) - 1;
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
@@ -914,14 +910,17 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     } else if (col == 1) { // it's label
       label = string_to<FEATURE_TYPE>(l);
       assert(label == 0.0 || label == 1.0);
+      if (label == 0.0)
+        label = -1.0;
     } else if (col >= 15) {
-      uint64_t hash = hash_f(l) % hash_size;
-      cat_features[hash]++;
+      uint64_t hash = hash_f(l) & hash_mask;
+      features_map[hash]++;
     } else {
-      //std::cout << "l: " << l << std::endl;
       assert(!is_definitely_categorical(l));
       FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-      num_features.push_back(v);
+      std::string name = "I" + std::to_string(col);
+      uint64_t hash = hash_f(name.c_str()) & hash_mask;
+      features_map[hash] += v;
     }
     col++;
   }
@@ -931,21 +930,17 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     * 13...hash_size+12 are categorical features
     * hash_size+13 is for bias
     */
-  uint64_t feature_index = 0;
-  for (const auto& feat : num_features) {
-    if (feat != 0.0)
-      features.push_back(std::make_pair(feature_index, feat));
-    feature_index++;
-  }
-
-  for (const auto& feat : cat_features) {
+  for (const auto& feat : features_map) {
     int index = feat.first;
     FEATURE_TYPE value = feat.second;
-    features.push_back(std::make_pair(13 + index, value));
+    if (value == 0) {
+      continue;
+    }
+    features.push_back(std::make_pair(index, value));
   }
 
   if (use_bias) { // add bias constant
-    features.push_back(std::make_pair(13 + hash_size, 1));
+    features.push_back(std::make_pair(hash_size, 1));
   }
 }
 
@@ -953,7 +948,7 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
     const std::string& input_file,
     const std::string& delimiter,
     uint64_t limit_lines,
-    bool to_normalize,
+    bool /* to_normalize */,
     bool use_bias) {
   std::cout << "Reading criteo kaggle sparse input file: " << input_file << std::endl;
   std::cout << "Limit_line: " << limit_lines << std::endl;
@@ -1004,9 +999,10 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
   std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
 
   SparseDataset ret(std::move(samples), std::move(labels));
-  if (to_normalize) {
-    // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 13 + use_bias);
-  }
+  //if (to_normalize) {
+  //  // pass hash size
+  //  ret.normalize( (1 << CRITEO_HASH_BITS) + use_bias);
+  //}
   return ret;
 }
+

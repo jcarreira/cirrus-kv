@@ -19,7 +19,7 @@ float s_1_float(float x) {
 
 double log_aux(double v) {
     if (v == 0) {
-        return -10e-50;
+        return -1000000;
     }
 
     double res = log(v);

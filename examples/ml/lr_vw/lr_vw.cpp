@@ -19,13 +19,12 @@
 #  endif
 #endif
 
-
 #define HASH_BITS (18)
 
 #define TEST_SET_SIZE (10000)
 
 #define DEBUG
-#define MAX_INPUT_LINES (10000000)
+#define MAX_INPUT_LINES (40000000)
 
 typedef std::vector<float> model_type;
 typedef std::vector<std::pair<int, std::vector<std::pair<int, int>>>> samples_type;
@@ -129,6 +128,7 @@ read_input(const std::string& fname) {
         break;
       }
     }
+    free(str);
 
     std::string label = parts[0];
     if (strcmp(parts[2].c_str(), "|i") != 0) {
@@ -477,7 +477,7 @@ int main() {
         model[index] += update * (value * w_spare[index]);
       }
 
-      if (i % 1000 == 0) {
+      if (i % 10000 == 0) {
         float loss = compute_loss(model, test_data);
         std::cout
           << "total loss: " << loss

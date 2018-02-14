@@ -84,7 +84,8 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   uint64_t s3_obj_num_samples = config.get_s3_size();
   s3_initialize_aws();
   auto s3_client = s3_create_client();
- 
+
+  // we don't normalize because VW doesn't do that 
   SparseDataset dataset = read_dataset(config);
   dataset.check();
 

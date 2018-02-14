@@ -114,6 +114,10 @@ class SparseDataset {
 
   uint64_t getSizeBytes() const { return size_bytes; }
 
+  FEATURE_TYPE get_label(int n) const {
+    return labels_.at(n);
+  }
+
   public:
   void build_max_features();
 
