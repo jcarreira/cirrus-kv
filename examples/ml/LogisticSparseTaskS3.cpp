@@ -26,12 +26,14 @@ typedef std::vector<std::pair<int, FEATURE_TYPE>> sample_type;
 
 float first_derivative(float prediction, float label) {
   float v = - label / (1 + exp(label * prediction));
+#ifdef DEBUG
   std::cout
     << "first_derivative"
     << " label: " << label
     << " prediction: " << prediction
     << " result: " << v
     << std::endl;
+#endif
   return v;
 }
 
@@ -102,12 +104,14 @@ float predict(const model_type& model, const sample_type& sample) {
     int index = v.first;
     int value = v.second;
     res += model.at(index) * value;
+#ifdef DEBUG
     std::cout 
       << "res: " << res
       << " index: " << index
       << " value: " << value
       << " model v: " << model.at(index)
       << std::endl;
+#endif
   }
   return res;
 }
@@ -350,7 +354,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
       continue;
     }
 
-    if ( (count++ % 10) == 0) {
+    std::map<int, float> grad;
+
+    if ( (count++ % 10) == 0) { // print loss every 10 minibatches
       float loss = compute_loss(model, test_datasets);
       std::cout
         << "total loss: " << loss
@@ -378,19 +384,17 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
         //std::cout << "Skipping, loss is 0" << std::endl;
         continue;
       }
-      //} else if ( (i + 1) % 10 == 0) {
-      //std::cout << "Skipping. Holdout sample." << std::endl;
-      //continue;
-      //}
 
       for (uint64_t i = 0; i < sample.size(); ++i) {
         int index = sample[i].first;
         int value = sample[i].second;
-        std::cout << "index: " << index << " value: " << value << std::endl;
         assert(value != 0);
 
         float sq_grad = getSquareGrad(update, label) * (value * value);
+#ifdef DEBUG
+        std::cout << "index: " << index << " value: " << value << std::endl;
         std::cout << "sq_grad: " << sq_grad << std::endl;
+#endif
         w_adaptive[index] += sq_grad;
 
         // there is a check here that we dont do for now
@@ -403,11 +407,13 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
           w_normalized[index] = x_abs;
         }
 
-        std::cout << "w_adaptive[index]: " << w_adaptive[index] << std::endl;
         float rate_decay = InvSqrt(w_adaptive[index]);
-        std::cout << "rate_decay: " << rate_decay << std::endl;
         float inv_norm = 1.f / w_normalized[index];
+#ifdef DEBUG
+        std::cout << "w_adaptive[index]: " << w_adaptive[index] << std::endl;
+        std::cout << "rate_decay: " << rate_decay << std::endl;
         std::cout << "inv_norm: " << inv_norm << std::endl;
+#endif
         rate_decay *= inv_norm;
         w_spare[index] = rate_decay;
         assert(!(std::isinf(w_spare[index]) || std::isnan(w_spare[index])));
@@ -425,17 +431,28 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
       assert(!(std::isinf(update_multiplier) || std::isnan(update_multiplier)));
       update *= update_multiplier;
 
+#ifdef DEBUG
       std::cout
         << "update: " << update
         << " update_multiplier: " << update_multiplier
         << std::endl;
+#endif
 
       for (const auto& v : sample) {
         int index = v.first;
         int value = v.second;
         model[index] += update * (value * w_spare[index]);
+        grad[index]  += update * (value * w_spare[index]);
       }
+    } // end of minibatch
+
+    // create gradient object
+    std::vector<std::pair<int, FEATURE_TYPE>> grad_vec;
+    for (const auto& v : grad) {
+      grad_vec.push_back(std::make_pair(v.first, v.second));
     }
+    LRSparseGradient sparse_grad(std::move(grad_vec));
+    push_gradient(&sparse_grad);
   }
 }
 

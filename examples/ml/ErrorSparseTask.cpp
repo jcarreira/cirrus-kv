@@ -10,7 +10,7 @@
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
 
-#define DEBUG
+#undef DEBUG
 #define ERROR_INTERVAL_USEC (100000) // time between error checks
 
 /**
@@ -35,6 +35,76 @@ SparseLRModel get_model() {
   }
 
   return psi->get_full_model();
+}
+
+static double log_aux(double v) {
+  if (v == 0) {
+    return -10000;
+  }
+
+  double res = log(v);
+  if (std::isnan(res) || std::isinf(res)) {
+    throw std::runtime_error(
+        std::string("log_aux generated nan/inf v: ") +
+        std::to_string(v));
+  }
+  return res;
+}
+
+
+static float s_1_float(float x) {
+  float res = 1.0 / (1.0 + exp(-x));
+  if (std::isnan(res) || std::isinf(res)) {
+    throw std::runtime_error(
+        std::string("s_1_float generated nan/inf x: " + std::to_string(x)
+          + " res: " + std::to_string(res)));
+  }
+
+  return res;
+}
+
+float predict(const SparseLRModel& model, const std::vector<std::pair<int, FEATURE_TYPE>>& sample) {
+  float res = 0;
+  for (const auto& v : sample) {
+    int index = v.first;
+    int value = v.second;
+    res += model.get_nth_weight(index) * value;
+#ifdef DEBUG
+    std::cout 
+      << "res: " << res
+      << " index: " << index
+      << " value: " << value
+      << " model v: " << model.get_nth_weight(index)
+      << std::endl;
+#endif
+  }
+  return res;
+}
+
+float compute_loss(SparseLRModel& model, std::vector<SparseDataset>& test_datasets, uint64_t& num_samples) {
+  float res_loss = 0;
+  for (uint64_t j = 0; j < test_datasets.size(); ++j) {
+    const SparseDataset& test_dataset = test_datasets[j];
+    for (uint64_t i = 0; i < test_dataset.num_samples(); ++i) {
+      const std::vector<std::pair<int, FEATURE_TYPE>>& sample =
+        test_dataset.get_row(i);
+      float prediction = predict(model, sample);
+      if (std::isinf(prediction) || std::isnan(prediction)) {
+        throw std::runtime_error("Invalid value");
+      }
+      float s1 = s_1_float(prediction);
+      float label = test_dataset.get_label(i);
+
+      if (label == -1) {
+        label = 0;
+      }
+
+      float loss = label * log_aux(s1) + (1 - label) * log_aux(1 - s1);
+      res_loss += loss;
+      num_samples++;
+    }
+  }
+  return res_loss;
 }
 
 void ErrorSparseTask::run(const Configuration& config) {
@@ -116,12 +186,15 @@ start:
       FEATURE_TYPE total_loss = 0;
       FEATURE_TYPE total_accuracy = 0;
       uint64_t total_num_samples = 0;
-      for (auto& ds : minibatches_vec) {
-        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model.calc_loss(ds);
-        total_loss += ret.first;
-        total_accuracy += ret.second;
-        total_num_samples += ds.num_samples();
-      }
+
+      total_loss = compute_loss(model, minibatches_vec, total_num_samples);
+
+      //for (auto& ds : minibatches_vec) {
+      //  std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model.calc_loss(ds);
+      //  total_loss += ret.first;
+      //  total_accuracy += ret.second;
+      //  total_num_samples += ds.num_samples();
+      //}
       std::cout
         << "Loss (Total/Avg): " << total_loss << "/" << (total_loss / total_num_samples)
         << " Accuracy: " << (total_accuracy / minibatches_vec.size())

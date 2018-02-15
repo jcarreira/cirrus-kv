@@ -83,6 +83,8 @@ class SparseLRModel : public Model {
     void sgd_update_adagrad(
         double learning_rate, const ModelGradient* gradient);
 
+    void simple_update(const ModelGradient* gradient);
+
     /**
      * Returns the size of the model weights serialized
      * @returns Size of the model when serialized
