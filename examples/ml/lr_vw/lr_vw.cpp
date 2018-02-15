@@ -24,7 +24,7 @@
 #define TEST_SET_SIZE (10000)
 
 #define DEBUG
-#define MAX_INPUT_LINES (40000000)
+#define MAX_INPUT_LINES (4000000)
 
 typedef std::vector<float> model_type;
 typedef std::vector<std::pair<int, std::vector<std::pair<int, int>>>> samples_type;
@@ -399,7 +399,8 @@ int main() {
   //weights_hist.resize(HASH_SIZE);
 
   // do some pochs
-  for (uint64_t n = 0; n < 1; ++n) {
+  for (uint64_t n = 0; n < 3; ++n) {
+    std::cout << "Starting epoch: " << (n + 1) << std::endl;
     for (uint64_t i = 0; i < train_data.size(); ++i) {
       const auto& train_sample = train_data[i];
       // here before we compute the update we should do the VW normalization

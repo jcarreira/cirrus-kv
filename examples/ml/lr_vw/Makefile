@@ -20,14 +20,20 @@ INCLUDES=-I.. \
 	 -I$(TOP_DIR)/third_party/eigen_source \
 	 -I$(TOP_DIR)/third_party/hiredis
 
-PROJ=lr_vw
+PROJ1=lr_vw
+PROJ2=lr_vw_parallel
 
-all: $(PROJ)
+all: $(PROJ1) $(PROJ2)
 
-lr_vw: $(PROJ).cpp hash.h
+lr_vw: $(PROJ1).cpp hash.h
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	$(PROJ).cpp ../MurmurHash3.cpp \
+	$(PROJ1).cpp ../MurmurHash3.cpp \
+	-o $@ $(LIBFLAGS) 
+
+lr_vw_parallel: $(PROJ2).cpp hash.h
+	$(CXX) $(INCLUDES) $(CXXFLAGS) \
+	$(PROJ2).cpp ../MurmurHash3.cpp \
 	-o $@ $(LIBFLAGS) 
 
 clean:
-	rm -rf a.out $(PROJ)
+	rm -rf a.out $(PROJ1) $(PROJ2)

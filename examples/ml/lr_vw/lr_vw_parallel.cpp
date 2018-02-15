@@ -10,6 +10,7 @@
 #include <cmath>
 #include <thread>
 #include <unistd.h>
+#include <mutex>
 #include "MurmurHash3.h"
 #include "hash.h"
 
@@ -26,7 +27,7 @@
 #define TEST_SET_SIZE (10000)
 
 #define DEBUG
-#define MAX_INPUT_LINES (6000000)
+#define MAX_INPUT_LINES (4000000)
 
 typedef std::vector<float> model_type;
 typedef std::vector<std::pair<int, std::vector<std::pair<int, int>>>> samples_type;
@@ -456,7 +457,7 @@ public:
 
 class ParallelWorker {
 public:
-  Worker(samples_type& train_data,
+  ParallelWorker(samples_type& train_data,
       std::vector<float>& shared_model,
       std::vector<float>& shared_w_normalized,
       std::mutex& ps_lock) :
@@ -473,7 +474,7 @@ public:
       std::cout << "Starting epoch: " << (n + 1) << std::endl;
       
       // index, update, w_normalized
-      std::vector<std::pair<int, std::pair<float, float>> grads;
+      std::vector<std::pair<int, std::pair<float, float>>> grads;
 
       for (uint64_t i = 0; i < train_data.size(); ++i) {
         const auto& train_sample = train_data[i];
@@ -513,7 +514,7 @@ public:
           w_spare[index] = rate_decay;
         }
 
-        update = getUnsafeUpdate(update, train_sample.first, 0.5);
+        update = getUnsafeUpdate(update, train_sample.first, 0.4);
 
         static float normalized_sum_norm = 0;
         float add =  compute_normalized_sum_norm(train_sample, w_normalized);
@@ -527,38 +528,42 @@ public:
         for (const auto& v : train_sample.second) {
           int index = v.first;
           int value = v.second;
-          model[index] += update * (value * w_spare[index]);
+          float upd = update * (value * w_spare[index]);
+          model[index] += upd;
           grads.push_back(std::make_pair(index, std::make_pair(upd, w_normalized[index])));
         }
 
-        if (i > 0 && i % 10 == 0) {
+        if (i > 0 && i % 1000 == 0) {
           ps_lock.lock();
           for (const auto& v : grads) {
-            int index = grads.first;
-            float upd = grad.second.first;
-            float w_normalized = grads.second.second;
+            int index = v.first;
+            float upd = v.second.first;
+            float w_normalized = v.second.second;
             if (w_normalized > shared_w_normalized[index]) {
-              shared_model[index] *= (shared_w_normalized[index] / w_normalized);
+              if (shared_w_normalized[index] > 0) {
+                shared_model[index] *= (shared_w_normalized[index] / w_normalized);
+              }
               shared_w_normalized[index] = w_normalized;
             }
             shared_model[index] += upd;
           }
+          model = shared_model;
           ps_lock.unlock();
+          grads.clear();
         }
       }
     }
   }
 
   void launch() {
-    thr = new std::thread(
-        std::bind(&Worker::run, this));
+    thr = new std::thread(std::bind(&ParallelWorker::run, this));
   }
 
 public:
-  std::mutex& ps_lock;
+  samples_type& train_data;
   std::vector<float>& shared_model;
   std::vector<float>& shared_w_normalized;
-  samples_type& train_data;
+  std::mutex& ps_lock;
   std::thread* thr;
   std::vector<float> model, w_normalized, w_adaptive, w_spare;
 };
@@ -591,20 +596,23 @@ int main() {
   shared_model.resize( (1 << HASH_BITS) + 1);
   shared_w_normalized.resize( (1 << HASH_BITS) + 1);
   ParallelWorker w1(train_data1, shared_model, shared_w_normalized, ps_lock);
-  //ParallelWorker w2(train_data2, shared_model, shared_w_normalized, ps_lock);
+  //ParallelWorker w1(split_data.first, shared_model, shared_w_normalized, ps_lock);
+  ParallelWorker w2(train_data2, shared_model, shared_w_normalized, ps_lock);
   //Worker w1(train_data1);
   //Worker w2(train_data2);
   w1.launch();
-  //w2.launch();
+  w2.launch();
   
   while (1) {
     sleep(1);
-    std::vector<float>& model = w1.model;
+    //std::vector<float>& model = w1.model;
+    ps_lock.lock();
     float loss = compute_loss(shared_model, test_data);
     std::cout
       << "total loss: " << loss
       << " average loss: " << (loss / test_data.size())
       << std::endl;
+    ps_lock.unlock();
   }
 
   return 0;
