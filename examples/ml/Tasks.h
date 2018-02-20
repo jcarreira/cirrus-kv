@@ -428,7 +428,8 @@ class PSSparseServerTask : public MLTask {
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
 
     std::unique_ptr<std::thread> server_thread;
-    std::unique_ptr<std::thread> gradient_thread;
+    std::unique_ptr<std::thread> gradient_thread1;
+    std::unique_ptr<std::thread> gradient_thread2;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

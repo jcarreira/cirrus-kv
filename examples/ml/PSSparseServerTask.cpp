@@ -252,7 +252,9 @@ void PSSparseServerTask::start_server() {
 
   server_thread = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::start_server2, this));
-  gradient_thread = std::make_unique<std::thread>(
+  gradient_thread1 = std::make_unique<std::thread>(
+      std::bind(&PSSparseServerTask::gradient_f, this));
+  gradient_thread2 = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::gradient_f, this));
 }
 
