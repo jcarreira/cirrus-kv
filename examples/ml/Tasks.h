@@ -121,7 +121,7 @@ class LogisticSparseTaskS3 : public MLTask {
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 
-    std::mutex redis_lock;
+    std::mutex redis_lock; // do I need this?
 };
 
 class LogisticTaskS3 : public MLTask {

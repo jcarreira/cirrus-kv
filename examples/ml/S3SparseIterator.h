@@ -15,16 +15,16 @@
 class S3SparseIterator {
  public:
     S3SparseIterator(
-        uint64_t left_id, uint64_t right_id,
+        uint64_t left_id, uint64_t right_id, // range for iteration
         const Configuration& c,
-        uint64_t s3_rows,
+        uint64_t s3_rows, //XXX is this redundant?
         uint64_t minibatch_rows,
         int worker_id = 0,
         bool random_access = true);
 
-    const void* get_next_fast();
+    const void* get_next_fast(); //XXX rename. gets next minibatch
 
-    void thread_function(const Configuration&);
+    void thread_function(const Configuration&); //XXX this should be private?
 
  private:
   void push_samples(std::ostringstream* oss);
@@ -56,7 +56,7 @@ class S3SparseIterator {
   ProgressMonitor pm;
 
   sem_t semaphore;
-  int str_version = 0;
+  int str_version = 0; //XXX comment here
   std::map<int, std::string> list_strings; // strings from s3
   CircularBuffer<std::pair<const void*, int>> minibatches_list;//(100000);
   int to_delete = -1;

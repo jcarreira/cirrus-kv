@@ -58,15 +58,15 @@ const void* S3SparseIterator::get_next_fast() {
     std::cout << "get_next_fast::Deleting entry: " << to_delete
       << std::endl;
 #endif
-    list_strings.erase(to_delete);
+    list_strings.erase(to_delete); //XXX explain what's going on here
 #ifdef DEBUG
     std::cout << "get_next_fast::Deleted entry: " << to_delete
       << std::endl;
 #endif
   }
-  
-  sem_wait(&semaphore);
-  ring_lock.lock();
+
+  sem_wait(&semaphore); //XXX explain
+  ring_lock.lock(); // lock minibatches list
 
   auto ret = minibatches_list.pop();
   
@@ -99,14 +99,14 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   auto start = get_time_us();
 #endif
   // save s3 object into list of string
-  list_strings[str_version] = oss->str();
+  list_strings[str_version] = oss->str(); //XXX COPY
   delete oss;
 #ifdef DEBUG
   uint64_t elapsed_us = (get_time_us() - start);
   std::cout << "oss->str() time (us): " << elapsed_us << std::endl;
 #endif
 
-  auto str_iter = list_strings.find(str_version);
+  auto str_iter = list_strings.find(str_version); //XXX what does this do?
   
   print_progress(str_iter->second);
 
@@ -114,6 +114,8 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   // create a pointer to each minibatch within s3 object and push it
 
   const void* s3_data = reinterpret_cast<const void*>(str_iter->second.c_str());
+
+  //XXX fix this!
   int s3_obj_size = load_value<int>(s3_data);
   assert(s3_obj_size > 0 && s3_obj_size < 100 * 1024 * 1024);
   int num_samples = load_value<int>(s3_data);
@@ -124,7 +126,7 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
     minibatches_list.add(std::make_pair(s3_data, is_last));
-    sem_post(&semaphore);
+    sem_post(&semaphore); //XXX change this
   
     // advance ptr sample by sample
     for (uint64_t j = 0; j < minibatch_rows; ++j) {
