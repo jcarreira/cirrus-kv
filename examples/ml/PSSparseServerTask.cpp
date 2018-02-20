@@ -11,7 +11,7 @@
 #define GET_MODEL_REQ (2)
 #define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (21)
+#define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
 static void update_model(auto&);
 
@@ -408,7 +408,7 @@ void PSSparseServerTask::run(const Configuration& config) {
   uint64_t last_tick = get_time_us();
   while (1) {
     sem_wait(&PSSparseServerTaskGlobal::sem_new_model);
-    publish_model_redis();
+    //publish_model_redis();
 
     auto now = get_time_us();
     auto elapsed_us = now - last_tick;
