@@ -2,7 +2,7 @@ include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS =  pr
+bin_PROGRAMS =  pr pr_batched
 
 LIBS         =  -lclient \
                 -lauthentication -lutils -lcommon -levictionpolicies \
@@ -24,3 +24,6 @@ pr_SOURCES  =  pr.cpp $(SOURCES)
 pr_LDFLAGS  =  -pthread
 pr_LDADD    =  $(LINCLUDES) $(LIBS)
 
+pr_batched_SOURCES  =  pr_batched.cpp $(SOURCES)
+pr_batched_LDFLAGS  =  -pthread
+pr_batched_LDADD    =  $(LINCLUDES) $(LIBS)
