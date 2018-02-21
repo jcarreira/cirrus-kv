@@ -11,7 +11,7 @@
 #define GET_MODEL_REQ (2)
 #define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (21) // (2 x # workers + 1)
+#define MAX_CONNECTIONS (201) // (2 x # workers + 1)
     
 static void update_model(auto&);
 
@@ -22,7 +22,6 @@ namespace PSSparseServerTaskGlobal {
   static Configuration config;
   static std::mutex mp_start_lock; // used as barrier
  
-  sem_t sem_new_model;
   static std::unique_ptr<SparseLRModel> model; // last computed model
   std::mutex model_lock; // used to coordinate access to the last computed model
 
@@ -76,20 +75,24 @@ std::mutex to_process_lock;
 sem_t sem_new_req;
 struct Request {
   public:
-    Request(int req_id, int sock, std::vector<char>&& vec) :
-      req_id(req_id), sock(sock), vec(std::move(vec)){}
+    Request(int req_id, int sock, std::vector<char>&& vec, struct pollfd& poll_fd) :
+      req_id(req_id), sock(sock), vec(std::move(vec)), poll_fd(poll_fd){}
 
   int req_id;
   int sock;
   std::vector<char> vec;
+  struct pollfd& poll_fd;
 };
 std::queue<Request> to_process;
 
 void PSSparseServerTask::gradient_f() {
+  std::vector<char> thread_buffer;
+  thread_buffer.resize(1024 * 1024); // 1MB
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
-    Request& req = to_process.front();
+    Request req = std::move(to_process.front());
+    to_process.pop();
     to_process_lock.unlock();
 
 #ifdef DEBUG
@@ -98,20 +101,50 @@ void PSSparseServerTask::gradient_f() {
 
     if (req.req_id == APPLY_GRADIENT_REQ) {
       std::vector<char>& buffer = req.vec;
+      uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+      uint32_t incoming_size = *incoming_size_ptr;
+#ifdef DEBUG 
+      std::cout << "incoming size: " << incoming_size << std::endl;
+#endif
+      if (incoming_size > thread_buffer.size()) {
+        throw std::runtime_error("Not enough buffer");
+      }
+      //buffer.resize(incoming_size);
+      try {
+        read_all(req.sock, thread_buffer.data(), incoming_size);
+      } catch(...) {
+        throw std::runtime_error("Uhandled error");
+      }
+
       LRSparseGradient gradient(0);
-      gradient.loadSerialized(buffer.data());
+      gradient.loadSerialized(thread_buffer.data());
 
       PSSparseServerTaskGlobal::model_lock.lock();
       PSSparseServerTaskGlobal::model->sgd_update_adagrad(
           PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
       PSSparseServerTaskGlobal::model_lock.unlock();
-      sem_post(&PSSparseServerTaskGlobal::sem_new_model);
       PSSparseServerTaskGlobal::onMessageCount++;
     } else if (req.req_id == GET_MODEL_REQ) {
       // need to parse the buffer to get the indices of the model we want 
       // to send back to the client
       std::vector<char>& buffer = req.vec;
-      const char* data = buffer.data();
+
+      uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+      uint32_t incoming_size = *incoming_size_ptr;
+      if (incoming_size > thread_buffer.size()) {
+        throw std::runtime_error("Not enough buffer");
+      }
+#ifdef DEBUG 
+      std::cout << "incoming size: " << incoming_size << std::endl;
+#endif
+      //buffer.resize(incoming_size);
+      try {
+        read_all(req.sock, thread_buffer.data(), incoming_size);
+      } catch(...) {
+        throw std::runtime_error("Uhandled error");
+      }
+
+      const char* data = thread_buffer.data();
       uint64_t num_entries = load_value<uint32_t>(data);
 
       uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
@@ -125,16 +158,16 @@ void PSSparseServerTask::gradient_f() {
 #endif
       for (uint32_t i = 0; i < num_entries; ++i) {
         uint32_t entry_index = load_value<uint32_t>(data);
-#ifdef DEBUG
-        std::cout << entry_index << " ";
-#endif
+//#ifdef DEBUG
+//        std::cout << entry_index << " ";
+//#endif
         store_value<FEATURE_TYPE>(
             data_to_send_ptr,
             PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
       }
-#ifdef DEBUG
-      std::cout << std::endl;
-#endif
+//#ifdef DEBUG
+//      std::cout << std::endl;
+//#endif
       send_all(req.sock, data_to_send.get(), to_send_size);
     } else if (req.req_id == GET_FULL_MODEL_REQ) {
       PSSparseServerTaskGlobal::model_lock.lock();
@@ -148,12 +181,19 @@ void PSSparseServerTask::gradient_f() {
       //std::cout << "Sending model message size: " << model_size << std::endl;
       send_all(req.sock, d.get(), model_size);
     } else {
-      throw std::runtime_error("Unknown operation");
+      throw std::runtime_error("gradient_f: Unknown operation");
     }
 
-    to_process_lock.lock();
-    to_process.pop();
-    to_process_lock.unlock();
+    req.poll_fd.events = POLLIN; // XXX explain this
+    //kill(getpid(), SIGCONT);
+    pthread_kill(poll_thread, SIGCONT);
+    //pthread_kill(poll_thread, SIGUSR1);
+//    to_process_lock.lock();
+//    to_process.pop();
+//    to_process_lock.unlock();
+#ifdef DEBUG
+    std::cout << "gradient_f done" << std::endl;
+#endif
   }
 }
 
@@ -163,7 +203,8 @@ void PSSparseServerTask::gradient_f() {
   * incoming size (uint32_t)
   * buffer with previous size
   */
-bool PSSparseServerTask::process(int sock) {
+bool PSSparseServerTask::process(struct pollfd& poll_fd) {
+  int sock = poll_fd.fd;
 #ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
 #endif
@@ -191,6 +232,7 @@ bool PSSparseServerTask::process(int sock) {
       return false;
     }
 
+#if 0
     uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
     uint32_t incoming_size = *incoming_size_ptr;
 #ifdef DEBUG 
@@ -205,18 +247,21 @@ bool PSSparseServerTask::process(int sock) {
     } catch(...) {
       return false;
     }
+#endif
 
     to_process_lock.lock();
-    to_process.push(Request(operation, sock, std::move(buffer)));
+    poll_fd.events = 0; // explain this
+    to_process.push(Request(operation, sock, std::move(buffer), poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else if (operation == GET_FULL_MODEL_REQ) {
     to_process_lock.lock();
-    to_process.push(Request(operation, sock, std::vector<char>()));
+    poll_fd.events = 0; //XXX explain this
+    to_process.push(Request(operation, sock, std::vector<char>(), poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else {
-    throw std::runtime_error("Unknown operation");
+    throw std::runtime_error("process: Unknown operation");
   }
   return true;
 }
@@ -252,14 +297,18 @@ void PSSparseServerTask::start_server() {
 
   server_thread = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::start_server2, this));
-  gradient_thread1 = std::make_unique<std::thread>(
-      std::bind(&PSSparseServerTask::gradient_f, this));
-  gradient_thread2 = std::make_unique<std::thread>(
-      std::bind(&PSSparseServerTask::gradient_f, this));
+
+  for (uint32_t i = 0; i < n_threads; ++i) {
+    gradient_thread.push_back(std::make_unique<std::thread>(
+        std::bind(&PSSparseServerTask::gradient_f, this)));
+  }
 }
 
 void PSSparseServerTask::start_server2() {
   std::cout << "Starting server2" << std::endl;
+
+  poll_thread = pthread_self();
+
   server_sock_ = socket(AF_INET, SOCK_STREAM, 0); 
   if (server_sock_ < 0) {
     throw cirrus::ConnectionException("Server error creating socket");
@@ -292,7 +341,8 @@ void PSSparseServerTask::start_server2() {
     throw std::runtime_error("Error listening on port " + to_string(port_));
   }
   fds.at(curr_index).fd = server_sock_;
-  fds.at(curr_index++).events = POLLIN;
+  fds.at(curr_index).events = POLLIN;
+  curr_index++;
   loop();
 }
 
@@ -306,9 +356,13 @@ void PSSparseServerTask::loop() {
   while (1) {
     int poll_status = poll(fds.data(), curr_index, timeout);
     if (poll_status == -1) {
-      throw std::runtime_error("Server error calling poll.");
+      if (errno != EINTR) {
+        throw std::runtime_error("Server error calling poll.");
+      } else {
+        //std::cout << "EINTR" << std::endl;
+      }
     } else if (poll_status == 0) {
-      std::cout << timeout << " ms elapsed" << std::endl;
+      //std::cout << timeout << " ms elapsed" << std::endl;
     } else {
       // there is at least one pending event, find it.
       for (uint64_t i = 0; i < curr_index; i++) {
@@ -355,7 +409,7 @@ void PSSparseServerTask::loop() {
 #ifdef DEBUG
           std::cout << "Calling process" << std::endl;
 #endif
-	  if (!process(curr_fd.fd)) {
+	  if (!process(curr_fd)) {
             num_connections--;
             std::cout << "PS closing connection " << num_connections << std::endl;
 	    //LOG<INFO>("Processing failed on socket: ", curr_fd.fd);
@@ -375,6 +429,10 @@ void PSSparseServerTask::loop() {
     }
   }
 }
+  
+void sig_handler(int) {
+  //std::cout << "Sig handler" << std::endl;
+}
 
 /**
   * This is the task that runs the parameter server
@@ -389,9 +447,11 @@ void PSSparseServerTask::run(const Configuration& config) {
     << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
     << std::endl;
 
+
+  if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
+    throw std::runtime_error("Unable to set signal handler");
+  }
   start_server();
-  
-  sem_init(&PSSparseServerTaskGlobal::sem_new_model, 0, 0);
 
   // initialize model
   PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
@@ -409,9 +469,6 @@ void PSSparseServerTask::run(const Configuration& config) {
   uint64_t start = get_time_us();
   uint64_t last_tick = get_time_us();
   while (1) {
-    sem_wait(&PSSparseServerTaskGlobal::sem_new_model);
-    //publish_model_redis();
-
     auto now = get_time_us();
     auto elapsed_us = now - last_tick;
     auto since_start_sec = 1.0 * (now - start) / 1000000;
@@ -424,6 +481,7 @@ void PSSparseServerTask::run(const Configuration& config) {
         << std::endl;
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }
+    sleep(1);
   }
 }
 
