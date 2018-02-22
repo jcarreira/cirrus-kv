@@ -36,6 +36,13 @@ class InputReader {
   SparseDataset read_netflix_ratings(const std::string& input_file,
       int *number_users, int* number_movies);
 
+  void read_netflix_input_thread(
+    std::ifstream& fin,
+    std::mutex& fin_lock,
+    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds,
+    int& number_movies,
+    int& number_users);
+
   /**
    * Read dataset in csv file with given delimiter (e.g., tab, space)
    * and specific number of threads

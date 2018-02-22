@@ -57,7 +57,8 @@ void netflix() {
 
     while (1) {
       sleep(1);
-      double loss = mf_model->calc_loss(dataset);
+      std::pair<double, double> ret = mf_model->calc_loss(dataset);
+      double loss = ret.first;
       std::cout 
         << " RMSE: " << loss << std::endl;
     }

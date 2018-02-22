@@ -23,6 +23,7 @@ class SparseDataset {
    * @param samples Vector of samples
    */
   SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples);
+  SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples);
   
   /**
    * Construct a dataset given a vector of samples and a vector of labels

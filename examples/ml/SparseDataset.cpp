@@ -22,6 +22,10 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
     data_(samples), max_features_(0) {
 }
 
+SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples) :
+    data_(std::move(samples)), max_features_(0) {
+}
+
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
     data_(std::move(samples)), labels_(std::move(labels)), max_features_(0) {
@@ -245,17 +249,17 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
 }
 
 SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) const {
-  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
 
   if (start + n_samples > data_.size()) {
     throw std::runtime_error("Start goes over size of dataset");
   }
 
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
   for (uint64_t i = start; i < start + n_samples; ++i) {
     samples.push_back(data_[i]);
   }
 
-  return SparseDataset(samples);
+  return std::move(SparseDataset(samples));
 }
 
 uint64_t SparseDataset::max_features() const {

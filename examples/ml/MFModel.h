@@ -105,9 +105,9 @@ class MFModel : public Model {
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    double calc_loss(Dataset& dataset) const;
+    std::pair<double, double> calc_loss(Dataset& dataset) const;
     
-    double calc_loss(SparseDataset& dataset) const;
+    std::pair<double, double> calc_loss(SparseDataset& dataset) const;
 
     /**
      * Return the size of the gradient when serialized
