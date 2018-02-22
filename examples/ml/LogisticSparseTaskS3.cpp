@@ -11,7 +11,7 @@
 
 #undef DEBUG
 
-class SparseModelGet {
+class SparseModelGet { //XXX remove this class
   public:
     SparseModelGet(const std::string& ps_ip, int ps_port) :
       ps_ip(ps_ip), ps_port(ps_port) {

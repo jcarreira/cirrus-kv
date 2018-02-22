@@ -10,7 +10,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     throw std::runtime_error("Error when creating socket.");
   }   
-  int opt = 1;
+  int opt = 1; //XXX should I disable this?
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
     throw std::runtime_error("Error setting socket options.");
   }   
@@ -54,8 +54,8 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   if (ret == -1) {
     throw std::runtime_error("Error sending grad");
   }
+  fflush(sock);
 }
-
 
 SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
   // we don't know the number of weights to start with
