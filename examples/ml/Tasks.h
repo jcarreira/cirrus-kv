@@ -423,7 +423,7 @@ class PSSparseServerTask : public MLTask {
 
     int port_ = 1337;
     int server_sock_ = 0;
-    const uint64_t max_fds = 100;
+    const uint64_t max_fds = 1000;
     int timeout = 1;
     //int timeout = 60 * 1000 * 3;
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
@@ -431,6 +431,8 @@ class PSSparseServerTask : public MLTask {
     const uint64_t n_threads = 12;
     std::unique_ptr<std::thread> server_thread;
     std::vector<std::unique_ptr<std::thread>> gradient_thread;
+
+    std::vector<char> buffer; // we use this buffer to hold data from workers
 
     pthread_t poll_thread;
 };
