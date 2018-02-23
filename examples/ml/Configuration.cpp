@@ -1,6 +1,5 @@
 #include <examples/ml/Configuration.h>
 
-#include <utils/Log.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -234,7 +233,7 @@ uint64_t Configuration::get_num_classes() const {
   */
 uint64_t Configuration::get_limit_cols() const {
     if (limit_cols == 0) {
-        cirrus::LOG<cirrus::INFO>("limit_cols not loaded");
+      std::cout << "limit_cols not loaded" << std::endl;
     }
     return limit_cols;
 }

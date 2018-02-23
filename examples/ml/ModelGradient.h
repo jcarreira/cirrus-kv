@@ -145,4 +145,29 @@ class MFGradient : public ModelGradient {
     std::vector<std::vector<FEATURE_TYPE>> weights;
 };
 
+class MFSparseGradient : public ModelGradient {
+ public:
+    friend class MFModel;
+
+    virtual ~MFSparseGradient() = default;
+
+    void loadSerialized(const void*);
+    void serialize(void*) const override;
+    uint64_t getSerializedSize() const override;
+
+    void print() const override;
+    void check_values() const override;
+ public:
+    // [D * K]
+    std::vector<FEATURE_TYPE> user_bias_grad;
+    std::vector<FEATURE_TYPE> item_bias_grad;
+
+    // user id and then weights
+    std::vector<
+      std::pair<int, std::vector<FEATURE_TYPE>>> users_weights_grad;
+    // item id and then weights
+    std::vector<
+      std::pair<int, std::vector<FEATURE_TYPE>>> items_weights_grad;
+};
+
 #endif  // EXAMPLES_ML_MODELGRADIENT_H_

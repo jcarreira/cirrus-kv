@@ -69,10 +69,8 @@ void netflix() {
 
 }
 
-
 int main() {
   netflix();
   return 0;
 }
-
 

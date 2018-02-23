@@ -127,9 +127,11 @@ uint64_t MFModel::getSerializedSize() const {
 }
 
 void MFModel::loadSerialized(const void* data) {
-    cirrus::LOG<cirrus::INFO>("loadSerialized nusers: ", nusers_, 
-        " nitems_: ", nitems_,
-        " nfactors_: ", nfactors_);
+  std::cout << "loadSerialized nusers: "
+    << nusers_
+    << " nitems_: " << nitems_
+    << " nfactors_: " << nfactors_
+    << std::endl;
 
     // Read number of samples, number of factors
     uint32_t* m = (uint32_t*)data;
@@ -165,65 +167,6 @@ std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
         uint64_t,
         double epsilon) const {
   throw std::runtime_error("Not implemented");
-}
-
-std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
-    double learning_rate,
-    uint64_t base_user,
-    const SparseDataset& dataset,
-    double epsilon) const {
-
-///  // iterate all pairs user rating
-///  for (uint64_t i = 0; i < dataset.data_.size(); ++i) {
-///    for (uint64_t j = 0; j < dataset.data_[i].size(); ++j) {
-///      uint64_t user = base_user + i;
-///      uint64_t itemId = dataset.data_[i][j].first;
-///      double rating = dataset.data_[i][j].second;
-///
-///      double pred = predict(user, itemId);
-///      double error = rating - pred;
-///
-///      user_bias_[user] += learning_rate * (error - user_bias_reg_ * user_bias_[user]);
-///      item_bias_[itemId] += learning_rate * (error - item_bias_reg_ * item_bias_[itemId]);
-///
-///#ifdef DEBUG
-///      if (std::isnan(user_bias_[user]) || std::isnan(item_bias_[itemId]) ||
-///          std::isinf(user_bias_[user]) || std::isinf(item_bias_[itemId]))
-///        throw std::runtime_error("nan in user_bias or item_bias");
-///#endif
-///
-///      // update user latent factors
-///      for (uint64_t k = 0; k < nfactors_; ++k) {
-///        double delta_user_w = 
-///          learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
-///        //std::cout << "delta_user_w: " << delta_user_w << std::endl;
-///        get_user_weights(user, k) += delta_user_w;
-///#ifdef DEBUG
-///        if (std::isnan(get_user_weights(user, k)) || std::isinf(get_user_weights(user, k))) {
-///          throw std::runtime_error("nan in user weight");
-///        }
-///#endif
-///      }
-///
-///      // update item latent factors
-///      for (uint64_t k = 0; k < nfactors_; ++k) {
-///        double delta_item_w =
-///          learning_rate * (error * get_user_weights(user, k) - item_fact_reg_ * get_item_weights(itemId, k));
-///        //std::cout << "delta_item_w: " << delta_item_w << std::endl;
-///        get_item_weights(itemId, k) += delta_item_w;
-///#ifdef DEBUG
-///        if (std::isnan(get_item_weights(itemId, k)) || std::isinf(get_item_weights(itemId, k))) {
-///          std::cout << "error: " << error << std::endl;
-///          std::cout << "user weight: " << get_user_weights(user, k) << std::endl;
-///          std::cout << "item weight: " << get_item_weights(itemId, k) << std::endl;
-///          std::cout << "learning_rate: " << learning_rate << std::endl;
-///          throw std::runtime_error("nan in item weight");
-///        }
-///#endif
-///      }
-///    }
-///  }
-  return std::make_unique<MFGradient>(10, 10);
 }
 
 FEATURE_TYPE& MFModel::get_user_weights(uint64_t userId, uint64_t factor) const {

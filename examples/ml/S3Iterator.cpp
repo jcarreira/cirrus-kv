@@ -14,6 +14,11 @@ sem_t semaphore;
 int str_version = 0;
 std::map<int, std::string> list_strings; // strings from s3
 
+/** list of pairs
+  * Each pair has two fields:
+  * 1. pointer to raw minibatch data
+  * 2. value indicating whether this is the last minibatch in an S3 object
+  */
 CircularBuffer<std::pair<const FEATURE_TYPE*, int>> minibatches_list(100000);
 
 // s3_cad_size nmber of samples times features per sample
