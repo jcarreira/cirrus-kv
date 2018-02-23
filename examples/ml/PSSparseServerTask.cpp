@@ -55,7 +55,8 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
   std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
-std::shared_ptr<char> PSSparseServerTask::serialize_model(const SparseLRModel& model, uint64_t* model_size) {
+std::shared_ptr<char> PSSparseServerTask::serialize_model(
+    const SparseLRModel& model, uint64_t* model_size) const {
   *model_size = model.getSerializedSize();
   auto d = std::shared_ptr<char>(
       new char[*model_size], std::default_delete<char[]>());
@@ -423,6 +424,15 @@ void PSSparseServerTask::run(const Configuration& config) {
       PSSparseServerTaskGlobal::onMessageCount = 0;
     }
   }
+}
+
+void PSSparseServerTask::checkpoint_model() const {
+  uint64_t model_size;
+  std::shared_ptr<char> data = serialize_model(*PSSparseServerTaskGlobal::model, &model_size);
+
+  std::ofstream fout("model_backup_file", std::ofstream::binary);
+  fout.write(data.get(), model_size);
+  fout.close();
 }
 
 void PSSparseServerTask::publish_model_redis() {

@@ -45,15 +45,19 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/ 
 
 CPP_SOURCES = InputReader.cpp Utils.cpp \
-              Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
+              Dataset.cpp Matrix.cpp \
+	      Model.cpp LRModel.cpp SoftmaxModel.cpp SparseLRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
-              Checksum.cpp SoftmaxModel.cpp Serializers.cpp \
-              ErrorTask.cpp LogisticTask.cpp LoadingTask.cpp \
+              Checksum.cpp Serializers.cpp \
+              ErrorTask.cpp ErrorSparseTask.cpp \
+	      LogisticTask.cpp LogisticSparseTaskS3.cpp \
+	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp LoadingTask.cpp LoadingTaskS3.cpp  \
               PSTask.cpp PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
-	      RedisIterator.cpp  S3Iterator.cpp PerformanceLambdaTask.cpp \
-	      Redis.cpp S3.cpp LoadingTaskS3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
-	      LoadingSparseTaskS3.cpp ErrorSparseTask.cpp SparseLRModel.cpp LogisticSparseTaskS3.cpp \
-	      S3SparseIterator.cpp ProgressMonitor.cpp PSSparseServerTask.cpp PSSparseServerInterface.cpp
+	      RedisIterator.cpp  S3Iterator.cpp S3SparseIterator.cpp \
+	      PerformanceLambdaTask.cpp \
+	      Redis.cpp S3.cpp LogisticTaskS3.cpp SparseDataset.cpp \
+	      ProgressMonitor.cpp \
+	      PSSparseServerTask.cpp PSSparseServerInterface.cpp
 
 CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \

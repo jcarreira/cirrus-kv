@@ -92,7 +92,11 @@ void run_tasks(int rank, int nworkers,
     et.run(config);
     sleep_forever();
   } else if (rank == LOADING_SPARSE_TASK_RANK) {
-    LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    //LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    //    LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+    //    batch_size, samples_per_batch, features_per_sample,
+    //    nworkers, rank);
+    LoadingNetflixTask lt(REDIS_IP, REDIS_PORT, 0, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
