@@ -56,6 +56,7 @@ bool MLTask::get_worker_status(auto r, int worker_id) {
   return is_done;
 }
 
+//XXX get rid of Redis and put this into ParameterServer
 void MLTask::wait_for_start(int index, redisContext* r, int nworkers) {
   std::cout << "Waiting for all workers to start (redis). index: " << index
     << std::endl;

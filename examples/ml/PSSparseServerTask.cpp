@@ -68,8 +68,9 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   // should be reduced by one correspondingly.
   if (x.fd == -1) {
     curr_index -= 1;
+    return true;
   }
-  return x.fd == -1;
+  return false;
 }
 
 std::mutex to_process_lock;
@@ -115,6 +116,7 @@ void PSSparseServerTask::gradient_f() {
       uint64_t num_entries = load_value<uint32_t>(data);
 
       uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
+      //XXX Not allocate this
       auto data_to_send = std::shared_ptr<char>(
           new char[to_send_size], std::default_delete<char[]>());
       char* data_to_send_ptr = data_to_send.get();
@@ -167,16 +169,17 @@ bool PSSparseServerTask::process(int sock) {
 #ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
 #endif
-  std::vector<char> buffer;
+  std::vector<char> buffer; //XXX preallocate this
   uint64_t current_buf_size = sizeof(uint32_t);
   buffer.reserve(current_buf_size);
   
   uint64_t bytes_read = 0;
-  bool ret = read_from_client(buffer, sock, bytes_read);
+  bool ret = read_from_client(buffer, sock, bytes_read); //XXX bad name
   if (!ret) {
     return false;
   }
 
+  //XXX use load value function
   uint32_t* operation_ptr = reinterpret_cast<uint32_t*>(buffer.data());
   uint32_t operation = *operation_ptr;
  
@@ -245,13 +248,13 @@ bool PSSparseServerTask::read_from_client(
 }
 
 void PSSparseServerTask::start_server() {
-  PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
-  PSSparseServerTaskGlobal::model->randomize();
+  //PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
+  //PSSparseServerTaskGlobal::model->randomize();
   
   sem_init(&sem_new_req, 0, 0);
 
   server_thread = std::make_unique<std::thread>(
-      std::bind(&PSSparseServerTask::start_server2, this));
+      std::bind(&PSSparseServerTask::start_server2, this)); //XXX use better name
   gradient_thread = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::gradient_f, this));
 }
@@ -267,6 +270,8 @@ void PSSparseServerTask::start_server2() {
   if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
     throw std::runtime_error("Error forcing port binding");
   }
+
+  //XXX get rid of this?
   if (setsockopt(server_sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
     throw std::runtime_error("Error setting socket options.");
   }   
@@ -310,7 +315,7 @@ void PSSparseServerTask::loop() {
     } else {
       // there is at least one pending event, find it.
       for (uint64_t i = 0; i < curr_index; i++) {
-	struct pollfd& curr_fd = fds.at(i);
+	struct pollfd& curr_fd = fds.at(i); //XXX remove at()
 	// Ignore the fd if we've said we don't care about it
 	if (curr_fd.fd == -1) {
 	  continue;
@@ -379,7 +384,6 @@ void PSSparseServerTask::loop() {
   * This task is responsible for
   * 1) sending the model to the workers
   * 2) receiving the gradient updates from the workers
-  *
   */
 void PSSparseServerTask::run(const Configuration& config) {
   std::cout

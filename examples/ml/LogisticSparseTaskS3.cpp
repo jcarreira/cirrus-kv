@@ -11,7 +11,7 @@
 
 #undef DEBUG
 
-class SparseModelGet {
+class SparseModelGet { //XXX remove this class
   public:
     SparseModelGet(const std::string& ps_ip, int ps_port) :
       ps_ip(ps_ip), ps_port(ps_port) {
@@ -41,9 +41,9 @@ void check_redis(auto r) {
 
 // we need global variables because of the static callbacks
 namespace LogisticSparseTaskGlobal {
-  std::unique_ptr<SparseModelGet> sparse_model_get;
-  redisContext* redis_con;
-  PSSparseServerInterface* psint;
+  std::unique_ptr<SparseModelGet> sparse_model_get; //XXX I don't think this needs to be global
+  redisContext* redis_con; //XXX this as well
+  PSSparseServerInterface* psint; //XXX
 }
 
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
@@ -102,7 +102,7 @@ bool LogisticSparseTaskS3::get_dataset_minibatch(
   return true;
 }
 
-static auto connect_redis() {
+static auto connect_redis() { //XXX get rid of auto
   std::cout << "[WORKER] "
     << "Worker task connecting to REDIS. "
     << "IP: " << REDIS_IP << std::endl;
@@ -115,13 +115,16 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   std::cout << "Starting LogisticSparseTaskS3"
     << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
     << std::endl;
+  // number of dataset minibatches in S3
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
+  //XXX: put PS_IP and PS_PORT in the config file
+  //XXX: put REDIS_IP and REDIS_PORT in the config file
   LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
 
   std::cout << "Connecting to redis.." << std::endl;
-  redis_lock.lock();
+  redis_lock.lock(); //XXX we don't need this I think
   LogisticSparseTaskGlobal::redis_con = connect_redis();
   redis_lock.unlock();
 
@@ -131,6 +134,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
+  // wait until all workers are ready
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, LogisticSparseTaskGlobal::redis_con, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
@@ -142,7 +146,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
   std::cout << "[WORKER] starting loop" << std::endl;
 
-  uint64_t version = 1;
+  uint64_t version = 1; //XXX don't need this?
   SparseLRModel model(MODEL_GRAD_SIZE);
 
   while (1) {
@@ -150,7 +154,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #ifdef DEBUG
     std::cout << "[WORKER] running phase 1" << std::endl;
 #endif
-    std::unique_ptr<SparseDataset> dataset;
+    std::unique_ptr<SparseDataset> dataset; //XXX give this a better name
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
@@ -175,6 +179,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     now = get_time_us();
 #endif
 
+    //XXX remove try block?
     try {
       gradient = model.minibatch_grad_sparse(*dataset, config.get_epsilon());
     } catch(const std::runtime_error& e) {
@@ -194,7 +199,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
     try {
       LRSparseGradient* lrg = dynamic_cast<LRSparseGradient*>(gradient.get());
-      push_gradient(lrg);
+      push_gradient(lrg); //XXX make this interface more uniform
     } catch(...) {
       std::cout << "[WORKER] "
         << "Worker task error doing put of gradient" << "\n";

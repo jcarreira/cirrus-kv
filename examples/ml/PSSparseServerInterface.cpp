@@ -10,7 +10,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     throw std::runtime_error("Error when creating socket.");
   }   
-  int opt = 1;
+  int opt = 1; //XXX should I disable this?
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
     throw std::runtime_error("Error setting socket options.");
   }   
@@ -54,14 +54,17 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   if (ret == -1) {
     throw std::runtime_error("Error sending grad");
   }
+  fflush(sock);
 }
-
 
 SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds) {
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
   char* msg_begin = msg; // need to keep this pointer to delete later
 
+  //XXX create a comment with format of the message
+  //XXX create a method to create message
+  //XXX use structure for feature (not std::pair)
   uint32_t num_weights = 0;
   store_value<uint32_t>(msg, num_weights); // just make space for the number of weights
   for (const auto& sample : ds.data_) {
@@ -78,13 +81,13 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   // put num_weights in the beginning
 
   // 1. Send operation
-  uint32_t operation = 2;
+  uint32_t operation = 2; //XXX fix this
   send_all(sock, &operation, sizeof(uint32_t));
   // 2. Send msg size
   uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send num_weights + weights
-  msg = msg_begin;
+  msg = msg_begin; // XXX do this back at the beginning
   store_value<uint32_t>(msg, num_weights);
   //std::cout << "Getting model. Sending weights msg size: " << msg_size << std::endl;
   send_all(sock, msg_begin, msg_size);
@@ -100,7 +103,7 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   SparseLRModel model(0);
   model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
   
-  delete[] msg_begin;
+  delete[] msg_begin; //XXX use smart pointers
   delete[] buffer;
 
   return std::move(model);

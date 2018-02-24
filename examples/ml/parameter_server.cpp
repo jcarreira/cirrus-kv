@@ -15,7 +15,7 @@
 #define BILLION (1000000000ULL)
 #define MILLION (1000000ULL)
 #define SAMPLE_BASE   (0)
-#define MODEL_BASE    (1 * BILLION)
+#define MODEL_BASE    (1 * BILLION) // don't need this anymore
 #define GRADIENT_BASE (2 * BILLION)
 #define LABEL_BASE    (3 * BILLION)
 #define START_BASE    (4 * BILLION)
@@ -30,7 +30,7 @@ void run_memory_task(const Configuration& /* config */) {
 }
 
 void run_tasks(int rank, int nworkers, 
-    int batch_size, const Configuration& config) {
+    int batch_size, const Configuration& config) { // batch size is redundant
 
   std::cout << "Run tasks rank: " << rank << std::endl;
   int features_per_sample = config.get_num_features();

@@ -367,7 +367,7 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
   assert(num_weights > 0 && num_weights < 10000000);
 
   //weights_sparse_.resize(num_weights);
-  weights_sparse_.reserve(num_weights);
+  weights_sparse_.reserve(num_weights); //XXX shouldn't this be resize?
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
