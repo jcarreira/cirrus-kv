@@ -429,7 +429,7 @@ class PSSparseServerTask : public MLTask {
     void loop();
     bool process(int);
     bool read_from_client(std::vector<char>& buffer, int sock, uint64_t& bytes_read);
-    std::shared_ptr<char> serialize_model(const SparseLRModel& model, uint64_t* model_size) const;
+    std::shared_ptr<char> serialize_lr_model(const SparseLRModel& model, uint64_t* model_size) const;
     void gradient_f();
     void checkpoint_model() const;
 

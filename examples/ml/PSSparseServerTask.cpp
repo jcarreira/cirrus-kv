@@ -4,12 +4,9 @@
 #include "Redis.h"
 #include "Utils.h"
 #include "async.h"
+#include "Constants.h"
 
 #undef DEBUG
-
-#define APPLY_GRADIENT_REQ (1)
-#define GET_MODEL_REQ (2)
-#define GET_FULL_MODEL_REQ (3)
 
 #define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
@@ -55,7 +52,7 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
   std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
-std::shared_ptr<char> PSSparseServerTask::serialize_model(
+std::shared_ptr<char> PSSparseServerTask::serialize_lr_model(
     const SparseLRModel& model, uint64_t* model_size) const {
   *model_size = model.getSerializedSize();
   auto d = std::shared_ptr<char>(
@@ -97,7 +94,7 @@ void PSSparseServerTask::gradient_f() {
     std::cout << "Processing request: " << req.req_id << std::endl;
 #endif
 
-    if (req.req_id == APPLY_GRADIENT_REQ) {
+    if (req.req_id == SEND_GRADIENT) {
       std::vector<char>& buffer = req.vec;
       LRSparseGradient gradient(0);
       gradient.loadSerialized(buffer.data());
@@ -108,7 +105,7 @@ void PSSparseServerTask::gradient_f() {
       PSSparseServerTaskGlobal::model_lock.unlock();
       sem_post(&PSSparseServerTaskGlobal::sem_new_model);
       PSSparseServerTaskGlobal::onMessageCount++;
-    } else if (req.req_id == GET_MODEL_REQ) {
+    } else if (req.req_id == GET_LR_SPARSE_MODEL) {
       // need to parse the buffer to get the indices of the model we want 
       // to send back to the client
       std::vector<char>& buffer = req.vec;
@@ -137,7 +134,7 @@ void PSSparseServerTask::gradient_f() {
       std::cout << std::endl;
 #endif
       send_all(req.sock, data_to_send.get(), to_send_size);
-    } else if (req.req_id == GET_FULL_MODEL_REQ) {
+    } else if (req.req_id == GET_LR_FULL_MODEL) {
       PSSparseServerTaskGlobal::model_lock.lock();
       auto model_copy = *PSSparseServerTaskGlobal::model;
       PSSparseServerTaskGlobal::model_lock.unlock();
@@ -185,7 +182,7 @@ bool PSSparseServerTask::process(int sock) {
   std::cout << "Operation: " << operation << std::endl;
 #endif
 
-  if (operation == APPLY_GRADIENT_REQ || operation == GET_MODEL_REQ) { // GRADIENT
+  if (operation == SEND_GRADIENT || operation == GET_LR_SPARSE_MODEL) { // GRADIENT
     uint64_t bytes_read = 0;
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
@@ -211,7 +208,7 @@ bool PSSparseServerTask::process(int sock) {
     to_process.push(Request(operation, sock, std::move(buffer)));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-  } else if (operation == GET_FULL_MODEL_REQ) {
+  } else if (operation == GET_LR_FULL_MODEL) {
     to_process_lock.lock();
     to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
@@ -428,7 +425,7 @@ void PSSparseServerTask::run(const Configuration& config) {
 
 void PSSparseServerTask::checkpoint_model() const {
   uint64_t model_size;
-  std::shared_ptr<char> data = serialize_model(*PSSparseServerTaskGlobal::model, &model_size);
+  std::shared_ptr<char> data = serialize_lr_model(*PSSparseServerTaskGlobal::model, &model_size);
 
   std::ofstream fout("model_backup_file", std::ofstream::binary);
   fout.write(data.get(), model_size);
@@ -454,7 +451,7 @@ void PSSparseServerTask::publish_model_redis() {
 #endif
   
   uint64_t model_size;
-  std::shared_ptr<char> data = serialize_model(model_copy, &model_size);
+  std::shared_ptr<char> data = serialize_lr_model(model_copy, &model_size);
 
 #ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;

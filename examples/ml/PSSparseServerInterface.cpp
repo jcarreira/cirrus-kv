@@ -1,34 +1,27 @@
 #include "PSSparseServerInterface.h"
+#include "Constants.h"
 
 //#define DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
-
-enum PS_OP {
-  SEND_GRADIENT,
-  SEND_MF_GRADIENT,
-  GET_LR_FULL_MODEL,
-  GET_LR_SPARSE_MODEL,
-  GET_MF_SPARSE_MODEL
-};
 
 PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port) :
   ip(ip), port(port) {
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     throw std::runtime_error("Error when creating socket.");
-  }   
+  }
   int opt = 1;
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
     throw std::runtime_error("Error setting socket options.");
-  }   
+  }
 
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) != 1) {
     throw std::runtime_error("Address family invalid or invalid "
         "IP address passed in");
-  }   
+  }
   // Save the port in the info
   serv_addr.sin_port = htons(port);
   std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
