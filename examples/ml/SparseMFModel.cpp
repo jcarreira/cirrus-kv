@@ -204,11 +204,11 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
       // compute gradient for user bias
       FEATURE_TYPE& user_bias = std::get<1>(user_models[user_from_0]);
-      gradient->user_bias_grad[user_from_0] += learning_rate * (error - user_bias_reg_ * user_bias);
+      gradient->users_bias_grad[user_from_0] += learning_rate * (error - user_bias_reg_ * user_bias);
 
       // compute gradient for item bias
       FEATURE_TYPE& item_bias = item_models[itemId].first;
-      gradient->item_bias_grad[itemId] += learning_rate * (error - item_bias_reg_ * item_bias);
+      gradient->items_bias_grad[itemId] += learning_rate * (error - item_bias_reg_ * item_bias);
 
 #ifdef DEBUG
       if (std::isnan(user_bias) || std::isnan(item_bias) ||

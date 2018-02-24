@@ -9,54 +9,54 @@
   * This class is a base class for a model's gradient
   */
 class ModelGradient {
- public:
-     ModelGradient() : version(0) {}
-     virtual ~ModelGradient() = default;
+  public:
+    ModelGradient() : version(0) {}
+    virtual ~ModelGradient() = default;
 
-     /**
-       * Serialize gradient
-       * @param mem Pointer where to serialize the gradient
-       */
-     virtual void serialize(void* mem) const = 0;
+    /**
+     * Serialize gradient
+     * @param mem Pointer where to serialize the gradient
+     */
+    virtual void serialize(void* mem) const = 0;
 
-     /**
-       * Get the size of the gradient when serialized
-       * @returns Size of serialized gradient
-       */
-     virtual uint64_t getSerializedSize() const = 0;
+    /**
+     * Get the size of the gradient when serialized
+     * @returns Size of serialized gradient
+     */
+    virtual uint64_t getSerializedSize() const = 0;
 
-     /**
-       * Load gradient from serialized memory
-       * @param mem Pointer to memory where the gradient lives serialized
-       */
-     virtual void loadSerialized(const void* mem) = 0;
+    /**
+     * Load gradient from serialized memory
+     * @param mem Pointer to memory where the gradient lives serialized
+     */
+    virtual void loadSerialized(const void* mem) = 0;
 
-     /**
-       * Print gradient
-       */
-     virtual void print() const = 0;
+    /**
+     * Print gradient
+     */
+    virtual void print() const = 0;
 
-     /**
-       * Set gradient version
-       */
-     virtual void setVersion(uint64_t v) {
-         version = v;
-     }
+    /**
+     * Set gradient version
+     */
+    virtual void setVersion(uint64_t v) {
+      version = v;
+    }
 
-     /**
-       * Get version of gradient
-       */
-     virtual uint64_t getVersion() const {
-         return version;
-     }
+    /**
+     * Get version of gradient
+     */
+    virtual uint64_t getVersion() const {
+      return version;
+    }
 
-     /**
-       * Sanity check gradient values
-       */
-     virtual void check_values() const = 0;
+    /**
+     * Sanity check gradient values
+     */
+    virtual void check_values() const = 0;
 
- protected:
-     uint64_t version = 0;  //< this gradient's version
+  protected:
+    uint64_t version = 0;  //< this gradient's version
 };
 
 class LRGradient : public ModelGradient {
@@ -159,8 +159,8 @@ class MFSparseGradient : public ModelGradient {
     void check_values() const override;
  public:
     // [D * K]
-    std::vector<FEATURE_TYPE> user_bias_grad;
-    std::vector<FEATURE_TYPE> item_bias_grad;
+    std::vector<FEATURE_TYPE> users_bias_grad;
+    std::vector<FEATURE_TYPE> items_bias_grad;
 
     // user id and then weights
     std::vector<
