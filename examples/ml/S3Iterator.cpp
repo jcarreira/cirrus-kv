@@ -3,18 +3,9 @@
 #include <unistd.h>
 #include <vector>
 #include <iostream>
-#include <CircularBuffer.h>
 
 #include <pthread.h>
 #include <semaphore.h>
-
-
-sem_t semaphore;
-
-int str_version = 0;
-std::map<int, std::string> list_strings; // strings from s3
-
-CircularBuffer<std::pair<const FEATURE_TYPE*, int>> minibatches_list(100000);
 
 // s3_cad_size nmber of samples times features per sample
 S3Iterator::S3Iterator(
@@ -25,7 +16,8 @@ S3Iterator::S3Iterator(
         const std::string& s3_bucket_name) :
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows), s3_cols(s3_cols),
-    minibatch_rows(minibatch_rows), s3_bucket_name(s3_bucket_name) {
+    minibatch_rows(minibatch_rows), s3_bucket_name(s3_bucket_name),
+    minibatches_list(100000) {
       
   std::cout << "Creating S3Iterator"
     << " left_id: " << left_id
@@ -42,12 +34,10 @@ S3Iterator::S3Iterator(
     pref_sem.signal();
   }
 
-  sem_init(&semaphore, 0, 0);
+  sem_init(&get_s3_data_semaphore, 0, 0);
 
   thread = new std::thread(std::bind(&S3Iterator::thread_function, this));
 }
-
-int to_delete = -1;
 
 const FEATURE_TYPE* S3Iterator::get_next_fast() {
   // we need to delete entry
@@ -59,7 +49,7 @@ const FEATURE_TYPE* S3Iterator::get_next_fast() {
       << std::endl;
   }
   
-  sem_wait(&semaphore);
+  sem_wait(&get_s3_data_semaphore);
   ring_lock.lock();
 
   auto ret = minibatches_list.pop();
@@ -79,37 +69,6 @@ const FEATURE_TYPE* S3Iterator::get_next_fast() {
   }
 
   return ret.first;
-}
-
-std::shared_ptr<FEATURE_TYPE> S3Iterator::get_next() {
-  throw std::runtime_error("No longer supported");
-  //std::cout << "Get next "
-  //  << " last: " << last
-  //  << "\n";
-#if 0
-  while (1) {
-    ring_lock.lock();
-    if (ring.empty()) {
-      ring_lock.unlock();
-      usleep(1000);
-    } else {
-      break;
-    }
-  }
-
-  std::shared_ptr<FEATURE_TYPE> ret = ring.front();
-  ring.pop_front();
-
-  uint64_t ring_size = ring.size();
-  ring_lock.unlock();
-
-  if (ring_size < 500 && pref_sem.getvalue() < (int)read_ahead) {
-    pref_sem.signal();
-  }
-
-  return ret;
-#endif
-  return std::shared_ptr<FEATURE_TYPE>(); // dummy
 }
 
 void S3Iterator::push_samples(std::ostringstream* oss) {
@@ -141,7 +100,7 @@ void S3Iterator::push_samples(std::ostringstream* oss) {
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
     minibatches_list.add(std::make_pair(data, is_last));
-    sem_post(&semaphore);
+    sem_post(&get_s3_data_semaphore);
   }
   ring_lock.unlock();
   
