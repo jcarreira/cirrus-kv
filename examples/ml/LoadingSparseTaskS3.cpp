@@ -7,7 +7,6 @@
 #include "Utils.h"
 #include "config.h"
 
-#define READ_INPUT_THREADS (10)
 SparseDataset LoadingSparseTaskS3::read_dataset(
     const Configuration& config) {
   InputReader input;
@@ -24,12 +23,11 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
   }
 
   // READ the kaggle criteo dataset
-  bool normalize = config.get_normalize();
   return input.read_input_criteo_kaggle_sparse(
       config.get_input_path(),
       delimiter,
       config.get_limit_samples(),
-      normalize,
+      config.get_normalize(),
       config.get_use_bias());
 }
 
@@ -81,7 +79,7 @@ void LoadingSparseTaskS3::check_loading(
 void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] " << "Read criteo input..." << std::endl;
 
-  uint64_t s3_obj_num_samples = config.get_s3_size();
+  uint64_t s3_obj_num_samples = config.get_s3_size(); // number of samples on an s3 object
   s3_initialize_aws();
   auto s3_client = s3_create_client();
  

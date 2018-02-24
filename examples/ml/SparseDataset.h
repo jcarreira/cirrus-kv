@@ -15,7 +15,7 @@ class SparseDataset {
   /**
    * Construct empty dataset
    */
-  SparseDataset();
+  SparseDataset() = default;
 
   /**
    * Construct a dataset given a vector of samples and a vector of labels

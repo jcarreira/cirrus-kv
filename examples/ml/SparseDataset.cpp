@@ -9,9 +9,6 @@
 
 #include <cassert>
 
-SparseDataset::SparseDataset() {
-}
-
 void SparseDataset::build_max_features() {
   max_features_ = std::max_element(data_.begin(), data_.end(),
       [](const std::vector<std::pair<int, FEATURE_TYPE>>& a,
@@ -22,12 +19,16 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
     data_(samples), max_features_(0) {
 }
 
+SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples) :
+    data_(std::move(samples)), max_features_(0) {
+}
+
 SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples,
     std::vector<FEATURE_TYPE>&& labels) :
     data_(std::move(samples)), labels_(std::move(labels)), max_features_(0) {
 }
 
-
+//XXX PUT FORMAT OF DATA IN RAW MEMORY HERE
 SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
   const char* data_begin = data;
 
@@ -57,11 +58,13 @@ SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
   size_bytes = std::distance(data_begin, data);
 }
 
+
+// XXX can we reafactor this?
 SparseDataset::SparseDataset(const char* data, bool from_s3) {
-  int obj_size = 0;
+  int obj_size = 0; //XXX why do we need this?
   if (from_s3) { // comes from s3 so get rid of object size
     obj_size = load_value<int>(data); // read object size
-  } else {
+  } else { // XXX fix this
     throw std::runtime_error("not supported");
   }
 
@@ -146,6 +149,7 @@ void SparseDataset::check_labels() const {
   }
 }
 
+//XXX remove this?
 double SparseDataset::checksum() const {
   throw std::runtime_error("Not implemented");
   return 0;
@@ -162,6 +166,7 @@ void SparseDataset::print() const {
   std::cout << std::endl;
 }
 
+// XXX fix this
 void SparseDataset::print_info() const {
   std::cout << "SparseDataset #samples: " << data_.size() << std::endl;
   //std::cout << "SparseDataset max features: " << max_features_ << std::endl;
@@ -199,11 +204,11 @@ std::shared_ptr<char> SparseDataset::build_serialized_s3_obj(uint64_t l, uint64_
   }
 
   // for each value we store int (index) and FEATURE_TYPE (value)
-  *obj_size = number_entries_obj * (sizeof(FEATURE_TYPE) + sizeof(int));
+  *obj_size = sizeof(int) * 2; // we also store the size of the obejct and the number of samples
+  *obj_size += number_entries_obj * (sizeof(FEATURE_TYPE) + sizeof(int));
   // we also store the labels
   uint64_t n_samples = r - l;
-  *obj_size += n_samples * (sizeof(FEATURE_TYPE) + sizeof(int));
-  *obj_size += sizeof(int) * 2; // we also store the size of the obejct and the number of samples
+  *obj_size += n_samples * (sizeof(FEATURE_TYPE) + sizeof(int)); // label and number of features for each sample
 
   // allocate memory for this object
   std::shared_ptr<char> s3_obj = std::shared_ptr<char>(
@@ -229,6 +234,7 @@ std::shared_ptr<char> SparseDataset::build_serialized_s3_obj(uint64_t l, uint64_
   return s3_obj;
 }
 
+//XXX should we seed before this?
 SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
   std::random_device rd;
   std::default_random_engine re(rd());
@@ -241,7 +247,7 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
     samples.push_back(data_[index]);
   }
 
-  return SparseDataset(samples);
+  return SparseDataset(std::move(samples)); //XXX we should std::move here
 }
 
 SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) const {
@@ -254,10 +260,10 @@ SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) con
   for (uint64_t i = start; i < start + n_samples; ++i) {
     samples.push_back(data_[i]);
   }
-
   return SparseDataset(samples);
 }
 
+//XXX get rid of this?
 uint64_t SparseDataset::max_features() const {
   throw std::runtime_error("Not supported");
   return max_features_;
