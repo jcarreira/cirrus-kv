@@ -44,6 +44,8 @@ S3SparseIterator::S3SparseIterator(
 
   thread = new std::thread(std::bind(&S3SparseIterator::thread_function, this, c));
 
+  // we fix the random seed but make it different for every worker
+  // to ensure each worker receives a different minibatch
   if (random_access) {
     srand(42 + worker_id);
   } else {
@@ -107,9 +109,7 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
 #endif
 
   auto str_iter = list_strings.find(str_version);
-  
   print_progress(str_iter->second);
-
   ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
 

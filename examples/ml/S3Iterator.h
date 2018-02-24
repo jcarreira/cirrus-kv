@@ -5,6 +5,7 @@
 #include <common/Synchronization.h>
 #include "Configuration.h"
 
+#include <CircularBuffer.h>
 #include <thread>
 #include <list>
 #include <mutex>
@@ -19,7 +20,6 @@ class S3Iterator {
         uint64_t minibatch_rows,
         const std::string&);
 
-    std::shared_ptr<FEATURE_TYPE> get_next();
     const FEATURE_TYPE* get_next_fast();
 
     void thread_function();
@@ -52,6 +52,12 @@ class S3Iterator {
   uint64_t features_per_sample;
 
   std::string s3_bucket_name;
+
+  int to_delete = -1;
+  sem_t get_s3_data_semaphore;
+  int str_version = 0;
+  std::map<int, std::string> list_strings; // strings from s3
+  CircularBuffer<std::pair<const FEATURE_TYPE*, int>> minibatches_list;
 };
 
 #endif  // _S3_ITERATOR_H_

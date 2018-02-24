@@ -11,7 +11,7 @@
 #define GET_MODEL_REQ (2)
 #define GET_FULL_MODEL_REQ (3)
 
-#define MAX_CONNECTIONS (201) // (2 x # workers + 1)
+#define MAX_CONNECTIONS (161) // (2 x # workers + 1)
     
 namespace PSSparseServerTaskGlobal {
   // used to monitor how much since last received gradient
