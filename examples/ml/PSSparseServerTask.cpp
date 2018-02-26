@@ -213,6 +213,32 @@ bool PSSparseServerTask::process(int sock) {
     to_process.push(Request(operation, sock, std::vector<char>()));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
+  } else if (operation == GET_MF_SPARSE_MODEL) {
+    uint64_t bytes_read = 0;
+    bool ret = read_from_client(buffer, sock, bytes_read);
+    if (!ret) {
+      return false;
+    }
+
+    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
+    uint32_t incoming_size = *incoming_size_ptr;
+#ifdef DEBUG 
+    std::cout << "incoming size: " << incoming_size << std::endl;
+#endif
+    if (incoming_size > current_buf_size) {
+      buffer.resize(incoming_size);
+    }
+
+    try {
+      read_all(sock, buffer.data(), incoming_size);
+    } catch(...) {
+      return false;
+    }
+
+    to_process_lock.lock();
+    to_process.push(Request(operation, sock, std::move(buffer)));
+    to_process_lock.unlock();
+    sem_post(&sem_new_req);
   } else {
     throw std::runtime_error("Unknown operation");
   }
