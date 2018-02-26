@@ -100,14 +100,16 @@ void PSSparseServerTask::gradient_f() {
     if (req.req_id == APPLY_GRADIENT_REQ) {
       uint32_t incoming_size = req.incoming_size;
 #ifdef DEBUG 
-      std::cout << "incoming size: " << incoming_size << std::endl;
+      std::cout << "APPLY_GRADIENT_REQ incoming size: " << incoming_size << std::endl;
 #endif
       if (incoming_size > thread_buffer.size()) {
         throw std::runtime_error("Not enough buffer");
       }
       //buffer.resize(incoming_size);
       try {
-        read_all(req.sock, thread_buffer.data(), incoming_size);
+        if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
+          break;
+        }
       } catch(...) {
         throw std::runtime_error("Uhandled error");
       }
@@ -128,10 +130,12 @@ void PSSparseServerTask::gradient_f() {
         throw std::runtime_error("Not enough buffer");
       }
 #ifdef DEBUG 
-      std::cout << "incoming size: " << incoming_size << std::endl;
+      std::cout << "GET_MODEL_REQ incoming size: " << incoming_size << std::endl;
 #endif
       try {
-        read_all(req.sock, thread_buffer.data(), incoming_size);
+        if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
+          break;
+        }
       } catch(...) {
         throw std::runtime_error("Uhandled error");
       }
@@ -187,17 +191,24 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
 #ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
 #endif
-  read_all(sock, buffer.data(), sizeof(uint32_t) * 2); // read operation + incoming size
-
   const char* data_ptr = buffer.data();
+  if (read_all(sock, buffer.data(), sizeof(uint32_t)) == 0) { // read operation
+    return false;
+  }
   uint32_t operation = load_value<uint32_t>(data_ptr);
-  uint32_t incoming_size = load_value<uint32_t>(data_ptr);
- 
 #ifdef DEBUG 
   std::cout << "Operation: " << operation << std::endl;
 #endif
+  
 
   if (operation == APPLY_GRADIENT_REQ || operation == GET_MODEL_REQ) { // GRADIENT
+    if (read_all(sock, buffer.data() + sizeof(uint32_t), sizeof(uint32_t)) == 0) { // read incoming size
+      return false;
+    }
+    uint32_t incoming_size = load_value<uint32_t>(data_ptr);
+#ifdef DEBUG 
+    std::cout << "incoming size: " << incoming_size << std::endl;
+#endif
     to_process_lock.lock();
     poll_fd.events = 0; // explain this
     to_process.push(Request(operation, sock, incoming_size, poll_fd));
@@ -206,7 +217,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
   } else if (operation == GET_FULL_MODEL_REQ) {
     to_process_lock.lock();
     poll_fd.events = 0; //XXX explain this
-    to_process.push(Request(operation, sock, incoming_size, poll_fd));
+    to_process.push(Request(operation, sock, 0, poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else {
@@ -264,6 +275,9 @@ void PSSparseServerTask::start_server2() {
   }   
 
   int opt = 1;
+  if (setsockopt(server_sock_, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
+    throw std::runtime_error("Error setting socket options.");
+  }   
   if (setsockopt(server_sock_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
     throw std::runtime_error("Error forcing port binding");
   }

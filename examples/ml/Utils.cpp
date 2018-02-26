@@ -6,6 +6,8 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
+#undef DEBUG
+
 #if 0
 void check_mpi_error(int err, std::string error) {
     if (err != MPI_SUCCESS) {
@@ -60,39 +62,38 @@ void init_mpi(int argc, char**argv) {
 #endif
 
 std::string hostname() {
-    char name[200] = {0};
-    gethostname(name, sizeof(name));
-    return name;
+  char name[200] = {0};
+  gethostname(name, sizeof(name));
+  return name;
 }
 
 unsigned int get_rand() {
-    static std::mt19937 mt_rand(42);
-
-    auto res = mt_rand();
-
-    return res;
+  static std::mt19937 mt_rand(42);
+  auto res = mt_rand();
+  return res;
 }
 
 double get_rand_between_0_1() {
-    static std::mt19937 mt_rand(42);
-
-    return 1.0 * mt_rand() / mt_rand.max();
+  static std::mt19937 mt_rand(42);
+  return 1.0 * mt_rand() / mt_rand.max();
 }
 
 double get_random_normal(double mean, double var) {
   static std::default_random_engine generator;
   std::normal_distribution<double> distribution(mean, std::sqrt(var));
-
   return distribution(generator);
 }
 
 void sleep_forever() {
-    while (1) {
-        sleep(1000);
-    }
+  while (1) {
+    sleep(1000);
+  }
 }
 
 int64_t send_all(int sock, void* data, size_t len) {
+#ifdef DEBUG
+  std::cout << "send_all len: " << len << std::endl;
+#endif
   uint64_t bytes_sent = 0;
 
   while (bytes_sent < len) {
@@ -102,29 +103,43 @@ int64_t send_all(int sock, void* data, size_t len) {
     if (retval == -1) {
       return -1;
     }
-
     bytes_sent += retval;
   }   
-
+#ifdef DEBUG
+  std::cout << "send_all done" << std::endl;
+#endif
   return bytes_sent;
 }
 
 ssize_t read_all(int sock, void* data, size_t len) {
+#ifdef DEBUG
+  std::cout << "read_all len: " << len << std::endl;
+#endif
   uint64_t bytes_read = 0;
 
   while (bytes_read < len) {
+#ifdef DEBUG
+    std::cout << "calling read().." << std::endl;
+#endif
     int64_t retval = read(sock, reinterpret_cast<char*>(data) + bytes_read,
         len - bytes_read);
+#ifdef DEBUG
+    std::cout << "read_all told to read: " << (len - bytes_read) << " retval: " << retval << std::endl;
+#endif
 
     if (retval == -1) {
-      throw std::runtime_error("Error reading from client");
+      std::string error_str = "Error reading from client. errno: "
+        + std::to_string(errno);
+      throw std::runtime_error(error_str);
     } else if (retval == 0) {
       // end of file
-      throw std::runtime_error("End of file in socket");
+      return 0; // we inform the caller of EOF
     }
-
     bytes_read += retval;
-  }   
-
+  }
+#ifdef DEBUG
+  std::cout << "read_all done" << std::endl;
+#endif
   return bytes_read;
 }
+
