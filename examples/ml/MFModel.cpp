@@ -17,10 +17,13 @@
 // ....
 
 void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfactors) {
-  user_weights_ = new FEATURE_TYPE[users * nfactors];
-  item_weights_ = new FEATURE_TYPE[items * nfactors];
-  user_bias_ = new FEATURE_TYPE[users];
-  item_bias_ = new FEATURE_TYPE[items];
+  user_weights_ = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[users * nfactors], std::default_delete<FEATURE_TYPE[]>());
+  item_weights_ = std::shared_ptr<FEATURE_TYPE>(
+      new FEATURE_TYPE[items * nfactors], std::default_delete<FEATURE_TYPE[]>());
+
+  user_bias_.resize(users);
+  item_bias_.resize(items);
 
   item_fact_reg_ = 0.01;
   user_fact_reg_ = 0.01;
@@ -32,9 +35,6 @@ void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfacto
   nitems_ = items;
   nfactors_ = nfactors;
 
-  memset(user_bias_, 0, users * sizeof(FEATURE_TYPE));
-  memset(item_bias_, 0, items * sizeof(FEATURE_TYPE));
-
   randomize();
 }
 
@@ -42,7 +42,7 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
     initialize_weights(users , items, nfactors);
 }
 
-MFModel::MFModel(const void* w, uint64_t n, uint64_t d) {
+MFModel::MFModel(const void* /*w*/, uint64_t /*n*/, uint64_t /*d*/) {
   throw std::runtime_error("Not implemented");
 }
 
@@ -51,16 +51,17 @@ uint64_t MFModel::size() const {
   return 0;
 }
 
-std::unique_ptr<Model> MFModel::deserialize(void* data, uint64_t size) const {
-    uint32_t* data_p = (uint32_t*)data;
-    //uint32_t users = *data_p++;
-    //uint32_t items = *data_p++;
-    //uint32_t nfactors = *data_p++;
+std::unique_ptr<Model> MFModel::deserialize(void* /*data*/, uint64_t /*size*/) const {
+  throw std::runtime_error("Not implemented");
+  //uint32_t* data_p = (uint32_t*)data;
+  ////uint32_t users = *data_p++;
+  ////uint32_t items = *data_p++;
+  ////uint32_t nfactors = *data_p++;
 
-    //return std::make_unique<MFModel>(
-    //        reinterpret_cast<void*>(data_p), users, items, nfactors);
-    return std::make_unique<MFModel>(
-            reinterpret_cast<void*>(data_p), 10, 10);
+  ////return std::make_unique<MFModel>(
+  ////        reinterpret_cast<void*>(data_p), users, items, nfactors);
+  //return std::make_unique<MFModel>(
+  //    reinterpret_cast<void*>(data_p), 10, 10);
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
@@ -86,11 +87,11 @@ void MFModel::serializeTo(void* mem) const {
     data_u++;
 
     FEATURE_TYPE* data_d = reinterpret_cast<FEATURE_TYPE*>(data_u);
-    std::copy(user_weights_, user_weights_ + nusers_ * nfactors_, data_d);
+    std::copy(user_weights_.get(), user_weights_.get() + nusers_ * nfactors_, data_d);
 
     data_d += nusers_ * nfactors_;
 
-    std::copy(item_weights_, item_weights_ + nitems_ * nfactors_, data_d);
+    std::copy(item_weights_.get(), item_weights_.get() + nitems_ * nfactors_, data_d);
 }
 
 /**
@@ -117,8 +118,8 @@ std::unique_ptr<Model> MFModel::copy() const {
     return new_model;
 }
 
-void MFModel::sgd_update(double learning_rate,
-        const ModelGradient* gradient) {
+void MFModel::sgd_update(double /*learning_rate*/,
+        const ModelGradient* /*gradient*/) {
     throw std::runtime_error("Not implemented");
 }
 
@@ -165,23 +166,23 @@ std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
         const Matrix&,
         FEATURE_TYPE*,
         uint64_t,
-        double epsilon) const {
+        double) const {
   throw std::runtime_error("Not implemented");
 }
 
 FEATURE_TYPE& MFModel::get_user_weights(uint64_t userId, uint64_t factor) const {
-  return *(user_weights_ + userId * nfactors_ + factor);
+  return *(user_weights_.get() + userId * nfactors_ + factor);
 }
 
 FEATURE_TYPE& MFModel::get_item_weights(uint64_t itemId, uint64_t factor) const {
-  return *(item_weights_ + itemId * nfactors_ + factor);
+  return *(item_weights_.get() + itemId * nfactors_ + factor);
 }
 
 void MFModel::sgd_update(
             double learning_rate,
             uint64_t base_user,
             const SparseDataset& dataset,
-            double epsilon) const {
+            double /*epsilon*/) {
   // iterate all pairs user rating
   for (uint64_t i = 0; i < dataset.data_.size(); ++i) {
     for (uint64_t j = 0; j < dataset.data_[i].size(); ++j) {
@@ -249,7 +250,7 @@ void MFModel::sgd_update(
   }
 }
 
-std::pair<double, double> MFModel::calc_loss(Dataset& dataset) const {
+std::pair<double, double> MFModel::calc_loss(Dataset& /*dataset*/) const {
   throw std::runtime_error("Not implemented");
   return std::make_pair(0.0, 0.0);
 }
@@ -294,13 +295,13 @@ std::unique_ptr<ModelGradient> MFModel::loadGradient(void* mem) const {
 }
 
 double MFModel::checksum() const {
-    return crc32(user_weights_, nusers_ * nfactors_ * sizeof(FEATURE_TYPE));
+    return crc32(user_weights_.get(), nusers_ * nfactors_ * sizeof(FEATURE_TYPE));
 }
 
 void MFModel::print() const {
     std::cout << "MODEL user weights: ";
     for (uint64_t i = 0; i < nusers_ * nfactors_; ++i) {
-      std::cout << " " << user_weights_[i];
+      std::cout << " " << user_weights_.get()[i];
     }
     std::cout << std::endl;
 }

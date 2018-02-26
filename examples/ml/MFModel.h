@@ -97,7 +97,7 @@ class MFModel : public Model {
     void sgd_update(double learning_rate,
                 uint64_t base_user,
                 const SparseDataset&,
-                double epsilon) const;
+                double epsilon);
 
     /**
      * Compute the logistic loss of a given dataset on the current model
@@ -146,11 +146,12 @@ class MFModel : public Model {
 
     void initialize_weights(uint64_t, uint64_t, uint64_t);
 
-    FEATURE_TYPE* user_weights_;
-    FEATURE_TYPE* item_weights_;
+    // between vector and shared_ptr, which one to use?
+    std::shared_ptr<FEATURE_TYPE> user_weights_;
+    std::shared_ptr<FEATURE_TYPE> item_weights_;
 
-    FEATURE_TYPE* user_bias_;
-    FEATURE_TYPE* item_bias_;
+    std::vector<FEATURE_TYPE> user_bias_;
+    std::vector<FEATURE_TYPE> item_bias_;
 
     FEATURE_TYPE user_bias_reg_;
     FEATURE_TYPE item_bias_reg_;
