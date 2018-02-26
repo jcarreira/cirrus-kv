@@ -36,7 +36,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 }
 
 void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
-  uint32_t operation = SEND_GRADIENT;
+  uint32_t operation = SEND_LR_GRADIENT;
 #ifdef DEBUG
   std::cout << "Sending gradient" << std::endl;
 #endif
@@ -173,9 +173,10 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   // FORMAT here is
   // minibatch_size * user vectors. Each vector is user_id + user_bias + NUM_FACTORS * FEATURE_TYPE
   // num_item_ids * item vectors. Each vector is item_id + item_bias + NUM_FACTORS * FEATURE_TYPE
-  uint32_t to_receive_size =
-    sizeof(uint32_t) * 2 + // user_id and item_id
-    (minibatch_size + item_ids.size() + 2) * sizeof(FEATURE_TYPE); // user/item bias + user/item vectors
+  uint32_t to_receive_size = 
+  minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+  item_ids.size() * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+
   std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
 
   char* buffer = new char[to_receive_size];

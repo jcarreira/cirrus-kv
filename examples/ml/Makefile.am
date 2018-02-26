@@ -47,7 +47,8 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
 
 CPP_SOURCES = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp \
-	      Model.cpp LRModel.cpp SoftmaxModel.cpp SparseLRModel.cpp SparseMFModel.cpp \
+	      Model.cpp LRModel.cpp SoftmaxModel.cpp SparseLRModel.cpp \
+	      SparseMFModel.cpp MFModel.cpp\
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp Serializers.cpp \
               ErrorTask.cpp ErrorSparseTask.cpp \

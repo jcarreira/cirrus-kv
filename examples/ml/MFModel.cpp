@@ -171,10 +171,14 @@ std::unique_ptr<ModelGradient> MFModel::minibatch_grad(
 }
 
 FEATURE_TYPE& MFModel::get_user_weights(uint64_t userId, uint64_t factor) const {
+  assert(factor < NUM_FACTORS);
+  assert(userId < nusers_);
   return *(user_weights_.get() + userId * nfactors_ + factor);
 }
 
 FEATURE_TYPE& MFModel::get_item_weights(uint64_t itemId, uint64_t factor) const {
+  assert(factor < NUM_FACTORS);
+  assert(itemId < nitems_);
   return *(item_weights_.get() + itemId * nfactors_ + factor);
 }
 

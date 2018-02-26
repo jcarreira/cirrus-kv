@@ -10,20 +10,6 @@
 
 #define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
-namespace PSSparseServerTaskGlobal {
-  // used to monitor how much since last received gradient
-  static auto prev_on_msg_time = get_time_us();
-
-  static Configuration config;
-  static std::mutex mp_start_lock; // used as barrier
- 
-  static std::unique_ptr<SparseLRModel> model; // last computed model
-  std::mutex model_lock; // used to coordinate access to the last computed model
-
-  redisContext* redis_con;
-  volatile uint64_t onMessageCount = 0;
-}
-
 auto PSSparseServerTask::connect_redis() {
   auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
   if (redis_con == NULL || redis_con -> err) {
@@ -50,11 +36,11 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
 }
 
 std::shared_ptr<char> PSSparseServerTask::serialize_lr_model(
-    const SparseLRModel& model, uint64_t* model_size) const {
-  *model_size = model.getSerializedSize();
+    const SparseLRModel& lr_model, uint64_t* model_size) const {
+  *model_size = lr_model.getSerializedSize();
   auto d = std::shared_ptr<char>(
       new char[*model_size], std::default_delete<char[]>());
-  model.serializeTo(d.get());
+  lr_model.serializeTo(d.get());
   return d;
 }
 
@@ -66,20 +52,122 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
   }
   return x.fd == -1;
 }
+      
+bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vector<char>& thread_buffer) {
+  uint32_t incoming_size = req.incoming_size;
+#ifdef DEBUG 
+  std::cout << "APPLY_GRADIENT_REQ incoming size: " << incoming_size << std::endl;
+#endif
+  if (incoming_size > thread_buffer.size()) {
+    throw std::runtime_error("Not enough buffer");
+  }
+  //buffer.resize(incoming_size);
+  try {
+    if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
+      return false;
+    }
+  } catch(...) {
+    throw std::runtime_error("Uhandled error");
+  }
 
-std::mutex to_process_lock;
-sem_t sem_new_req;
-struct Request {
-  public:
-    Request(int req_id, int sock, uint32_t incoming_size, struct pollfd& poll_fd) :
-      req_id(req_id), sock(sock), incoming_size(incoming_size), poll_fd(poll_fd){}
+  LRSparseGradient gradient(0);
+  gradient.loadSerialized(thread_buffer.data());
 
-  int req_id;
-  int sock;
-  uint32_t incoming_size;
-  struct pollfd& poll_fd;
-};
-std::queue<Request> to_process;
+  model_lock.lock();
+  lr_model->sgd_update_adagrad(
+      task_config.get_learning_rate(), &gradient);
+  model_lock.unlock();
+  onMessageCount++;
+  return true;
+}
+
+bool PSSparseServerTask::process_get_mf_sparse_model(
+    const Request& req, std::vector<char>& thread_buffer) {
+  uint32_t k_items;
+  uint32_t base_user_id;
+  uint32_t minibatch_size;
+
+  read_all(req.sock, &k_items, sizeof(uint32_t));
+  read_all(req.sock, &base_user_id, sizeof(uint32_t));
+  read_all(req.sock, &minibatch_size, sizeof(uint32_t));
+  read_all(req.sock, thread_buffer.data(), k_items * sizeof(uint32_t));
+
+  // we have to send #users * n_factors +
+  // #items * n_factors 
+  uint32_t to_send_size = 
+    minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+    k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+  auto data_to_send = std::shared_ptr<char>(
+      new char[to_send_size], std::default_delete<char[]>());
+  char* data_to_send_ptr = data_to_send.get();
+
+  // first we store data about users
+  for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
+    store_value<uint32_t>(data_to_send_ptr, i); // user id
+    store_value<FEATURE_TYPE>(
+        data_to_send_ptr,
+        mf_model->user_bias_[i]);  // bias
+    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
+      store_value<FEATURE_TYPE>(
+          data_to_send_ptr,
+          mf_model->get_user_weights(i, j));
+    }
+  }
+  
+  // now we store data about items
+  const char* item_data_ptr = thread_buffer.data();
+  for (uint32_t i = 0; i < k_items; ++i) {
+    int item_id = load_value<uint32_t>(item_data_ptr);
+    store_value<uint32_t>(data_to_send_ptr, item_id);
+    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->user_bias_[i]);
+    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
+      store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_item_weights(item_id, j));
+    }
+  }
+
+  return true;
+}
+
+bool PSSparseServerTask::process_get_lr_sparse_model(
+    const Request& req, std::vector<char>& thread_buffer) {
+  // need to parse the buffer to get the indices of the model we want 
+  // to send back to the client
+  uint32_t incoming_size = req.incoming_size;
+  if (incoming_size > thread_buffer.size()) {
+    throw std::runtime_error("Not enough buffer");
+  }
+#ifdef DEBUG 
+  std::cout << "GET_MODEL_REQ incoming size: " << incoming_size << std::endl;
+#endif
+  try {
+    if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
+      return false;
+    }
+  } catch(...) {
+    throw std::runtime_error("Uhandled error");
+  }
+
+  const char* data = thread_buffer.data();
+  uint64_t num_entries = load_value<uint32_t>(data);
+
+  uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
+  auto data_to_send = std::shared_ptr<char>(
+      new char[to_send_size], std::default_delete<char[]>());
+  char* data_to_send_ptr = data_to_send.get();
+#ifdef DEBUG
+  std::cout << "Sending back: " << num_entries
+    << " weights from model. Size: " << to_send_size
+    << std::endl;
+#endif
+  for (uint32_t i = 0; i < num_entries; ++i) {
+    uint32_t entry_index = load_value<uint32_t>(data);
+    store_value<FEATURE_TYPE>(
+        data_to_send_ptr,
+        lr_model->get_nth_weight(entry_index));
+  }
+  send_all(req.sock, data_to_send.get(), to_send_size);
+  return true;
+}
 
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
@@ -95,78 +183,27 @@ void PSSparseServerTask::gradient_f() {
     std::cout << "Processing request: " << req.req_id << std::endl;
 #endif
 
-    if (req.req_id == SEND_GRADIENT) {
-    if (req.req_id == APPLY_GRADIENT_REQ) {
-      uint32_t incoming_size = req.incoming_size;
-#ifdef DEBUG 
-      std::cout << "APPLY_GRADIENT_REQ incoming size: " << incoming_size << std::endl;
-#endif
-      if (incoming_size > thread_buffer.size()) {
-        throw std::runtime_error("Not enough buffer");
+    if (req.req_id == SEND_LR_GRADIENT) {
+      if (!process_send_lr_gradient(req, thread_buffer)) {
+        break;
       }
-      //buffer.resize(incoming_size);
-      try {
-        if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
-          break;
-        }
-      } catch(...) {
-        throw std::runtime_error("Uhandled error");
-      }
-
-      LRSparseGradient gradient(0);
-      gradient.loadSerialized(thread_buffer.data());
-
-      PSSparseServerTaskGlobal::model_lock.lock();
-      PSSparseServerTaskGlobal::model->sgd_update_adagrad(
-          PSSparseServerTaskGlobal::config.get_learning_rate(), &gradient);
-      PSSparseServerTaskGlobal::model_lock.unlock();
-      PSSparseServerTaskGlobal::onMessageCount++;
     } else if (req.req_id == GET_LR_SPARSE_MODEL) {
-      // need to parse the buffer to get the indices of the model we want 
-      // to send back to the client
-      uint32_t incoming_size = req.incoming_size;
-      if (incoming_size > thread_buffer.size()) {
-        throw std::runtime_error("Not enough buffer");
+      if (!process_get_lr_sparse_model(req, thread_buffer)) {
+        break;
       }
-#ifdef DEBUG 
-      std::cout << "GET_MODEL_REQ incoming size: " << incoming_size << std::endl;
-#endif
-      try {
-        if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
-          break;
-        }
-      } catch(...) {
-        throw std::runtime_error("Uhandled error");
+    } else if (req.req_id == GET_MF_SPARSE_MODEL) {
+      if (!process_get_mf_sparse_model(req, thread_buffer)) {
+        break;
       }
-
-      const char* data = thread_buffer.data();
-      uint64_t num_entries = load_value<uint32_t>(data);
-
-      uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
-      auto data_to_send = std::shared_ptr<char>(
-          new char[to_send_size], std::default_delete<char[]>());
-      char* data_to_send_ptr = data_to_send.get();
-#ifdef DEBUG
-      std::cout << "Sending back: " << num_entries
-        << " weights from model. Size: " << to_send_size
-        << std::endl;
-#endif
-      for (uint32_t i = 0; i < num_entries; ++i) {
-        uint32_t entry_index = load_value<uint32_t>(data);
-        store_value<FEATURE_TYPE>(
-            data_to_send_ptr,
-            PSSparseServerTaskGlobal::model->get_nth_weight(entry_index));
-      }
-      send_all(req.sock, data_to_send.get(), to_send_size);
     } else if (req.req_id == GET_LR_FULL_MODEL) {
-      PSSparseServerTaskGlobal::model_lock.lock();
-      auto model_copy = *PSSparseServerTaskGlobal::model;
-      PSSparseServerTaskGlobal::model_lock.unlock();
-      uint32_t model_size = model_copy.getSerializedSize();
+      model_lock.lock();
+      auto lr_model_copy = *lr_model;
+      model_lock.unlock();
+      uint32_t model_size = lr_model_copy.getSerializedSize();
 
       auto d = std::shared_ptr<char>(
           new char[model_size], std::default_delete<char[]>());
-      model_copy.serializeTo(d.get());
+      lr_model_copy.serializeTo(d.get());
       send_all(req.sock, d.get(), model_size);
     } else {
       throw std::runtime_error("gradient_f: Unknown operation");
@@ -199,7 +236,8 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
   std::cout << "Operation: " << operation << std::endl;
 #endif
 
-  if (operation == SEND_GRADIENT || operation == GET_LR_SPARSE_MODEL) { // GRADIENT
+  if (operation == SEND_LR_GRADIENT || operation == GET_LR_SPARSE_MODEL ||
+      GET_MF_SPARSE_MODEL) {
     uint64_t bytes_read = 0;
     bool ret = read_from_client(buffer, sock, bytes_read);
     if (!ret) {
@@ -221,31 +259,6 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else if (operation == GET_MF_SPARSE_MODEL) {
-    uint64_t bytes_read = 0;
-    bool ret = read_from_client(buffer, sock, bytes_read);
-    if (!ret) {
-      return false;
-    }
-
-    uint32_t* incoming_size_ptr = reinterpret_cast<uint32_t*>(buffer.data());
-    uint32_t incoming_size = *incoming_size_ptr;
-#ifdef DEBUG 
-    std::cout << "incoming size: " << incoming_size << std::endl;
-#endif
-    if (incoming_size > current_buf_size) {
-      buffer.resize(incoming_size);
-    }
-
-    try {
-      read_all(sock, buffer.data(), incoming_size);
-    } catch(...) {
-      return false;
-    }
-
-    to_process_lock.lock();
-    to_process.push(Request(operation, sock, std::move(buffer)));
-    to_process_lock.unlock();
-    sem_post(&sem_new_req);
   } else {
     throw std::runtime_error("process: Unknown operation");
   }
@@ -276,13 +289,13 @@ bool PSSparseServerTask::read_from_client(
 }
 
 void PSSparseServerTask::start_server() {
-  PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
-  PSSparseServerTaskGlobal::model->randomize();
+  lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
+  lr_model->randomize();
   
   sem_init(&sem_new_req, 0, 0);
 
   server_thread = std::make_unique<std::thread>(
-      std::bind(&PSSparseServerTask::start_server2, this));
+      std::bind(&PSSparseServerTask::poll_thread_fn, this));
 
   for (uint32_t i = 0; i < n_threads; ++i) {
     gradient_thread.push_back(std::make_unique<std::thread>(
@@ -290,7 +303,7 @@ void PSSparseServerTask::start_server() {
   }
 }
 
-void PSSparseServerTask::start_server2() {
+void PSSparseServerTask::poll_thread_fn() {
   std::cout << "Starting server2" << std::endl;
 
   poll_thread = pthread_self();
@@ -437,17 +450,17 @@ void PSSparseServerTask::run(const Configuration& config) {
   start_server();
 
   // initialize model
-  PSSparseServerTaskGlobal::model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
-  PSSparseServerTaskGlobal::model->randomize();
+  lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
+  lr_model->randomize();
   std::cout << "[PS] "
     << "PS publishing model at id: " << MODEL_BASE
-    << " csum: " << PSSparseServerTaskGlobal::model->checksum() << std::endl;
+    << " csum: " << lr_model->checksum() << std::endl;
 
-  PSSparseServerTaskGlobal::config = config;
+  task_config = config;
 
-  PSSparseServerTaskGlobal::redis_con = connect_redis();
+  redis_con = connect_redis();
   //publish_model_redis();
-  wait_for_start(PS_SPARSE_SERVER_TASK_RANK, PSSparseServerTaskGlobal::redis_con, nworkers);
+  wait_for_start(PS_SPARSE_SERVER_TASK_RANK, redis_con, nworkers);
 
   uint64_t start = get_time_us();
   uint64_t last_tick = get_time_us();
@@ -458,11 +471,11 @@ void PSSparseServerTask::run(const Configuration& config) {
     if (elapsed_us > 1000000) {
       last_tick = now;
       std::cout << "Events in the last sec: " 
-        << 1.0 * PSSparseServerTaskGlobal::onMessageCount / elapsed_us * 1000 * 1000
+        << 1.0 * onMessageCount / elapsed_us * 1000 * 1000
         << " since (sec): " << since_start_sec
         << " #conns: " << num_connections
         << std::endl;
-      PSSparseServerTaskGlobal::onMessageCount = 0;
+      onMessageCount = 0;
     }
     sleep(1);
   }
@@ -470,7 +483,7 @@ void PSSparseServerTask::run(const Configuration& config) {
 
 void PSSparseServerTask::checkpoint_model() const {
   uint64_t model_size;
-  std::shared_ptr<char> data = serialize_lr_model(*PSSparseServerTaskGlobal::model, &model_size);
+  std::shared_ptr<char> data = serialize_lr_model(*lr_model, &model_size);
 
   std::ofstream fout("model_backup_file", std::ofstream::binary);
   fout.write(data.get(), model_size);
@@ -486,17 +499,17 @@ void PSSparseServerTask::publish_model_redis() {
     << "\n";
 #endif
 
-  PSSparseServerTaskGlobal::model_lock.lock();
-  auto model_copy = *PSSparseServerTaskGlobal::model;
-  PSSparseServerTaskGlobal::model_lock.unlock();
+  model_lock.lock();
+  auto lr_model_copy = *lr_model;
+  model_lock.unlock();
 
 #ifdef DEBUG
   std::cout << "Checking model" << std::endl;
-  model_copy.check();
+  lr_model_copy.check();
 #endif
   
   uint64_t model_size;
-  std::shared_ptr<char> data = serialize_lr_model(model_copy, &model_size);
+  std::shared_ptr<char> data = serialize_lr_model(lr_model_copy, &model_size);
 
 #ifdef DEBUG
   std::cout << "redisCommand PUBLISH MODEL" << std::endl;

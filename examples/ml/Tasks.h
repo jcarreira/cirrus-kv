@@ -7,6 +7,7 @@
 #include "config.h"
 #include "Redis.h"
 #include "LRModel.h"
+#include "MFModel.h"
 #include "SparseLRModel.h"
 #include "ProgressMonitor.h"
 
@@ -418,13 +419,24 @@ class PSSparseServerTask : public MLTask {
 
     void run(const Configuration& config);
 
+    struct Request {
+      public:
+        Request(int req_id, int sock, uint32_t incoming_size, struct pollfd& poll_fd) :
+          req_id(req_id), sock(sock), incoming_size(incoming_size), poll_fd(poll_fd){}
+
+        int req_id;
+        int sock;
+        uint32_t incoming_size;
+        struct pollfd& poll_fd;
+    };
+
   private:
     auto connect_redis();
     void thread_fn();
     void publish_model_pubsub();
     void publish_model_redis();
     void start_server();
-    void start_server2();
+    void poll_thread_fn();
     bool testRemove(struct pollfd x);
     void loop();
     bool process(struct pollfd&);
@@ -432,6 +444,9 @@ class PSSparseServerTask : public MLTask {
     std::shared_ptr<char> serialize_lr_model(const SparseLRModel& model, uint64_t* model_size) const;
     void gradient_f();
     void checkpoint_model() const;
+    bool process_get_lr_sparse_model(const Request& req, std::vector<char>&);
+    bool process_send_lr_gradient(const Request& req, std::vector<char>&);
+    bool process_get_mf_sparse_model(const Request& req, std::vector<char>&);
 
     /**
       * Attributes
@@ -456,6 +471,18 @@ class PSSparseServerTask : public MLTask {
     std::vector<char> buffer; // we use this buffer to hold data from workers
 
     pthread_t poll_thread;
+
+    std::mutex to_process_lock;
+    sem_t sem_new_req;
+    std::queue<Request> to_process;
+    
+    volatile uint64_t onMessageCount = 0;
+    redisContext* redis_con;
+    std::mutex model_lock; // used to coordinate access to the last computed model
+    
+    std::unique_ptr<SparseLRModel> lr_model; // last computed model
+    std::unique_ptr<MFModel> mf_model; // last computed model
+    Configuration task_config;
 };
 
 class MFNetflixTask : public MLTask {
