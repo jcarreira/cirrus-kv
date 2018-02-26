@@ -433,52 +433,56 @@ class PSSparseServerTask : public MLTask {
   private:
     auto connect_redis();
     void thread_fn();
-    void publish_model_pubsub();
-    void publish_model_redis();
+    //void publish_model_redis();
+
+    // network related methods
     void start_server();
     void poll_thread_fn();
     bool testRemove(struct pollfd x);
     void loop();
     bool process(struct pollfd&);
-    bool read_from_client(std::vector<char>& buffer, int sock, uint64_t& bytes_read);
-    std::shared_ptr<char> serialize_lr_model(const SparseLRModel& model, uint64_t* model_size) const;
-    void gradient_f();
+    //bool read_from_client(std::vector<char>& buffer, int sock, uint64_t& bytes_read);
+
+    // Model/ML related methods
     void checkpoint_model() const;
+    std::shared_ptr<char> serialize_lr_model(const SparseLRModel&, uint64_t* model_size) const;
+    void gradient_f();
+
+    // message handling
     bool process_get_lr_sparse_model(const Request& req, std::vector<char>&);
     bool process_send_lr_gradient(const Request& req, std::vector<char>&);
     bool process_get_mf_sparse_model(const Request& req, std::vector<char>&);
+    bool process_get_lr_full_model(const Request& req, std::vector<char>& thread_buffer);
+    bool process_send_mf_gradient(const Request& req, std::vector<char>& thread_buffer);
+    bool process_get_mf_full_model(const Request& req, std::vector<char>& thread_buffer);
 
     /**
       * Attributes
       */
-#if defined(USE_REDIS)
-    std::vector<unsigned int> gradientVersions;
-#endif
-    uint64_t curr_index = 0;
+    uint64_t curr_index = 0; // index (exclusive) to last sockets in fds
+#if 0
     uint64_t server_clock = 0;  // minimum of all worker clocks
-    std::unique_ptr<std::thread> thread;
+#endif
+    std::unique_ptr<std::thread> thread; // worker threads
+    std::unique_ptr<std::thread> server_thread;
+    std::vector<std::unique_ptr<std::thread>> gradient_thread;
+    pthread_t poll_thread;
+    std::mutex to_process_lock;
+    sem_t sem_new_req;
+    std::queue<Request> to_process;
+    const uint64_t n_threads = 12;
+    std::mutex model_lock; // used to coordinate access to the last computed model
 
     int port_ = 1337;
     int server_sock_ = 0;
     const uint64_t max_fds = 1000;
-    int timeout = 1;
+    int timeout = 1; // 1 ms
     std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
-
-    const uint64_t n_threads = 12;
-    std::unique_ptr<std::thread> server_thread;
-    std::vector<std::unique_ptr<std::thread>> gradient_thread;
 
     std::vector<char> buffer; // we use this buffer to hold data from workers
 
-    pthread_t poll_thread;
-
-    std::mutex to_process_lock;
-    sem_t sem_new_req;
-    std::queue<Request> to_process;
-    
     volatile uint64_t onMessageCount = 0;
     redisContext* redis_con;
-    std::mutex model_lock; // used to coordinate access to the last computed model
     
     std::unique_ptr<SparseLRModel> lr_model; // last computed model
     std::unique_ptr<MFModel> mf_model; // last computed model

@@ -16,7 +16,7 @@
 // Sample2 : ...
 // ....
 
-void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfactors) {
+void MFModel::initialize_data(uint64_t users, uint64_t items, uint64_t nfactors) {
   user_weights_ = std::shared_ptr<FEATURE_TYPE>(
       new FEATURE_TYPE[users * nfactors], std::default_delete<FEATURE_TYPE[]>());
   item_weights_ = std::shared_ptr<FEATURE_TYPE>(
@@ -39,7 +39,7 @@ void MFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfacto
 }
 
 MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
-    initialize_weights(users , items, nfactors);
+    initialize_data(users , items, nfactors);
 }
 
 MFModel::MFModel(const void* /*w*/, uint64_t /*n*/, uint64_t /*d*/) {
@@ -53,15 +53,6 @@ uint64_t MFModel::size() const {
 
 std::unique_ptr<Model> MFModel::deserialize(void* /*data*/, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
-  //uint32_t* data_p = (uint32_t*)data;
-  ////uint32_t users = *data_p++;
-  ////uint32_t items = *data_p++;
-  ////uint32_t nfactors = *data_p++;
-
-  ////return std::make_unique<MFModel>(
-  ////        reinterpret_cast<void*>(data_p), users, items, nfactors);
-  //return std::make_unique<MFModel>(
-  //    reinterpret_cast<void*>(data_p), 10, 10);
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
@@ -79,6 +70,7 @@ MFModel::serialize() const {
 void MFModel::serializeTo(void* mem) const {
     uint32_t* data_u = reinterpret_cast<uint32_t*>(mem);
 
+    //XXX fix this
     *data_u = nusers_;
     data_u++;
     *data_u = nitems_;

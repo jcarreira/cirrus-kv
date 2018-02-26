@@ -138,13 +138,19 @@ class MFModel : public Model {
       */
     uint64_t size() const;
 
+ private:
+    void initialize_data(uint64_t, uint64_t, uint64_t);
+    
+    // predict rating that userId gives to itemId
+    FEATURE_TYPE predict(uint32_t userId, uint32_t itemId) const;
+
+    uint64_t nusers_;
+    uint64_t nitems_;
+    uint64_t nfactors_;
+
  public:
     FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
     FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
-
-    FEATURE_TYPE predict(uint32_t userId, uint32_t itemId) const;
-
-    void initialize_weights(uint64_t, uint64_t, uint64_t);
 
     // between vector and shared_ptr, which one to use?
     std::shared_ptr<FEATURE_TYPE> user_weights_;
@@ -158,10 +164,6 @@ class MFModel : public Model {
 
     FEATURE_TYPE item_fact_reg_;
     FEATURE_TYPE user_fact_reg_;
-
-    uint64_t nusers_;
-    uint64_t nitems_;
-    uint64_t nfactors_;
 
     FEATURE_TYPE global_bias_ = 0;
 };

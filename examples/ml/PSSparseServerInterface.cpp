@@ -35,7 +35,7 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
   }
 }
 
-void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
+void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = SEND_LR_GRADIENT;
 #ifdef DEBUG
   std::cout << "Sending gradient" << std::endl;
@@ -191,23 +191,23 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   return std::move(model);
 }
 
+// 1. send operation (uint32_t)
+// 2. send gradient size (uint32_t)
+// 3. send gradient data
 void PSSparseServerInterface::send_mf_gradient(const MFSparseGradient& gradient) {
   uint32_t operation = SEND_MF_GRADIENT;
-  int ret = send(sock, &operation, sizeof(uint32_t), 0);
-  if (ret == -1) {
+  if (send(sock, &operation, sizeof(uint32_t), 0) == -1) {
     throw std::runtime_error("Error sending operation");
   }
 
   uint32_t size = gradient.getSerializedSize();
-  ret = send(sock, &size, sizeof(uint32_t), 0);
-  if (ret == -1) {
+  if (send(sock, &size, sizeof(uint32_t), 0) == -1) {
     throw std::runtime_error("Error sending grad size");
   }
   
   char data[size];
   gradient.serialize(data);
-  ret = send(sock, data, size, 0);
-  if (ret == -1) {
+  if (send(sock, data, size, 0) == -1) {
     throw std::runtime_error("Error sending grad");
   }
 }

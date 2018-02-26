@@ -19,7 +19,7 @@ class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
 
-  void send_gradient(const LRSparseGradient&);
+  void send_lr_gradient(const LRSparseGradient&);
   void send_mf_gradient(const MFSparseGradient&);
   
   //void get_model(SparseLRModel& model);

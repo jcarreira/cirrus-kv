@@ -30,8 +30,6 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
       LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
       batch_size, samples_per_batch, features_per_sample,
       nworkers, worker_id) {
-  gradientVersions.resize(nworkers, 0);
-
   std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
@@ -51,6 +49,29 @@ bool PSSparseServerTask::testRemove(struct pollfd x) {
     curr_index -= 1;
   }
   return x.fd == -1;
+}
+
+bool PSSparseServerTask::process_send_mf_gradient(const Request& req, std::vector<char>& thread_buffer) {
+  uint32_t incoming_size = req.incoming_size;
+#ifdef DEBUG 
+  std::cout << "APPLY_GRADIENT_REQ incoming size: " << incoming_size << std::endl;
+#endif
+  if (incoming_size > thread_buffer.size()) {
+    throw std::runtime_error("Not enough buffer");
+  }
+  if (read_all(req.sock, thread_buffer.data(), incoming_size) == 0) {
+    return false;
+  }
+
+  MFSparseGradient gradient;
+  gradient.loadSerialized(thread_buffer.data());
+
+  model_lock.lock();
+  mf_model->sgd_update(
+      task_config.get_learning_rate(), &gradient);
+  model_lock.unlock();
+  onMessageCount++;
+  return true;
 }
       
 bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vector<char>& thread_buffer) {
@@ -169,6 +190,41 @@ bool PSSparseServerTask::process_get_lr_sparse_model(
   return true;
 }
 
+bool PSSparseServerTask::process_get_mf_full_model(
+    const Request& req, std::vector<char>& thread_buffer) {
+  model_lock.lock();
+  auto mf_model_copy = *mf_model;
+  model_lock.unlock();
+  uint32_t model_size = mf_model_copy.getSerializedSize();
+
+  if (thread_buffer.size() < model_size) {
+    throw std::runtime_error("Thread buffer too small");
+  }
+
+  mf_model_copy.serializeTo(thread_buffer.data());
+  if (send_all(req.sock, thread_buffer.data(), model_size) == 0) {
+    return false;
+  }
+  return true;
+}
+      
+bool PSSparseServerTask::process_get_lr_full_model(
+    const Request& req, std::vector<char>& thread_buffer) {
+  model_lock.lock();
+  auto lr_model_copy = *lr_model;
+  model_lock.unlock();
+  uint32_t model_size = lr_model_copy.getSerializedSize();
+  
+  if (thread_buffer.size() < model_size) {
+    throw std::runtime_error("Thread buffer too small");
+  }
+
+  lr_model_copy.serializeTo(thread_buffer.data());
+  if (send_all(req.sock, thread_buffer.data(), model_size) == 0)
+    return false;
+  return true;
+}
+
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
   thread_buffer.resize(1024 * 1024); // 1MB
@@ -187,6 +243,10 @@ void PSSparseServerTask::gradient_f() {
       if (!process_send_lr_gradient(req, thread_buffer)) {
         break;
       }
+    }  else if (req.req_id == SEND_MF_GRADIENT) {
+      if (!process_send_mf_gradient(req, thread_buffer)) {
+        break;
+      }
     } else if (req.req_id == GET_LR_SPARSE_MODEL) {
       if (!process_get_lr_sparse_model(req, thread_buffer)) {
         break;
@@ -196,20 +256,17 @@ void PSSparseServerTask::gradient_f() {
         break;
       }
     } else if (req.req_id == GET_LR_FULL_MODEL) {
-      model_lock.lock();
-      auto lr_model_copy = *lr_model;
-      model_lock.unlock();
-      uint32_t model_size = lr_model_copy.getSerializedSize();
-
-      auto d = std::shared_ptr<char>(
-          new char[model_size], std::default_delete<char[]>());
-      lr_model_copy.serializeTo(d.get());
-      send_all(req.sock, d.get(), model_size);
+      if (!process_get_lr_full_model(req, thread_buffer))
+        break;
+    } else if (req.req_id == GET_MF_FULL_MODEL) {
+      if (!process_get_mf_full_model(req, thread_buffer))
+        break;
     } else {
       throw std::runtime_error("gradient_f: Unknown operation");
     }
-
-    req.poll_fd.events = POLLIN; // XXX explain this
+    
+    // We reactivate events from the client socket here
+    req.poll_fd.events = POLLIN;
 #ifdef DEBUG
     std::cout << "gradient_f done" << std::endl;
 #endif
@@ -236,11 +293,9 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
   std::cout << "Operation: " << operation << std::endl;
 #endif
 
-  if (operation == SEND_LR_GRADIENT || operation == GET_LR_SPARSE_MODEL ||
-      GET_MF_SPARSE_MODEL) {
-    uint64_t bytes_read = 0;
-    bool ret = read_from_client(buffer, sock, bytes_read);
-    if (!ret) {
+  if (operation == SEND_LR_GRADIENT || operation == SEND_MF_GRADIENT ||
+      operation == GET_LR_SPARSE_MODEL || GET_MF_SPARSE_MODEL) {
+    if (read_all(sock, buffer.data(), sizeof(uint32_t) == 0)) {
       return false;
     }
     uint32_t incoming_size = load_value<uint32_t>(data_ptr);
@@ -265,6 +320,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
   return true;
 }
 
+#if 0
 bool PSSparseServerTask::read_from_client(
     std::vector<char>& buffer, int sock, uint64_t& bytes_read) {
   bool first_loop = true;
@@ -287,6 +343,7 @@ bool PSSparseServerTask::read_from_client(
   }
   return true;
 }
+#endif
 
 void PSSparseServerTask::start_server() {
   lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
@@ -408,6 +465,9 @@ void PSSparseServerTask::loop() {
           std::cout << "Calling process" << std::endl;
 #endif
 	  if (!process(curr_fd)) {
+            if (close(curr_fd.fd) != 0) {
+              std::cout << "Error closing socket. errno: " << errno << std::endl;
+            }
             num_connections--;
             std::cout << "PS closing connection " << num_connections << std::endl;
 	    curr_fd.fd = -1;
@@ -490,6 +550,7 @@ void PSSparseServerTask::checkpoint_model() const {
   fout.close();
 }
 
+#if 0
 void PSSparseServerTask::publish_model_redis() {
 #ifdef DEBUG
   static int publish_count = 0;
@@ -524,4 +585,5 @@ void PSSparseServerTask::publish_model_redis() {
     << "\n";
 #endif
 }
+#endif
 
