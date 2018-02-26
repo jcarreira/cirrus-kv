@@ -2,7 +2,7 @@
 #include "PSSparseServerInterface.h"
 #include "Constants.h"
 
-#undef DEBUG
+#define DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -82,11 +82,19 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
   std::cout << std::endl;
 #endif
 
+#ifdef DEBUG
+  std::cout << "Sending operation and size" << std::endl;
+#endif
   // 1. Send operation
   uint32_t operation = GET_LR_SPARSE_MODEL;
   send_all(sock, &operation, sizeof(uint32_t));
   // 2. Send msg size
   uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
+#ifdef DEBUG
+  std::cout << "msg_size: " << msg_size
+    << " num_weights: " << num_weights
+    << std::endl;
+#endif
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send num_weights + weights
   send_all(sock, msg_begin, msg_size);
@@ -95,9 +103,15 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
   //std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
 
+#ifdef DEBUG
+  std::cout << "Receiving " << to_receive_size << " bytes" << std::endl;
+#endif
   char* buffer = new char[to_receive_size];
   read_all(sock, buffer, to_receive_size); //XXX this takes 2ms once every 5 runs
 
+#ifdef DEBUG
+  std::cout << "Loading model from memory" << std::endl;
+#endif
   // build a truly sparse model and return
   SparseLRModel model(0);
   model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
@@ -117,12 +131,16 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
   send_all(sock, &operation, sizeof(uint32_t));
   //2. receive size from PS
   int model_size;
-  read_all(sock, &model_size, sizeof(int));
+  if (read_all(sock, &model_size, sizeof(int)) == 0) {
+    throw std::runtime_error("Error talking to PS");
+  }
   char* model_data = new char[sizeof(int) + model_size * sizeof(FEATURE_TYPE)];
   char*model_data_ptr = model_data;
   store_value<int>(model_data_ptr, model_size);
 
-  read_all(sock, model_data_ptr, model_size * sizeof(FEATURE_TYPE));
+  if (read_all(sock, model_data_ptr, model_size * sizeof(FEATURE_TYPE)) == 0) {
+    throw std::runtime_error("Error talking to PS");
+  }
 
   SparseLRModel model(0);
   model.loadSerialized(model_data);

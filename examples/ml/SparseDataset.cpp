@@ -33,7 +33,7 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
 
 
 SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
-  throw std::runtime_error("Is this used");
+  //throw std::runtime_error("Is this used");
   const char* data_begin = data;
 
   data_.reserve(n_samples);

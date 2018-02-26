@@ -6,7 +6,7 @@
 #include "async.h"
 #include "Constants.h"
 
-#undef DEBUG
+#define DEBUG
 
 #define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
@@ -216,7 +216,9 @@ bool PSSparseServerTask::process_get_lr_full_model(
   uint32_t model_size = lr_model_copy.getSerializedSize();
   
   if (thread_buffer.size() < model_size) {
-    throw std::runtime_error("Thread buffer too small");
+    std::string error_str = "buffer with size " + std::to_string(thread_buffer.size()) +
+        "too small: " + std::to_string(model_size);
+    throw std::runtime_error(error_str);
   }
 
   lr_model_copy.serializeTo(thread_buffer.data());
@@ -227,7 +229,7 @@ bool PSSparseServerTask::process_get_lr_full_model(
 
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
-  thread_buffer.resize(1024 * 1024); // 1MB
+  thread_buffer.resize(10 * 1024 * 1024); // 10 MB
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
@@ -284,21 +286,21 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
 #ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
 #endif
-  const char* data_ptr = buffer.data();
-  if (read_all(sock, buffer.data(), sizeof(uint32_t)) == 0) { // read operation
+  uint32_t operation = 0;
+  if (read_all(sock, &operation, sizeof(uint32_t)) == 0) { // read operation
     return false;
   }
-  uint32_t operation = load_value<uint32_t>(data_ptr);
 #ifdef DEBUG 
   std::cout << "Operation: " << operation << std::endl;
 #endif
 
   if (operation == SEND_LR_GRADIENT || operation == SEND_MF_GRADIENT ||
-      operation == GET_LR_SPARSE_MODEL || GET_MF_SPARSE_MODEL) {
-    if (read_all(sock, buffer.data(), sizeof(uint32_t) == 0)) {
+      operation == GET_LR_SPARSE_MODEL || operation == GET_MF_SPARSE_MODEL) {
+    uint32_t incoming_size = 0;
+    if (read_all(sock, &incoming_size, sizeof(uint32_t)) == 0) {
       return false;
     }
-    uint32_t incoming_size = load_value<uint32_t>(data_ptr);
+    //data_ptr = buffer.data();
 #ifdef DEBUG 
     std::cout << "incoming size: " << incoming_size << std::endl;
 #endif
@@ -309,13 +311,14 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     sem_post(&sem_new_req);
   } else if (operation == GET_LR_FULL_MODEL) {
     to_process_lock.lock();
-    poll_fd.events = 0; //XXX explain this
+    poll_fd.events = 0; // we disable events for this socket while we process this message
     to_process.push(Request(operation, sock, 0, poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
   } else if (operation == GET_MF_SPARSE_MODEL) {
   } else {
-    throw std::runtime_error("process: Unknown operation");
+    std::string error = "process: Uknown operation " + std::to_string(operation);
+    throw std::runtime_error(error);
   }
   return true;
 }
@@ -402,8 +405,6 @@ void PSSparseServerTask::poll_thread_fn() {
   loop();
 }
 
-uint32_t num_connections = 0;
-
 void PSSparseServerTask::loop() {
   struct sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
@@ -469,7 +470,7 @@ void PSSparseServerTask::loop() {
               std::cout << "Error closing socket. errno: " << errno << std::endl;
             }
             num_connections--;
-            std::cout << "PS closing connection " << num_connections << std::endl;
+            std::cout << "PS closing connection after process(): " << num_connections << std::endl;
 	    curr_fd.fd = -1;
 	  }
 	}

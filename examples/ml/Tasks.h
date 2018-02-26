@@ -487,6 +487,7 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<SparseLRModel> lr_model; // last computed model
     std::unique_ptr<MFModel> mf_model; // last computed model
     Configuration task_config;
+    uint32_t num_connections = 0;
 };
 
 class MFNetflixTask : public MLTask {
