@@ -1,7 +1,8 @@
+#include <cassert>
 #include "PSSparseServerInterface.h"
 #include "Constants.h"
 
-//#define DEBUG
+#undef DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -36,6 +37,9 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 
 void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = SEND_GRADIENT;
+#ifdef DEBUG
+  std::cout << "Sending gradient" << std::endl;
+#endif
   int ret = send(sock, &operation, sizeof(uint32_t), 0);
   if (ret == -1) {
     throw std::runtime_error("Error sending operation");
@@ -56,6 +60,9 @@ void PSSparseServerInterface::send_gradient(const LRSparseGradient& gradient) {
 }
 
 SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& ds) {
+#ifdef DEBUG
+  std::cout << "Getting LR sparse model" << std::endl;
+#endif
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
   char* msg_begin = msg; // need to keep this pointer to delete later
@@ -102,6 +109,9 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
 }
 
 SparseLRModel PSSparseServerInterface::get_full_model() {
+#ifdef DEBUG
+  std::cout << "Getting full model" << std::endl;
+#endif
   // 1. Send operation
   uint32_t operation = GET_LR_FULL_MODEL;
   send_all(sock, &operation, sizeof(uint32_t));
