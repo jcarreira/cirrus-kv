@@ -32,7 +32,7 @@ uint64_t SparseLRModel::size() const {
 /** FORMAT
   * weights
   */
-std::unique_ptr<Model> SparseLRModel::deserialize(void* data, uint64_t size) const {
+std::unique_ptr<CirrusModel> SparseLRModel::deserialize(void* data, uint64_t size) const {
   throw std::runtime_error("not supported");
   uint64_t d = size / sizeof(FEATURE_TYPE);
   std::unique_ptr<SparseLRModel> model = std::make_unique<SparseLRModel>(
@@ -98,7 +98,7 @@ void SparseLRModel::randomize() {
     }
 }
 
-std::unique_ptr<Model> SparseLRModel::copy() const {
+std::unique_ptr<CirrusModel> SparseLRModel::copy() const {
     std::unique_ptr<SparseLRModel> new_model =
         std::make_unique<SparseLRModel>(weights_.data(), size());
     return new_model;

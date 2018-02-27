@@ -51,7 +51,7 @@ uint64_t MFModel::size() const {
   return 0;
 }
 
-std::unique_ptr<Model> MFModel::deserialize(void* /*data*/, uint64_t /*size*/) const {
+std::unique_ptr<CirrusModel> MFModel::deserialize(void* /*data*/, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
 }
 
@@ -104,7 +104,7 @@ void MFModel::randomize() {
   }
 }
 
-std::unique_ptr<Model> MFModel::copy() const {
+std::unique_ptr<CirrusModel> MFModel::copy() const {
     std::unique_ptr<MFModel> new_model =
         std::make_unique<MFModel>(nusers_, nitems_, nfactors_);
     return new_model;

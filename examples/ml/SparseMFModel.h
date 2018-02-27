@@ -16,7 +16,7 @@
   * Model is represented with a vector of FEATURE_TYPEs
   */
 
-class SparseMFModel : public Model {
+class SparseMFModel : public CirrusModel {
  public:
     /**
       * MFModel constructor from serialized data
@@ -56,14 +56,14 @@ class SparseMFModel : public Model {
      * @param data Memory where the serialized model lives
      * @param size Size of the serialized model
      */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<CirrusModel> deserialize(void* data,
             uint64_t size) const;
 
     /**
      * Performs a deep copy of this model
      * @return New model
      */
-    std::unique_ptr<Model> copy() const;
+    std::unique_ptr<CirrusModel> copy() const;
 
     /**
      * Performs an SGD update in the direction of the input gradient

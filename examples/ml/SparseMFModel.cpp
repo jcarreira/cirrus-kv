@@ -43,7 +43,7 @@ SparseMFModel::SparseMFModel(const void* data, uint64_t minibatch_size, uint64_t
 //  return 0;
 //}
 
-std::unique_ptr<Model> SparseMFModel::deserialize(void* data, uint64_t /*size*/) const {
+std::unique_ptr<CirrusModel> SparseMFModel::deserialize(void* data, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
     uint32_t* data_p = (uint32_t*)data;
     //uint32_t users = *data_p++;
@@ -111,7 +111,7 @@ void SparseMFModel::randomize() {
 #endif
 }
 
-std::unique_ptr<Model> SparseMFModel::copy() const {
+std::unique_ptr<CirrusModel> SparseMFModel::copy() const {
     std::unique_ptr<SparseMFModel> new_model =
         std::make_unique<SparseMFModel>(nusers_, nitems_, nfactors_);
     return new_model;

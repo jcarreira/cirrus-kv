@@ -122,32 +122,65 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
   return std::move(model);
 }
 
-SparseLRModel PSSparseServerInterface::get_full_model() {
+std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
+    bool isCollaborative //XXX use a better argument here
+    ) {
 #ifdef DEBUG
   std::cout << "Getting full model" << std::endl;
 #endif
-  // 1. Send operation
-  uint32_t operation = GET_LR_FULL_MODEL;
-  send_all(sock, &operation, sizeof(uint32_t));
-  //2. receive size from PS
-  int model_size;
-  if (read_all(sock, &model_size, sizeof(int)) == 0) {
-    throw std::runtime_error("Error talking to PS");
+  if (isCollaborative) {
+    return std::unique_ptr<CirrusModel>(std::make_unique<MFModel>(0,0,0)); //XXX fix this
+#if 0
+    // 1. Send operation
+    uint32_t operation = GET_MF_FULL_MODEL;
+    send_all(sock, &operation, sizeof(uint32_t));
+    // 2. Send msg size
+    uint32_t msg_size = sizeof(uint32_t) * 3 + sizeof(uint32_t) * item_ids_count;
+    send_all(sock, &msg_size, sizeof(uint32_t));
+    // 3. Send request message
+    send_all(sock, msg_begin, msg_size);
+
+    // 4. receive user vectors and item vectors
+    // FORMAT here is
+    // minibatch_size * user vectors. Each vector is user_id + user_bias + NUM_FACTORS * FEATURE_TYPE
+    // num_item_ids * item vectors. Each vector is item_id + item_bias + NUM_FACTORS * FEATURE_TYPE
+    uint32_t to_receive_size = 
+      minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+      item_ids_count * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+
+    std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
+
+    char* buffer = new char[to_receive_size];
+    read_all(sock, buffer, to_receive_size);
+
+    // build a sparse model and return
+    std::unique_ptr<Model> model = std::make_unique<SparseMFModel>((FEATURE_TYPE*)buffer, minibatch_size, item_ids_count);
+    delete[] msg_begin;
+    delete[] buffer;
+    return model;
+#endif
+  } else {
+    // 1. Send operation
+    uint32_t operation = GET_LR_FULL_MODEL;
+    send_all(sock, &operation, sizeof(uint32_t));
+    //2. receive size from PS
+    int model_size;
+    if (read_all(sock, &model_size, sizeof(int)) == 0) {
+      throw std::runtime_error("Error talking to PS");
+    }
+    char* model_data = new char[sizeof(int) + model_size * sizeof(FEATURE_TYPE)];
+    char*model_data_ptr = model_data;
+    store_value<int>(model_data_ptr, model_size);
+
+    if (read_all(sock, model_data_ptr, model_size * sizeof(FEATURE_TYPE)) == 0) {
+      throw std::runtime_error("Error talking to PS");
+    }
+    std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
+    model->loadSerialized(model_data);
+
+    delete[] model_data;
+    return model;
   }
-  char* model_data = new char[sizeof(int) + model_size * sizeof(FEATURE_TYPE)];
-  char*model_data_ptr = model_data;
-  store_value<int>(model_data_ptr, model_size);
-
-  if (read_all(sock, model_data_ptr, model_size * sizeof(FEATURE_TYPE)) == 0) {
-    throw std::runtime_error("Error talking to PS");
-  }
-
-  SparseLRModel model(0);
-  model.loadSerialized(model_data);
-  
-  delete[] model_data;
-
-  return std::move(model);
 }
 
 // Collaborative filtering

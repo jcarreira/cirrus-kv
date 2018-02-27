@@ -100,7 +100,7 @@ void SoftmaxModel::loadSerialized(const void* data) {
     }
 }
 
-std::unique_ptr<Model> SoftmaxModel::deserialize(void* data,
+std::unique_ptr<CirrusModel> SoftmaxModel::deserialize(void* data,
             uint64_t /* size */) const {
     uint64_t* uint_ptr = reinterpret_cast<uint64_t*>(data);
     uint64_t dim = *uint_ptr++;
@@ -112,7 +112,7 @@ std::unique_ptr<Model> SoftmaxModel::deserialize(void* data,
     return model;
 }
 
-std::unique_ptr<Model> SoftmaxModel::copy() const {
+std::unique_ptr<CirrusModel> SoftmaxModel::copy() const {
     std::unique_ptr<SoftmaxModel> new_model =
         std::make_unique<SoftmaxModel>(weights, nclasses, d);
     return new_model;
