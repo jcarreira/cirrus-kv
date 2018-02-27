@@ -12,24 +12,6 @@
 
 #undef DEBUG
 
-class MFModelGet {
-  public:
-    MFModelGet(const std::string& ps_ip, int ps_port) :
-      ps_ip(ps_ip), ps_port(ps_port) {
-      psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
-    }
-
-    SparseMFModel get_new_model(
-        const SparseDataset& ds, uint64_t user_base_index, uint64_t mb_size) {
-      return psi->get_sparse_mf_model(ds, user_base_index, mb_size);
-    }
-
-  private:
-    std::unique_ptr<PSSparseServerInterface> psi;
-    std::string ps_ip;
-    int ps_port;
-};
-
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
     std::cout << "[WORKER] "
@@ -41,19 +23,12 @@ void check_redis(auto r) {
   }
 }
 
-// we need global variables because of the static callbacks
-namespace MFNetflixTaskTaskGlobal {
-  std::unique_ptr<MFModelGet> mf_model_get;
-  redisContext* redis_con;
-  PSSparseServerInterface* psint;
-}
-
 void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  MFNetflixTaskTaskGlobal::psint->send_mf_gradient(mfg);
+  psint->send_mf_gradient(mfg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -104,30 +79,19 @@ bool MFNetflixTask::get_dataset_minibatch(
   return true;
 }
 
-static auto connect_redis() {
-  std::cout << "[WORKER] "
-    << "Worker task connecting to REDIS. "
-    << "IP: " << REDIS_IP << std::endl;
-  auto redis_con = redis_connect(REDIS_IP, REDIS_PORT);
-  check_redis(redis_con);
-  return redis_con;
-}
-
 void MFNetflixTask::run(const Configuration& config, int worker) {
   std::cout << "Starting MFNetflixTask"
     << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  MFNetflixTaskTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
+  psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
-  MFNetflixTaskTaskGlobal::redis_con = connect_redis();
   redis_lock.unlock();
 
-  MFNetflixTaskTaskGlobal::mf_model_get =
-    std::make_unique<MFModelGet>(PS_IP, PS_PORT);
+  mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
@@ -169,8 +133,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
     // we get the model subset with just the right amount of weights
     SparseMFModel model =
-      MFNetflixTaskTaskGlobal::mf_model_get->get_new_model(
-          *dataset, sample_index, config.get_minibatch_size());
+      mf_model_get->get_new_model(*dataset, sample_index, config.get_minibatch_size());
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
