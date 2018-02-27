@@ -13,6 +13,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -47,12 +48,8 @@ class MLTask {
      */
     void run(const Configuration& config, int worker);
 
-#ifdef USE_CIRRUS
-    void wait_for_start(int index, cirrus::TCPClient& client, int nworkers);
-#elif defined(USE_REDIS)
-    void wait_for_start(int index, redisContext* r, int nworkers);
+    void wait_for_start(int index, int nworkers);
     bool get_worker_status(auto r, int worker_id);
-#endif
 
   protected:
     std::string redis_ip;
@@ -170,28 +167,6 @@ class ErrorSparseTask : public MLTask {
         auto& samples, auto& labels);
 
     ProgressMonitor mp;
-};
-
-class LoadingTaskS3 : public MLTask {
-  public:
-    LoadingTaskS3(const std::string& redis_ip, uint64_t redis_port,
-        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
-        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
-        uint64_t SAMPLE_BASE, uint64_t START_BASE,
-        uint64_t batch_size, uint64_t samples_per_batch,
-        uint64_t features_per_sample, uint64_t nworkers,
-        uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
-          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-          batch_size, samples_per_batch, features_per_sample,
-          nworkers, worker_id)
-  {}
-    void run(const Configuration& config);
-    Dataset read_dataset(const Configuration& config);
-    auto connect_redis();
-    void check_loading(const Configuration&, auto& s3_client, uint64_t s3_obj_entries);
-
-  private:
 };
 
 class PerformanceLambdaTask : public MLTask {
@@ -345,6 +320,8 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<MFModel> mf_model; // last computed model
     Configuration task_config;
     uint32_t num_connections = 0;
+
+    std::map<int, bool> task_to_status;
 };
 
 class MFNetflixTask : public MLTask {

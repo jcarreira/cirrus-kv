@@ -87,7 +87,7 @@ start:
   
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
-  wait_for_start(ERROR_SPARSE_TASK_RANK, redis_con, nworkers);
+  wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);
   ErrorSparseTaskGlobal::start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"

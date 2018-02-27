@@ -1,6 +1,8 @@
 #include <cassert>
+#include <stdexcept>
 #include "PSSparseServerInterface.h"
 #include "Constants.h"
+#include "MFModel.h"
 
 #define DEBUG
 
@@ -53,8 +55,8 @@ void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient)
   
   char data[size];
   gradient.serialize(data);
-  ret = send(sock, data, size, 0);
-  if (ret == -1) {
+  ret = send_all(sock, data, size);
+  if (ret == 0) {
     throw std::runtime_error("Error sending grad");
   }
 }
@@ -87,7 +89,9 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
 #endif
   // 1. Send operation
   uint32_t operation = GET_LR_SPARSE_MODEL;
-  send_all(sock, &operation, sizeof(uint32_t));
+  if (send_all(sock, &operation, sizeof(uint32_t)) == -1) {
+    throw std::runtime_error("Error getting sparse lr model");
+  }
   // 2. Send msg size
   uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
 #ifdef DEBUG
@@ -97,7 +101,9 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
 #endif
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send num_weights + weights
-  send_all(sock, msg_begin, msg_size);
+  if (send_all(sock, msg_begin, msg_size) == -1) {
+    throw std::runtime_error("Error getting sparse lr model");
+  }
   
   //4. receive weights from PS
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
@@ -218,7 +224,9 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   uint32_t msg_size = sizeof(uint32_t) * 3 + sizeof(uint32_t) * item_ids_count;
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send request message
-  send_all(sock, msg_begin, msg_size);
+  if (send_all(sock, msg_begin, msg_size) == -1) {
+    throw std::runtime_error("Error getting sparse mf model");
+  }
   
   // 4. receive user vectors and item vectors
   // FORMAT here is
@@ -258,7 +266,27 @@ void PSSparseServerInterface::send_mf_gradient(const MFSparseGradient& gradient)
   
   char data[size];
   gradient.serialize(data);
-  if (send(sock, data, size, 0) == -1) {
+  if (send_all(sock, data, size) == 0) {
     throw std::runtime_error("Error sending grad");
   }
 }
+  
+void PSSparseServerInterface::set_status(uint32_t id, uint32_t status) {
+  uint32_t data[3] = {SET_TASK_STATUS, id, status};
+  if (send_all(sock, data, sizeof(uint32_t) * 3) == 0) {
+    throw std::runtime_error("Error setting task status");
+  }
+}
+
+uint32_t PSSparseServerInterface::get_status(uint32_t id) {
+  uint32_t data[2] = {GET_TASK_STATUS, id};
+  if (send_all(sock, data, sizeof(uint32_t) * 2) == -1) {
+    throw std::runtime_error("Error getting task status");
+  }
+  uint32_t status;
+  if (read_all(sock, &status, sizeof(uint32_t)) == 0) {
+    throw std::runtime_error("Error getting task status");
+  }
+  return status;
+}
+

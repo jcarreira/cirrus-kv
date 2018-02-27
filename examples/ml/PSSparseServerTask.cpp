@@ -331,7 +331,32 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     to_process.push(Request(operation, sock, 0, poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-  } else if (operation == GET_MF_SPARSE_MODEL) {
+  } else if (operation == GET_TASK_STATUS) {
+    uint32_t task_id;
+    if (read_all(sock, &task_id, sizeof(uint32_t)) == 0) {
+      return false;
+    }
+#ifdef DEBUG
+    std::cout << "Get status task id: " << task_id << std::endl;
+#endif
+    assert(task_id < 10000);
+    if (task_to_status.find(task_id) == task_to_status.end() ||
+        task_to_status[task_id] == false) {
+      uint32_t status = 0;
+      send_all(sock, &status, sizeof(uint32_t));
+    } else {
+      uint32_t status = 1;
+      send_all(sock, &status, sizeof(uint32_t));
+    }
+  } else if (operation == SET_TASK_STATUS) {
+    uint32_t data[2] = {0}; // id + status
+    if (read_all(sock, buffer.data(), sizeof(uint32_t) * 2) == 0) {
+      return false;
+    }
+#ifdef DEBUG
+    std::cout << "Set status task id: " << data[0] << " status: " << data[1] << std::endl;
+#endif
+    task_to_status[data[0]] = data[1];
   } else {
     std::string error = "process: Uknown operation " + std::to_string(operation);
     throw std::runtime_error(error);
@@ -538,8 +563,7 @@ void PSSparseServerTask::run(const Configuration& config) {
   task_config = config;
 
   redis_con = connect_redis();
-  //publish_model_redis();
-  wait_for_start(PS_SPARSE_SERVER_TASK_RANK, redis_con, nworkers);
+  //wait_for_start(PS_SPARSE_SERVER_TASK_RANK, redis_con, nworkers);
 
   uint64_t start = get_time_us();
   uint64_t last_tick = get_time_us();

@@ -29,6 +29,9 @@ class PSSparseServerInterface {
 
   std::unique_ptr<CirrusModel> get_full_model(bool isCollaborativeFiltering); //XXX use a better argument here
 
+  void set_status(uint32_t id, uint32_t status);
+  uint32_t get_status(uint32_t id);
+
  private:
   std::string ip;
   int port;

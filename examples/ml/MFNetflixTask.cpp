@@ -131,7 +131,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, MFNetflixTaskTaskGlobal::redis_con, nworkers);
+  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
   auto train_range = config.get_train_range();

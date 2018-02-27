@@ -54,7 +54,7 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
               ErrorSparseTask.cpp \
 	      LogisticSparseTaskS3.cpp \
 	      MFNetflixTask.cpp \
-	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp LoadingTaskS3.cpp  \
+	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp \
               PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp S3SparseIterator.cpp \
 	      PerformanceLambdaTask.cpp \
