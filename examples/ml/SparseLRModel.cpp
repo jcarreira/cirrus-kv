@@ -74,7 +74,7 @@ uint64_t SparseLRModel::getSerializedSize() const {
 void SparseLRModel::loadSerialized(const void* data) {
   int num_weights = load_value<int>(data);
 #ifdef DEBUG
-  //std::cout << "num_weights: " << num_weights << std::endl;
+  std::cout << "num_weights: " << num_weights << std::endl;
 #endif
   assert(num_weights > 0 && num_weights < 10000000);
 

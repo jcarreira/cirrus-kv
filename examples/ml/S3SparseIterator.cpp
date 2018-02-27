@@ -15,6 +15,7 @@ S3SparseIterator::S3SparseIterator(
         const Configuration& c,
         uint64_t s3_rows,
         uint64_t minibatch_rows,
+        bool use_label,
         int worker_id,
         bool random_access) :
     left_id(left_id), right_id(right_id),
@@ -22,6 +23,7 @@ S3SparseIterator::S3SparseIterator(
     minibatch_rows(minibatch_rows),
     pm(REDIS_IP, REDIS_PORT),
     minibatches_list(100000),
+    use_label(use_label),
     worker_id(worker_id),
     re(worker_id),
     random_access(random_access)
@@ -93,6 +95,9 @@ const void* S3SparseIterator::get_next_fast() {
   return ret.first;
 }
 
+// XXX we need to build minibatches from S3 objects
+// in a better way to allow support for different types
+// of minibatches
 void S3SparseIterator::push_samples(std::ostringstream* oss) {
   uint64_t n_minibatches = s3_rows / minibatch_rows;
 
@@ -128,9 +133,11 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   
     // advance ptr sample by sample
     for (uint64_t j = 0; j < minibatch_rows; ++j) {
-      FEATURE_TYPE label = load_value<FEATURE_TYPE>(s3_data); // read label
+      if (use_label) {
+        FEATURE_TYPE label = load_value<FEATURE_TYPE>(s3_data); // read label
+        assert(label == 0.0 || label == 1.0);
+      }
       int num_values = load_value<int>(s3_data); 
-      assert(label == 0.0 || label == 1.0);
       assert(num_values > 0 && num_values < 1000000);
     
       // advance until the next minibatch

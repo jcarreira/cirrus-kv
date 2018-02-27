@@ -302,4 +302,16 @@ void MFModel::print() const {
     std::cout << std::endl;
 }
 
+FEATURE_TYPE MFModel::get_user_bias(uint64_t userId) const {
+  if (userId >= user_bias_.size()) {
+    throw std::runtime_error("User bias index too large");
+  }
+  return user_bias_.at(userId);
+}
 
+FEATURE_TYPE MFModel::get_item_bias(uint64_t itemId) const {
+  if (itemId >= item_bias_.size()) {
+    throw std::runtime_error("Item bias index too large");
+  }
+  return item_bias_.at(itemId);
+}

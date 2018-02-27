@@ -165,7 +165,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   char* msg = new char[MAX_MSG_SIZE];
   char* msg_begin = msg; // need to keep this pointer to delete later
  
-  std::vector<uint32_t> item_ids;
+  uint32_t item_ids_count = 0;
   store_value<uint32_t>(msg, 0); // we will write this value later
   store_value<uint32_t>(msg, user_base);
   store_value<uint32_t>(msg, minibatch_size);
@@ -176,13 +176,13 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
     }
   }
   msg = msg_begin;
-  store_value<uint32_t>(msg, item_ids.size()); // store correct value here
+  store_value<uint32_t>(msg, item_ids_count); // store correct value here
   
   // 1. Send operation
   uint32_t operation = GET_MF_SPARSE_MODEL;
   send_all(sock, &operation, sizeof(uint32_t));
   // 2. Send msg size
-  uint32_t msg_size = sizeof(uint32_t) * 3 + sizeof(uint32_t) * item_ids.size();
+  uint32_t msg_size = sizeof(uint32_t) * 3 + sizeof(uint32_t) * item_ids_count;
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send request message
   send_all(sock, msg_begin, msg_size);
@@ -193,7 +193,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   // num_item_ids * item vectors. Each vector is item_id + item_bias + NUM_FACTORS * FEATURE_TYPE
   uint32_t to_receive_size = 
   minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
-  item_ids.size() * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+  item_ids_count * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
 
   std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
 
@@ -201,7 +201,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   read_all(sock, buffer, to_receive_size);
 
   // build a sparse model and return
-  SparseMFModel model((FEATURE_TYPE*)buffer, minibatch_size, item_ids.size());
+  SparseMFModel model((FEATURE_TYPE*)buffer, minibatch_size, item_ids_count);
   
   delete[] msg_begin;
   delete[] buffer;

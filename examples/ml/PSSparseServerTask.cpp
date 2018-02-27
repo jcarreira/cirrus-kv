@@ -113,21 +113,36 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
   read_all(req.sock, &minibatch_size, sizeof(uint32_t));
   read_all(req.sock, thread_buffer.data(), k_items * sizeof(uint32_t));
 
+#ifdef DEBUG
+  std::cout << "k_items: " << k_items << std::endl;
+  std::cout << "base_user_id: " << base_user_id << std::endl;
+  std::cout << "minibatch_size: " << minibatch_size << std::endl;
+#endif
+
   // we have to send #users * n_factors +
   // #items * n_factors 
   uint32_t to_send_size = 
     minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
     k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+#ifdef DEBUG
+  std::cout << "to_send_size: " << to_send_size << std::endl;
+#endif
   auto data_to_send = std::shared_ptr<char>(
       new char[to_send_size], std::default_delete<char[]>());
   char* data_to_send_ptr = data_to_send.get();
 
   // first we store data about users
   for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
+#ifdef DEBUG
+    std::cout << "userid: " << i << std::endl;
+    std::cout << "user_bias size: " << mf_model->user_bias_.size() << std::endl;
+    std::cout << "user_bias: " << mf_model->get_user_bias(i)
+      << std::endl;
+#endif
     store_value<uint32_t>(data_to_send_ptr, i); // user id
     store_value<FEATURE_TYPE>(
         data_to_send_ptr,
-        mf_model->user_bias_[i]);  // bias
+        mf_model->get_user_bias(i));  // bias
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       store_value<FEATURE_TYPE>(
           data_to_send_ptr,
@@ -140,7 +155,7 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
   for (uint32_t i = 0; i < k_items; ++i) {
     int item_id = load_value<uint32_t>(item_data_ptr);
     store_value<uint32_t>(data_to_send_ptr, item_id);
-    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->user_bias_[i]);
+    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_user_bias(i));
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_item_weights(item_id, j));
     }
@@ -254,6 +269,7 @@ void PSSparseServerTask::gradient_f() {
         break;
       }
     } else if (req.req_id == GET_MF_SPARSE_MODEL) {
+      std::cout << "process_get_mf_sparse_model" << std::endl;
       if (!process_get_mf_sparse_model(req, thread_buffer)) {
         break;
       }
@@ -351,6 +367,8 @@ bool PSSparseServerTask::read_from_client(
 void PSSparseServerTask::start_server() {
   lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
   lr_model->randomize();
+  mf_model.reset(new MFModel(task_config.get_users(), task_config.get_items(), NUM_FACTORS));
+  mf_model->randomize();
   
   sem_init(&sem_new_req, 0, 0);
 

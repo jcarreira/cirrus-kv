@@ -115,7 +115,6 @@ static auto connect_redis() {
 
 void MFNetflixTask::run(const Configuration& config, int worker) {
   std::cout << "Starting MFNetflixTask"
-    << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
     << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
@@ -127,7 +126,6 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   MFNetflixTaskTaskGlobal::redis_con = connect_redis();
   redis_lock.unlock();
 
-  //uint64_t MODEL_BASE = (1000000000ULL);
   MFNetflixTaskTaskGlobal::mf_model_get =
     std::make_unique<MFModelGet>(PS_IP, PS_PORT);
   
@@ -146,7 +144,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   S3SparseIterator s3_iter(
       train_range.first, train_range.second,
       config, config.get_s3_size(), config.get_minibatch_size(),
-      worker, false);
+      false, worker, false);
 
   std::cout << "[WORKER] starting loop" << std::endl;
 

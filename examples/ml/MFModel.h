@@ -151,6 +151,8 @@ class MFModel : public Model {
  public:
     FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
     FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
+    FEATURE_TYPE get_user_bias(uint64_t userId) const;
+    FEATURE_TYPE get_item_bias(uint64_t itemId) const;
 
     // between vector and shared_ptr, which one to use?
     std::shared_ptr<FEATURE_TYPE> user_weights_;

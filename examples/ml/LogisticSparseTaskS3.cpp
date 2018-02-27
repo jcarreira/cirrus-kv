@@ -9,7 +9,7 @@
 
 #include <pthread.h>
 
-#undef DEBUG
+#define DEBUG
 
 class SparseModelGet {
   public:
@@ -155,7 +155,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
       continue;
     }
 #ifdef DEBUG
-    std::cout << "[WORKER] phase 1 done" << std::endl;
+    std::cout << "[WORKER] phase 1 done. Getting the model" << std::endl;
     //dataset->check();
     //dataset->print_info();
     auto now = get_time_us();

@@ -978,12 +978,12 @@ void InputReader::read_netflix_input_thread(
     std::mutex& map_lock,
     std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds,
     int& number_movies,
+    int& number_users,
     std::map<int,int>& userid_to_realid,
     int& user_index) {
   //getline(fin, line); // read the header 
   std::string line;
-  //int numusers_local = 0;
-  int nummovies_local = 0;
+  int nummovies_local = 0, numusers_local = 0;
   while (1) {
     fin_lock.lock();
     getline(fin, line);
@@ -1022,12 +1022,12 @@ void InputReader::read_netflix_input_thread(
     sparse_ds.at(newuser_id).push_back(std::make_pair(movieId - 1, rating));
     map_lock.unlock();
 
-    //numusers_local = std::max(numusers_local, userId);
+    numusers_local = std::max(numusers_local, newuser_id);
     nummovies_local = std::max(nummovies_local, movieId);
   }
   
   fin_lock.lock();
-  //number_users = std::max(number_users, numusers_local);
+  number_users = std::max(number_users, numusers_local);
   number_movies = std::max(number_movies, nummovies_local);
   fin_lock.unlock();
 }
@@ -1037,7 +1037,7 @@ void InputReader::read_netflix_input_thread(
   * userId, movieId, rating
   */
 SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
-   int* number_movies) {
+   int* number_movies, int* number_users) {
   std::ifstream fin(input_file, std::ifstream::in);
   if (!fin) {
     throw std::runtime_error("Error opening input file " + input_file);
@@ -1048,7 +1048,7 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
   std::map<int, int> userid_to_realid;
   int user_index = 0;
 
-  *number_movies = 0;
+  *number_movies = *number_users = 0;
 
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> sparse_ds; // result dataset
   
@@ -1067,12 +1067,13 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
             std::placeholders::_1, std::placeholders::_2,
             std::placeholders::_3, std::placeholders::_4,
             std::placeholders::_5, std::placeholders::_6,
-            std::placeholders::_7),
+            std::placeholders::_7, std::placeholders::_8),
           std::ref(fin),
           std::ref(fin_lock),
           std::ref(map_lock),
           std::ref(sparse_ds),
           std::ref(*number_movies),
+          std::ref(*number_users),
           std::ref(userid_to_realid),
           std::ref(user_index)
           ));

@@ -50,32 +50,16 @@ void run_tasks(int rank, int nworkers,
         nworkers, rank);
     st.run(config);
     sleep_forever();
-  } else if (rank == PS_TASK_RANK) {
-    PSTask pt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
-        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-        batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
-    pt.run(config);
-    sleep_forever();
-  } else if (rank == LOADING_TASK_RANK) {
-    LoadingTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
-        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-        batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
-    lt.run(config);
-  } else if (rank == ERROR_TASK_RANK) {
-    ErrorTask et(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
-        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-        batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
-    et.run(config);
-    sleep_forever();
   } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
     /**
      * Worker tasks run here
      * Number of tasks is determined by the value of nworkers
      */
-    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+    //LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, features_per_sample, MODEL_BASE,
+    //    LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+    //    batch_size, samples_per_batch, features_per_sample,
+    //    nworkers, rank);
+    MFNetflixTask lt(REDIS_IP, REDIS_PORT, 0, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
@@ -109,7 +93,11 @@ void run_tasks(int rank, int nworkers,
     pt.run(config);
     sleep_forever();
   } else if (rank == WORKER_SPARSE_TASK_RANK) {
-    LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    //LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    //    LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+    //    batch_size, samples_per_batch, features_per_sample,
+    //    nworkers, rank);
+    MFNetflixTask lt(REDIS_IP, REDIS_PORT, 0, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);

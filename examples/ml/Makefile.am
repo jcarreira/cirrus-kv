@@ -51,11 +51,11 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
 	      SparseMFModel.cpp MFModel.cpp\
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp Serializers.cpp \
-              ErrorTask.cpp ErrorSparseTask.cpp \
-	      LogisticTask.cpp LogisticSparseTaskS3.cpp LogisticTaskS3.cpp \
+              ErrorSparseTask.cpp \
+	      LogisticSparseTaskS3.cpp \
 	      MFNetflixTask.cpp \
-	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp LoadingTask.cpp LoadingTaskS3.cpp  \
-              PSTask.cpp PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
+	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp LoadingTaskS3.cpp  \
+              PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp S3SparseIterator.cpp \
 	      PerformanceLambdaTask.cpp \
 	      Redis.cpp S3.cpp SparseDataset.cpp \

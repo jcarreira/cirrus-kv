@@ -47,6 +47,11 @@ void Configuration::print() const {
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "
       << test_set_range.first << "-" << test_set_range.second << std::endl;
+    if (nusers || nitems) {
+      std::cout
+        << "users: " << nusers << std::endl
+        << " items: " << nitems << std::endl;
+    }
 }
 
 void Configuration::check() const {
@@ -105,6 +110,10 @@ void Configuration::parse_line(const std::string& line) {
         iss >> s3_bucket_name;
     } else if (s == "use_bias:") {
         iss >> use_bias;
+    } else if (s == "num_users:") {
+        iss >> nusers;
+    } else if (s == "num_items:") {
+        iss >> nitems;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -116,6 +125,8 @@ void Configuration::parse_line(const std::string& line) {
             model_type = LOGISTICREGRESSION;
         } else if (model == "Softmax") {
             model_type = SOFTMAX;
+        } else if (model == "CollaborativeFiltering") {
+            model_type = COLLABORATIVE_FILTERING;
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
@@ -276,5 +287,13 @@ std::pair<int, int> Configuration::get_test_range() const {
 
 bool Configuration::get_use_bias() const {
   return use_bias;
+}
+
+int Configuration::get_users() const {
+  return nusers;
+}
+
+int Configuration::get_items() const {
+  return nitems;
 }
 
