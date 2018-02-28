@@ -10,15 +10,6 @@
 
 #define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
-auto PSSparseServerTask::connect_redis() {
-  auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (redis_con == NULL || redis_con -> err) {
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-  return redis_con;
-}
-
 PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t redis_port,
     uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
     uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
@@ -70,7 +61,7 @@ bool PSSparseServerTask::process_send_mf_gradient(const Request& req, std::vecto
   mf_model->sgd_update(
       task_config.get_learning_rate(), &gradient);
   model_lock.unlock();
-  onMessageCount++;
+  gradientUpdatesCount++;
   return true;
 }
       
@@ -98,7 +89,7 @@ bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vecto
   lr_model->sgd_update_adagrad(
       task_config.get_learning_rate(), &gradient);
   model_lock.unlock();
-  onMessageCount++;
+  gradientUpdatesCount++;
   return true;
 }
 
@@ -127,18 +118,19 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
 #ifdef DEBUG
   std::cout << "to_send_size: " << to_send_size << std::endl;
 #endif
+  //char* data_to_send_ptr = thread_buffer.data();
   auto data_to_send = std::shared_ptr<char>(
       new char[to_send_size], std::default_delete<char[]>());
   char* data_to_send_ptr = data_to_send.get();
 
   // first we store data about users
   for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
-#ifdef DEBUG
-    std::cout << "userid: " << i << std::endl;
-    std::cout << "user_bias size: " << mf_model->user_bias_.size() << std::endl;
-    std::cout << "user_bias: " << mf_model->get_user_bias(i)
-      << std::endl;
-#endif
+//#ifdef DEBUG
+//    std::cout << "userid: " << i << std::endl;
+//    std::cout << "user_bias size: " << mf_model->user_bias_.size() << std::endl;
+//    std::cout << "user_bias: " << mf_model->get_user_bias(i)
+//      << std::endl;
+//#endif
     store_value<uint32_t>(data_to_send_ptr, i); // user id
     store_value<FEATURE_TYPE>(
         data_to_send_ptr,
@@ -153,12 +145,17 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
   // now we store data about items
   const char* item_data_ptr = thread_buffer.data();
   for (uint32_t i = 0; i < k_items; ++i) {
-    int item_id = load_value<uint32_t>(item_data_ptr);
+    uint32_t item_id = load_value<uint32_t>(item_data_ptr);
+    std::cout << "item_id: " << item_id << std::endl;
     store_value<uint32_t>(data_to_send_ptr, item_id);
     store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_user_bias(i));
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_item_weights(item_id, j));
     }
+  }
+
+  if (send_all(req.sock, thread_buffer.data(), to_send_size) == -1) {
+    return false;
   }
 
   return true;
@@ -201,7 +198,9 @@ bool PSSparseServerTask::process_get_lr_sparse_model(
         data_to_send_ptr,
         lr_model->get_nth_weight(entry_index));
   }
-  send_all(req.sock, data_to_send.get(), to_send_size);
+  if (send_all(req.sock, data_to_send.get(), to_send_size) == -1) {
+    return false;
+  }
   return true;
 }
 
@@ -213,11 +212,13 @@ bool PSSparseServerTask::process_get_mf_full_model(
   uint32_t model_size = mf_model_copy.getSerializedSize();
 
   if (thread_buffer.size() < model_size) {
+    std::cout << "thread_buffer.size(): " << thread_buffer.size()
+      << " model_size: " << model_size << std::endl;
     throw std::runtime_error("Thread buffer too small");
   }
 
   mf_model_copy.serializeTo(thread_buffer.data());
-  if (send_all(req.sock, thread_buffer.data(), model_size) == 0) {
+  if (send_all(req.sock, thread_buffer.data(), model_size) == -1) {
     return false;
   }
   return true;
@@ -237,14 +238,14 @@ bool PSSparseServerTask::process_get_lr_full_model(
   }
 
   lr_model_copy.serializeTo(thread_buffer.data());
-  if (send_all(req.sock, thread_buffer.data(), model_size) == 0)
+  if (send_all(req.sock, thread_buffer.data(), model_size) == -1)
     return false;
   return true;
 }
 
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
-  thread_buffer.resize(10 * 1024 * 1024); // 10 MB
+  thread_buffer.resize(20 * 1024 * 1024); // 10 MB
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
@@ -325,7 +326,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     to_process.push(Request(operation, sock, incoming_size, poll_fd));
     to_process_lock.unlock();
     sem_post(&sem_new_req);
-  } else if (operation == GET_LR_FULL_MODEL) {
+  } else if (operation == GET_LR_FULL_MODEL || operation == GET_MF_FULL_MODEL) {
     to_process_lock.lock();
     poll_fd.events = 0; // we disable events for this socket while we process this message
     to_process.push(Request(operation, sock, 0, poll_fd));
@@ -350,7 +351,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     }
   } else if (operation == SET_TASK_STATUS) {
     uint32_t data[2] = {0}; // id + status
-    if (read_all(sock, buffer.data(), sizeof(uint32_t) * 2) == 0) {
+    if (read_all(sock, data, sizeof(uint32_t) * 2) == 0) {
       return false;
     }
 #ifdef DEBUG
@@ -551,18 +552,10 @@ void PSSparseServerTask::run(const Configuration& config) {
   if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
     throw std::runtime_error("Unable to set signal handler");
   }
+  
+  task_config = config;
   start_server();
 
-  // initialize model
-  lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
-  lr_model->randomize();
-  std::cout << "[PS] "
-    << "PS publishing model at id: " << MODEL_BASE
-    << " csum: " << lr_model->checksum() << std::endl;
-
-  task_config = config;
-
-  redis_con = connect_redis();
   //wait_for_start(PS_SPARSE_SERVER_TASK_RANK, redis_con, nworkers);
 
   uint64_t start = get_time_us();
@@ -574,11 +567,11 @@ void PSSparseServerTask::run(const Configuration& config) {
     if (elapsed_us > 1000000) {
       last_tick = now;
       std::cout << "Events in the last sec: " 
-        << 1.0 * onMessageCount / elapsed_us * 1000 * 1000
+        << 1.0 * gradientUpdatesCount / elapsed_us * 1000 * 1000
         << " since (sec): " << since_start_sec
         << " #conns: " << num_connections
         << std::endl;
-      onMessageCount = 0;
+      gradientUpdatesCount = 0;
     }
     sleep(1);
   }

@@ -9,6 +9,8 @@
 
 #include <cassert>
 
+#define DEBUG
+
 SparseDataset::SparseDataset() {
 }
 
@@ -32,7 +34,7 @@ SparseDataset::SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE
 }
 
 
-SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
+SparseDataset::SparseDataset(const char* data, uint64_t n_samples, bool has_labels) {
   //throw std::runtime_error("Is this used");
   const char* data_begin = data;
 
@@ -40,12 +42,19 @@ SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
   labels_.reserve(n_samples);
 
   for (uint64_t i = 0; i < n_samples; ++i) {
-    FEATURE_TYPE label = load_value<FEATURE_TYPE>(data);
+    FEATURE_TYPE label;
+    if (has_labels) {
+      label = load_value<FEATURE_TYPE>(data);
+      labels_.push_back(label);
+    }
     int num_sample_values = load_value<int>(data);
 
 #ifdef DEBUG
-    assert(FLOAT_EQ(label, 0.0) || FLOAT_EQ(label, 1.0));
-    assert(num_sample_values > 0 && num_sample_values < 1000000);
+    if (has_labels) {
+      assert(FLOAT_EQ(label, 0.0) || FLOAT_EQ(label, 1.0));
+    }
+    assert(num_sample_values >= 0 && num_sample_values < 1000000);
+    //std::cout << "num_sample_values: " << num_sample_values <<  std::endl;
 #endif
 
     std::vector<std::pair<int, FEATURE_TYPE>> sample;
@@ -56,7 +65,6 @@ SparseDataset::SparseDataset(const char* data, uint64_t n_samples) {
       sample.push_back(std::make_pair(index, value));
     }
     data_.push_back(sample);
-    labels_.push_back(label);
   }
 
   size_bytes = std::distance(data_begin, data);
@@ -293,7 +301,7 @@ void SparseDataset::normalize(uint64_t hash_size) {
       FEATURE_TYPE value = v.second;
 
 #ifdef DEBUG
-      if (index >= hash_size)
+      if (index >= (int)hash_size)
         throw std::runtime_error("Index bigger than capacity");
 #endif
 
@@ -315,5 +323,16 @@ const std::vector<std::pair<int, FEATURE_TYPE>>& SparseDataset::get_row(uint64_t
     throw std::runtime_error("Wrong index");
   }
   return data_[n];
+}
+
+uint64_t SparseDataset::num_features() const {
+  uint64_t count = 0;
+  for (const auto& w : data_) {
+    for (const auto& v : w) {
+      (void)v;
+      count++;
+    }
+  }
+  return count;
 }
 

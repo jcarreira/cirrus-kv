@@ -58,6 +58,9 @@ void Configuration::check() const {
   if (s3_bucket_name == "") {
     throw std::runtime_error("S3 bucket name missing from config file");
   }
+  if (test_set_range.first && model_type == COLLABORATIVE_FILTERING) {
+    throw std::runtime_error("Can't use test range with COLLABORATIVE_FILTERING");
+  }
 }
 
 /**

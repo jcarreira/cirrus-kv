@@ -238,7 +238,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     return ret;
 }
 
-std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const {
+std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset, uint32_t) const {
   double total_loss = 0;
   auto w = weights_;
 
@@ -287,12 +287,6 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
     double value = class_i *
       mlutils::log_aux(s1) +
       (1 - class_i) * mlutils::log_aux(1 - s1);
-
-    //if (value > 0 && value < 1e-6) {
-    //  // XXX this should be investigated
-    //  throw std::runtime_error("This code is actually used huh");
-    //  value = 0;
-    //}
 
     if (value > 0) {
       //std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
@@ -367,7 +361,6 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
   
   assert(num_weights > 0 && num_weights < 10000000);
 
-  //weights_sparse_.resize(num_weights);
   weights_sparse_.reserve(num_weights);
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);

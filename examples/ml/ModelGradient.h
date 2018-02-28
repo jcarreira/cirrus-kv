@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 #include <config.h>
 
 /**
@@ -149,6 +150,7 @@ class MFSparseGradient : public ModelGradient {
  public:
     friend class MFModel;
 
+    MFSparseGradient();
     virtual ~MFSparseGradient() = default;
 
     void loadSerialized(const void*);
@@ -159,8 +161,9 @@ class MFSparseGradient : public ModelGradient {
     void check_values() const override;
  public:
     // [D * K]
-    std::vector<FEATURE_TYPE> users_bias_grad;
-    std::vector<FEATURE_TYPE> items_bias_grad;
+    std::unordered_map<int, FEATURE_TYPE> users_bias_grad;
+    std::unordered_map<int, FEATURE_TYPE> items_bias_grad;
+    //std::vector<FEATURE_TYPE> items_bias_grad;
 
     // user id and then weights
     std::vector<

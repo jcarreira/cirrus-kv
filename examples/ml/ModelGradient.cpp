@@ -308,6 +308,14 @@ void MFGradient::check_values() const {
   }
 }
 
+MFSparseGradient::MFSparseGradient() {
+  //users_bias_grad.resize(nusers);
+  //users_weights_grad.resize(nusers);
+
+  //items_bias_grad.resize(nitems);
+  //items_weights_grad.resize(nitems);
+}
+
 /** FORMAT of the Matrix Factorization sparse gradient
  * number of users (uint32_t)
  * number of items (uint32_t)
@@ -317,8 +325,8 @@ void MFGradient::check_values() const {
  * item_weights_grad id (uint32_t) [# items * NUM_FACTORS] (uint32_t + FEATURE_TYPE)
  */
 uint64_t MFSparseGradient::getSerializedSize() const {
-  return users_bias_grad.size() * sizeof(FEATURE_TYPE)
-    + items_bias_grad.size() * sizeof(FEATURE_TYPE)
+  return users_bias_grad.size() * (sizeof(int) + sizeof(FEATURE_TYPE))
+    + items_bias_grad.size() * (sizeof(int) + sizeof(FEATURE_TYPE))
     + users_weights_grad.size() * (sizeof(uint32_t) + NUM_FACTORS * sizeof(FEATURE_TYPE))
     + items_weights_grad.size() *  (sizeof(uint32_t) + NUM_FACTORS * sizeof(FEATURE_TYPE));
 }
@@ -327,10 +335,12 @@ void MFSparseGradient::serialize(void *mem) const {
   store_value<uint32_t>(mem, users_bias_grad.size());
   store_value<uint32_t>(mem, items_bias_grad.size());
   for (const auto& user_bias : users_bias_grad) {
-    store_value<FEATURE_TYPE>(mem, user_bias);
+    store_value<int>(mem, user_bias.first);
+    store_value<FEATURE_TYPE>(mem, user_bias.second);
   }
   for (const auto& bias_grad : items_bias_grad) {
-    store_value<FEATURE_TYPE>(mem, bias_grad);
+    store_value<int>(mem, bias_grad.first);
+    store_value<FEATURE_TYPE>(mem, bias_grad.second);
   }
   for (const auto& user : users_weights_grad) {
     store_value<int>(mem, user.first);
@@ -349,16 +359,18 @@ void MFSparseGradient::serialize(void *mem) const {
 void MFSparseGradient::loadSerialized(const void* mem) {
   uint32_t users_size = load_value<uint32_t>(mem);
   uint32_t items_size = load_value<uint32_t>(mem);
-  users_bias_grad.reserve(users_size);
-  items_bias_grad.reserve(items_size);
+  //users_bias_grad.reserve(users_size);
+  //items_bias_grad.reserve(items_size);
   
   for (uint32_t i = 0; i < users_size; ++i) {
+    int user_id = load_value<int>(mem);
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(mem);
-    users_bias_grad.push_back(user_bias);
+    users_bias_grad[user_id] = user_bias;
   }
   for (uint32_t i = 0; i < items_size; ++i) {
+    int item_id = load_value<int>(mem);
     FEATURE_TYPE item_grad = load_value<FEATURE_TYPE>(mem);
-    items_bias_grad.push_back(item_grad);
+    items_bias_grad[item_id] = item_grad;
   }
   for (uint32_t i = 0; i < users_size; ++i) {
     std::pair<int, std::vector<FEATURE_TYPE>> user_weights_grad;

@@ -21,7 +21,7 @@ class MFModel : public CirrusModel {
       * @param w Array of model weights
       * @param d Features dimension
       */
-    MFModel(const void* w, uint64_t n, uint64_t d);
+    MFModel(const void*, uint64_t, uint64_t, uint64_t);
     MFModel(uint64_t users, uint64_t items, uint64_t factors);
 
     /**
@@ -107,6 +107,8 @@ class MFModel : public CirrusModel {
     std::pair<double, double> calc_loss(Dataset& dataset) const;
     
     std::pair<double, double> calc_loss(SparseDataset& dataset) const;
+    
+    std::pair<double, double> calc_loss(SparseDataset& dataset, uint32_t start_index) const;
 
     /**
      * Return the size of the gradient when serialized
@@ -149,14 +151,18 @@ class MFModel : public CirrusModel {
     uint64_t nfactors_;
 
  public:
-    FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
-    FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
-    FEATURE_TYPE get_user_bias(uint64_t userId) const;
-    FEATURE_TYPE get_item_bias(uint64_t itemId) const;
+    const FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
+    const FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
+    FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor);
+    FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor);
+    FEATURE_TYPE& get_user_bias(uint64_t userId);
+    FEATURE_TYPE& get_item_bias(uint64_t itemId);
 
     // between vector and shared_ptr, which one to use?
-    std::shared_ptr<FEATURE_TYPE> user_weights_;
-    std::shared_ptr<FEATURE_TYPE> item_weights_;
+    std::vector<FEATURE_TYPE> user_weights_;
+    std::vector<FEATURE_TYPE> item_weights_;
+    //std::shared_ptr<FEATURE_TYPE> user_weights_;
+    //std::shared_ptr<FEATURE_TYPE> item_weights_;
 
     std::vector<FEATURE_TYPE> user_bias_;
     std::vector<FEATURE_TYPE> item_bias_;

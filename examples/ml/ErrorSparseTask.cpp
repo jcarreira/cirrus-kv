@@ -44,32 +44,26 @@ void ErrorSparseTask::run(const Configuration& config) {
   // declare serializers
   lr_model_deserializer lmd(MODEL_GRAD_SIZE);
 
-  std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
-  auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (redis_con == NULL || redis_con -> err) { 
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-
   std::cout << "Creating sequential S3Iterator" << std::endl;
-  auto test_range = config.get_test_range();
-  S3SparseIterator s3_iter(test_range.first, test_range.second, config,
-      config.get_s3_size(), config.get_minibatch_size(), 0, false);
+  auto train_range = config.get_train_range();
+  S3SparseIterator s3_iter(train_range.first, train_range.second, config,
+      config.get_s3_size(), config.get_minibatch_size(), false, 0, false);
 
   // get data first
   // what we are going to use as a test set
 start:
   std::vector<SparseDataset> minibatches_vec;
   std::cout << "[ERROR_TASK] getting minibatches from "
-    << test_range.first << " to " << test_range.second
+    << train_range.first << " to " << train_range.second
     << std::endl;
   for (uint64_t i = 0;
-      i < (test_range.second - test_range.first) * (config.get_s3_size() / config.get_minibatch_size()); ++i) {
+      i < (train_range.second - train_range.first) *
+      (config.get_s3_size() / config.get_minibatch_size()); ++i) {
     try {
-      std::cout << "Getting object: " << i << std::endl;
+      //std::cout << "Getting minibatch: " << i << std::endl;
       const void* minibatch_data = s3_iter.get_next_fast();
       SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
-          config.get_minibatch_size());
+          config.get_minibatch_size(), false);
       minibatches_vec.push_back(ds);
     } catch(const cirrus::NoSuchIDException& e) {
       if (i == 0)
@@ -98,18 +92,16 @@ start:
     try {
       // first we get the model
 #ifdef DEBUG
-      std::cout << "[ERROR_TASK] getting the full model at id: "
-        << MODEL_BASE
+      std::cout << "[ERROR_TASK] getting the full model"
         << "\n";
 #endif
       std::unique_ptr<CirrusModel> model = get_model(config);
 
 #ifdef DEBUG
-      std::cout << "[ERROR_TASK] received the model with id: "
-        << MODEL_BASE << "\n";
+      std::cout << "[ERROR_TASK] received the model" << std::endl;
 #endif
 
-      int nb = mp.get_number_batches();
+      int nb = 0;//mp.get_number_batches();
       std::cout 
         << "[ERROR_TASK] computing loss."
         << " number_batches: " << nb
@@ -117,21 +109,37 @@ start:
       FEATURE_TYPE total_loss = 0;
       FEATURE_TYPE total_accuracy = 0;
       uint64_t total_num_samples = 0;
+      uint64_t total_num_features = 0;
+      uint64_t start_index = 0;
       for (auto& ds : minibatches_vec) {
-        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds);
+        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
         total_loss += ret.first;
         total_accuracy += ret.second;
         total_num_samples += ds.num_samples();
+        total_num_features += ds.num_features();
+        start_index += config.get_minibatch_size();
       }
-      std::cout
-        << "Loss (Total/Avg): " << total_loss << "/" << (total_loss / total_num_samples)
-        << " Accuracy: " << (total_accuracy / minibatches_vec.size())
-        << " time(us): " << get_time_us()
-        << " time from start (sec): "
-        << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
-        << std::endl;
+
+      if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
+        std::cout
+          << "[ERROR_TASK] Loss (Total/Avg): " << total_loss
+          << "/" << (total_loss / total_num_samples)
+          << " Accuracy: " << (total_accuracy / minibatches_vec.size())
+          << " time(us): " << get_time_us()
+          << " time from start (sec): "
+          << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
+          << std::endl;
+      } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
+        std::cout
+          << "[ERROR_TASK] RMSE (Total): " << std::sqrt(total_loss / total_num_features)
+          << " time(us): " << get_time_us()
+          << " time from start (sec): "
+          << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
+          << std::endl;
+      }
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;
     }
   }
 }
+

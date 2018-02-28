@@ -264,9 +264,8 @@ class PSSparseServerTask : public MLTask {
     };
 
   private:
-    auto connect_redis();
+    //auto connect_redis();
     void thread_fn();
-    //void publish_model_redis();
 
     // network related methods
     void start_server();
@@ -274,7 +273,6 @@ class PSSparseServerTask : public MLTask {
     bool testRemove(struct pollfd x);
     void loop();
     bool process(struct pollfd&);
-    //bool read_from_client(std::vector<char>& buffer, int sock, uint64_t& bytes_read);
 
     // Model/ML related methods
     void checkpoint_model() const;
@@ -314,7 +312,7 @@ class PSSparseServerTask : public MLTask {
 
     std::vector<char> buffer; // we use this buffer to hold data from workers
 
-    volatile uint64_t onMessageCount = 0;
+    volatile uint64_t gradientUpdatesCount = 0;
     redisContext* redis_con;
     
     std::unique_ptr<SparseLRModel> lr_model; // last computed model

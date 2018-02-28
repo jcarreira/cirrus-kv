@@ -86,7 +86,7 @@ class CirrusModel {
      */
     virtual std::pair<double,double> calc_loss(Dataset&) const {
       throw std::runtime_error("not implemented"); }
-    virtual std::pair<double,double> calc_loss(SparseDataset&) const {
+    virtual std::pair<double,double> calc_loss(SparseDataset&, uint32_t) const {
       throw std::runtime_error("not implemented"); }
 
     /**

@@ -109,7 +109,7 @@ class SparseLRModel : public CirrusModel {
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    std::pair<double, double> calc_loss(SparseDataset& dataset) const override;
+    std::pair<double, double> calc_loss(SparseDataset& dataset, uint32_t) const override;
 
     /**
      * Return the size of the gradient when serialized

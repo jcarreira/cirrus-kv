@@ -35,6 +35,7 @@ SparseMFModel::SparseMFModel(uint64_t users, uint64_t items, uint64_t nfactors) 
 }
 
 SparseMFModel::SparseMFModel(const void* data, uint64_t minibatch_size, uint64_t num_items) {
+  initialize_weights(0, 0, 0);
   loadSerialized(data, minibatch_size, num_items);
 }
 
@@ -94,8 +95,6 @@ void SparseMFModel::serializeTo(void* /*mem*/) const {
   * We probably want to put 0 in the values we don't know
   */
 void SparseMFModel::randomize() {
-  throw std::runtime_error("Not implemented");
-#if 0
   std::default_random_engine generator;
   std::normal_distribution<FEATURE_TYPE> distribution(0, 1.0 / nfactors_); // mean 0 and stddev=1
   for (uint64_t i = 0; i < nusers_; ++i) {
@@ -108,7 +107,6 @@ void SparseMFModel::randomize() {
       get_item_weights(i, j) = distribution(generator);
     }
   }
-#endif
 }
 
 std::unique_ptr<CirrusModel> SparseMFModel::copy() const {
@@ -123,7 +121,7 @@ uint64_t SparseMFModel::getSerializedSize() const {
 }
 
 void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, uint64_t num_item_ids) {
-  std::cout << "loadSerialized nusers: "
+  std::cout << "SparseMFModel::loadSerialized nusers: "
     << nusers_
     << " nitems_: " << nitems_
     << " nfactors_: " << nfactors_
@@ -204,7 +202,13 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
       // compute gradient for user bias
       FEATURE_TYPE& user_bias = std::get<1>(user_models[user_from_0]);
-      gradient->users_bias_grad[user_from_0] += learning_rate * (error - user_bias_reg_ * user_bias);
+      std::cout
+        << " user_from_0: " << user_from_0
+        << " users_bias_grad.size(): " << gradient->users_bias_grad.size()
+        << std::endl;
+      //gradient->users_bias_grad.at(user_from_0) +=
+      gradient->users_bias_grad[real_user_id] +=
+        learning_rate * (error - user_bias_reg_ * user_bias);
 
       // compute gradient for item bias
       FEATURE_TYPE& item_bias = item_models[itemId].first;

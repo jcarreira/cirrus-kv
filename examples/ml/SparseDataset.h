@@ -38,7 +38,7 @@ class SparseDataset {
     */
   SparseDataset(const char*, bool from_s3, bool has_labels = true);
   
-  SparseDataset(const char*, uint64_t);
+  SparseDataset(const char*, uint64_t, bool has_labels = true);
 
   /**
    * Get the number of samples in this dataset
@@ -50,7 +50,7 @@ class SparseDataset {
    * Get the number of features in this dataset
    * @return Number of features in the dataset
    */
-  //uint64_t num_features() const;
+  uint64_t num_features() const;
 
   /**
    * Get the max number of features of any single user

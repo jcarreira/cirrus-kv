@@ -62,7 +62,7 @@ bool MFNetflixTask::get_dataset_minibatch(
   auto finish1 = get_time_us();
 #endif
   dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
-        config.get_minibatch_size())); // this takes 11 us
+        config.get_minibatch_size(), false)); // this takes 11 us
 
 #ifdef DEBUG
   auto finish2 = get_time_us();
@@ -145,19 +145,19 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
     try {
       auto gradient = model.minibatch_grad(*dataset, config, sample_index);
+#ifdef DEBUG
+      auto elapsed_us = get_time_us() - now;
+      std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
+        << " at time: " << get_time_us()
+        << " version " << version << "\n";
+#endif
+      MFSparseGradient* grad_ptr = dynamic_cast<MFSparseGradient*>(gradient.get());
+      push_gradient(*grad_ptr);
+      sample_index += config.get_minibatch_size();
     } catch(...) {
       std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);
     }
-#ifdef DEBUG
-    auto elapsed_us = get_time_us() - now;
-    std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
-      << " at time: " << get_time_us()
-      << " version " << version << "\n";
-#endif
-
-    push_gradient(*dynamic_cast<MFSparseGradient*>(gradient.get()));
-    sample_index += config.get_minibatch_size();
   }
 }
 
