@@ -5,6 +5,7 @@
 #include <utility>
 #include <unordered_map>
 #include <Model.h>
+#include <MFModel.h>
 #include <Matrix.h>
 #include <Dataset.h>
 #include <ModelGradient.h>
@@ -131,6 +132,11 @@ class SparseMFModel : public CirrusModel {
       * @return Size of the model
       */
     //uint64_t size() const;
+
+    std::vector<char> serializeFromDense(
+        MFModel& model,
+        uint32_t base_user, uint32_t minibatch_size, uint32_t k_items,
+        const char* item_data_ptr) const;
 
  public:
 

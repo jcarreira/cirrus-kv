@@ -342,3 +342,42 @@ void SparseMFModel::check() const {
   }
 }
 
+std::vector<char> SparseMFModel::serializeFromDense(
+    MFModel& mf_model,
+    uint32_t base_user_id, uint32_t minibatch_size, uint32_t k_items,
+    const char* item_data_ptr) const {
+
+  uint32_t to_send_size = 
+    minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+    k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+
+  std::vector<char> buffer(to_send_size);
+  char* data_to_send_ptr = buffer.data();
+
+  // first we store data about users
+  for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
+    store_value<uint32_t>(data_to_send_ptr, i); // user id
+    store_value<FEATURE_TYPE>(
+        data_to_send_ptr,
+        mf_model.get_user_bias(i));  // bias
+    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
+      store_value<FEATURE_TYPE>(
+          data_to_send_ptr,
+          mf_model.get_user_weights(i, j));
+    }   
+  }
+
+  // now we store data about items
+  for (uint32_t i = 0; i < k_items; ++i) {
+    uint32_t item_id = load_value<uint32_t>(item_data_ptr);
+    std::cout << "item_id: " << item_id << std::endl;
+    store_value<uint32_t>(data_to_send_ptr, item_id);
+    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_user_bias(i));
+    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
+      store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_item_weights(item_id, j));
+    }   
+  }
+
+  return buffer;
+}
+

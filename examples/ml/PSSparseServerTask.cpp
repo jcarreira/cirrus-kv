@@ -135,48 +135,15 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
   std::cout << "minibatch_size: " << minibatch_size << std::endl;
 #endif
 
-  // we have to send #users * n_factors +
-  // #items * n_factors 
-  uint32_t to_send_size = 
-    minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
-    k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
-#ifdef DEBUG
-  std::cout << "to_send_size: " << to_send_size << std::endl;
-#endif
+  SparseMFModel sparse_mf_model((uint64_t)0, 0, 0);
+  std::vector<char> data_to_send = sparse_mf_model.serializeFromDense(
+      *mf_model, base_user_id, minibatch_size, k_items, thread_buffer.data());
 
+  uint32_t to_send_size = data_to_send.size();
   if (send_all(req.sock, &to_send_size, sizeof(uint32_t)) == -1) {
     return false;
   }
-  auto data_to_send = std::shared_ptr<char>(
-      new char[to_send_size], std::default_delete<char[]>());
-  char* data_to_send_ptr = data_to_send.get();
-
-  // first we store data about users
-  for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
-    store_value<uint32_t>(data_to_send_ptr, i); // user id
-    store_value<FEATURE_TYPE>(
-        data_to_send_ptr,
-        mf_model->get_user_bias(i));  // bias
-    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
-      store_value<FEATURE_TYPE>(
-          data_to_send_ptr,
-          mf_model->get_user_weights(i, j));
-    }
-  }
-  
-  // now we store data about items
-  const char* item_data_ptr = thread_buffer.data();
-  for (uint32_t i = 0; i < k_items; ++i) {
-    uint32_t item_id = load_value<uint32_t>(item_data_ptr);
-    std::cout << "item_id: " << item_id << std::endl;
-    store_value<uint32_t>(data_to_send_ptr, item_id);
-    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_user_bias(i));
-    for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
-      store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model->get_item_weights(item_id, j));
-    }
-  }
-
-  if (send_all(req.sock, data_to_send.get(), to_send_size) == -1) {
+  if (send_all(req.sock, data_to_send.data(), data_to_send.size()) == -1) {
     return false;
   }
   return true;
