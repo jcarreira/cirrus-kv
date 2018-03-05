@@ -39,22 +39,11 @@ SparseMFModel::SparseMFModel(const void* data, uint64_t minibatch_size, uint64_t
   loadSerialized(data, minibatch_size, num_items);
 }
 
-//uint64_t SparseMFModel::size() const {
-//  throw std::runtime_error("Not implemented");
-//  return 0;
-//}
-
 std::unique_ptr<CirrusModel> SparseMFModel::deserialize(void* data, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
-    uint32_t* data_p = (uint32_t*)data;
-    //uint32_t users = *data_p++;
-    //uint32_t items = *data_p++;
-    //uint32_t nfactors = *data_p++;
-
-    //return std::make_unique<SparseMFModel>(
-    //        reinterpret_cast<void*>(data_p), users, items, nfactors);
-    return std::make_unique<SparseMFModel>(
-            reinterpret_cast<void*>(data_p), 10, 10);
+  uint32_t* data_p = (uint32_t*)data;
+  return std::make_unique<SparseMFModel>(
+      reinterpret_cast<void*>(data_p), 10, 10);
 }
 
 std::pair<std::unique_ptr<char[]>, uint64_t>
@@ -72,23 +61,6 @@ SparseMFModel::serialize() const {
 
 void SparseMFModel::serializeTo(void* /*mem*/) const {
   throw std::runtime_error("Not implemented");
-#if 0
-    uint32_t* data_u = reinterpret_cast<uint32_t*>(mem);
-
-    *data_u = nusers_;
-    data_u++;
-    *data_u = nitems_;
-    data_u++;
-    *data_u = nfactors_;
-    data_u++;
-
-    FEATURE_TYPE* data_d = reinterpret_cast<FEATURE_TYPE*>(data_u);
-    std::copy(user_weights_, user_weights_ + nusers_ * nfactors_, data_d);
-
-    data_d += nusers_ * nfactors_;
-
-    std::copy(item_weights_, item_weights_ + nitems_ * nfactors_, data_d);
-#endif
 }
 
 /**
@@ -129,6 +101,7 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
 
   // data has minibatch_size vectors of size NUM_FACTORS (user weights)
   // followed by the same (item weights)
+  nfactors_ = NUM_FACTORS;
   for (uint64_t i = 0; i < minibatch_size; ++i) {
     std::tuple<int, FEATURE_TYPE,
       std::vector<FEATURE_TYPE>> user_model;
@@ -155,7 +128,12 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
       std::get<1>(item_model).push_back(item_weight);
     }
     item_models[item_id] = item_model;
+    std::cout << "item_id: " << item_id << " model size: " << item_model.second.size() << std::endl;
   }
+
+#ifdef DEBUG
+  check();
+#endif
 }
 
 /**
@@ -187,26 +165,44 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
             const Configuration& config,
             uint64_t base_user) {
 
+  std::cout <<
+    "base_user: " << base_user
+    << " dataset size: " << dataset.data_.size()
+    << std::endl;
+
   FEATURE_TYPE learning_rate = config.get_learning_rate();
   auto gradient = std::make_unique<MFSparseGradient>();
+  std::unordered_map<int, std::vector<FEATURE_TYPE>> item_weights_grad_map;
+  double training_rmse = 0;
+  uint64_t training_rmse_count = 0;
+
   // iterate all pairs user rating
   for (uint64_t user_from_0 = 0; user_from_0 < dataset.data_.size(); ++user_from_0) {
+    std::vector<FEATURE_TYPE> user_weights_grad(NUM_FACTORS);
+    uint64_t real_user_id = base_user + user_from_0;
+
+    // we have to populate this value in case this user doesn't have any ratings
+    // XXX we should probably optimize this
+    gradient->users_bias_grad[real_user_id] = 0;
     for (uint64_t j = 0; j < dataset.data_[user_from_0].size(); ++j) {
       // first user matches the model in user_models[0]
-      uint64_t real_user_id = base_user + user_from_0;
       uint64_t itemId = dataset.data_[user_from_0][j].first;
       FEATURE_TYPE rating = dataset.data_[user_from_0][j].second;
+      
+
+      std::cout <<
+        "user_from_0: " << user_from_0
+        << " itemId: " << itemId
+        << std::endl;
 
       FEATURE_TYPE pred = predict(user_from_0, itemId);
       FEATURE_TYPE error = rating - pred;
+      training_rmse += error * error;
+      training_rmse_count++;
 
       // compute gradient for user bias
       FEATURE_TYPE& user_bias = std::get<1>(user_models[user_from_0]);
-      std::cout
-        << " user_from_0: " << user_from_0
-        << " users_bias_grad.size(): " << gradient->users_bias_grad.size()
-        << std::endl;
-      //gradient->users_bias_grad.at(user_from_0) +=
+      //std::cout << "real_user_id: " << real_user_id << std::endl;
       gradient->users_bias_grad[real_user_id] +=
         learning_rate * (error - user_bias_reg_ * user_bias);
 
@@ -221,28 +217,38 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 #endif
 
       // update user latent factors
-      std::vector<FEATURE_TYPE> user_weights_grad(NUM_FACTORS);
       for (uint64_t k = 0; k < nfactors_; ++k) {
         FEATURE_TYPE delta_user_w = 
-          learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user_from_0, k));
+          learning_rate *
+          (error * get_item_weights(itemId, k)
+                   - user_fact_reg_ * get_user_weights(user_from_0, k));
         user_weights_grad[k] += delta_user_w;
 #ifdef DEBUG
-        if (std::isnan(get_user_weights(user_from_0, k)) || std::isinf(get_user_weights(user_from_0, k))) {
+        if (std::isnan(get_user_weights(user_from_0, k)) ||
+            std::isinf(get_user_weights(user_from_0, k))) {
           throw std::runtime_error("nan in user weight");
         }
 #endif
       }
-      gradient->users_weights_grad.push_back(std::make_pair(real_user_id, std::move(user_weights_grad)));
+      //XXX moving this after this inner loop
+      //gradient->users_weights_grad.push_back(std::make_pair(real_user_id, std::move(user_weights_grad)));
 
       // update item latent factors
-      std::vector<FEATURE_TYPE> item_weights_grad(NUM_FACTORS);
       for (uint64_t k = 0; k < nfactors_; ++k) {
+        //std::cout << "k: " << k << std::endl;
         FEATURE_TYPE delta_item_w =
-          learning_rate * (error * get_user_weights(user_from_0, k) - item_fact_reg_ * get_item_weights(itemId, k));
-        item_weights_grad[k] += delta_item_w;
-        //get_item_weights(itemId, k) += delta_item_w;
+          learning_rate *
+          (error * get_user_weights(user_from_0, k) -
+                 item_fact_reg_ * get_item_weights(itemId, k));
+
+        if (item_weights_grad_map[itemId].size() == 0) {
+          item_weights_grad_map[itemId].resize(NUM_FACTORS);
+        }
+        //std::cout << "UPDATE HERE " << std::endl;
+        item_weights_grad_map[itemId][k] += delta_item_w;
 #ifdef DEBUG
-        if (std::isnan(get_item_weights(itemId, k)) || std::isinf(get_item_weights(itemId, k))) {
+        if (std::isnan(get_item_weights(itemId, k)) ||
+            std::isinf(get_item_weights(itemId, k))) {
           std::cout << "error: " << error << std::endl;
           std::cout << "user weight: " << get_user_weights(user_from_0, k) << std::endl;
           std::cout << "item weight: " << get_item_weights(itemId, k) << std::endl;
@@ -250,10 +256,28 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
           throw std::runtime_error("nan in item weight");
         }
       }
-      gradient->items_weights_grad.push_back(std::make_pair(itemId, std::move(item_weights_grad)));
+      //gradient->items_weights_grad.push_back(
+      //    std::make_pair(itemId, std::move(item_weights_grad)));
 #endif
     }
+    gradient->users_weights_grad.push_back(
+        std::make_pair(real_user_id, std::move(user_weights_grad)));
+    //std::cout 
+    //  << "user weights size: " << gradient->users_weights_grad.size()
+    //  << " user bias size: " << gradient->users_bias_grad.size() << std::endl;
   }
+
+  for (const auto& p : item_weights_grad_map) {
+    auto item_id = p.first;
+    auto& item_weights = p.second;
+    gradient->items_weights_grad.push_back(
+        std::make_pair(item_id, std::move(item_weights)));
+  }
+
+  std::cout << "Training rmse: " << std::sqrt(training_rmse / training_rmse_count) << std::endl;
+
+  gradient->print();
+  gradient->check();
   return gradient;
 }
 
@@ -264,107 +288,23 @@ FEATURE_TYPE& SparseMFModel::get_user_weights(uint64_t userId, uint64_t factor) 
 }
 
 FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) {
+#ifdef DEBUG
+  if (item_models.find(itemId) == item_models.end()) {
+    throw std::runtime_error("key not found");
+  }
+  if (factor >= item_models[itemId].second.size()) {
+    std::cout
+      << "itemId: " << itemId
+      << "factor: " << factor
+      << " size: " << item_models[itemId].second.size()
+      << std::endl;
+  }
+#endif
   assert(item_models.find(itemId) != item_models.end());
   assert(factor < item_models[itemId].second.size());
   return item_models[itemId].second[factor];
 }
 
-#if 0
-void SparseMFModel::sgd_update(
-            double learning_rate,
-            uint64_t base_user,
-            const SparseDataset& dataset) {
-  // iterate all pairs user rating
-  for (uint64_t user_from_0 = 0; user_from_0 < dataset.data_.size(); ++user_from_0) {
-    for (uint64_t j = 0; j < dataset.data_[user_from_0].size(); ++j) {
-      // first user matches the model in user_models[0]
-      //uint64_t real_user_id = base_user + user_from_0;
-      uint64_t itemId = dataset.data_[user_from_0][j].first;
-      FEATURE_TYPE rating = dataset.data_[user_from_0][j].second;
-
-      FEATURE_TYPE pred = predict(i, itemId);
-      FEATURE_TYPE error = rating - pred;
-
-      FEATURE_TYPE& user_bias = std::get<1>(user_models[i]);
-      user_bias += learning_rate * (error - user_bias_reg_ * user_bias);
-      FEATURE_TYPE& item_bias = item_models[itemId].first;
-      item_bias += learning_rate * (error - item_bias_reg_ * item_bias);
-
-#ifdef DEBUG
-      if (std::isnan(user_bias) || std::isnan(item_bias) ||
-          std::isinf(user_bias) || std::isinf(item_bias))
-        throw std::runtime_error("nan in user_bias or item_bias");
-#endif
-
-      // update user latent factors
-      for (uint64_t k = 0; k < nfactors_; ++k) {
-        FEATURE_TYPE delta_user_w = 
-          learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user_from_0, k));
-        //std::cout << "delta_user_w: " << delta_user_w << std::endl;
-        get_user_weights(user_from_0, k) += delta_user_w;
-#ifdef DEBUG
-        if (std::isnan(get_user_weights(user_from_0, k)) || std::isinf(get_user_weights(user_from_0, k))) {
-          throw std::runtime_error("nan in user weight");
-        }
-#endif
-      }
-
-      // update item latent factors
-      for (uint64_t k = 0; k < nfactors_; ++k) {
-        FEATURE_TYPE delta_item_w =
-          learning_rate * (error * get_user_weights(user_from_0, k) - item_fact_reg_ * get_item_weights(itemId, k));
-        //std::cout << "delta_item_w: " << delta_item_w << std::endl;
-        get_item_weights(itemId, k) += delta_item_w;
-#ifdef DEBUG
-        if (std::isnan(get_item_weights(itemId, k)) || std::isinf(get_item_weights(itemId, k))) {
-          std::cout << "error: " << error << std::endl;
-          std::cout << "user weight: " << get_user_weights(user_from_0, k) << std::endl;
-          std::cout << "item weight: " << get_item_weights(itemId, k) << std::endl;
-          std::cout << "learning_rate: " << learning_rate << std::endl;
-          throw std::runtime_error("nan in item weight");
-        }
-      }
-#endif
-    }
-  }
-}
-#endif
-
-#if 0
-std::pair<double, double> SparseMFModel::calc_loss(Dataset& dataset) const {
-  throw std::runtime_error("Not implemented");
-  return std::make_pair(0.0, 0.0);
-}
-
-std::pair<double, double> SparseMFModel::calc_loss(SparseDataset& dataset) const {
-  double error = 0;
-  uint64_t count = 0;
-
-  for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
-    for (uint64_t j = 0; j < dataset.data_[userId].size(); ++j) {
-      uint64_t movieId = dataset.data_[userId][j].first;
-      FEATURE_TYPE rating = dataset.data_[userId][j].second;
-
-      FEATURE_TYPE prediction = predict(userId, movieId);
-      FEATURE_TYPE e = rating - prediction;
-
-      //std::cout << "e: " << e << std::endl;
-
-      error += pow(e, 2);
-      if (std::isnan(e) || std::isnan(error)) {
-        std::string error = std::string("nan in calc_loss rating: ") + std::to_string(rating) +
-          " prediction: " + std::to_string(prediction);
-        throw std::runtime_error(error);
-      }
-      count++;
-    }
-  }
-
-  error = error / count;
-  error = std::sqrt(error);
-  return std::make_pair(error, 0);
-}
-#endif
 
 uint64_t SparseMFModel::getSerializedGradientSize() const {
   throw std::runtime_error("Not implemented");
@@ -391,4 +331,14 @@ void SparseMFModel::print() const {
     //std::cout << std::endl;
 }
 
+void SparseMFModel::check() const {
+  for (const auto& k : item_models) {
+    //int key = k.first;
+    //auto item_bias = k.second.first;
+    auto& item_weights = k.second.second;
+    if (item_weights.size() != NUM_FACTORS) { 
+      throw std::runtime_error("Item has wrong size");
+    }
+  }
+}
 

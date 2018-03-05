@@ -22,6 +22,15 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
       batch_size, samples_per_batch, features_per_sample,
       nworkers, worker_id) {
   std::cout << "PSSparseServerTask is built" << std::endl;
+
+  operation_to_name[0] = "SEND_LR_GRADIENT";
+  operation_to_name[1] = "SEND_MF_GRADIENT";
+  operation_to_name[2] = "GET_LR_FULL_MODEL";
+  operation_to_name[3] = "GET_MF_FULL_MODEL";
+  operation_to_name[4] = "GET_LR_SPARSE_MODEL";
+  operation_to_name[5] = "GET_MF_SPARSE_MODEL";
+  operation_to_name[6] = "SET_TASK_STATUS";
+  operation_to_name[7] = "GET_TASK_STATUS";
 }
 
 std::shared_ptr<char> PSSparseServerTask::serialize_lr_model(
@@ -58,8 +67,14 @@ bool PSSparseServerTask::process_send_mf_gradient(const Request& req, std::vecto
   gradient.loadSerialized(thread_buffer.data());
 
   model_lock.lock();
+#ifdef DEBUG 
+  std::cout << "Doing sgd update" << std::endl;
+#endif
   mf_model->sgd_update(
       task_config.get_learning_rate(), &gradient);
+#ifdef DEBUG 
+  std::cout << "sgd update done" << std::endl;
+#endif
   model_lock.unlock();
   gradientUpdatesCount++;
   return true;
@@ -93,15 +108,25 @@ bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vecto
   return true;
 }
 
+// XXX we have to refactor this ASAP
+// move this to SparseMFModel
 bool PSSparseServerTask::process_get_mf_sparse_model(
     const Request& req, std::vector<char>& thread_buffer) {
   uint32_t k_items;
   uint32_t base_user_id;
   uint32_t minibatch_size;
-
+  uint32_t magic_value;
+      
   read_all(req.sock, &k_items, sizeof(uint32_t));
   read_all(req.sock, &base_user_id, sizeof(uint32_t));
   read_all(req.sock, &minibatch_size, sizeof(uint32_t));
+  read_all(req.sock, &magic_value, sizeof(uint32_t));
+
+  assert(k_items > 0);
+  assert(minibatch_size > 0);
+  if (magic_value != 0x1337) {
+    throw std::runtime_error("Wrong message");
+  }
   read_all(req.sock, thread_buffer.data(), k_items * sizeof(uint32_t));
 
 #ifdef DEBUG
@@ -118,19 +143,16 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
 #ifdef DEBUG
   std::cout << "to_send_size: " << to_send_size << std::endl;
 #endif
-  //char* data_to_send_ptr = thread_buffer.data();
+
+  if (send_all(req.sock, &to_send_size, sizeof(uint32_t)) == -1) {
+    return false;
+  }
   auto data_to_send = std::shared_ptr<char>(
       new char[to_send_size], std::default_delete<char[]>());
   char* data_to_send_ptr = data_to_send.get();
 
   // first we store data about users
   for (uint32_t i = base_user_id; i < base_user_id + minibatch_size; ++i) {
-//#ifdef DEBUG
-//    std::cout << "userid: " << i << std::endl;
-//    std::cout << "user_bias size: " << mf_model->user_bias_.size() << std::endl;
-//    std::cout << "user_bias: " << mf_model->get_user_bias(i)
-//      << std::endl;
-//#endif
     store_value<uint32_t>(data_to_send_ptr, i); // user id
     store_value<FEATURE_TYPE>(
         data_to_send_ptr,
@@ -154,10 +176,9 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
     }
   }
 
-  if (send_all(req.sock, thread_buffer.data(), to_send_size) == -1) {
+  if (send_all(req.sock, data_to_send.get(), to_send_size) == -1) {
     return false;
   }
-
   return true;
 }
 
@@ -308,7 +329,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     return false;
   }
 #ifdef DEBUG 
-  std::cout << "Operation: " << operation << std::endl;
+  std::cout << "Operation: " << operation << " - " << operation_to_name[operation] << std::endl;
 #endif
 
   if (operation == SEND_LR_GRADIENT || operation == SEND_MF_GRADIENT ||
@@ -364,31 +385,6 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
   }
   return true;
 }
-
-#if 0
-bool PSSparseServerTask::read_from_client(
-    std::vector<char>& buffer, int sock, uint64_t& bytes_read) {
-  bool first_loop = true;
-  while (bytes_read < static_cast<int>(sizeof(uint32_t))) {
-    int retval = read(sock, buffer.data() + bytes_read,
-        sizeof(uint32_t) - bytes_read);
-
-    if (first_loop && retval == 0) {
-      // Socket is closed by client if 0 bytes are available
-      close(sock);
-      return false;
-    }
-    if (retval < 0) {
-      close(sock);
-      return false; // likely because lambda worker died after 5 minutes
-      throw std::runtime_error("Server issue in reading socket during size read.");
-    }
-    bytes_read += retval;
-    first_loop = false;
-  }
-  return true;
-}
-#endif
 
 void PSSparseServerTask::start_server() {
   lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
@@ -585,41 +581,4 @@ void PSSparseServerTask::checkpoint_model() const {
   fout.write(data.get(), model_size);
   fout.close();
 }
-
-#if 0
-void PSSparseServerTask::publish_model_redis() {
-#ifdef DEBUG
-  static int publish_count = 0;
-  std::cout << "[PS] "
-    << "Publishing model at: " << get_time_us()
-    << " publish_count: " << (++publish_count)
-    << "\n";
-#endif
-
-  model_lock.lock();
-  auto lr_model_copy = *lr_model;
-  model_lock.unlock();
-
-#ifdef DEBUG
-  std::cout << "Checking model" << std::endl;
-  lr_model_copy.check();
-#endif
-  
-  uint64_t model_size;
-  std::shared_ptr<char> data = serialize_lr_model(lr_model_copy, &model_size);
-
-#ifdef DEBUG
-  std::cout << "redisCommand PUBLISH MODEL" << std::endl;
-  auto before_us = get_time_us();
-#endif
-
-#ifdef DEBUG
-  auto elapsed_us = get_time_us() - before_us;
-  std::cout 
-    << "Put model elapsed (us): " << elapsed_us
-    << " bw (MB/s): " << (1.0 * model_size / 1024 / 1024 / elapsed_us * 1000 * 1000)
-    << "\n";
-#endif
-}
-#endif
 

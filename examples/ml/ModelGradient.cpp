@@ -325,15 +325,19 @@ MFSparseGradient::MFSparseGradient() {
  * item_weights_grad id (uint32_t) [# items * NUM_FACTORS] (uint32_t + FEATURE_TYPE)
  */
 uint64_t MFSparseGradient::getSerializedSize() const {
-  return users_bias_grad.size() * (sizeof(int) + sizeof(FEATURE_TYPE))
+  return sizeof(uint32_t) * (2 + 2) // also count magic values
+    + users_bias_grad.size() * (sizeof(int) + sizeof(FEATURE_TYPE))
     + items_bias_grad.size() * (sizeof(int) + sizeof(FEATURE_TYPE))
-    + users_weights_grad.size() * (sizeof(uint32_t) + NUM_FACTORS * sizeof(FEATURE_TYPE))
-    + items_weights_grad.size() *  (sizeof(uint32_t) + NUM_FACTORS * sizeof(FEATURE_TYPE));
+    + users_weights_grad.size() * (sizeof(int) + NUM_FACTORS * sizeof(FEATURE_TYPE))
+    + items_weights_grad.size() *  (sizeof(int) + NUM_FACTORS * sizeof(FEATURE_TYPE));
 }
 
 void MFSparseGradient::serialize(void *mem) const {
+  store_value<uint32_t>(mem, 0x1337); // magic value
   store_value<uint32_t>(mem, users_bias_grad.size());
   store_value<uint32_t>(mem, items_bias_grad.size());
+
+  // First we serialize the bias values
   for (const auto& user_bias : users_bias_grad) {
     store_value<int>(mem, user_bias.first);
     store_value<FEATURE_TYPE>(mem, user_bias.second);
@@ -342,21 +346,32 @@ void MFSparseGradient::serialize(void *mem) const {
     store_value<int>(mem, bias_grad.first);
     store_value<FEATURE_TYPE>(mem, bias_grad.second);
   }
+
+  // Second we serialize the weight gradients
+  assert(users_weights_grad.size() == users_bias_grad.size());
   for (const auto& user : users_weights_grad) {
     store_value<int>(mem, user.first);
+    assert(user.second.size() == NUM_FACTORS);
     for (const auto& weight_grad : user.second) {
       store_value<FEATURE_TYPE>(mem, weight_grad);
     }
   }
+
+  assert(items_weights_grad.size() == items_bias_grad.size());
   for (const auto& item : items_weights_grad) {
+    //std::cout << "Serializing itemId: " << item.first << std::endl;
     store_value<int>(mem, item.first);
+    assert(item.second.size() == NUM_FACTORS);
     for (const auto& weight_grad : item.second) {
       store_value<FEATURE_TYPE>(mem, weight_grad);
     }
   }
+  store_value<uint32_t>(mem, 0x1338); // magic value
 }
 
 void MFSparseGradient::loadSerialized(const void* mem) {
+  uint32_t magic_value = load_value<uint32_t>(mem);
+  assert(magic_value == 0x1337);
   uint32_t users_size = load_value<uint32_t>(mem);
   uint32_t items_size = load_value<uint32_t>(mem);
   //users_bias_grad.reserve(users_size);
@@ -386,6 +401,7 @@ void MFSparseGradient::loadSerialized(const void* mem) {
   for (uint32_t i = 0; i < items_size; ++i) {
     std::pair<int, std::vector<FEATURE_TYPE>> item_weights_grad;
     item_weights_grad.first = load_value<int>(mem);
+    //std::cout << "loadSerialized itemId: " << item_weights_grad.first << std::endl;
     item_weights_grad.second.reserve(NUM_FACTORS);
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       FEATURE_TYPE weight = load_value<FEATURE_TYPE>(mem);
@@ -393,10 +409,8 @@ void MFSparseGradient::loadSerialized(const void* mem) {
     }
     items_weights_grad.push_back(item_weights_grad);
   }
-}
-
-void MFSparseGradient::print() const {
-
+  magic_value = load_value<uint32_t>(mem);
+  assert(magic_value == 0x1338);
 }
 
 void MFSparseGradient::check_values() const {

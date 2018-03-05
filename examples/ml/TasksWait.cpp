@@ -4,6 +4,7 @@
 #include "PSSparseServerInterface.h"
 
 void MLTask::wait_for_start(int index, int nworkers) {
+  return;
   std::cout << "Waiting for all workers to start (redis). index: " << index
     << std::endl;
   std::cout << "Setting start flag. id: " << START_BASE + index

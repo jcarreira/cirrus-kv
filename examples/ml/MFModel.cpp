@@ -47,20 +47,15 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
 }
 
 MFModel::MFModel(
-    const void* data, uint64_t nusers, uint64_t nitems, uint64_t nfactors) {
+    const void* data, uint64_t /*nusers*/, uint64_t /*nitems*/, uint64_t /*nfactors*/) {
+  loadSerialized(data);
+#if 0
   nusers_ = nusers;
   nitems_ = nitems;
   nfactors_ = nfactors;
 
-  //user_weights_.reset(
-  //    new FEATURE_TYPE[nusers * nfactors], std::default_delete<FEATURE_TYPE[]>());
-  //item_weights_.reset(
-  //    new FEATURE_TYPE[nitems * nfactors], std::default_delete<FEATURE_TYPE[]>());
   user_weights_.resize(nusers * nfactors);
   item_weights_.resize(nitems * nfactors);
-
-  user_bias_.clear();
-  item_bias_.clear();
   user_bias_.resize(nusers);
   item_bias_.resize(nitems);
   
@@ -68,12 +63,19 @@ MFModel::MFModel(
   std::copy(data_ptr, data_ptr + nusers_ * nfactors_, user_weights_.data());
   data_ptr += nusers * nfactors;
   std::copy(data_ptr, data_ptr + nitems_ * nfactors_, item_weights_.data());
+#endif
 }
 
 uint64_t MFModel::size() const {
   throw std::runtime_error("Not implemented");
   return 0;
 }
+
+/**
+  *
+  * Serialization / deserialization
+  *
+  */
 
 std::unique_ptr<CirrusModel> MFModel::deserialize(void* /*data*/, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
@@ -91,6 +93,11 @@ MFModel::serialize() const {
     return res;
 }
 
+uint64_t MFModel::getSerializedSize() const {
+    return sizeof(uint64_t) * 3 +
+      (nusers_ * nfactors_ + nitems_ * nfactors_) * sizeof(FEATURE_TYPE);
+}
+
 void MFModel::serializeTo(void* mem) const {
     char* data = reinterpret_cast<char*>(mem);
 
@@ -106,9 +113,53 @@ void MFModel::serializeTo(void* mem) const {
     store_value<uint64_t>(data, nitems_);
     store_value<uint64_t>(data, nfactors_);
 
+    // store bias values first
+    std::copy(user_bias_.data(), user_bias_.data() + nusers_, data);
+    data += nusers_;
+    std::copy(item_bias_.data(), item_bias_.data() + item_bias_.size(), data);
+    data += item_bias_.size();
+
+    // not store weights
     std::copy(user_weights_.data(), user_weights_.data() + nusers_ * nfactors_, data);
     data += nusers_ * nfactors_;
     std::copy(item_weights_.data(), item_weights_.data() + nitems_ * nfactors_, data);
+}
+
+void MFModel::loadSerialized(const void* data) {
+  // Read number of samples, number of factors
+  nusers_ = load_value<uint64_t>(data);
+  nitems_ = load_value<uint64_t>(data);
+  nfactors_ = load_value<uint64_t>(data);
+
+  user_weights_.resize(nusers_ * nfactors_);
+  item_weights_.resize(nitems_ * nfactors_);
+  user_bias_.resize(nusers_);
+  item_bias_.resize(nitems_);
+
+  // read user bias
+  for (uint32_t i = 0; i < nusers_; ++i) {
+    FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
+    user_bias_.push_back(user_bias);
+  }
+  // read item bias
+  for (uint32_t i = 0; i < nitems_; ++i) {
+    FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
+    item_bias_.push_back(item_bias);
+  }
+  // read user weights
+  for (uint32_t i = 0; i < nusers_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE user_weight = load_value<FEATURE_TYPE>(data);
+      get_user_weights(i, j) = user_weight;
+    }
+  }
+  // read item weights
+  for (uint32_t i = 0; i < nitems_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE item_weight = load_value<FEATURE_TYPE>(data);
+      get_item_weights(i, j) = item_weight;
+    }
+  }
 }
 
 /**
@@ -142,45 +193,29 @@ void MFModel::sgd_update(double learning_rate,
 
   // apply grad to users_bias_grad
   for (const auto& v : grad_ptr->users_bias_grad) {
+    std::cout << "ub: " << v.second << "\n";
       user_bias_[v.first] += learning_rate * v.second;
   }
   for (const auto& v : grad_ptr->items_bias_grad) {
+    std::cout << "ib: " << v.second << "\n";
       item_bias_[v.first] += learning_rate * v.second;
   }
   for (const auto& v : grad_ptr->users_weights_grad) {
     int user_id = v.first;
+    assert(v.second.size() == NUM_FACTORS);
     for (uint32_t i = 0; i < v.second.size(); ++i) {
+      std::cout << "uw: " << v.second[i] << "\n";
       get_user_weights(user_id, i) += learning_rate * v.second[i];
     }
   }
   for (const auto& v : grad_ptr->items_weights_grad) {
     int item_id = v.first;
+    assert(v.second.size() == NUM_FACTORS);
     for (uint32_t i = 0; i < v.second.size(); ++i) {
+      std::cout << "iw: " << v.second[i] << "\n";
       get_item_weights(item_id, i) += learning_rate * v.second[i];
     }
   }
-}
-
-uint64_t MFModel::getSerializedSize() const {
-    return sizeof(uint64_t) * 3 +
-      (nusers_ * nfactors_ + nitems_ * nfactors_) * sizeof(FEATURE_TYPE);
-}
-
-void MFModel::loadSerialized(const void* data) {
-  std::cout << "loadSerialized nusers: "
-    << nusers_
-    << " nitems_: " << nitems_
-    << " nfactors_: " << nfactors_
-    << std::endl;
-
-    // Read number of samples, number of factors
-    uint32_t* m = (uint32_t*)data;
-    nusers_ = *m++;
-    nitems_ = *m++;
-    nfactors_ = *m++;
-
-    // XXX FIX
-    throw std::runtime_error("Not implemented");
 }
 
 FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
@@ -225,6 +260,9 @@ FEATURE_TYPE& MFModel::get_user_weights(uint64_t userId, uint64_t factor) {
 }
 
 FEATURE_TYPE& MFModel::get_item_weights(uint64_t itemId, uint64_t factor) {
+  if (itemId >= nitems_) {
+    std::cout << "itemId: " << itemId << " nitems_: " << nitems_ << std::endl;
+  }
   assert(factor < NUM_FACTORS);
   assert(itemId < nitems_);
   return item_weights_.at(itemId * nfactors_ + factor);
@@ -257,11 +295,13 @@ void MFModel::sgd_update(
       FEATURE_TYPE pred = predict(user, itemId);
       FEATURE_TYPE error = rating - pred;
 
-      //std::cout 
-      //  << "rating: " << rating
-      //  << " prediction: " << pred
-      //  << " error: " << error
-      //  << std::endl;
+      std::cout 
+        << "user: " << user
+        << "itemId: " << itemId
+        << "rating: " << rating
+        << " prediction: " << pred
+        << " error: " << error
+        << std::endl;
 
       if (itemId >= nitems_ || user >= nusers_) {
         std::cout

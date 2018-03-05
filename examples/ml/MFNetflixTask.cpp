@@ -10,18 +10,7 @@
 
 #include <pthread.h>
 
-#undef DEBUG
-
-void check_redis(auto r) {
-  if (r == NULL || r -> err) {
-    std::cout << "[WORKER] "
-      << "Error connecting to REDIS"
-      << " IP: " << REDIS_IP
-      << std::endl;
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-}
+#define DEBUG
 
 void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
 #ifdef DEBUG
@@ -38,11 +27,10 @@ void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
   auto now = get_time_us();
   std::cout << "[WORKER] "
       << "Worker task published gradient"
-      << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us()
       << " took(us): " << elapsed_push_us
       << " bw(MB/s): " << std::fixed <<
-         (1.0 * lrg->getSerializedSize() / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
+         (1.0 * mfg.getSerializedSize() / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
       << " since last(us): " << (now - before)
       << "\n";
   before = now;
@@ -87,10 +75,6 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
   psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
 
-  std::cout << "Connecting to redis.." << std::endl;
-  redis_lock.lock();
-  redis_lock.unlock();
-
   mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
@@ -122,10 +106,11 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
+    std::cout << "DS size: " << dataset->num_samples() << std::endl;
 #ifdef DEBUG
     std::cout << "[WORKER] phase 1 done" << std::endl;
-    //dataset->check();
-    //dataset->print_info();
+    dataset->check();
+    dataset->print_info();
     auto now = get_time_us();
 #endif
     // compute mini batch gradient
@@ -148,8 +133,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 #ifdef DEBUG
       auto elapsed_us = get_time_us() - now;
       std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
-        << " at time: " << get_time_us()
-        << " version " << version << "\n";
+        << " at time: " << get_time_us() << "\n";
 #endif
       MFSparseGradient* grad_ptr = dynamic_cast<MFSparseGradient*>(gradient.get());
       push_gradient(*grad_ptr);

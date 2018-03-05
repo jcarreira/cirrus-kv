@@ -61,13 +61,13 @@ void LoadingNetflixTask::run(const Configuration& config) {
   SparseDataset dataset = read_dataset(config, number_movies, number_users);
   dataset.check();
 
-  return;
-
   uint64_t num_s3_objs = dataset.num_samples() / s3_obj_num_samples;
   std::cout << "[LOADER-SPARSE] "
     << "Adding " << dataset.num_samples()
     << " #s3 objs: " << num_s3_objs
     << std::endl;
+  
+  return;
 
   // For each S3 object (group of s3_obj_num_samples samples)
   for (unsigned int i = 0; i < num_s3_objs; ++i) {

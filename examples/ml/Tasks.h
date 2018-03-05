@@ -321,6 +321,7 @@ class PSSparseServerTask : public MLTask {
     uint32_t num_connections = 0;
 
     std::map<int, bool> task_to_status;
+    std::map<int, std::string> operation_to_name;
 };
 
 class MFNetflixTask : public MLTask {
@@ -371,8 +372,6 @@ class MFNetflixTask : public MLTask {
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 
-    std::mutex redis_lock;
-  
     std::unique_ptr<MFModelGet> mf_model_get;
     std::unique_ptr<PSSparseServerInterface> psint;
 };

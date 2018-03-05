@@ -139,21 +139,8 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
     uint32_t operation = GET_MF_FULL_MODEL;
     send_all(sock, &operation, sizeof(uint32_t));
 
-    uint64_t data[3]; // nusers, nitems and nfactors
-    read_all(sock, data, sizeof(uint64_t) * 3);
-
-#ifdef DEBUG
-    std::cout << "Received nusers: " << data[0]
-      << " nitems: " << data[1]
-      << " nfactors: " << data[2]
-      << std::endl;
-#endif
-
-    uint32_t nusers = data[0], nitems = data[1], nfactors = data[2];
-    uint32_t to_receive_size = 
-      nusers * nfactors * sizeof(FEATURE_TYPE) +
-      nitems * nfactors * sizeof(FEATURE_TYPE);
-
+    uint32_t to_receive_size;
+    read_all(sock, &to_receive_size, sizeof(uint32_t));
     std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
 
     char* buffer = new char[to_receive_size];
@@ -161,7 +148,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
 
     // build a sparse model and return
     std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(
-        (FEATURE_TYPE*)buffer, nusers, nitems, nfactors);
+        (FEATURE_TYPE*)buffer, 0, 0, 0); //XXX fix this
     delete[] buffer;
     return model;
   } else {
@@ -196,6 +183,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
   * K item ids to send (uint32_t)
   * base user id (uint32_t)
   * minibatch size (uint32_t)
+  * magic number (0x1337) (uint32_t)
   * list of K item ids (K * uint32_t)
   */
 SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
@@ -207,10 +195,11 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   store_value<uint32_t>(msg, 0); // we will write this value later
   store_value<uint32_t>(msg, user_base);
   store_value<uint32_t>(msg, minibatch_size);
+  store_value<uint32_t>(msg, 0x1337); // magic value
   for (const auto& sample : ds.data_) {
     for (const auto& w : sample) {
       uint32_t movieId = w.first;
-      //std::cout << "movieId: " << movieId << std::endl;
+      //std::cout << "movieId: " << movieId << "\n";
       store_value<uint32_t>(msg, movieId); // encode the index
       item_ids_count++;
     }
@@ -222,7 +211,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   uint32_t operation = GET_MF_SPARSE_MODEL;
   send_all(sock, &operation, sizeof(uint32_t));
   // 2. Send msg size
-  uint32_t msg_size = sizeof(uint32_t) * 3 + sizeof(uint32_t) * item_ids_count;
+  uint32_t msg_size = sizeof(uint32_t) * 4 + sizeof(uint32_t) * item_ids_count;
   send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send request message
   if (send_all(sock, msg_begin, msg_size) == -1) {
@@ -233,9 +222,10 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   // FORMAT here is
   // minibatch_size * user vectors. Each vector is user_id + user_bias + NUM_FACTORS * FEATURE_TYPE
   // num_item_ids * item vectors. Each vector is item_id + item_bias + NUM_FACTORS * FEATURE_TYPE
-  uint32_t to_receive_size = 
-  minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
-  item_ids_count * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+  uint32_t to_receive_size;
+  read_all(sock, &to_receive_size, sizeof(uint32_t));
+  //minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+  //item_ids_count * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
 
   std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
 
@@ -267,11 +257,12 @@ void PSSparseServerInterface::send_mf_gradient(const MFSparseGradient& gradient)
     throw std::runtime_error("Error sending grad size");
   }
   
-  char data[size];
+  char* data = new char[size];
   gradient.serialize(data);
   if (send_all(sock, data, size) == 0) {
     throw std::runtime_error("Error sending grad");
   }
+  delete[] data;
 }
   
 void PSSparseServerInterface::set_status(uint32_t id, uint32_t status) {

@@ -168,6 +168,9 @@ class SparseMFModel : public CirrusModel {
     uint64_t nfactors_;
 
     FEATURE_TYPE global_bias_ = 0;
+
+private:
+    void check() const;
 };
 
 #endif  // EXAMPLES_ML_MFMODEL_H_

@@ -220,7 +220,7 @@ try_start:
         << " elapsed: " << elapsed_us
         << std::endl;
 #endif
-      pm.increment_batches(); // increment number of batches we have processed
+      //pm.increment_batches(); // increment number of batches we have processed
 
 #ifdef DEBUG
       //double MBps = (1.0 * (32812.5*1024.0) / elapsed_us) / 1024 / 1024 * 1000 * 1000;
