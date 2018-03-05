@@ -46,31 +46,42 @@ void ErrorSparseTask::run(const Configuration& config) {
 
   std::cout << "Creating sequential S3Iterator" << std::endl;
   auto train_range = config.get_train_range();
-  S3SparseIterator s3_iter(train_range.first, train_range.second, config,
-      config.get_s3_size(), config.get_minibatch_size(), false, 0, false);
+  auto test_range = config.get_test_range();
+
+  uint32_t left, right;
+  if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
+    left = test_range.first;
+    right = test_range.second;
+  } else if(config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
+    left = train_range.first;
+    right = train_range.second;
+  } else {
+    exit(-1);
+  }
+
+  S3SparseIterator s3_iter(left, right, config,
+      config.get_s3_size(), config.get_minibatch_size(),
+      config.get_model_type() == Configuration::LOGISTICREGRESSION, // use_label true for LR
+      0, false);
 
   // get data first
   // what we are going to use as a test set
-start:
   std::vector<SparseDataset> minibatches_vec;
   std::cout << "[ERROR_TASK] getting minibatches from "
     << train_range.first << " to " << train_range.second
     << std::endl;
+
   for (uint64_t i = 0;
-      i < (train_range.second - train_range.first) *
+      i < (right - left) *
       (config.get_s3_size() / config.get_minibatch_size()); ++i) {
-    try {
-      //std::cout << "Getting minibatch: " << i << std::endl;
-      const void* minibatch_data = s3_iter.get_next_fast();
-      SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
-          config.get_minibatch_size(), false);
-      minibatches_vec.push_back(ds);
-    } catch(const cirrus::NoSuchIDException& e) {
-      if (i == 0)
-        goto start;  // no loss to be computed
-      else
-        break;  // we looked at all minibatches
-    }
+
+    //std::cout << "Getting minibatch: " << i << std::endl;
+    const void* minibatch_data = s3_iter.get_next_fast();
+    SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
+        config.get_minibatch_size(),
+        config.get_model_type() == Configuration::LOGISTICREGRESSION // has labels
+        );
+    minibatches_vec.push_back(ds);
   }
 
   std::cout << "[ERROR_TASK] Got "

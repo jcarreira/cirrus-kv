@@ -42,7 +42,6 @@ void check_redis(auto r) {
 // we need global variables because of the static callbacks
 namespace LogisticSparseTaskGlobal {
   std::unique_ptr<SparseModelGet> sparse_model_get;
-  redisContext* redis_con;
   PSSparseServerInterface* psint;
 }
 
@@ -102,15 +101,6 @@ bool LogisticSparseTaskS3::get_dataset_minibatch(
   return true;
 }
 
-static auto connect_redis() {
-  std::cout << "[WORKER] "
-    << "Worker task connecting to REDIS. "
-    << "IP: " << REDIS_IP << std::endl;
-  auto redis_con = redis_connect(REDIS_IP, REDIS_PORT);
-  check_redis(redis_con);
-  return redis_con;
-}
-
 void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   std::cout << "Starting LogisticSparseTaskS3"
     << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
@@ -120,12 +110,6 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
   LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
 
-  std::cout << "Connecting to redis.." << std::endl;
-  redis_lock.lock();
-  LogisticSparseTaskGlobal::redis_con = connect_redis();
-  redis_lock.unlock();
-
-  //uint64_t MODEL_BASE = (1000000000ULL);
   LogisticSparseTaskGlobal::sparse_model_get =
     std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
@@ -138,7 +122,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   S3SparseIterator s3_iter(
       train_range.first, train_range.second,
       config, config.get_s3_size(), config.get_minibatch_size(),
-      worker);
+      true, worker);
 
   std::cout << "[WORKER] starting loop" << std::endl;
 

@@ -32,6 +32,7 @@ S3SparseIterator::S3SparseIterator(
   std::cout << "S3SparseIterator::Creating S3SparseIterator"
     << " left_id: " << left_id
     << " right_id: " << right_id
+    << " use_label: " << use_label
     << std::endl;
 
   // initialize s3
