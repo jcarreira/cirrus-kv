@@ -206,6 +206,9 @@ bool PSSparseServerTask::process_get_mf_full_model(
   }
 
   mf_model_copy.serializeTo(thread_buffer.data());
+  if (send_all(req.sock, &model_size, sizeof(uint32_t)) == -1) {
+    return false;
+  }
   if (send_all(req.sock, thread_buffer.data(), model_size) == -1) {
     return false;
   }
@@ -233,7 +236,7 @@ bool PSSparseServerTask::process_get_lr_full_model(
 
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
-  thread_buffer.resize(20 * 1024 * 1024); // 10 MB
+  thread_buffer.resize(30 * 1024 * 1024); // 30 MB
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
