@@ -138,6 +138,7 @@ void ErrorSparseTask::run(const Configuration& config) {
           << " Accuracy: " << (total_accuracy / minibatches_vec.size())
           << " time(us): " << get_time_us()
           << " time from start (sec): "
+          << " model checksum: " << model->checksum()
           << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
           << std::endl;
       } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
@@ -146,6 +147,7 @@ void ErrorSparseTask::run(const Configuration& config) {
           << " time(us): " << get_time_us()
           << " time from start (sec): "
           << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
+          << " model checksum: " << model->checksum()
           << std::endl;
       }
     } catch(const cirrus::NoSuchIDException& e) {

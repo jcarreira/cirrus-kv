@@ -128,7 +128,7 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
       std::get<1>(item_model).push_back(item_weight);
     }
     item_models[item_id] = item_model;
-    std::cout << "item_id: " << item_id << " model size: " << item_model.second.size() << std::endl;
+    //std::cout << "item_id: " << item_id << " model size: " << item_model.second.size() << std::endl;
   }
 
 #ifdef DEBUG
@@ -190,10 +190,10 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
       FEATURE_TYPE rating = dataset.data_[user_from_0][j].second;
       
 
-      std::cout <<
-        "user_from_0: " << user_from_0
-        << " itemId: " << itemId
-        << std::endl;
+      //std::cout <<
+      //  "user_from_0: " << user_from_0
+      //  << " itemId: " << itemId
+      //  << std::endl;
 
       FEATURE_TYPE pred = predict(user_from_0, itemId);
       FEATURE_TYPE error = rating - pred;
@@ -370,7 +370,7 @@ std::vector<char> SparseMFModel::serializeFromDense(
   // now we store data about items
   for (uint32_t i = 0; i < k_items; ++i) {
     uint32_t item_id = load_value<uint32_t>(item_data_ptr);
-    std::cout << "item_id: " << item_id << std::endl;
+    //std::cout << "item_id: " << item_id << std::endl;
     store_value<uint32_t>(data_to_send_ptr, item_id);
     store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_user_bias(i));
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {

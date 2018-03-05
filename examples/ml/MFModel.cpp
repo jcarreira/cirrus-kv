@@ -49,21 +49,6 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
 MFModel::MFModel(
     const void* data, uint64_t /*nusers*/, uint64_t /*nitems*/, uint64_t /*nfactors*/) {
   loadSerialized(data);
-#if 0
-  nusers_ = nusers;
-  nitems_ = nitems;
-  nfactors_ = nfactors;
-
-  user_weights_.resize(nusers * nfactors);
-  item_weights_.resize(nitems * nfactors);
-  user_bias_.resize(nusers);
-  item_bias_.resize(nitems);
-  
-  const char* data_ptr = (const char*)data;
-  std::copy(data_ptr, data_ptr + nusers_ * nfactors_, user_weights_.data());
-  data_ptr += nusers * nfactors;
-  std::copy(data_ptr, data_ptr + nitems_ * nfactors_, item_weights_.data());
-#endif
 }
 
 uint64_t MFModel::size() const {
@@ -95,14 +80,18 @@ MFModel::serialize() const {
 
 uint64_t MFModel::getSerializedSize() const {
     return sizeof(uint64_t) * 3 +
-      (nusers_ * nfactors_ + nitems_ * nfactors_) * sizeof(FEATURE_TYPE);
+      user_bias_.size() * sizeof(FEATURE_TYPE) +
+      item_bias_.size() * sizeof(FEATURE_TYPE) +
+      user_weights_.size() * sizeof(FEATURE_TYPE) +
+      item_weights_.size() * sizeof(FEATURE_TYPE);
 }
 
 void MFModel::serializeTo(void* mem) const {
     char* data = reinterpret_cast<char*>(mem);
 
 #ifdef DEBUG
-    std::cout << "SerializeTo"
+    std::cout
+      << "SerializeTo"
       << " nusers: " << nusers_
       << " nitems_: " << nitems_
       << " nfactors_: " << nfactors_
@@ -113,16 +102,18 @@ void MFModel::serializeTo(void* mem) const {
     store_value<uint64_t>(data, nitems_);
     store_value<uint64_t>(data, nfactors_);
 
-    // store bias values first
-    std::copy(user_bias_.data(), user_bias_.data() + nusers_, data);
-    data += nusers_;
-    std::copy(item_bias_.data(), item_bias_.data() + item_bias_.size(), data);
-    data += item_bias_.size();
-
-    // not store weights
-    std::copy(user_weights_.data(), user_weights_.data() + nusers_ * nfactors_, data);
-    data += nusers_ * nfactors_;
-    std::copy(item_weights_.data(), item_weights_.data() + nitems_ * nfactors_, data);
+    for (uint64_t i = 0; i < user_bias_.size(); ++i) {
+      store_value<FEATURE_TYPE>(data, user_bias_[i]);
+    }
+    for (uint64_t i = 0; i < item_bias_.size(); ++i) {
+      store_value<FEATURE_TYPE>(data, item_bias_[i]);
+    }
+    for (uint64_t i = 0; i < user_weights_.size(); ++i) {
+      store_value<FEATURE_TYPE>(data, user_weights_[i]);
+    }
+    for (uint64_t i = 0; i < item_weights_.size(); ++i) {
+      store_value<FEATURE_TYPE>(data, item_weights_[i]);
+    }
 }
 
 void MFModel::loadSerialized(const void* data) {
@@ -130,6 +121,14 @@ void MFModel::loadSerialized(const void* data) {
   nusers_ = load_value<uint64_t>(data);
   nitems_ = load_value<uint64_t>(data);
   nfactors_ = load_value<uint64_t>(data);
+  
+#ifdef DEBUG
+  std::cout << "loadSerialized"
+    << " nusers: " << nusers_
+    << " nitems_: " << nitems_
+    << " nfactors_: " << nfactors_
+    << std::endl;
+#endif
 
   user_weights_.resize(nusers_ * nfactors_);
   item_weights_.resize(nitems_ * nfactors_);
@@ -139,12 +138,12 @@ void MFModel::loadSerialized(const void* data) {
   // read user bias
   for (uint32_t i = 0; i < nusers_; ++i) {
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
-    user_bias_.push_back(user_bias);
+    user_bias_[i] = user_bias;
   }
   // read item bias
   for (uint32_t i = 0; i < nitems_; ++i) {
     FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
-    item_bias_.push_back(item_bias);
+    item_bias_[i] = item_bias;
   }
   // read user weights
   for (uint32_t i = 0; i < nusers_; ++i) {
@@ -193,18 +192,18 @@ void MFModel::sgd_update(double learning_rate,
 
   // apply grad to users_bias_grad
   for (const auto& v : grad_ptr->users_bias_grad) {
-    std::cout << "ub: " << v.second << "\n";
+    //std::cout << "ub: " << v.second << "\n";
       user_bias_[v.first] += learning_rate * v.second;
   }
   for (const auto& v : grad_ptr->items_bias_grad) {
-    std::cout << "ib: " << v.second << "\n";
+    //std::cout << "ib: " << v.second << "\n";
       item_bias_[v.first] += learning_rate * v.second;
   }
   for (const auto& v : grad_ptr->users_weights_grad) {
     int user_id = v.first;
     assert(v.second.size() == NUM_FACTORS);
     for (uint32_t i = 0; i < v.second.size(); ++i) {
-      std::cout << "uw: " << v.second[i] << "\n";
+      //std::cout << "uw: " << v.second[i] << "\n";
       get_user_weights(user_id, i) += learning_rate * v.second[i];
     }
   }
@@ -212,7 +211,7 @@ void MFModel::sgd_update(double learning_rate,
     int item_id = v.first;
     assert(v.second.size() == NUM_FACTORS);
     for (uint32_t i = 0; i < v.second.size(); ++i) {
-      std::cout << "iw: " << v.second[i] << "\n";
+      //std::cout << "iw: " << v.second[i] << "\n";
       get_item_weights(item_id, i) += learning_rate * v.second[i];
     }
   }
@@ -229,10 +228,6 @@ FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
 #ifdef DEBUG
-//    std::cout
-//      << "user_weight: " << get_user_weights(userId, i)
-//      << " item_weight: " << get_item_weights(itemId, i)
-//      << std::endl;
     if (std::isnan(res) || std::isinf(res)) {
       std::cout << "userId: " << userId << " itemId: " << itemId 
         << " get_user_weights(userId, i): " << get_user_weights(userId, i)
@@ -295,6 +290,7 @@ void MFModel::sgd_update(
       FEATURE_TYPE pred = predict(user, itemId);
       FEATURE_TYPE error = rating - pred;
 
+#ifdef DEBUG
       std::cout 
         << "user: " << user
         << "itemId: " << itemId
@@ -302,6 +298,7 @@ void MFModel::sgd_update(
         << " prediction: " << pred
         << " error: " << error
         << std::endl;
+#endif
 
       if (itemId >= nitems_ || user >= nusers_) {
         std::cout
@@ -437,7 +434,7 @@ std::unique_ptr<ModelGradient> MFModel::loadGradient(void* mem) const {
 }
 
 double MFModel::checksum() const {
-    return crc32(user_weights_.data(), user_weights_.size() * sizeof(FEATURE_TYPE));
+  return crc32(user_weights_.data(), user_weights_.size() * sizeof(FEATURE_TYPE));
 }
 
 void MFModel::print() const {
