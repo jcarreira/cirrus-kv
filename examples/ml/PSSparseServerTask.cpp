@@ -5,6 +5,7 @@
 #include "Utils.h"
 #include "async.h"
 #include "Constants.h"
+#include "Checksum.h"
 
 #define DEBUG
 
@@ -73,7 +74,10 @@ bool PSSparseServerTask::process_send_mf_gradient(const Request& req, std::vecto
   mf_model->sgd_update(
       task_config.get_learning_rate(), &gradient);
 #ifdef DEBUG 
-  std::cout << "sgd update done" << std::endl;
+  std::cout
+    << "sgd update done"
+    << " checksum: " << mf_model->checksum()
+    << std::endl;
 #endif
   model_lock.unlock();
   gradientUpdatesCount++;
@@ -206,6 +210,11 @@ bool PSSparseServerTask::process_get_mf_full_model(
   }
 
   mf_model_copy.serializeTo(thread_buffer.data());
+  std::cout
+    << "Serializing mf model"
+    << " mode checksum: " << mf_model_copy.checksum()
+    << " buffer checksum: " << crc32(thread_buffer.data(), model_size)
+    << std::endl;
   if (send_all(req.sock, &model_size, sizeof(uint32_t)) == -1) {
     return false;
   }

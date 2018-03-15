@@ -3,6 +3,7 @@
 #include "PSSparseServerInterface.h"
 #include "Constants.h"
 #include "MFModel.h"
+#include "Checksum.h"
 
 #define DEBUG
 
@@ -145,6 +146,10 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
 
     char* buffer = new char[to_receive_size];
     read_all(sock, buffer, to_receive_size);
+    
+    std::cout
+      << " buffer checksum: " << crc32(buffer, to_receive_size)
+      << std::endl;
 
     // build a sparse model and return
     std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(
