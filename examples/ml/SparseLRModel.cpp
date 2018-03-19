@@ -371,7 +371,7 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
 
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
         const SparseDataset& dataset,
-        double epsilon) const {
+        const Configuration& config) const {
   if (!is_sparse_) {
     throw std::runtime_error("This model is not sparse");
   }
@@ -407,7 +407,10 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
   for (const auto& v : part3) {
     uint64_t index = v.first;
     FEATURE_TYPE value = v.second;
-    res.push_back(std::make_pair(index, value + weights_sparse_[index] * 2 * epsilon));
+    double final_grad = value + weights_sparse_[index] * 2 * config.get_epsilon();
+    if (config.get_grad_threshold_use() && final_grad > config.get_grad_threshold()) {
+      res.push_back(std::make_pair(index, final_grad));
+    }
   }
   std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
   return ret;

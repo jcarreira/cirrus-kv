@@ -61,6 +61,9 @@ void Configuration::check() const {
   if (test_set_range.first && model_type == COLLABORATIVE_FILTERING) {
     throw std::runtime_error("Can't use test range with COLLABORATIVE_FILTERING");
   }
+  if (use_grad_threshold && grad_threshold == 0) {
+    throw std::runtime_error("Can't use a 0 for grad threshold");
+  }
 }
 
 /**
@@ -155,6 +158,15 @@ void Configuration::parse_line(const std::string& line) {
         test_set_range = std::make_pair(
             string_to<int>(left),
             string_to<int>(right));
+    } else if (s == "use_grad_threshold:") {
+      std::string b;
+      iss >> b;
+      if (b != "0" && b != "1") {
+        throw std::runtime_error("use_grad_threshold must be 0/1");
+      }
+      use_grad_threshold = string_to<bool>(b);
+    } else if (s == "grad_threshold:") {
+      iss >> grad_threshold;
     } else {
         throw std::runtime_error("Unrecognized option: " + line);
     }
@@ -300,3 +312,10 @@ int Configuration::get_items() const {
   return nitems;
 }
 
+bool Configuration::get_grad_threshold_use() const {
+  return use_grad_threshold;
+}
+
+double Configuration::get_grad_threshold() const {
+  return grad_threshold;
+}
