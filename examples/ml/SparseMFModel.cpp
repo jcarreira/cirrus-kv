@@ -41,7 +41,7 @@ SparseMFModel::SparseMFModel(const void* data, uint64_t minibatch_size, uint64_t
 
 std::unique_ptr<CirrusModel> SparseMFModel::deserialize(void* data, uint64_t /*size*/) const {
   throw std::runtime_error("Not implemented");
-  uint32_t* data_p = (uint32_t*)data;
+  uint32_t* data_p = reinterpret_cast<uint32_t*>(data);
   return std::make_unique<SparseMFModel>(
       reinterpret_cast<void*>(data_p), 10, 10);
 }
@@ -268,7 +268,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
   }
 
   for (const auto& p : item_weights_grad_map) {
-    auto item_id = p.first;
+    const auto& item_id = p.first;
     auto& item_weights = p.second;
     gradient->items_weights_grad.push_back(
         std::make_pair(item_id, std::move(item_weights)));
@@ -335,7 +335,7 @@ void SparseMFModel::check() const {
   for (const auto& k : item_models) {
     //int key = k.first;
     //auto item_bias = k.second.first;
-    auto& item_weights = k.second.second;
+    const auto& item_weights = k.second.second;
     if (item_weights.size() != NUM_FACTORS) { 
       throw std::runtime_error("Item has wrong size");
     }

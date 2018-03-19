@@ -4,6 +4,7 @@
 #include <Utils.h>
 #include <cassert>
 #include "utils/Log.h"
+#include "Constants.h"
 
 /**
  * LRGradient
@@ -333,7 +334,7 @@ uint64_t MFSparseGradient::getSerializedSize() const {
 }
 
 void MFSparseGradient::serialize(void *mem) const {
-  store_value<uint32_t>(mem, 0x1337); // magic value
+  store_value<uint32_t>(mem, MAGIC_NUMBER); // magic value
   store_value<uint32_t>(mem, users_bias_grad.size());
   store_value<uint32_t>(mem, items_bias_grad.size());
 
@@ -371,7 +372,7 @@ void MFSparseGradient::serialize(void *mem) const {
 
 void MFSparseGradient::loadSerialized(const void* mem) {
   uint32_t magic_value = load_value<uint32_t>(mem);
-  assert(magic_value == 0x1337);
+  assert(magic_value == MAGIC_NUMBER);
   uint32_t users_size = load_value<uint32_t>(mem);
   uint32_t items_size = load_value<uint32_t>(mem);
   //users_bias_grad.reserve(users_size);

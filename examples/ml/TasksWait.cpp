@@ -19,7 +19,7 @@ void MLTask::wait_for_start(int index, int nworkers) {
     int i = 1;
     for (; i < num_waiting_tasks; ++i) {
       uint32_t is_done = psi.get_status(i);
-      if (!is_done)
+      if (i != 1 && !is_done)
         break;
     }
     if (i == num_waiting_tasks) {

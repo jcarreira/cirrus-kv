@@ -116,10 +116,10 @@ bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vecto
 // move this to SparseMFModel
 bool PSSparseServerTask::process_get_mf_sparse_model(
     const Request& req, std::vector<char>& thread_buffer) {
-  uint32_t k_items;
-  uint32_t base_user_id;
-  uint32_t minibatch_size;
-  uint32_t magic_value;
+  uint32_t k_items = 0;
+  uint32_t base_user_id = 0;
+  uint32_t minibatch_size = 0;
+  uint32_t magic_value = 0;
       
   read_all(req.sock, &k_items, sizeof(uint32_t));
   read_all(req.sock, &base_user_id, sizeof(uint32_t));
@@ -128,7 +128,7 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
 
   assert(k_items > 0);
   assert(minibatch_size > 0);
-  if (magic_value != 0x1337) {
+  if (magic_value != MAGIC_NUMBER) {
     throw std::runtime_error("Wrong message");
   }
   read_all(req.sock, thread_buffer.data(), k_items * sizeof(uint32_t));

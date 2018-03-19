@@ -4,6 +4,7 @@
 #include "Constants.h"
 #include "MFModel.h"
 #include "Checksum.h"
+#include "Constants.h"
 
 #define DEBUG
 
@@ -188,7 +189,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
   * K item ids to send (uint32_t)
   * base user id (uint32_t)
   * minibatch size (uint32_t)
-  * magic number (0x1337) (uint32_t)
+  * magic number (MAGIC_NUMBER) (uint32_t)
   * list of K item ids (K * uint32_t)
   */
 SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
@@ -200,7 +201,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   store_value<uint32_t>(msg, 0); // we will write this value later
   store_value<uint32_t>(msg, user_base);
   store_value<uint32_t>(msg, minibatch_size);
-  store_value<uint32_t>(msg, 0x1337); // magic value
+  store_value<uint32_t>(msg, MAGIC_NUMBER); // magic value
   for (const auto& sample : ds.data_) {
     for (const auto& w : sample) {
       uint32_t movieId = w.first;

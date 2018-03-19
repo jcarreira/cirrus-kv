@@ -12,4 +12,6 @@ enum PS_OP {
   GET_TASK_STATUS
 };
 
+#define MAGIC_NUMBER (0x1337)
+
 #endif // _CONSTANTS_H_

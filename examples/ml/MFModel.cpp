@@ -79,7 +79,7 @@ MFModel::serialize() const {
 }
 
 uint64_t MFModel::getSerializedSize() const {
-    return sizeof(uint64_t) * 3 +
+    return sizeof(uint64_t) * 3 + // nusers + nitem + nfactors
       user_bias_.size() * sizeof(FEATURE_TYPE) +
       item_bias_.size() * sizeof(FEATURE_TYPE) +
       user_weights_.size() * sizeof(FEATURE_TYPE) +
@@ -102,17 +102,17 @@ void MFModel::serializeTo(void* mem) const {
     store_value<uint64_t>(data, nitems_);
     store_value<uint64_t>(data, nfactors_);
 
-    for (uint64_t i = 0; i < user_bias_.size(); ++i) {
-      store_value<FEATURE_TYPE>(data, user_bias_[i]);
+    for (const auto& v : user_bias_) {
+      store_value<FEATURE_TYPE>(data, v);
     }
-    for (uint64_t i = 0; i < item_bias_.size(); ++i) {
-      store_value<FEATURE_TYPE>(data, item_bias_[i]);
+    for (const auto& v : item_bias_) {
+      store_value<FEATURE_TYPE>(data, v);
     }
-    for (uint64_t i = 0; i < user_weights_.size(); ++i) {
-      store_value<FEATURE_TYPE>(data, user_weights_[i]);
+    for (const auto& v : user_weights_) {
+      store_value<FEATURE_TYPE>(data, v);
     }
-    for (uint64_t i = 0; i < item_weights_.size(); ++i) {
-      store_value<FEATURE_TYPE>(data, item_weights_[i]);
+    for (const auto& v : item_weights_) {
+      store_value<FEATURE_TYPE>(data, v);
     }
 }
 
