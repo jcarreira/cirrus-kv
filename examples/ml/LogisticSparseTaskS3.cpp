@@ -160,7 +160,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #endif
 
     try {
-      gradient = model.minibatch_grad_sparse(*dataset, config.get_epsilon());
+      gradient = model.minibatch_grad_sparse(*dataset, config);
     } catch(const std::runtime_error& e) {
       std::cout << "Error. " << e.what() << std::endl;
       exit(-1);

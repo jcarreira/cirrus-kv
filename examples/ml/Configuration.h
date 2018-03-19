@@ -117,6 +117,10 @@ class Configuration {
 
     bool get_use_bias() const;
 
+    // threshold to filter out gradient values that are too small
+    bool get_grad_threshold_use() const;
+    double get_grad_threshold() const;
+
     /**
       * Netflix specific
       */
@@ -160,13 +164,17 @@ class Configuration {
 
     std::string s3_bucket_name; //< bucket used for training dataset
 
-    std::pair<int, int> train_set_range;
-    std::pair<int, int> test_set_range;
+    std::pair<int, int> train_set_range; // range of S3 ids for training
+    std::pair<int, int> test_set_range;  // range of S3 ids for testing
 
-    bool use_bias = false;
+    bool use_bias = false; // whether to use bias value for every sample
 
-    int nusers = 0;
-    int nitems = 0;
+    // Netflix parameters
+    int nusers = 0; // number of users
+    int nitems = 0; // number of items
+
+    bool use_grad_threshold = false;
+    double grad_threshold = 0;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_
