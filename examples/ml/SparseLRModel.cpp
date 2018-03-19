@@ -408,7 +408,8 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
     uint64_t index = v.first;
     FEATURE_TYPE value = v.second;
     double final_grad = value + weights_sparse_[index] * 2 * config.get_epsilon();
-    if (config.get_grad_threshold_use() && final_grad > config.get_grad_threshold()) {
+    if (!config.get_grad_threshold_use()
+        || (config.get_grad_threshold_use() && std::abs(final_grad) > config.get_grad_threshold())) {
       res.push_back(std::make_pair(index, final_grad));
     }
   }

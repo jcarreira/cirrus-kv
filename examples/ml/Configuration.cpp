@@ -43,6 +43,8 @@ void Configuration::print() const {
     std::cout << "epsilon: " << epsilon << std::endl;
     std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
     std::cout << "use_bias: " << use_bias << std::endl;
+    std::cout << "use_grad_threshold: " << use_grad_threshold << std::endl;
+    std::cout << "grad_threshold: " << grad_threshold << std::endl;
     std::cout << "train_set: "
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "

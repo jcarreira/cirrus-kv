@@ -9,24 +9,7 @@
 
 #include <pthread.h>
 
-#define DEBUG
-
-class SparseModelGet {
-  public:
-    SparseModelGet(const std::string& ps_ip, int ps_port) :
-      ps_ip(ps_ip), ps_port(ps_port) {
-      psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
-    }
-
-    SparseLRModel get_new_model(const SparseDataset& ds) {
-      return psi->get_lr_sparse_model(ds);
-    }
-
-  private:
-    std::unique_ptr<PSSparseServerInterface> psi;
-    std::string ps_ip;
-    int ps_port;
-};
+//#define DEBUG
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
@@ -39,18 +22,12 @@ void check_redis(auto r) {
   }
 }
 
-// we need global variables because of the static callbacks
-namespace LogisticSparseTaskGlobal {
-  std::unique_ptr<SparseModelGet> sparse_model_get;
-  PSSparseServerInterface* psint;
-}
-
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LogisticSparseTaskGlobal::psint->send_lr_gradient(*lrg);
+  psint->send_lr_gradient(*lrg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -108,10 +85,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
-
-  LogisticSparseTaskGlobal::sparse_model_get =
-    std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
+  psint = new PSSparseServerInterface(PS_IP, PS_PORT);
+  sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
@@ -132,14 +107,14 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   while (1) {
     // get data, labels and model
 #ifdef DEBUG
-    std::cout << "[WORKER] running phase 1" << std::endl;
+    std::cout << get_time_us() << " [WORKER] running phase 1" << std::endl;
 #endif
     std::unique_ptr<SparseDataset> dataset;
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
 #ifdef DEBUG
-    std::cout << "[WORKER] phase 1 done. Getting the model" << std::endl;
+    std::cout << get_time_us() << " [WORKER] phase 1 done. Getting the model" << std::endl;
     //dataset->check();
     //dataset->print_info();
     auto now = get_time_us();
@@ -148,8 +123,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
-    SparseLRModel model =
-      LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
+    SparseLRModel model = sparse_model_get->get_new_model(*dataset);
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -184,6 +158,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
         << "Worker task error doing put of gradient" << "\n";
       exit(-1);
     }
+#ifdef DEBUG
+    std::cout << get_time_us() << " [WORKER] Sent gradient" << std::endl;
+#endif
   }
 }
 
