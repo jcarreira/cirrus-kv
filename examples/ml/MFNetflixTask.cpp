@@ -6,51 +6,18 @@
 #include "S3SparseIterator.h"
 #include "async.h"
 #include "PSSparseServerInterface.h"
+#include "SparseMFModel.h"
 
 #include <pthread.h>
 
 #define DEBUG
 
-class SparseModelGet {
-  public:
-    SparseModelGet(const std::string& ps_ip, int ps_port) :
-      ps_ip(ps_ip), ps_port(ps_port) {
-      psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
-    }
-
-    SparseLRModel get_new_model(const SparseDataset& ds) {
-      return psi->get_lr_sparse_model(ds);
-    }
-
-  private:
-    std::unique_ptr<PSSparseServerInterface> psi;
-    std::string ps_ip;
-    int ps_port;
-};
-
-void check_redis(auto r) {
-  if (r == NULL || r -> err) {
-    std::cout << "[WORKER] "
-      << "Error connecting to REDIS"
-      << " IP: " << REDIS_IP
-      << std::endl;
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-}
-
-// we need global variables because of the static callbacks
-namespace LogisticSparseTaskGlobal {
-  std::unique_ptr<SparseModelGet> sparse_model_get;
-  PSSparseServerInterface* psint;
-}
-
-void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
+void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LogisticSparseTaskGlobal::psint->send_lr_gradient(*lrg);
+  psint->send_mf_gradient(mfg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -60,11 +27,10 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto now = get_time_us();
   std::cout << "[WORKER] "
       << "Worker task published gradient"
-      << " with version: " << lrg->getVersion()
       << " at time (us): " << get_time_us()
       << " took(us): " << elapsed_push_us
       << " bw(MB/s): " << std::fixed <<
-         (1.0 * lrg->getSerializedSize() / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
+         (1.0 * mfg.getSerializedSize() / elapsed_push_us / 1024 / 1024 * 1000 * 1000)
       << " since last(us): " << (now - before)
       << "\n";
   before = now;
@@ -72,7 +38,7 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 }
 
 // get samples and labels data
-bool LogisticSparseTaskS3::get_dataset_minibatch(
+bool MFNetflixTask::get_dataset_minibatch(
     auto& dataset,
     auto& s3_iter) {
 #ifdef DEBUG
@@ -84,7 +50,7 @@ bool LogisticSparseTaskS3::get_dataset_minibatch(
   auto finish1 = get_time_us();
 #endif
   dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
-        config.get_minibatch_size())); // this takes 11 us
+        config.get_minibatch_size(), false)); // this takes 11 us
 
 #ifdef DEBUG
   auto finish2 = get_time_us();
@@ -101,34 +67,36 @@ bool LogisticSparseTaskS3::get_dataset_minibatch(
   return true;
 }
 
-void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
-  std::cout << "Starting LogisticSparseTaskS3"
-    << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
+void MFNetflixTask::run(const Configuration& config, int worker) {
+  std::cout << "Starting MFNetflixTask"
     << std::endl;
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
+  psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
 
-  LogisticSparseTaskGlobal::sparse_model_get =
-    std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
+  mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(worker, nworkers);
+  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
   auto train_range = config.get_train_range();
+
+  /** We sequentially iterate over data
+    * This is necessary because we need to know the index of each row
+    * in the dataset matrix because that tells us which user it belongs to
+    * (same doesn't happen with Logistic Regression)
+    */
   S3SparseIterator s3_iter(
       train_range.first, train_range.second,
       config, config.get_s3_size(), config.get_minibatch_size(),
-      true, worker);
+      false, worker, false);
 
   std::cout << "[WORKER] starting loop" << std::endl;
 
-  uint64_t version = 1;
-  SparseLRModel model(MODEL_GRAD_SIZE);
-
+  uint64_t sample_index = 0;
   while (1) {
     // get data, labels and model
 #ifdef DEBUG
@@ -138,18 +106,19 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
+    std::cout << "DS size: " << dataset->num_samples() << std::endl;
 #ifdef DEBUG
-    std::cout << "[WORKER] phase 1 done. Getting the model" << std::endl;
-    //dataset->check();
-    //dataset->print_info();
+    std::cout << "[WORKER] phase 1 done" << std::endl;
+    dataset->check();
+    dataset->print_info();
     auto now = get_time_us();
 #endif
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
-    SparseLRModel model =
-      LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
+    SparseMFModel model =
+      mf_model_get->get_new_model(*dataset, sample_index, config.get_minibatch_size());
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -160,28 +129,17 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #endif
 
     try {
-      gradient = model.minibatch_grad_sparse(*dataset, config.get_epsilon());
-    } catch(const std::runtime_error& e) {
-      std::cout << "Error. " << e.what() << std::endl;
-      exit(-1);
+      auto gradient = model.minibatch_grad(*dataset, config, sample_index);
+#ifdef DEBUG
+      auto elapsed_us = get_time_us() - now;
+      std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
+        << " at time: " << get_time_us() << "\n";
+#endif
+      MFSparseGradient* grad_ptr = dynamic_cast<MFSparseGradient*>(gradient.get());
+      push_gradient(*grad_ptr);
+      sample_index += config.get_minibatch_size();
     } catch(...) {
       std::cout << "There was an error computing the gradient" << std::endl;
-      exit(-1);
-    }
-#ifdef DEBUG
-    auto elapsed_us = get_time_us() - now;
-    std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
-      << " at time: " << get_time_us()
-      << " version " << version << "\n";
-#endif
-    gradient->setVersion(version++);
-
-    try {
-      LRSparseGradient* lrg = dynamic_cast<LRSparseGradient*>(gradient.get());
-      push_gradient(lrg);
-    } catch(...) {
-      std::cout << "[WORKER] "
-        << "Worker task error doing put of gradient" << "\n";
       exit(-1);
     }
   }

@@ -7,6 +7,7 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <map>
 #include <config.h>
 #include <MurmurHash3.h>
 
@@ -34,7 +35,17 @@ class InputReader {
    * @returns The dataset
    */
   SparseDataset read_netflix_ratings(const std::string& input_file,
-      int *number_users, int* number_movies);
+      int* number_movies, int *number_users);
+
+  void read_netflix_input_thread(
+    std::ifstream& fin,
+    std::mutex& fin_lock,
+    std::mutex& map_lock,
+    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds,
+    int& number_movies,
+    int& number_users,
+    std::map<int,int>& userid_to_realid,
+    int& user_index);
 
   /**
    * Read dataset in csv file with given delimiter (e.g., tab, space)

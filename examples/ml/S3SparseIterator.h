@@ -19,6 +19,7 @@ class S3SparseIterator {
         const Configuration& c,
         uint64_t s3_rows,
         uint64_t minibatch_rows,
+        bool use_label = true,
         int worker_id = 0,
         bool random_access = true);
 
@@ -60,11 +61,13 @@ class S3SparseIterator {
   std::map<int, std::string> list_strings; // strings from s3
   CircularBuffer<std::pair<const void*, int>> minibatches_list;//(100000);
   int to_delete = -1;
+  bool use_label; // whether the dataset has labels or not
   int worker_id = 0;
   
   std::default_random_engine re;
   bool random_access = true;
   uint64_t current = 0;
+
 };
 
 #endif  // _S3_SPARSEITERATOR_H_

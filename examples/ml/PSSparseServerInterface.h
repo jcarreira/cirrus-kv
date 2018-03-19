@@ -10,19 +10,27 @@
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include "ModelGradient.h"
 #include "Utils.h"
 #include "SparseLRModel.h"
+#include "SparseMFModel.h"
+#include "Model.h"
 
 class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
 
-  void send_gradient(const LRSparseGradient&);
+  void send_lr_gradient(const LRSparseGradient&);
+  void send_mf_gradient(const MFSparseGradient&);
   
-  //void get_model(SparseLRModel& model);
-  SparseLRModel get_full_model();
-  SparseLRModel get_sparse_model(const SparseDataset& ds);
+  SparseLRModel get_lr_sparse_model(const SparseDataset& ds);
+  SparseMFModel get_sparse_mf_model(const SparseDataset& ds, uint32_t, uint32_t);
+
+  std::unique_ptr<CirrusModel> get_full_model(bool isCollaborativeFiltering); //XXX use a better argument here
+
+  void set_status(uint32_t id, uint32_t status);
+  uint32_t get_status(uint32_t id);
 
  private:
   std::string ip;

@@ -84,7 +84,8 @@ class Configuration {
     enum ModelType {
         UNKNOWN = 0,
         LOGISTICREGRESSION,
-        SOFTMAX
+        SOFTMAX,
+        COLLABORATIVE_FILTERING,
     };
 
     /**
@@ -115,6 +116,12 @@ class Configuration {
     std::pair<int, int> get_test_range() const;
 
     bool get_use_bias() const;
+
+    /**
+      * Netflix specific
+      */
+    int get_users() const;
+    int get_items() const;
 
  public:
     /**
@@ -157,6 +164,9 @@ class Configuration {
     std::pair<int, int> test_set_range;
 
     bool use_bias = false;
+
+    int nusers = 0;
+    int nitems = 0;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

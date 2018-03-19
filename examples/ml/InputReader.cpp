@@ -477,7 +477,7 @@ void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<i
     // check if all ratings of an user have same value
     // if so we 'discard' this user
     if (stddev == 0.0) {
-      throw std::runtime_error("I think this is not well implemented");
+      //throw std::runtime_error("I think this is not well implemented");
       sample.clear();
       continue;
     }
@@ -509,52 +509,6 @@ void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<i
 }
 
 
-/**
-  * Format
-  * userId, movieId, rating
-  */
-SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
-   int *number_users, int* number_movies) {
-  std::ifstream fin(input_file, std::ifstream::in);
-  if (!fin) {
-    throw std::runtime_error("Error opening input file " + input_file);
-  }
-
-  *number_movies = *number_users = 0;
-
-  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> sparse_ds;
-  sparse_ds.resize(2649430);
-
-  std::string line;
-  getline(fin, line); // read the header 
-  while (getline(fin, line)) {
-    char str[STR_SIZE];
-    assert(line.size() < STR_SIZE);
-    strncpy(str, line.c_str(), STR_SIZE);
-
-    char* s = str;
-    char* l = strsep(&s, ",");
-    int userId = string_to<int>(l);
-    l = strsep(&s, ",");
-    int movieId = string_to<int>(l);
-    l = strsep(&s, ",");
-    FEATURE_TYPE rating = string_to<FEATURE_TYPE>(l);
-
-    sparse_ds[userId - 1].push_back(std::make_pair(movieId, rating));
-
-    *number_users = std::max(*number_users, userId);
-    *number_movies = std::max(*number_movies, movieId);
-  }
-
-  // we standardize the dataset
-  standardize_sparse_dataset(sparse_ds);
-
-  auto ds = SparseDataset(sparse_ds);
-  std::cout << "Checking sparse dataset" << std::endl;
-  ds.check();
-  std::cout << "Checking sparse dataset done" << std::endl;
-  return ds;
-}
 
 uint64_t hash_f(const char* s) {
   uint64_t seed = 100;
@@ -1010,3 +964,138 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
   }
   return ret;
 }
+
+/****************************************
+  ***************************************
+  ******** NETFLIX **********************
+  ***************************************
+  ***************************************
+  */
+
+void InputReader::read_netflix_input_thread(
+    std::ifstream& fin,
+    std::mutex& fin_lock,
+    std::mutex& map_lock,
+    std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& sparse_ds,
+    int& number_movies,
+    int& number_users,
+    std::map<int,int>& userid_to_realid,
+    int& user_index) {
+  //getline(fin, line); // read the header 
+  std::string line;
+  int nummovies_local = 0, numusers_local = 0;
+  while (1) {
+    fin_lock.lock();
+    getline(fin, line);
+    if (fin.eof()) {
+      fin_lock.unlock();
+      break;
+    }
+    fin_lock.unlock();
+
+    char str[STR_SIZE];
+    assert(line.size() < STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE);
+
+    char* s = str;
+    char* l = strsep(&s, ",");
+    int userId = string_to<int>(l);
+    l = strsep(&s, ",");
+    int movieId = string_to<int>(l);
+    l = strsep(&s, ",");
+    FEATURE_TYPE rating = string_to<FEATURE_TYPE>(l);
+
+    //std::cout
+    //  << " line: " << line
+    //  << " userId: " << userId
+    //  << std::endl;
+    map_lock.lock();
+    auto iter = userid_to_realid.find(userId);
+    int newuser_id = 0;
+    if (iter == userid_to_realid.end()) {
+      // first time seeing this user
+      newuser_id = user_index;
+      userid_to_realid[userId] = user_index++;
+    } else {
+      newuser_id = iter->second;
+    }
+    sparse_ds.at(newuser_id).push_back(std::make_pair(movieId - 1, rating));
+    map_lock.unlock();
+
+    numusers_local = std::max(numusers_local, newuser_id);
+    nummovies_local = std::max(nummovies_local, movieId);
+  }
+  
+  fin_lock.lock();
+  number_users = std::max(number_users, numusers_local);
+  number_movies = std::max(number_movies, nummovies_local);
+  fin_lock.unlock();
+}
+
+/**
+  * Format
+  * userId, movieId, rating
+  */
+SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
+   int* number_movies, int* number_users) {
+  std::ifstream fin(input_file, std::ifstream::in);
+  if (!fin) {
+    throw std::runtime_error("Error opening input file " + input_file);
+  }
+
+  // we use this map to map ids in the dataset (these have gaps)
+  // to a continuous range (without gaps)
+  std::map<int, int> userid_to_realid;
+  int user_index = 0;
+
+  *number_movies = *number_users = 0;
+
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> sparse_ds; // result dataset
+  
+  // CustomerIDs range from 1 to 2649429, with gaps. There are 480189 users.
+  sparse_ds.resize(480189); // we assume we read the whole dataset
+  //sparse_ds.resize(2649430); // we assume we read the whole dataset
+  
+  std::vector<std::shared_ptr<std::thread>> threads; // container for threads
+  uint64_t nthreads = 8; //  number of threads to use
+  std::mutex fin_lock; // lock to access input file
+  std::mutex map_lock; // lock to access map
+  for (uint64_t i = 0; i < nthreads; ++i) {
+    threads.push_back(
+        std::make_shared<std::thread>(
+          std::bind(&InputReader::read_netflix_input_thread, this,
+            std::placeholders::_1, std::placeholders::_2,
+            std::placeholders::_3, std::placeholders::_4,
+            std::placeholders::_5, std::placeholders::_6,
+            std::placeholders::_7, std::placeholders::_8),
+          std::ref(fin),
+          std::ref(fin_lock),
+          std::ref(map_lock),
+          std::ref(sparse_ds),
+          std::ref(*number_movies),
+          std::ref(*number_users),
+          std::ref(userid_to_realid),
+          std::ref(user_index)
+          ));
+  }
+
+  for (auto& t : threads) {
+    t->join();
+  }
+
+  // we standardize the dataset
+  standardize_sparse_dataset(sparse_ds);
+
+  auto ds = SparseDataset(sparse_ds);
+  std::cout << "Checking sparse dataset" << std::endl;
+  ds.check();
+  std::cout << "Checking sparse dataset done" << std::endl;
+
+  for (int i = 0; i < 100; ++i) {
+    auto sample = ds.get_row(i);
+    std::cout << "sample " << i << " size: " << sample.size() << std::endl;
+  }
+
+  return ds;
+}
+

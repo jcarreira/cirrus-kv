@@ -6,7 +6,7 @@
 #include <vector>
 #include <config.h>
 
-class SoftmaxModel : public Model {
+class SoftmaxModel : public CirrusModel {
  public:
     SoftmaxModel(uint64_t classes, uint64_t d);
     SoftmaxModel(const FEATURE_TYPE* data, uint64_t nclasses, uint64_t d);
@@ -42,14 +42,14 @@ class SoftmaxModel : public Model {
       * @param size Size of model when serialized
       * @return Deserialized model
       */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<CirrusModel> deserialize(void* data,
                                        uint64_t size) const;
 
     /**
       * Performs a deep copy of this model
       * @return Copy of model
       */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<CirrusModel> copy() const override;
 
     /**
       * Performsa stochastic gradient update in the direction of the input gradient

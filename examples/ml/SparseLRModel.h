@@ -12,7 +12,7 @@
   * Logistic regression model
   * Model is represented with a vector of FEATURE_TYPEs
   */
-class SparseLRModel : public Model {
+class SparseLRModel : public CirrusModel {
  public:
     /**
       * SparseLRModel constructor
@@ -59,14 +59,14 @@ class SparseLRModel : public Model {
      * @param data Memory where the serialized model lives
      * @param size Size of the serialized model
      */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<CirrusModel> deserialize(void* data,
             uint64_t size) const override;
 
     /**
      * Performs a deep copy of this model
      * @return New model
      */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<CirrusModel> copy() const override;
 
     /**
      * Performs an SGD update in the direction of the input gradient
@@ -109,7 +109,7 @@ class SparseLRModel : public Model {
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    std::pair<double, double> calc_loss(SparseDataset& dataset) const override;
+    std::pair<double, double> calc_loss(SparseDataset& dataset, uint32_t) const override;
 
     /**
      * Return the size of the gradient when serialized

@@ -1,28 +1,32 @@
-#ifndef EXAMPLES_ML_MFMODEL_H_
-#define EXAMPLES_ML_MFMODEL_H_
+#ifndef EXAMPLES_ML_SPARSEMFMODEL_H_
+#define EXAMPLES_ML_SPARSEMFMODEL_H_
 
 #include <vector>
 #include <utility>
+#include <unordered_map>
 #include <Model.h>
+#include <MFModel.h>
 #include <Matrix.h>
 #include <Dataset.h>
 #include <ModelGradient.h>
 #include <SparseDataset.h>
+#include <Configuration.h>
 
 /**
   * Matrix Factorization model
   * Model is represented with a vector of FEATURE_TYPEs
   */
 
-class MFModel : public CirrusModel {
+class SparseMFModel : public CirrusModel {
  public:
     /**
-      * MFModel constructor from weight vector
-      * @param w Array of model weights
-      * @param d Features dimension
+      * MFModel constructor from serialized data
+      * @param w Serialized data
+      * @param minibatch_size 
+      * @param num_items
       */
-    MFModel(const void*, uint64_t, uint64_t, uint64_t);
-    MFModel(uint64_t users, uint64_t items, uint64_t factors);
+    SparseMFModel(const void* w, uint64_t minibatch_size, uint64_t num_items);
+    SparseMFModel(uint64_t users, uint64_t items, uint64_t factors);
 
     /**
      * Set the model weights to values between 0 and 1
@@ -33,7 +37,8 @@ class MFModel : public CirrusModel {
      * Loads model weights from serialized memory
      * @param mem Memory where model is serialized
      */
-    void loadSerialized(const void* mem);
+    void loadSerialized(const void*) { throw std::runtime_error("Not implemented"); }
+    void loadSerialized(const void* mem, uint64_t, uint64_t);
 
     /**
       * serializes this model into memory
@@ -66,7 +71,9 @@ class MFModel : public CirrusModel {
      * @param learning_rate Learning rate to be used
      * @param gradient Gradient to be used for the update
      */
-    void sgd_update(double learning_rate, const ModelGradient* gradient);
+    void sgd_update(double /*learning_rate*/, const ModelGradient* /*gradient*/) {
+      throw std::runtime_error("Not implemented");
+    }
 
     /**
      * Returns the size of the model weights serialized
@@ -80,35 +87,21 @@ class MFModel : public CirrusModel {
      * @param epsilon L2 Regularization rate
      * @return Newly computed gradient
      */
-    std::unique_ptr<ModelGradient> minibatch_grad(
-            const Matrix& m,
-            FEATURE_TYPE* labels,
-            uint64_t labels_size,
-            //const SparseDataset& dataset,
-            double epsilon) const;
+    //std::unique_ptr<ModelGradient> minibatch_grad(
+    //        const Matrix& m,
+    //        FEATURE_TYPE* labels,
+    //        uint64_t labels_size,
+    //        double epsilon) const;
 
     std::unique_ptr<ModelGradient> minibatch_grad(
-        double learning_rate,
-        uint64_t base_user,
         const SparseDataset& dataset,
-        double epsilon) const;
+        const Configuration&,
+        uint64_t);
 
      
-    void sgd_update(double learning_rate,
-                uint64_t base_user,
-                const SparseDataset&,
-                double epsilon);
-
-    /**
-     * Compute the logistic loss of a given dataset on the current model
-     * @param dataset Dataset to calculate loss on
-     * @return Total loss of whole dataset
-     */
-    std::pair<double, double> calc_loss(Dataset& dataset) const;
-    
-    std::pair<double, double> calc_loss(SparseDataset& dataset) const;
-    
-    std::pair<double, double> calc_loss(SparseDataset& dataset, uint32_t start_index) const;
+    //void sgd_update(double learning_rate,
+    //            uint64_t base_user,
+    //            const SparseDataset&);
 
     /**
      * Return the size of the gradient when serialized
@@ -138,34 +131,37 @@ class MFModel : public CirrusModel {
       * Return model size (should match sample size)
       * @return Size of the model
       */
-    uint64_t size() const;
+    //uint64_t size() const;
 
- private:
-    void initialize_data(uint64_t, uint64_t, uint64_t);
-    
-    // predict rating that userId gives to itemId
-    FEATURE_TYPE predict(uint32_t userId, uint32_t itemId) const;
-
-    uint64_t nusers_;
-    uint64_t nitems_;
-    uint64_t nfactors_;
+    std::vector<char> serializeFromDense(
+        MFModel& model,
+        uint32_t base_user, uint32_t minibatch_size, uint32_t k_items,
+        const char* item_data_ptr) const;
 
  public:
-    const FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor) const;
-    const FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor) const;
+
+    // for each user we have in order:
+    // 1. user id
+    // 2. user_bias
+    // 3. user weights
+    std::vector<
+      std::tuple<int, FEATURE_TYPE,
+        std::vector<FEATURE_TYPE>>> user_models;
+    
+    // for each item we have in order:
+    // 1. item id
+    // 2. item_bias
+    // 3. item weights
+    std::unordered_map<int,
+      std::pair<FEATURE_TYPE,
+        std::vector<FEATURE_TYPE>>> item_models;
+
     FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor);
     FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor);
-    FEATURE_TYPE& get_user_bias(uint64_t userId);
-    FEATURE_TYPE& get_item_bias(uint64_t itemId);
 
-    // between vector and shared_ptr, which one to use?
-    std::vector<FEATURE_TYPE> user_weights_;
-    std::vector<FEATURE_TYPE> item_weights_;
-    //std::shared_ptr<FEATURE_TYPE> user_weights_;
-    //std::shared_ptr<FEATURE_TYPE> item_weights_;
+    FEATURE_TYPE predict(uint32_t userId, uint32_t itemId);
 
-    std::vector<FEATURE_TYPE> user_bias_;
-    std::vector<FEATURE_TYPE> item_bias_;
+    void initialize_weights(uint64_t, uint64_t, uint64_t);
 
     FEATURE_TYPE user_bias_reg_;
     FEATURE_TYPE item_bias_reg_;
@@ -173,7 +169,14 @@ class MFModel : public CirrusModel {
     FEATURE_TYPE item_fact_reg_;
     FEATURE_TYPE user_fact_reg_;
 
+    uint64_t nusers_;
+    uint64_t nitems_;
+    uint64_t nfactors_;
+
     FEATURE_TYPE global_bias_ = 0;
+
+private:
+    void check() const;
 };
 
 #endif  // EXAMPLES_ML_MFMODEL_H_

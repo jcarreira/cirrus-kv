@@ -18,15 +18,12 @@
 #define LOADING_TASK_RANK -100000
 #define PERFORMANCE_LAMBDA_RANK (-100000)
 
-#define PS_SPARSE_SERVER_TASK_RANK (1)
 #define PS_SPARSE_TASK_RANK (-300)
 
 #define WORKER_SPARSE_TASK_RANK (3)
 #define ERROR_SPARSE_TASK_RANK (2)
+#define PS_SPARSE_SERVER_TASK_RANK (1)
 #define LOADING_SPARSE_TASK_RANK (0)
-#define PS_TASK_RANK -1
-#define ERROR_TASK_RANK -2
-#define WORKER_TASK_RANK -3
 #define WORKERS_BASE 3 // used in wait_for_start
 
 using FEATURE_TYPE = float;
@@ -37,3 +34,6 @@ using FEATURE_TYPE = float;
 #define LIMIT_NUMBER_PASSES 3
 
 #define SYNC_N_STEPS (100)
+
+// number of factors for neflix workload
+#define NUM_FACTORS 10

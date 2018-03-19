@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-Wall -ansi -O3 -std=c++14 -pthread
+CXXFLAGS=-Wall -ansi -O3 -std=c++14 -pthread -ggdb
 TOP_DIR=../../..
 LIBFLAGS =-static-libgcc  -static \
 	  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive \
@@ -12,7 +12,8 @@ INCLUDES=-I.. \
 
 SOURCES=../Dataset.cpp ../ModelGradient.cpp ../Utils.cpp \
 	../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	../SparseDataset.cpp ../MFModel.cpp  ../Model.cpp
+	../SparseDataset.cpp ../MFModel.cpp  ../Model.cpp \
+	../MurmurHash3.cpp
 
 PROJ1=test_mf
 PROJ2=test_mf_threads

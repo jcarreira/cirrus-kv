@@ -23,6 +23,7 @@ class SparseDataset {
    * @param samples Vector of samples
    */
   SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>& samples);
+  SparseDataset(std::vector<std::vector<std::pair<int, FEATURE_TYPE>>>&& samples);
   
   /**
    * Construct a dataset given a vector of samples and a vector of labels
@@ -35,9 +36,9 @@ class SparseDataset {
 
   /** Load sparse dataset from serialized format
     */
-  SparseDataset(const char*, bool from_s3);
+  SparseDataset(const char*, bool from_s3, bool has_labels = true);
   
-  SparseDataset(const char*, uint64_t);
+  SparseDataset(const char*, uint64_t, bool has_labels = true);
 
   /**
    * Get the number of samples in this dataset
@@ -49,7 +50,7 @@ class SparseDataset {
    * Get the number of features in this dataset
    * @return Number of features in the dataset
    */
-  //uint64_t num_features() const;
+  uint64_t num_features() const;
 
   /**
    * Get the max number of features of any single user
@@ -97,7 +98,7 @@ class SparseDataset {
    * from feature and label data from samples in range [l,r)
    * output size of object in the uint64_t*
    */
-  std::shared_ptr<char> build_serialized_s3_obj(uint64_t, uint64_t, uint64_t*);
+  std::shared_ptr<char> build_serialized_s3_obj(uint64_t, uint64_t, uint64_t*, bool store_labels = true);
 
   /**
    * Return random subset of samples
@@ -113,6 +114,9 @@ class SparseDataset {
   const std::vector<std::pair<int, FEATURE_TYPE>>& get_row(uint64_t) const;
 
   uint64_t getSizeBytes() const { return size_bytes; }
+
+  // return train set and test set (in this order)
+  std::pair<SparseDataset, SparseDataset> split(double fraction) const;
 
   public:
   void build_max_features();

@@ -32,7 +32,7 @@ uint64_t SparseLRModel::size() const {
 /** FORMAT
   * weights
   */
-std::unique_ptr<Model> SparseLRModel::deserialize(void* data, uint64_t size) const {
+std::unique_ptr<CirrusModel> SparseLRModel::deserialize(void* data, uint64_t size) const {
   throw std::runtime_error("not supported");
   uint64_t d = size / sizeof(FEATURE_TYPE);
   std::unique_ptr<SparseLRModel> model = std::make_unique<SparseLRModel>(
@@ -74,7 +74,7 @@ uint64_t SparseLRModel::getSerializedSize() const {
 void SparseLRModel::loadSerialized(const void* data) {
   int num_weights = load_value<int>(data);
 #ifdef DEBUG
-  //std::cout << "num_weights: " << num_weights << std::endl;
+  std::cout << "num_weights: " << num_weights << std::endl;
 #endif
   assert(num_weights > 0 && num_weights < 10000000);
 
@@ -98,7 +98,7 @@ void SparseLRModel::randomize() {
     }
 }
 
-std::unique_ptr<Model> SparseLRModel::copy() const {
+std::unique_ptr<CirrusModel> SparseLRModel::copy() const {
     std::unique_ptr<SparseLRModel> new_model =
         std::make_unique<SparseLRModel>(weights_.data(), size());
     return new_model;
@@ -238,7 +238,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     return ret;
 }
 
-std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const {
+std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset, uint32_t) const {
   double total_loss = 0;
   auto w = weights_;
 
@@ -287,12 +287,6 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset) const
     double value = class_i *
       mlutils::log_aux(s1) +
       (1 - class_i) * mlutils::log_aux(1 - s1);
-
-    //if (value > 0 && value < 1e-6) {
-    //  // XXX this should be investigated
-    //  throw std::runtime_error("This code is actually used huh");
-    //  value = 0;
-    //}
 
     if (value > 0) {
       //std::cout << "ds row: " << std::endl << ds.row(i) << std::endl;
@@ -367,7 +361,6 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
   
   assert(num_weights > 0 && num_weights < 10000000);
 
-  //weights_sparse_.resize(num_weights);
   weights_sparse_.reserve(num_weights);
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);

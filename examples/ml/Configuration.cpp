@@ -1,6 +1,5 @@
 #include <examples/ml/Configuration.h>
 
-#include <utils/Log.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -48,11 +47,19 @@ void Configuration::print() const {
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "
       << test_set_range.first << "-" << test_set_range.second << std::endl;
+    if (nusers || nitems) {
+      std::cout
+        << "users: " << nusers << std::endl
+        << " items: " << nitems << std::endl;
+    }
 }
 
 void Configuration::check() const {
   if (s3_bucket_name == "") {
     throw std::runtime_error("S3 bucket name missing from config file");
+  }
+  if (test_set_range.first && model_type == COLLABORATIVE_FILTERING) {
+    throw std::runtime_error("Can't use test range with COLLABORATIVE_FILTERING");
   }
 }
 
@@ -106,6 +113,10 @@ void Configuration::parse_line(const std::string& line) {
         iss >> s3_bucket_name;
     } else if (s == "use_bias:") {
         iss >> use_bias;
+    } else if (s == "num_users:") {
+        iss >> nusers;
+    } else if (s == "num_items:") {
+        iss >> nitems;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -117,6 +128,8 @@ void Configuration::parse_line(const std::string& line) {
             model_type = LOGISTICREGRESSION;
         } else if (model == "Softmax") {
             model_type = SOFTMAX;
+        } else if (model == "CollaborativeFiltering") {
+            model_type = COLLABORATIVE_FILTERING;
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
@@ -234,7 +247,7 @@ uint64_t Configuration::get_num_classes() const {
   */
 uint64_t Configuration::get_limit_cols() const {
     if (limit_cols == 0) {
-        cirrus::LOG<cirrus::INFO>("limit_cols not loaded");
+      std::cout << "limit_cols not loaded" << std::endl;
     }
     return limit_cols;
 }
@@ -277,5 +290,13 @@ std::pair<int, int> Configuration::get_test_range() const {
 
 bool Configuration::get_use_bias() const {
   return use_bias;
+}
+
+int Configuration::get_users() const {
+  return nusers;
+}
+
+int Configuration::get_items() const {
+  return nitems;
 }
 
