@@ -144,21 +144,4 @@ sh bundle.sh
 ./invoke_lambda.sh
 ```
 
-Load dataset into Redis
-
-Add instructions here
-
-
-Work in progress:
-=============
-
-Load whole dataset
-Calculate how size of dataset impacts costs
-
-Run 3 experiments:
-1. Single-node vowpal wabbit
-2. Distributed vowpal wabbit
-3. Distributed serverless
-
-
 
