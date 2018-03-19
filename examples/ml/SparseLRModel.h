@@ -6,6 +6,7 @@
 #include <Model.h>
 #include <SparseDataset.h>
 #include <ModelGradient.h>
+#include <Configuration.h>
 #include <unordered_map>
 
 /**
@@ -103,7 +104,7 @@ class SparseLRModel : public CirrusModel {
 
     std::unique_ptr<ModelGradient> minibatch_grad_sparse(
         const SparseDataset& dataset,
-        double epsilon) const;
+        const Configuration& config) const;
     /**
      * Compute the logistic loss of a given dataset on the current model
      * @param dataset Dataset to calculate loss on
@@ -161,6 +162,8 @@ class SparseLRModel : public CirrusModel {
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
     std::vector<FEATURE_TYPE> weights_hist_;  //< vector of the model weights
     mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
+
+    double grad_threshold_ = 0;
 };
 
 #endif  // EXAMPLES_ML_SPARSE_LRMODEL_H_
