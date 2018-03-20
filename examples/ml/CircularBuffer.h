@@ -28,6 +28,7 @@ class CircularBuffer
 
     void add(T item); // we add at the 
     T pop();
+    T& front();
 
     friend void swap(CircularBuffer<T> &a, CircularBuffer<T> &b) {
       std::swap(a._buffer, b._buffer);
@@ -64,6 +65,15 @@ T CircularBuffer<T>::pop() {
   T ret = _buffer[_front];
   _front = (_front + 1) % _capacity;
 
+  return ret;
+}
+
+template<typename T>
+T& CircularBuffer<T>::front() {
+  if (size() == 0) {
+    throw std::runtime_error("Empty circular buffer");
+  }
+  T& ret = _buffer[_front];
   return ret;
 }
 
