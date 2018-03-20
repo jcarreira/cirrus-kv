@@ -41,7 +41,8 @@ class SparseLRModel : public CirrusModel {
 
     void loadSerializedSparse(const FEATURE_TYPE* weights,
         const uint32_t* weight_indices,
-        uint64_t num_weights);
+        uint64_t num_weights,
+        const Configuration& config);
 
     /**
       * serializes this model into memory
@@ -147,11 +148,12 @@ class SparseLRModel : public CirrusModel {
     void check() const;
 
     FEATURE_TYPE get_nth_weight(uint64_t n) const override {
-      return weights_.at(n);
+      return weights_[n];
     }
 
 
  private:
+    void ensure_preallocated_vectors(const Configuration&) const;
     /**
       * Check whether value n is an integer
       */
@@ -161,9 +163,15 @@ class SparseLRModel : public CirrusModel {
 
     std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
     std::vector<FEATURE_TYPE> weights_hist_;  //< vector of the model weights
-    mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
+    //mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
+    mutable std::vector<FEATURE_TYPE> weights_sparse_;
 
     double grad_threshold_ = 0;
+
+    // we keep these vectors preallocated for performance reasons
+    mutable std::vector<FEATURE_TYPE> part2;
+    mutable std::vector<FEATURE_TYPE> part3;
+    mutable std::vector<int> unique_indices;
 };
 
 #endif  // EXAMPLES_ML_SPARSE_LRMODEL_H_

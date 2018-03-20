@@ -43,7 +43,8 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I $(MPI_HOME)/include/ -Itest_aws \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
-	   -ggdb -frecord-gcc-switches -O0 #-O3
+	   -ggdb -frecord-gcc-switches -O3
+#-pg
 
 CPP_SOURCES = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp \

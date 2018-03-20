@@ -7,8 +7,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define DEBUG
-
+//#define DEBUG
+  
 // s3_cad_size nmber of samples times features per sample
 S3SparseIterator::S3SparseIterator(
         uint64_t left_id, uint64_t right_id, // right id is exclusive
@@ -69,13 +69,19 @@ const void* S3SparseIterator::get_next_fast() {
       << std::endl;
 #endif
   }
-  
+ 
+  //std::cout << "sem_wait" << std::endl; 
   sem_wait(&semaphore);
   ring_lock.lock();
 
-  auto ret = minibatches_list.pop();
-  
-  uint64_t ring_size = minibatches_list.size();
+  // first discard empty queue
+  while (minibatches_list.front()->size() == 0) {
+    auto queue_ptr = minibatches_list.pop();
+    delete queue_ptr; // free memory of empty queue
+  }
+  auto ret = minibatches_list.front()->front();
+  minibatches_list.front()->pop();
+  num_minibatches_ready--;
   ring_lock.unlock();
 
 #ifdef DEBUG
@@ -86,7 +92,7 @@ const void* S3SparseIterator::get_next_fast() {
 
   to_delete = ret.second;
 
-  if (ring_size < 200 && pref_sem.getvalue() < (int)read_ahead) {
+  if (num_minibatches_ready < 200 && pref_sem.getvalue() < (int)read_ahead) {
 #ifdef DEBUG
     std::cout << "get_next_fast::pref_sem.signal!!!" << std::endl;
 #endif
@@ -116,12 +122,13 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
 
   auto str_iter = list_strings.find(str_version);
   print_progress(str_iter->second);
-  ring_lock.lock();
   // create a pointer to each minibatch within s3 object and push it
 
   const void* s3_data = reinterpret_cast<const void*>(str_iter->second.c_str());
   int s3_obj_size = load_value<int>(s3_data);
   int num_samples = load_value<int>(s3_data);
+  (void)s3_obj_size;
+  (void)num_samples;
 #ifdef DEBUG
   std::cout
     << "push_samples s3_obj_size: " << s3_obj_size
@@ -129,12 +136,12 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
   assert(s3_obj_size > 0 && s3_obj_size < 100 * 1024 * 1024);
   assert(num_samples > 0 && num_samples < 1000000);
 #endif
+  auto new_queue = new std::queue<std::pair<const void*, int>>;
   for (uint64_t i = 0; i < n_minibatches; ++i) {
     // if it's the last minibatch in object we mark it so it can be deleted
     int is_last = ((i + 1) == n_minibatches) ? str_version : -1;
 
-    minibatches_list.add(std::make_pair(s3_data, is_last));
-    sem_post(&semaphore);
+    new_queue->push(std::make_pair(s3_data, is_last));
   
     // advance ptr sample by sample
     for (uint64_t j = 0; j < minibatch_rows; ++j) {
@@ -153,7 +160,13 @@ void S3SparseIterator::push_samples(std::ostringstream* oss) {
       advance_ptr(s3_data, num_values * (sizeof(int) + sizeof(FEATURE_TYPE)));
     }
   }
+  ring_lock.lock();
+  minibatches_list.add(new_queue);
   ring_lock.unlock();
+  for (uint64_t i = 0; i < n_minibatches; ++i) {
+    num_minibatches_ready++;
+    sem_post(&semaphore);
+  }
   str_version++;
 }
 
@@ -206,15 +219,16 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     pref_sem.wait();
 
     uint64_t obj_id = get_obj_id(left_id, right_id);
+    std::string obj_id_str = std::to_string(hash_f(std::to_string(obj_id).c_str())) + "-CRITEO";
 
     std::ostringstream* s3_obj;
 try_start:
     try {
-      std::cout << "S3SparseIterator: getting object " << obj_id << std::endl;
+      std::cout << "S3SparseIterator: getting object " << obj_id_str << std::endl;
 #ifdef DEBUG
       auto start = get_time_us();
 #endif
-      s3_obj = s3_get_object_fast(obj_id, *s3_client, config.get_s3_bucket());
+      s3_obj = s3_get_object_ptr(obj_id_str, *s3_client, config.get_s3_bucket());
 #ifdef DEBUG
       auto elapsed_us = (get_time_us() - start);
       std::cout << "received s3 obj"
@@ -233,7 +247,7 @@ try_start:
     } catch(...) {
       std::cout
         << "S3SparseIterator: error in s3_get_object"
-        << " obj_id: " << obj_id
+        << " obj_id_str: " << obj_id_str
         << std::endl;
       goto try_start;
       exit(-1);
