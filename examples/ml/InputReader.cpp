@@ -17,7 +17,6 @@
 #include <atomic>
 #include <map>
 #include <iomanip>
-#include "MurmurHash3.h"
  
 #define DEBUG
 
@@ -510,15 +509,6 @@ void InputReader::standardize_sparse_dataset(std::vector<std::vector<std::pair<i
 
 
 
-uint64_t hash_f(const char* s) {
-  uint64_t seed = 100;
-  uint64_t hash_otpt[2]= {0};
-  MurmurHash3_x64_128(s, strlen(s), seed, hash_otpt);
-
-  //std::cout << "MurmurHash3_x64_128 hash: " << hash_otpt[0] << std::endl;
-  return hash_otpt[0];
-}
-
 bool InputReader::is_definitely_categorical(const char* s) {
   for (uint64_t i = 0; s[i]; ++i) {
     if (!isdigit(s[i]) && s[i]!='-') {
@@ -533,9 +523,11 @@ bool InputReader::is_definitely_categorical(const char* s) {
  * containg numerical and/or categorical variables
  */
 void InputReader::parse_criteo_sparse_line(
-    const std::string& line, const std::string& delimiter,
-    std::vector<std::pair<int, FEATURE_TYPE>>& features,
-    FEATURE_TYPE& label) {
+    const std::string& line,
+    const std::string& delimiter,
+    std::vector<std::pair<int, FEATURE_TYPE>>& output_features,
+    FEATURE_TYPE& label,
+    const Configuration& config) {
   char str[STR_SIZE];
 
   if (line.size() > STR_SIZE) {
@@ -546,10 +538,9 @@ void InputReader::parse_criteo_sparse_line(
   strncpy(str, line.c_str(), STR_SIZE);
   char* s = str;
 
-  std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::map<uint64_t, int> cat_features;
+  std::map<uint64_t, int> features;
 
-  uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+  uint64_t hash_size = 1 << config.get_model_bits();
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
@@ -558,26 +549,15 @@ void InputReader::parse_criteo_sparse_line(
     } else if (col >= 14) {
       //assert(is_categorical(l) || std::string(l).size() == 0);
       uint64_t hash = hash_f(l) % hash_size;
-      cat_features[hash]++;
-    } else {
-      assert(!is_definitely_categorical(l));
-      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-      num_features.push_back(v);
+      features[hash]++;
     }
     col++;
   }
 
-  uint64_t feature_index = 0;
-  for (const auto& feat : num_features) {
-    if (feat != 0.0)
-      features.push_back(std::make_pair(feature_index, feat));
-    feature_index++;
-  }
-
-  for (const auto& feat : cat_features) {
-    int index = feat.first;
-    FEATURE_TYPE value = feat.second;
-    features.push_back(std::make_pair(13 + index, value));
+  for (const auto& feat : features) {
+    if (feat.second != 0.0) {
+      output_features.push_back(std::make_pair(feat.first, feat.second));
+    }
   }
 }
 
@@ -634,10 +614,9 @@ void InputReader::read_input_criteo_sparse_thread(std::ifstream& fin, std::mutex
     */
 SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_file,
     const std::string& delimiter,
-    uint64_t limit_lines,
-    bool to_normalize) {
+    const Configuration& config) {
   std::cout << "Reading input file: " << input_file << std::endl;
-  std::cout << "Limit_line: " << limit_lines << std::endl;
+  std::cout << "Limit_line: " << config.get_limit_samples() << std::endl;
 
   std::ifstream fin(input_file, std::ifstream::in);
   if (!fin) {
@@ -660,12 +639,13 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
             std::placeholders::_7, std::placeholders::_8),
           std::ref(fin), std::ref(fin_lock),
           std::ref(delimiter), std::ref(samples),
-          std::ref(labels), limit_lines, std::ref(lines_count),
+          std::ref(labels), config.get_limit_samples(), std::ref(lines_count),
           std::bind(&InputReader::parse_criteo_sparse_line, this, 
             std::placeholders::_1,
             std::placeholders::_2,
             std::placeholders::_3,
-            std::placeholders::_4)
+            std::placeholders::_4,
+            config)
           ));
   }
 
@@ -677,9 +657,9 @@ SparseDataset InputReader::read_input_criteo_sparse(const std::string& input_fil
   std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
 
   SparseDataset ret(std::move(samples), std::move(labels));
-  if (to_normalize) {
+  if (config.get_normalize()) {
     // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 14);
+    ret.normalize( (1 << config.get_model_bits()) );
   }
   return ret;
 }
@@ -843,8 +823,8 @@ SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
  */
 void InputReader::parse_criteo_kaggle_sparse_line(
     const std::string& line, const std::string& delimiter,
-    std::vector<std::pair<int, FEATURE_TYPE>>& features,
-    FEATURE_TYPE& label, bool use_bias) {
+    std::vector<std::pair<int, FEATURE_TYPE>>& output_features,
+    FEATURE_TYPE& label, const Configuration& config) {
   char str[STR_SIZE];
 
   //std::cout << "line: " << line << std::endl;
@@ -857,10 +837,9 @@ void InputReader::parse_criteo_kaggle_sparse_line(
   strncpy(str, line.c_str(), STR_SIZE);
   char* s = str;
 
-  std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::map<uint64_t, int> cat_features;
+  std::map<uint64_t, int> features;
 
-  uint64_t hash_size = 1 << CRITEO_HASH_BITS;
+  uint64_t hash_size = 1 << config.get_model_bits();
 
   uint64_t col = 0;
   while (char* l = strsep(&s, delimiter.c_str())) {
@@ -868,49 +847,33 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     } else if (col == 1) { // it's label
       label = string_to<FEATURE_TYPE>(l);
       assert(label == 0.0 || label == 1.0);
-    } else if (col >= 15) {
-      uint64_t hash = hash_f(l) % hash_size;
-      cat_features[hash]++;
     } else {
-      //std::cout << "l: " << l << std::endl;
-      assert(!is_definitely_categorical(l));
-      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-      num_features.push_back(v);
+      uint64_t hash = hash_f(l) % hash_size;
+      features[hash]++;
     }
     col++;
   }
+  
+  if (config.get_use_bias()) { // add bias constant
+    uint64_t hash = hash_f("bias") % hash_size;
+    features[hash]++;
+  }
 
   /**
-    * indices 0...12 are for numerical features
-    * 13...hash_size+12 are categorical features
-    * hash_size+13 is for bias
     */
-  uint64_t feature_index = 0;
-  for (const auto& feat : num_features) {
-    if (feat != 0.0)
-      features.push_back(std::make_pair(feature_index, feat));
-    feature_index++;
-  }
-
-  for (const auto& feat : cat_features) {
-    int index = feat.first;
-    FEATURE_TYPE value = feat.second;
-    features.push_back(std::make_pair(13 + index, value));
-  }
-
-  if (use_bias) { // add bias constant
-    features.push_back(std::make_pair(13 + hash_size, 1));
+  for (const auto& feat : features) {
+    if (feat.second != 0.0) {
+      output_features.push_back(std::make_pair(feat.first, feat.second));
+    }
   }
 }
 
 SparseDataset InputReader::read_input_criteo_kaggle_sparse(
     const std::string& input_file,
     const std::string& delimiter,
-    uint64_t limit_lines,
-    bool to_normalize,
-    bool use_bias) {
+    const Configuration& config) {
   std::cout << "Reading criteo kaggle sparse input file: " << input_file << std::endl;
-  std::cout << "Limit_line: " << limit_lines << std::endl;
+  std::cout << "Limit_line: " << config.get_limit_samples() << std::endl;
 
   assert(delimiter == ",");
 
@@ -940,13 +903,13 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
             std::placeholders::_7, std::placeholders::_8),
           std::ref(fin), std::ref(fin_lock),
           std::ref(delimiter), std::ref(samples),
-          std::ref(labels), limit_lines, std::ref(lines_count),
+          std::ref(labels), config.get_limit_samples(), std::ref(lines_count),
           std::bind(&InputReader::parse_criteo_kaggle_sparse_line, this, 
             std::placeholders::_1,
             std::placeholders::_2,
             std::placeholders::_3,
             std::placeholders::_4,
-            use_bias)
+            config)
           ));
   }
 
@@ -958,9 +921,9 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
   std::cout << "Read a total of " << labels.size() << " samples" << std::endl;
 
   SparseDataset ret(std::move(samples), std::move(labels));
-  if (to_normalize) {
+  if (config.get_normalize()) {
     // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 13 + use_bias);
+    ret.normalize( (1 << config.get_model_bits()) );
   }
   return ret;
 }

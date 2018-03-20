@@ -38,12 +38,12 @@ void run_tasks(int rank, int nworkers,
     lt.run(config);
     sleep_forever();
   } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
-    PSSparseServerTask st(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    PSSparseServerTask st(REDIS_IP, REDIS_PORT, (1 << config.get_model_bits()) + 1, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
     st.run(config);
-    sleep_forever();
+    //sleep_forever();
   } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
     /**
      * Worker tasks run here
@@ -68,7 +68,7 @@ void run_tasks(int rank, int nworkers,
     * SPARSE tasks
     */
   } else if (rank == ERROR_SPARSE_TASK_RANK) {
-    ErrorSparseTask et(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    ErrorSparseTask et(REDIS_IP, REDIS_PORT, (1 << config.get_model_bits()), MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
@@ -76,7 +76,7 @@ void run_tasks(int rank, int nworkers,
     sleep_forever();
   } else if (rank == LOADING_SPARSE_TASK_RANK) {
     if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
-      LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+      LoadingSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << config.get_model_bits()), MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, rank);
@@ -91,26 +91,12 @@ void run_tasks(int rank, int nworkers,
       exit(-1);
     }
   } else if (rank == PS_SPARSE_TASK_RANK) {
-    PSSparseTask pt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
+    PSSparseTask pt(REDIS_IP, REDIS_PORT, (1 << config.get_model_bits()), MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank);
     pt.run(config);
     sleep_forever();
-#if 0
-    //XXX remove this code?
-  } else if (rank == WORKER_SPARSE_TASK_RANK) {
-    //LogisticSparseTaskS3 lt(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
-    //    LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-    //    batch_size, samples_per_batch, features_per_sample,
-    //    nworkers, rank);
-    MFNetflixTask lt(REDIS_IP, REDIS_PORT, 0, MODEL_BASE,
-        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
-        batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
-    lt.run(config, rank - WORKERS_BASE);
-    sleep_forever();
-#endif
   } else {
     throw std::runtime_error("Wrong task rank: " + std::to_string(rank));
   }

@@ -7,7 +7,7 @@
 #include "Constants.h"
 #include "Checksum.h"
 
-#define DEBUG
+//#define DEBUG
 
 #define MAX_CONNECTIONS (21) // (2 x # workers + 1)
     
@@ -176,9 +176,9 @@ bool PSSparseServerTask::process_get_lr_sparse_model(
   uint64_t num_entries = load_value<uint32_t>(data);
 
   uint32_t to_send_size = num_entries * sizeof(FEATURE_TYPE);
-  auto data_to_send = std::shared_ptr<char>(
-      new char[to_send_size], std::default_delete<char[]>());
-  char* data_to_send_ptr = data_to_send.get();
+  assert(to_send_size < 1024 * 1024);
+  char data_to_send[1024*1024]; // 1MB
+  char* data_to_send_ptr = data_to_send;
 #ifdef DEBUG
   std::cout << "Sending back: " << num_entries
     << " weights from model. Size: " << to_send_size
@@ -190,7 +190,7 @@ bool PSSparseServerTask::process_get_lr_sparse_model(
         data_to_send_ptr,
         lr_model->get_nth_weight(entry_index));
   }
-  if (send_all(req.sock, data_to_send.get(), to_send_size) == -1) {
+  if (send_all(req.sock, data_to_send, to_send_size) == -1) {
     return false;
   }
   return true;
@@ -266,6 +266,9 @@ void PSSparseServerTask::gradient_f() {
         break;
       }
     } else if (req.req_id == GET_LR_SPARSE_MODEL) {
+#ifdef DEBUG
+      std::cout << "process_get_lr_sparse_model" << std::endl;
+#endif
       if (!process_get_lr_sparse_model(req, thread_buffer)) {
         break;
       }

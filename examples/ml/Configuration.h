@@ -121,6 +121,8 @@ class Configuration {
     bool get_grad_threshold_use() const;
     double get_grad_threshold() const;
 
+    uint64_t get_model_bits() const;
+
     /**
       * Netflix specific
       */
@@ -175,6 +177,8 @@ class Configuration {
 
     bool use_grad_threshold = false;
     double grad_threshold = 0;
+
+    uint64_t model_bits = 20;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

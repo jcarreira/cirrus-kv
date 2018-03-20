@@ -5,3 +5,4 @@ out*
 redis_receiver
 redis_sender
 test_circular_buffer
+core.*
