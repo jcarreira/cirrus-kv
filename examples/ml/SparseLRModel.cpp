@@ -8,7 +8,7 @@
 #include <map>
 #include <unordered_map>
 
-#define DEBUG
+//#define DEBUG
 
 SparseLRModel::SparseLRModel(uint64_t d) {
     weights_.resize(d);
@@ -202,6 +202,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         }
 #endif
       }
+      part2[i] = 0; // prepare for next call
     }
 #ifdef DEBUG
     auto after_2 = get_time_us();
@@ -356,16 +357,35 @@ void SparseLRModel::check() const {
 
 void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
     const uint32_t* weight_indices,
-    uint64_t num_weights) {
+    uint64_t num_weights,
+    const Configuration& config) {
   is_sparse_ = true;
   
   assert(num_weights > 0 && num_weights < 10000000);
 
-  weights_sparse_.reserve(num_weights);
+  weights_sparse_.reserve((1 << config.get_model_bits()));
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
     weights_sparse_[index] = value;
+  }
+}
+
+void SparseLRModel::ensure_preallocated_vectors(const Configuration& config) const {
+  if (unique_indices.capacity() == 0) {
+    unique_indices.reserve(500);
+  } else {
+    unique_indices.clear();
+    unique_indices.reserve(500);
+  }
+  
+  if (part3.capacity() == 0) {
+    part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
+  }
+  
+  // value needs to be less than number of samples in minibatch
+  if (part2.capacity() == 0) {
+    part2.resize(500);
   }
 }
 
@@ -376,7 +396,8 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
     throw std::runtime_error("This model is not sparse");
   }
 
-  std::vector<FEATURE_TYPE> part2(dataset.num_samples());
+  ensure_preallocated_vectors(config);
+
   for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
     double part1_i = 0;
     for (const auto& feat : dataset.get_row(i)) {
@@ -388,25 +409,29 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
         throw std::runtime_error("Weight not found");
       }
 #endif
-      part1_i += value * weights_sparse_[index];
+      part1_i += value * weights_sparse_[index]; // 25% of the execution time is spent here
     }
     part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
   }
 
-  std::unordered_map<uint64_t, FEATURE_TYPE> part3;
   for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
     for (const auto& feat : dataset.get_row(i)) {
       int index = feat.first;
       FEATURE_TYPE value = feat.second;
+      unique_indices.push_back(index);
       part3[index] += value * part2[i];
     }
   }
 
   std::vector<std::pair<int, FEATURE_TYPE>> res;
-  res.reserve(part3.size());
-  for (const auto& v : part3) {
-    uint64_t index = v.first;
-    FEATURE_TYPE value = v.second;
+  res.reserve(unique_indices.size());
+  for (auto& v : unique_indices) {
+    uint64_t index = v;//.first;
+    FEATURE_TYPE value = part3[index];
+    if (value == 0)
+      continue;
+    // we set this to 0 so that next iteration part3 is all 0s
+    else part3[index] = 0;
     double final_grad = value + weights_sparse_[index] * 2 * config.get_epsilon();
     if (!config.get_grad_threshold_use()
         || (config.get_grad_threshold_use() && std::abs(final_grad) > config.get_grad_threshold())) {

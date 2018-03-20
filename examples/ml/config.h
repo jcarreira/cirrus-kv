@@ -28,7 +28,7 @@
 
 using FEATURE_TYPE = float;
 
-#define CRITEO_HASH_BITS 20
+//#define CRITEO_HASH_BITS 19
 #define RCV1_HASH_BITS 19
 
 #define LIMIT_NUMBER_PASSES 3

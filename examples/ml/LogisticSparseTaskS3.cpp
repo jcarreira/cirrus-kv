@@ -9,7 +9,7 @@
 
 #include <pthread.h>
 
-//#define DEBUG
+#define DEBUG
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
@@ -102,7 +102,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   std::cout << "[WORKER] starting loop" << std::endl;
 
   uint64_t version = 1;
-  SparseLRModel model(MODEL_GRAD_SIZE);
+  SparseLRModel model(1 << config.get_model_bits());
 
   while (1) {
     // get data, labels and model
@@ -123,7 +123,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
-    SparseLRModel model = sparse_model_get->get_new_model(*dataset);
+    sparse_model_get->get_new_model_inplace(*dataset, model, config);
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;

@@ -97,8 +97,11 @@ class LogisticSparseTaskS3 : public MLTask {
             psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
           }
 
-        SparseLRModel get_new_model(const SparseDataset& ds) {
-          return psi->get_lr_sparse_model(ds);
+        SparseLRModel get_new_model(const SparseDataset& ds, const Configuration& config) {
+          return std::move(psi->get_lr_sparse_model(ds, config));
+        }
+        void get_new_model_inplace(const SparseDataset& ds, SparseLRModel& model, const Configuration& config) {
+          psi->get_lr_sparse_model_inplace(ds, model, config);
         }
 
       private:
@@ -284,7 +287,6 @@ class PSSparseServerTask : public MLTask {
     };
 
   private:
-    //auto connect_redis();
     void thread_fn();
 
     // network related methods

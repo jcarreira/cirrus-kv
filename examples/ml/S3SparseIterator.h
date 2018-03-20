@@ -8,6 +8,7 @@
 #include <thread>
 #include <list>
 #include <mutex>
+#include <queue>
 #include "Serializers.h"
 #include "ProgressMonitor.h"
 #include <CircularBuffer.h>
@@ -59,7 +60,12 @@ class S3SparseIterator {
   sem_t semaphore;
   int str_version = 0;
   std::map<int, std::string> list_strings; // strings from s3
-  CircularBuffer<std::pair<const void*, int>> minibatches_list;//(100000);
+
+  // this contains a pointer to memory where a minibatch can be found
+  // the int tells whether this is the last minibatch of a block of memory
+  CircularBuffer<std::queue<std::pair<const void*, int>>*> minibatches_list;
+  std::atomic<int> num_minibatches_ready{0};
+  
   int to_delete = -1;
   bool use_label; // whether the dataset has labels or not
   int worker_id = 0;

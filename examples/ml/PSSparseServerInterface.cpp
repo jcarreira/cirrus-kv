@@ -6,7 +6,7 @@
 #include "Checksum.h"
 #include "Constants.h"
 
-#define DEBUG
+//#define DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -50,6 +50,9 @@ void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient)
   }
 
   uint32_t size = gradient.getSerializedSize();
+#ifdef DEBUG
+  std::cout << "Sending gradient with size: " << size << std::endl;
+#endif
   ret = send(sock, &size, sizeof(uint32_t), 0);
   if (ret == -1) {
     throw std::runtime_error("Error sending grad size");
@@ -63,9 +66,10 @@ void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient)
   }
 }
 
-SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& ds) {
+void PSSparseServerInterface::get_lr_sparse_model_inplace(const SparseDataset& ds, SparseLRModel& lr_model,
+    const Configuration& config) {
 #ifdef DEBUG
-  std::cout << "Getting LR sparse model" << std::endl;
+  std::cout << "Getting LR sparse model inplace" << std::endl;
 #endif
   // we don't know the number of weights to start with
   char* msg = new char[MAX_MSG_SIZE];
@@ -121,12 +125,16 @@ SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& 
   std::cout << "Loading model from memory" << std::endl;
 #endif
   // build a truly sparse model and return
-  SparseLRModel model(0);
-  model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
+  // XXX this copy could be avoided
+  lr_model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights, config);
   
   delete[] msg_begin;
   delete[] buffer;
+}
 
+SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& ds, const Configuration& config) {
+  SparseLRModel model(0);
+  get_lr_sparse_model_inplace(ds, model, config);
   return std::move(model);
 }
 
