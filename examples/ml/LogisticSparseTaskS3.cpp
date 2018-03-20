@@ -43,7 +43,7 @@ void check_redis(auto r) {
 namespace LogisticSparseTaskGlobal {
   std::unique_ptr<SparseModelGet> sparse_model_get;
   redisContext* redis_con;
-  PSSparseServerInterface* psint;
+  PSSparseServerInterface* psint[2];
 }
 
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
@@ -51,7 +51,9 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LogisticSparseTaskGlobal::psint->send_gradient(*lrg);
+  LRSparseGradient split_model[2] = lrg.shard(2);
+  LogisticSparseTaskGlobal::psint[0]->send_gradient(split_model[0]);
+  LogisticSparseTaskGlobal::psint[1]->send_gradient(split_model[1]);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -118,7 +120,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint = new PSSparseServerInterface(PS_IP, PS_PORT);
+  LogisticSparseTaskGlobal::psint[0] = new PSSparseServerInterface(PS_IP, PS_PORT);
+  LogisticSparseTaskGlobal::psint[1] = new PSSparseServerInterface(PS_IP+1, PS_PORT+1);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
