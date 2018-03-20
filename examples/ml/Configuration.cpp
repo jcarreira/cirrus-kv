@@ -45,6 +45,7 @@ void Configuration::print() const {
     std::cout << "use_bias: " << use_bias << std::endl;
     std::cout << "use_grad_threshold: " << use_grad_threshold << std::endl;
     std::cout << "grad_threshold: " << grad_threshold << std::endl;
+    std::cout << "model_bits: " << model_bits << std::endl;
     std::cout << "train_set: "
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "
@@ -65,6 +66,9 @@ void Configuration::check() const {
   }
   if (use_grad_threshold && grad_threshold == 0) {
     throw std::runtime_error("Can't use a 0 for grad threshold");
+  }
+  if (model_bits == 0) {
+    throw std::runtime_error("Model bits can't be 0");
   }
 }
 
@@ -122,6 +126,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> nusers;
     } else if (s == "num_items:") {
         iss >> nitems;
+    } else if (s == "model_bits:") {
+        iss >> model_bits;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -320,4 +326,8 @@ bool Configuration::get_grad_threshold_use() const {
 
 double Configuration::get_grad_threshold() const {
   return grad_threshold;
+}
+
+uint64_t Configuration::get_model_bits() const {
+  return model_bits;
 }

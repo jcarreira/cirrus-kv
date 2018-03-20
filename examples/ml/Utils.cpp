@@ -5,6 +5,9 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <cstring>
+
+#include "MurmurHash3.h"
 
 #undef DEBUG
 
@@ -143,3 +146,11 @@ ssize_t read_all(int sock, void* data, size_t len) {
   return bytes_read;
 }
 
+uint64_t hash_f(const char* s) {
+  uint64_t seed = 100;
+  uint64_t hash_otpt[2]= {0};
+  MurmurHash3_x64_128(s, strlen(s), seed, hash_otpt);
+
+  //std::cout << "MurmurHash3_x64_128 hash: " << hash_otpt[0] << std::endl;
+  return hash_otpt[0];
+}

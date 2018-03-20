@@ -24,13 +24,10 @@ SparseDataset LoadingSparseTaskS3::read_dataset(
   }
 
   // READ the kaggle criteo dataset
-  bool normalize = config.get_normalize();
   return input.read_input_criteo_kaggle_sparse(
       config.get_input_path(),
       delimiter,
-      config.get_limit_samples(),
-      normalize,
-      config.get_use_bias());
+      config);
 }
 
 void LoadingSparseTaskS3::check_label(FEATURE_TYPE label) {
@@ -107,7 +104,8 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
       dataset.build_serialized_s3_obj(first_sample, last_sample, &len);
 
     std::cout << "Putting object in S3 with size: " << len << std::endl;
-    s3_put_object(SAMPLE_BASE + i, s3_client, config.get_s3_bucket(),
+    std::string obj_id = std::to_string(hash_f(std::to_string(SAMPLE_BASE + i).c_str())) + "-CRITEO";
+    s3_put_object(obj_id, s3_client, config.get_s3_bucket(),
         std::string(s3_obj.get(), len));
   }
   check_loading(config, s3_client);

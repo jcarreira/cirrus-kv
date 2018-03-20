@@ -3,6 +3,7 @@
 
 #include <Dataset.h>
 #include <SparseDataset.h>
+#include <Configuration.h>
 #include <string>
 #include <vector>
 #include <queue>
@@ -102,14 +103,11 @@ class InputReader {
 
   SparseDataset read_input_criteo_sparse(const std::string& input_file,
       const std::string& delimiter,
-      uint64_t limit_lines,
-      bool /*to_normalize*/);
+      const Configuration&);
   
   SparseDataset read_input_criteo_kaggle_sparse(const std::string& input_file,
       const std::string& delimiter,
-      uint64_t limit_lines,
-      bool /*to_normalize*/,
-      bool use_bias);
+      const Configuration&);
 
   private:
   /**
@@ -163,7 +161,7 @@ class InputReader {
   void parse_criteo_sparse_line(
       const std::string& line, const std::string& delimiter,
       std::vector<std::pair<int, FEATURE_TYPE>>& features,
-      FEATURE_TYPE& label);
+      FEATURE_TYPE& label, const Configuration&);
 
   /** Check if feature is categorical (contains character that is not diigt)
     +    */
@@ -192,7 +190,7 @@ class InputReader {
   void parse_criteo_kaggle_sparse_line(
       const std::string& line, const std::string& delimiter,
       std::vector<std::pair<int, FEATURE_TYPE>>& features,
-      FEATURE_TYPE& label, bool use_bias);
+      FEATURE_TYPE& label, const Configuration&);
 
   void parse_rcv1_vw_sparse_line(
     const std::string& line, const std::string& delimiter,

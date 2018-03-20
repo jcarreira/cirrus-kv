@@ -140,4 +140,6 @@ ssize_t send_all(int sock, void* data, size_t len);
 
 ssize_t read_all(int sock, void* data, size_t len);
 
+uint64_t hash_f(const char* s);
+
 #endif  // EXAMPLES_ML_UTILS_H_
