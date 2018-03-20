@@ -843,7 +843,7 @@ SparseDataset InputReader::read_input_rcv1_sparse(const std::string& input_file,
  */
 void InputReader::parse_criteo_kaggle_sparse_line(
     const std::string& line, const std::string& delimiter,
-    std::vector<std::pair<int, FEATURE_TYPE>>& features,
+    std::vector<std::pair<int, FEATURE_TYPE>>& output_features,
     FEATURE_TYPE& label, bool use_bias) {
   char str[STR_SIZE];
 
@@ -857,8 +857,7 @@ void InputReader::parse_criteo_kaggle_sparse_line(
   strncpy(str, line.c_str(), STR_SIZE);
   char* s = str;
 
-  std::vector<FEATURE_TYPE> num_features; // numerical features
-  std::map<uint64_t, int> cat_features;
+  std::map<uint64_t, int> features;
 
   uint64_t hash_size = 1 << CRITEO_HASH_BITS;
 
@@ -868,38 +867,24 @@ void InputReader::parse_criteo_kaggle_sparse_line(
     } else if (col == 1) { // it's label
       label = string_to<FEATURE_TYPE>(l);
       assert(label == 0.0 || label == 1.0);
-    } else if (col >= 15) {
-      uint64_t hash = hash_f(l) % hash_size;
-      cat_features[hash]++;
     } else {
-      //std::cout << "l: " << l << std::endl;
-      assert(!is_definitely_categorical(l));
-      FEATURE_TYPE v = string_to<FEATURE_TYPE>(l);
-      num_features.push_back(v);
+      uint64_t hash = hash_f(l) % hash_size;
+      features[hash]++;
     }
     col++;
   }
+  
+  if (use_bias) { // add bias constant
+    uint64_t hash = hash_f("bias") % hash_size;
+    features[hash]++;
+  }
 
   /**
-    * indices 0...12 are for numerical features
-    * 13...hash_size+12 are categorical features
-    * hash_size+13 is for bias
     */
-  uint64_t feature_index = 0;
-  for (const auto& feat : num_features) {
-    if (feat != 0.0)
-      features.push_back(std::make_pair(feature_index, feat));
-    feature_index++;
-  }
-
-  for (const auto& feat : cat_features) {
-    int index = feat.first;
-    FEATURE_TYPE value = feat.second;
-    features.push_back(std::make_pair(13 + index, value));
-  }
-
-  if (use_bias) { // add bias constant
-    features.push_back(std::make_pair(13 + hash_size, 1));
+  for (const auto& feat : features) {
+    if (feat.second != 0.0) {
+      output_features.push_back(std::make_pair(feat.first, feat.second));
+    }
   }
 }
 
@@ -960,7 +945,7 @@ SparseDataset InputReader::read_input_criteo_kaggle_sparse(
   SparseDataset ret(std::move(samples), std::move(labels));
   if (to_normalize) {
     // pass hash size
-    ret.normalize( (1 << CRITEO_HASH_BITS) + 13 + use_bias);
+    ret.normalize( (1 << CRITEO_HASH_BITS) );
   }
   return ret;
 }
