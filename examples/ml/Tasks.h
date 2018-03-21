@@ -320,11 +320,14 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<std::thread> server_thread;
     std::vector<std::unique_ptr<std::thread>> gradient_thread;
     pthread_t poll_thread;
+    pthread_t main_thread;
     std::mutex to_process_lock;
     sem_t sem_new_req;
     std::queue<Request> to_process;
     const uint64_t n_threads = 4;
     std::mutex model_lock; // used to coordinate access to the last computed model
+
+    int pipefd[2] = {0};
 
     int port_ = 1337;
     int server_sock_ = 0;

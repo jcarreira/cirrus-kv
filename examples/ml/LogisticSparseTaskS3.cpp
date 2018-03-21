@@ -9,7 +9,7 @@
 
 #include <pthread.h>
 
-#define DEBUG
+#undef DEBUG
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
