@@ -93,6 +93,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t version = 1;
   SparseLRModel model(1 << config.get_model_bits());
 
+  bool printed_rate = false;
+  int count = 0;
+  auto start_time = get_time_ms();
   while (1) {
     // get data, labels and model
 #ifdef DEBUG
@@ -150,6 +153,15 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #ifdef DEBUG
     std::cout << get_time_us() << " [WORKER] Sent gradient" << std::endl;
 #endif
+    count++;
+    if (count % 10 == 0 && !printed_rate) {
+      auto elapsed_ms = get_time_ms() - start_time;
+      float elapsed_sec = elapsed_ms / 1000.0;
+      if (elapsed_sec > (2 * 60)) {
+        printed_rate = true;
+        std::cout << "Update rate/sec last 2 mins: " << (1.0 * count / elapsed_sec) << std::endl;
+      }
+    }
   }
 }
 
