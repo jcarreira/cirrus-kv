@@ -25,8 +25,7 @@
 
 class MLTask {
   public:
-    MLTask(const std::string& redis_ip,
-        uint64_t redis_port,
+    MLTask(
         uint64_t MODEL_GRAD_SIZE, //XXX this doesn't generalize to all types of gradients
         uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
@@ -34,7 +33,6 @@ class MLTask {
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      redis_ip(redis_ip), redis_port(redis_port),
       MODEL_GRAD_SIZE(MODEL_GRAD_SIZE),
       MODEL_BASE(MODEL_BASE), LABEL_BASE(LABEL_BASE),
       GRADIENT_BASE(GRADIENT_BASE), SAMPLE_BASE(SAMPLE_BASE),
@@ -53,8 +51,6 @@ class MLTask {
     bool get_worker_status(auto r, int worker_id);
 
   protected:
-    std::string redis_ip;
-    uint64_t redis_port;
     uint64_t MODEL_GRAD_SIZE;
     uint64_t MODEL_BASE;
     uint64_t LABEL_BASE;
@@ -71,14 +67,14 @@ class MLTask {
 
 class LogisticSparseTaskS3 : public MLTask {
   public:
-    LogisticSparseTaskS3(const std::string& redis_ip, uint64_t redis_port,
+    LogisticSparseTaskS3(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, worker_id)
@@ -126,7 +122,7 @@ class LogisticSparseTaskS3 : public MLTask {
 
 class PSSparseTask : public MLTask {
   public:
-    PSSparseTask(const std::string& redis_ip, uint64_t redis_port,
+    PSSparseTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
@@ -168,18 +164,18 @@ class PSSparseTask : public MLTask {
 
 class ErrorSparseTask : public MLTask {
   public:
-    ErrorSparseTask(const std::string& redis_ip, uint64_t redis_port,
+    ErrorSparseTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
-          nworkers, worker_id),
-      mp(redis_ip, redis_port)
+          nworkers, worker_id)
+      //mp(redis_ip, redis_port)
   {}
     void run(const Configuration& config);
 
@@ -190,19 +186,19 @@ class ErrorSparseTask : public MLTask {
     void parse_raw_minibatch(const FEATURE_TYPE* minibatch,
         auto& samples, auto& labels);
 
-    ProgressMonitor mp;
+    //ProgressMonitor mp;
 };
 
 class PerformanceLambdaTask : public MLTask {
   public:
-    PerformanceLambdaTask(const std::string& redis_ip, uint64_t redis_port,
+    PerformanceLambdaTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, worker_id)
@@ -222,14 +218,14 @@ class PerformanceLambdaTask : public MLTask {
 
 class LoadingSparseTaskS3 : public MLTask {
   public:
-    LoadingSparseTaskS3(const std::string& redis_ip, uint64_t redis_port,
+    LoadingSparseTaskS3(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, worker_id)
@@ -244,14 +240,14 @@ class LoadingSparseTaskS3 : public MLTask {
 
 class LoadingNetflixTask : public MLTask {
   public:
-    LoadingNetflixTask(const std::string& redis_ip, uint64_t redis_port,
+    LoadingNetflixTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, worker_id)
@@ -265,7 +261,7 @@ class LoadingNetflixTask : public MLTask {
 
 class PSSparseServerTask : public MLTask {
   public:
-    PSSparseServerTask(const std::string& redis_ip, uint64_t redis_port,
+    PSSparseServerTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
@@ -320,11 +316,14 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<std::thread> server_thread;
     std::vector<std::unique_ptr<std::thread>> gradient_thread;
     pthread_t poll_thread;
+    pthread_t main_thread;
     std::mutex to_process_lock;
     sem_t sem_new_req;
     std::queue<Request> to_process;
     const uint64_t n_threads = 4;
     std::mutex model_lock; // used to coordinate access to the last computed model
+
+    int pipefd[2] = {0};
 
     int port_ = 1337;
     int server_sock_ = 0;
@@ -348,14 +347,14 @@ class PSSparseServerTask : public MLTask {
 
 class MFNetflixTask : public MLTask {
   public:
-    MFNetflixTask(const std::string& redis_ip, uint64_t redis_port,
+    MFNetflixTask(
         uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
         uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id) :
-      MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+      MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
           nworkers, worker_id)

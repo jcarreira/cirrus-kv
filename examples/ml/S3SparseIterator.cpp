@@ -21,7 +21,7 @@ S3SparseIterator::S3SparseIterator(
     left_id(left_id), right_id(right_id),
     conf(c), s3_rows(s3_rows),
     minibatch_rows(minibatch_rows),
-    pm(REDIS_IP, REDIS_PORT),
+    //pm(REDIS_IP, REDIS_PORT),
     minibatches_list(100000),
     use_label(use_label),
     worker_id(worker_id),
@@ -219,7 +219,14 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     pref_sem.wait();
 
     uint64_t obj_id = get_obj_id(left_id, right_id);
-    std::string obj_id_str = std::to_string(hash_f(std::to_string(obj_id).c_str())) + "-CRITEO";
+
+    std::string obj_id_str;
+    if (config.get_s3_bucket() == "cirrus-criteo-kaggle-19b-random" ||
+      config.get_s3_bucket() == "cirrus-criteo-kaggle-20b-random") {
+      obj_id_str = std::to_string(hash_f(std::to_string(obj_id).c_str())) + "-CRITEO";
+    } else {
+      obj_id_str = "CIRRUS" + std::to_string(obj_id);
+    }
 
     std::ostringstream* s3_obj;
 try_start:

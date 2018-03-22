@@ -8,29 +8,6 @@
 #include "async.h"
 //#include "adapters/libevent.h"
 
-void check_redis(auto r) {
-  if (r == NULL || r -> err) {
-    std::cout << "[WORKER] "
-      << "Error connecting to REDIS"
-      << " IP: " << REDIS_IP
-      << std::endl;
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-}
-
-/**
-  * Works as a cache for remote model
-  */
-//redisContext* connect_redis() {
-//  std::cout << "[WORKER] "
-//    << "Worker task connecting to REDIS. "
-//    << "IP: " << REDIS_IP << std::endl;
-//  auto r = redis_connect(REDIS_IP, REDIS_PORT);
-//  check_redis(r);
-//  return r;
-//
-
 std::unique_ptr<LRModel> lr_model;
 
 void PerformanceLambdaTask::unpack_minibatch(
@@ -62,9 +39,6 @@ void PerformanceLambdaTask::run(const Configuration& config) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
 
   // we use redis
-  std::cout << "Connecting to redis.." << std::endl;
-  //redisContext* r = connect_redis();
-
   // Create iterator that goes from 0 to num_s3_batches
   S3Iterator s3_iter(0, num_s3_batches, config,
       config.get_s3_size(), features_per_sample,

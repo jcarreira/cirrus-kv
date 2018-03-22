@@ -7,18 +7,18 @@
 #include "Constants.h"
 #include "Checksum.h"
 
-//#define DEBUG
+#undef DEBUG
 
-#define MAX_CONNECTIONS (21) // (2 x # workers + 1)
+#define MAX_CONNECTIONS (401) // (2 x # workers + 1)
     
-PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t redis_port,
+PSSparseServerTask::PSSparseServerTask(
     uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
     uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
     uint64_t SAMPLE_BASE, uint64_t START_BASE,
     uint64_t batch_size, uint64_t samples_per_batch,
     uint64_t features_per_sample, uint64_t nworkers,
     uint64_t worker_id) :
-  MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
+  MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
       LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
       batch_size, samples_per_batch, features_per_sample,
       nworkers, worker_id) {
@@ -268,10 +268,15 @@ void PSSparseServerTask::gradient_f() {
     } else if (req.req_id == GET_LR_SPARSE_MODEL) {
 #ifdef DEBUG
       std::cout << "process_get_lr_sparse_model" << std::endl;
+      auto before = get_time_us();
 #endif
       if (!process_get_lr_sparse_model(req, thread_buffer)) {
         break;
       }
+#ifdef DEBUG
+      auto elapsed = get_time_us() - before;
+      std::cout << "GET_LR_SPARSE_MODEL Elapsed(us): " << elapsed << std::endl;
+#endif
     } else if (req.req_id == GET_MF_SPARSE_MODEL) {
       std::cout << "process_get_mf_sparse_model" << std::endl;
       if (!process_get_mf_sparse_model(req, thread_buffer)) {
@@ -289,6 +294,8 @@ void PSSparseServerTask::gradient_f() {
     
     // We reactivate events from the client socket here
     req.poll_fd.events = POLLIN;
+    //pthread_kill(main_thread, SIGUSR1);
+    assert(write(pipefd[1], "a", 1) == 1); // wake up poll()
 #ifdef DEBUG
     std::cout << "gradient_f done" << std::endl;
 #endif
@@ -424,6 +431,9 @@ void PSSparseServerTask::poll_thread_fn() {
   fds.at(curr_index).fd = server_sock_;
   fds.at(curr_index).events = POLLIN;
   curr_index++;
+  fds.at(curr_index).fd = pipefd[0];
+  fds.at(curr_index).events = POLLIN;
+  curr_index++;
   loop();
 }
 
@@ -440,8 +450,14 @@ void PSSparseServerTask::loop() {
       if (errno != EINTR) {
         throw std::runtime_error("Server error calling poll.");
       } else {
-        //std::cout << "EINTR" << std::endl;
+        std::cout << "EINTR" << std::endl;
       }
+    } else if (fds[1].revents == POLLIN) {
+      //std::cout << "Ignoring" << std::endl;
+      fds[1].revents = 0;  // Reset the event flags
+      char a[1];
+      read(pipefd[0], a, 1);
+      // ignore
     } else if (poll_status == 0) {
       //std::cout << timeout << " ms elapsed" << std::endl;
     } else {
@@ -526,7 +542,9 @@ void PSSparseServerTask::run(const Configuration& config) {
     << " MODEL_GRAD_SIZE: " << MODEL_GRAD_SIZE
     << std::endl;
 
+  assert(pipe(pipefd) != -1);
 
+  main_thread = pthread_self();
   if (signal(SIGUSR1, sig_handler) == SIG_ERR) {
     throw std::runtime_error("Unable to set signal handler");
   }

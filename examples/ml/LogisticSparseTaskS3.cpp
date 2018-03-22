@@ -9,18 +9,7 @@
 
 #include <pthread.h>
 
-#define DEBUG
-
-void check_redis(auto r) {
-  if (r == NULL || r -> err) {
-    std::cout << "[WORKER] "
-      << "Error connecting to REDIS"
-      << " IP: " << REDIS_IP
-      << std::endl;
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-}
+#undef DEBUG
 
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 #ifdef DEBUG
