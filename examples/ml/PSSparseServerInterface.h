@@ -27,6 +27,13 @@ class PSSparseServerInterface {
   SparseLRModel get_lr_sparse_model(const SparseDataset& ds, const Configuration& config);
   void get_lr_sparse_model_inplace(const SparseDataset& ds, SparseLRModel&, const Configuration& config);
   SparseMFModel get_sparse_mf_model(const SparseDataset& ds, uint32_t, uint32_t);
+  
+  // XXX: Change this to fit with Joao's changes - Andy
+  SparseLRModel get_full_model();
+  SparseLRModel get_sparse_model(const SparseDataset& ds);
+  void get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model);
+  // XXX: END - Andy
+
 
   std::unique_ptr<CirrusModel> get_full_model(bool isCollaborativeFiltering); //XXX use a better argument here
 

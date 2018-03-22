@@ -114,8 +114,10 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
+    SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
     sparse_model_get->get_new_model_inplace(*dataset, model, config);
+
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -164,4 +166,3 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     }
   }
 }
-
