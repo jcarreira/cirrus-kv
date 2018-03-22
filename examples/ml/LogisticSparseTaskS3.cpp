@@ -26,7 +26,6 @@ void check_redis(auto r) {
 
 // we need global variables because of the static callbacks
 namespace LogisticSparseTaskGlobal {
-  std::unique_ptr<SparseModelGet> sparse_model_get;
   redisContext* redis_con;
   PSSparseServerInterface* psint[2];
 }
@@ -36,9 +35,9 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LRSparseGradient split_model[2] = lrg.shard(2);
-  LogisticSparseTaskGlobal::psint[0]->send_gradient(split_model[0]);
-  LogisticSparseTaskGlobal::psint[1]->send_gradient(split_model[1]);
+  LRSparseGradient** split_model = lrg->shard();
+  LogisticSparseTaskGlobal::psint[0]->send_gradient(*split_model[0]);
+  LogisticSparseTaskGlobal::psint[1]->send_gradient(*split_model[1]);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -152,7 +151,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
     for (int i = 0; i < 2; i++) {
-      psint[i]->get_sparse_model(*dataset, i, 2, model);
+      LogisticSparseTaskGlobal::psint[i]->get_sparse_model(*dataset, i, 2, model);
     }
 
 

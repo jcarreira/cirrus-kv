@@ -12,7 +12,7 @@
   * Logistic regression model
   * Model is represented with a vector of FEATURE_TYPEs
   */
-class LRModel : public Model {
+class LRModel : public aModel {
  public:
     /**
       * LRModel constructor
@@ -55,14 +55,14 @@ class LRModel : public Model {
      * @param data Memory where the serialized model lives
      * @param size Size of the serialized model
      */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<aModel> deserialize(void* data,
             uint64_t size) const override;
 
     /**
      * Performs a deep copy of this model
      * @return New model
      */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<aModel> copy() const override;
 
     /**
      * Performs an SGD update in the direction of the input gradient

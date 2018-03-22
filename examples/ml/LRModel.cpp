@@ -26,7 +26,7 @@ uint64_t LRModel::size() const {
 /** FORMAT
   * weights
   */
-std::unique_ptr<Model> LRModel::deserialize(void* data, uint64_t size) const {
+std::unique_ptr<aModel> LRModel::deserialize(void* data, uint64_t size) const {
     uint64_t d = size / sizeof(FEATURE_TYPE);
     std::unique_ptr<LRModel> model = std::make_unique<LRModel>(
             reinterpret_cast<FEATURE_TYPE*>(data), d);
@@ -68,7 +68,7 @@ void LRModel::randomize() {
     }
 }
 
-std::unique_ptr<Model> LRModel::copy() const {
+std::unique_ptr<aModel> LRModel::copy() const {
     std::unique_ptr<LRModel> new_model =
         std::make_unique<LRModel>(weights_.data(), size());
     return new_model;

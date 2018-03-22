@@ -13,7 +13,7 @@
   * Models can have different sizes and need to be serializable
   * to send over the network
   */
-class Model {
+class aModel {
   public:
     /**
      * Serializes model into memory
@@ -31,7 +31,7 @@ class Model {
      * @param data Pointer to serialized model
      * @param size Size of model when serialized
      */
-    virtual std::unique_ptr<Model> deserialize(void* data,
+    virtual std::unique_ptr<aModel> deserialize(void* data,
         uint64_t size) const = 0;
 
     /**
@@ -57,7 +57,7 @@ class Model {
      * Make a copy of the model
      * @return Copy of model
      */
-    virtual std::unique_ptr<Model> copy() const = 0;
+    virtual std::unique_ptr<aModel> copy() const = 0;
 
     /**
      * Get size of model when serialized

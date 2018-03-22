@@ -162,7 +162,7 @@ void PSSparseServerInterface::get_sparse_model(const SparseDataset& ds, int i, i
 
   // build a truly sparse model and return
   // XXX Optimize resizing the model weights vector
-  model->loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
+  model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
 
   delete[] msg_begin;
   delete[] buffer;
