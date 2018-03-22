@@ -1,0 +1,7 @@
+#ifndef META_CONFIG_HPP
+#define META_CONFIG_HPP
+
+#define LAMBDA_SIZE_MB 128
+#define OBJECT_SIZE_KB 10000
+
+#endif
