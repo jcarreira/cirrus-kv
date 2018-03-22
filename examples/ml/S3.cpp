@@ -38,8 +38,8 @@ void s3_put_object(const std::string& key_name, Aws::S3::S3Client& s3_client,
 #ifdef DEBUG
   std::cout << "putObjectRequest building" << std::endl;
 #endif
-  putObjectRequest.WithBucket(bucket_name)
-      .WithKey(key_name);
+  putObjectRequest.WithBucket(bucket_name.c_str())
+      .WithKey(key_name.c_str());
 
   auto ss = Aws::MakeShared<Aws::StringStream>("TAG");
 #ifdef DEBUG
@@ -102,7 +102,7 @@ std::ostringstream* s3_get_object_ptr(uint64_t id, Aws::S3::S3Client& s3_client,
 std::ostringstream* s3_get_object_ptr(const std::string& key_name, Aws::S3::S3Client& s3_client,
                 const std::string& bucket_name) {
   Aws::S3::Model::GetObjectRequest object_request;
-  object_request.WithBucket(bucket_name).WithKey(key_name);
+  object_request.WithBucket(bucket_name.c_str()).WithKey(key_name.c_str());
 
   auto get_object_outcome = s3_client.GetObject(object_request);
 

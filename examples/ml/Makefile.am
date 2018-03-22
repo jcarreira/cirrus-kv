@@ -3,7 +3,7 @@ TOP_DIR = $(top_srcdir)/../../
 include $(TOP_DIR)/common.mk
 AUTOMAKE_OPTIONS = foreign
 
-CXX = g++
+CXX = g++-6
 #CXX = $(MPI_HOME)/bin/mpic++
 
 bin_PROGRAMS = parameter_server ps_test csv_to_libsvm
@@ -12,7 +12,7 @@ LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
 		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
-		-lall -lkeyutils -lhiredis -levent
+		-lkeyutils -lhiredis -levent -lpthread
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -24,14 +24,13 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-s3 \
-	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
-	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
-	       -L/home/ec2-user/libevent/install_dir/lib/
-
+	       -L/home/camus/build/aws-cpp-sdk-core/ \
+	       -L/home/camus/build/aws-cpp-sdk-s3 \
+	       -L$(TOP_DIR)/third_party/krb5-1.15.2/src/lib \
+	       -L$(TOP_DIR)/third_party/keyutils/keyutils-1.5.10 \
+	       -L$(TOP_DIR)/third_party/libevent/install_dir/lib/
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive \
+LDFLAGS  = -static-libgcc  -Wl,--whole-archive \
 	   -lpthread -Wl,--no-whole-archive
 CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
@@ -41,10 +40,9 @@ CPPFLAGS = -static -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/ -Itest_aws \
-	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
-	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
-	   -ggdb -frecord-gcc-switches -O3
-#-pg
+	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
+	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
+	   -ggdb -O3 -frecord-gcc-switches
 
 CPP_SOURCES = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp \
