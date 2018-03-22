@@ -6,7 +6,7 @@
 #include "Checksum.h"
 #include "Constants.h"
 
-#undef DEBUG
+//#define DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
@@ -69,31 +69,24 @@ void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient)
 void PSSparseServerInterface::get_lr_sparse_model_inplace(const SparseDataset& ds, SparseLRModel& lr_model,
     const Configuration& config) {
 #ifdef DEBUG
-  auto time1 = get_time_us();
   std::cout << "Getting LR sparse model inplace" << std::endl;
 #endif
   // we don't know the number of weights to start with
-  char msg[MAX_MSG_SIZE];
-  //char* msg = new char[MAX_MSG_SIZE];
-  char* msg_ptr = msg; // need to keep this pointer to delete later
+  char* msg = new char[MAX_MSG_SIZE];
+  char* msg_begin = msg; // need to keep this pointer to delete later
 
   uint32_t num_weights = 0;
-  store_value<uint32_t>(msg_ptr, 0);           // make space for msg size
-  store_value<uint32_t>(msg_ptr, num_weights); // make space for the number of weights
+  store_value<uint32_t>(msg, num_weights); // just make space for the number of weights
   for (const auto& sample : ds.data_) {
     for (const auto& w : sample) {
-      store_value<uint32_t>(msg_ptr, w.first); // encode the index
+      store_value<uint32_t>(msg, w.first); // encode the index
       num_weights++;
     }
   }
-  
-  uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
-  char* msg_ptr2 = msg;
-  store_value<uint32_t>(msg_ptr2, msg_size);
-  store_value<uint32_t>(msg_ptr2, num_weights); // store correct value here
+  msg = msg_begin;
+  store_value<uint32_t>(msg, num_weights); // store correct value here
 #ifdef DEBUG
-  auto time2 = get_time_us();
-  assert(std::distance(msg_ptr, msg) < MAX_MSG_SIZE);
+  assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
   std::cout << std::endl;
 #endif
 
@@ -106,16 +99,15 @@ void PSSparseServerInterface::get_lr_sparse_model_inplace(const SparseDataset& d
     throw std::runtime_error("Error getting sparse lr model");
   }
   // 2. Send msg size
-  // num_weights + weights
+  uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
 #ifdef DEBUG
-  auto time3 = get_time_us();
   std::cout << "msg_size: " << msg_size
     << " num_weights: " << num_weights
     << std::endl;
 #endif
-  //send_all(sock, &msg_size, sizeof(uint32_t));
+  send_all(sock, &msg_size, sizeof(uint32_t));
   // 3. Send num_weights + weights
-  if (send_all(sock, msg, msg_size + sizeof(uint32_t)) == -1) {
+  if (send_all(sock, msg_begin, msg_size) == -1) {
     throw std::runtime_error("Error getting sparse lr model");
   }
   
@@ -123,35 +115,21 @@ void PSSparseServerInterface::get_lr_sparse_model_inplace(const SparseDataset& d
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
   //std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
 
-  char buffer[to_receive_size];
 #ifdef DEBUG
-  auto time4 = get_time_us();
   std::cout << "Receiving " << to_receive_size << " bytes" << std::endl;
 #endif
-  //char* buffer = new char[to_receive_size];
+  char* buffer = new char[to_receive_size];
   read_all(sock, buffer, to_receive_size); //XXX this takes 2ms once every 5 runs
 
 #ifdef DEBUG
-  auto time5 = get_time_us();
   std::cout << "Loading model from memory" << std::endl;
 #endif
   // build a truly sparse model and return
   // XXX this copy could be avoided
   lr_model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights, config);
-
-#ifdef DEBUG
-  auto time6 = get_time_us();
-  std::cout << "get_lr_sparse_model_inplace times: "
-    << " " << (time2 - time1)
-    << " " << (time3 - time2)
-    << " " << (time4 - time3)
-    << " " << (time5 - time4)
-    << " " << (time6 - time5)
-    << "\n";
-#endif
   
-  //delete[] msg_begin;
-  //delete[] buffer;
+  delete[] msg_begin;
+  delete[] buffer;
 }
 
 SparseLRModel PSSparseServerInterface::get_lr_sparse_model(const SparseDataset& ds, const Configuration& config) {
