@@ -10,18 +10,18 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     throw std::runtime_error("Error when creating socket.");
-  }   
+  }
   int opt = 1;
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt))) {
     throw std::runtime_error("Error setting socket options.");
-  }   
+  }
 
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) != 1) {
     throw std::runtime_error("Address family invalid or invalid "
         "IP address passed in");
-  }   
+  }
   // Save the port in the info
   serv_addr.sin_port = htons(port);
   std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
@@ -95,7 +95,7 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   store_value<uint32_t>(msg, num_weights);
   //std::cout << "Getting model. Sending weights msg size: " << msg_size << std::endl;
   send_all(sock, msg_begin, msg_size);
-  
+
   //4. receive weights from PS
   uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
   //std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
@@ -106,11 +106,66 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
   // build a truly sparse model and return
   SparseLRModel model(0);
   model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
-  
+
   delete[] msg_begin;
   delete[] buffer;
 
   return std::move(model);
+}
+
+
+void PSSparseServerInterface::get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model) {
+#ifdef DEBUG
+  std::cout << "Getting LR sparse model" << std::endl;
+#endif
+  // we don't know the number of weights to start with
+  char* msg = new char[MAX_MSG_SIZE];
+  char* msg_begin = msg; // need to keep this pointer to delete later
+
+  uint32_t num_weights = 0;
+  store_value<uint32_t>(msg, num_weights); // just make space for the number of weights
+
+  // XXX consider optimizing this 
+  for (const auto& sample : ds.data_) {
+    for (const auto& w : sample) {
+      if ((w.first % n) == i) {
+        store_value<uint32_t>(msg, w.first); // encode the index
+        num_weights++;
+      }
+    }
+  }
+#ifdef DEBUG
+  assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
+  std::cout << std::endl;
+#endif
+
+  // put num_weights in the beginning
+
+  // 1. Send operation
+  uint32_t operation = 2;
+  send_all(sock, &operation, sizeof(uint32_t));
+  // 2. Send msg size
+  uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
+  send_all(sock, &msg_size, sizeof(uint32_t));
+  // 3. Send num_weights + weights
+  msg = msg_begin;
+  store_value<uint32_t>(msg, num_weights);
+  //std::cout << "Getting model. Sending weights msg size: " << msg_size << std::endl;
+  send_all(sock, msg_begin, msg_size);
+
+  //4. receive weights from PS
+  uint32_t to_receive_size = sizeof(FEATURE_TYPE) * num_weights;
+  //std::cout << "Model sent. Receiving: " << num_weights << " weights" << std::endl;
+
+  char* buffer = new char[to_receive_size];
+  read_all(sock, buffer, to_receive_size); //XXX this takes 2ms once every 5 runs
+
+  // build a truly sparse model and return
+  // XXX Optimize resizing the model weights vector
+  model->loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
+
+  delete[] msg_begin;
+  delete[] buffer;
 }
 
 SparseLRModel PSSparseServerInterface::get_full_model() {
@@ -131,9 +186,8 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
 
   SparseLRModel model(0);
   model.loadSerialized(model_data);
-  
+
   delete[] model_data;
 
   return std::move(model);
 }
-

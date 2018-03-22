@@ -19,10 +19,12 @@ class PSSparseServerInterface {
   PSSparseServerInterface(const std::string& ip, int port);
 
   void send_gradient(const LRSparseGradient&);
-  
+
   //void get_model(SparseLRModel& model);
   SparseLRModel get_full_model();
   SparseLRModel get_sparse_model(const SparseDataset& ds);
+  void get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model);
+
 
  private:
   std::string ip;

@@ -11,22 +11,7 @@
 
 #undef DEBUG
 
-class SparseModelGet {
-  public:
-    SparseModelGet(const std::string& ps_ip, int ps_port) :
-      ps_ip(ps_ip), ps_port(ps_port) {
-      psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
-    }
 
-    SparseLRModel get_new_model(const SparseDataset& ds) {
-      return psi->get_sparse_model(ds);
-    }
-
-  private:
-    std::unique_ptr<PSSparseServerInterface> psi;
-    std::string ps_ip;
-    int ps_port;
-};
 
 void check_redis(auto r) {
   if (r == NULL || r -> err) {
@@ -129,9 +114,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   redis_lock.unlock();
 
   //uint64_t MODEL_BASE = (1000000000ULL);
-  LogisticSparseTaskGlobal::sparse_model_get =
-    std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
-  
+
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, LogisticSparseTaskGlobal::redis_con, nworkers);
@@ -166,9 +149,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
+    SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
-    SparseLRModel model =
-      LogisticSparseTaskGlobal::sparse_model_get->get_new_model(*dataset);
+    for (int i = 0; i < 2; i++) {
+      psint[i]->get_sparse_model(*dataset, i, 2, model);
+    }
+
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -205,4 +191,3 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     }
   }
 }
-
