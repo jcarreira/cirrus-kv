@@ -42,6 +42,23 @@ class MLTask {
       nworkers(nworkers), worker_id(worker_id)
   {}
 
+    MLTask(const std::string& redis_ip,
+        uint64_t redis_port,
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id, uint64_t offset) :
+      redis_ip(redis_ip), redis_port(redis_port),
+      MODEL_GRAD_SIZE(MODEL_GRAD_SIZE),
+      MODEL_BASE(MODEL_BASE), LABEL_BASE(LABEL_BASE),
+      GRADIENT_BASE(GRADIENT_BASE), SAMPLE_BASE(SAMPLE_BASE),
+      START_BASE(START_BASE),
+      batch_size(batch_size), samples_per_batch(samples_per_batch),
+      features_per_sample(features_per_sample),
+      nworkers(nworkers), worker_id(worker_id), offset(offset)
+  {}
     /**
      * Worker here is a value 0..nworkers - 1
      */
@@ -62,6 +79,7 @@ class MLTask {
     uint64_t features_per_sample;
     uint64_t nworkers;
     uint64_t worker_id;
+    uint64_t offset;
     Configuration config;
 };
 
@@ -269,6 +287,13 @@ class PSSparseServerTask : public MLTask {
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id);
 
+    PSSparseServerTask(const std::string& redis_ip, uint64_t redis_port,
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id, uint64_t offset);
     void run(const Configuration& config);
 
     struct Request {

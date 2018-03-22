@@ -417,7 +417,8 @@ void PSSparseServerTask::poll_thread_fn() {
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(port_);
+  serv_addr.sin_port = htons(port_ + offset);
+  std::cout << port_ + offset  << " listening in on" << std::endl;
   std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 
   int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr), sizeof(serv_addr));
