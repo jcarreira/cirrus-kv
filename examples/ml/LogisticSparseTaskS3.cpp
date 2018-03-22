@@ -11,17 +11,6 @@
 
 #undef DEBUG
 
-void check_redis(auto r) {
-  if (r == NULL || r -> err) {
-    std::cout << "[WORKER] "
-      << "Error connecting to REDIS"
-      << " IP: " << REDIS_IP
-      << std::endl;
-    throw std::runtime_error(
-        "Error connecting to redis server. IP: " + std::string(REDIS_IP));
-  }
-}
-
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();

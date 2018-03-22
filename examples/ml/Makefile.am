@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server parameter_server_softmax ps_test
+bin_PROGRAMS = parameter_server ps_test
 
 LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
@@ -56,7 +56,7 @@ CPP_SOURCES = InputReader.cpp Utils.cpp \
 	      LogisticSparseTaskS3.cpp \
 	      MFNetflixTask.cpp \
 	      LoadingSparseTaskS3.cpp LoadingNetflixTask.cpp \
-              PSSparseTask.cpp TasksWait.cpp MurmurHash3.cpp \
+              TasksWait.cpp MurmurHash3.cpp \
 	      RedisIterator.cpp  S3Iterator.cpp S3SparseIterator.cpp \
 	      PerformanceLambdaTask.cpp \
 	      Redis.cpp S3.cpp SparseDataset.cpp \
@@ -67,11 +67,9 @@ CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
               Dataset.cpp Matrix.cpp Model.cpp LRModel.cpp \
               ModelGradient.cpp MlUtils.cpp Configuration.cpp \
               Checksum.cpp SoftmaxModel.cpp \
-              Tasks_softmax.cpp Serializers.cpp  \
+              Serializers.cpp  \
               Redis.cpp SparseDataset.cpp MurmurHash3.cpp
 
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
-parameter_server_softmax_SOURCES  = parameter_server_softmax.cpp \
-				$(CPP_SOURCES_SOFTMAX)
 
 ps_test_SOURCES = PSSparseServerTaskTest.cpp $(CPP_SOURCES)

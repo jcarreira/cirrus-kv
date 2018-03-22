@@ -55,7 +55,7 @@ class S3SparseIterator {
   uint64_t minibatch_rows;
   uint64_t features_per_sample;
 
-  ProgressMonitor pm;
+  //ProgressMonitor pm;
 
   sem_t semaphore;
   int str_version = 0;
