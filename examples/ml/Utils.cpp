@@ -35,6 +35,10 @@ uint64_t get_time_ms() {
     return (1000000UL * tv.tv_sec + tv.tv_usec) / 1000;
 }
 
+uint64_t get_time_sec() {
+    return get_time_ms() / 1000;
+}
+
 uint64_t get_time_ns() {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);

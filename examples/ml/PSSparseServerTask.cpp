@@ -9,7 +9,7 @@
 
 #undef DEBUG
 
-#define MAX_CONNECTIONS (401) // (2 x # workers + 1)
+#define MAX_CONNECTIONS (nworkers * 2 + 1) // (2 x # workers + 1)
     
 PSSparseServerTask::PSSparseServerTask(
     uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,

@@ -32,6 +32,11 @@ uint64_t get_time_us();
 uint64_t get_time_ms();
 
 /**
+  * Get current time/epoch in secs
+  */
+uint64_t get_time_ms();
+
+/**
   * Convert string to arbitrary type
   */
 template <class C>
