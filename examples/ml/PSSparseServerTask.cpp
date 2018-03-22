@@ -42,13 +42,13 @@ PSSparseServerTask::PSSparseServerTask(const std::string& redis_ip, uint64_t red
     uint64_t SAMPLE_BASE, uint64_t START_BASE,
     uint64_t batch_size, uint64_t samples_per_batch,
     uint64_t features_per_sample, uint64_t nworkers,
-    uint64_t worker_id) :
+    uint64_t worker_id, uint64_t offset) :
   MLTask(redis_ip, redis_port, MODEL_GRAD_SIZE, MODEL_BASE,
       LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
       batch_size, samples_per_batch, features_per_sample,
-      nworkers, worker_id) {
+      nworkers, worker_id, offset) {
   gradientVersions.resize(nworkers, 0);
-
+  this->offset = offset;
   std::cout << "PSSparseServerTask is built" << std::endl;
 }
 
@@ -289,7 +289,8 @@ void PSSparseServerTask::start_server2() {
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(port_);
+  serv_addr.sin_port = htons(port_ + offset);
+  std::cout << port_ + offset  << " listening in on" << std::endl;
   std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 
   int ret = bind(server_sock_, reinterpret_cast<sockaddr*>(&serv_addr), sizeof(serv_addr));

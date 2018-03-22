@@ -10,9 +10,9 @@
 
 #ifdef USE_REDIS
 #define REDIS_PORT (6379)
-#define REDIS_IP "172.31.0.197"
-#define PS_IP "172.31.0.197"
-#define PS_PORT 1337
+#define REDIS_IP "127.0.0.1"
+#define PS_IP "127.0.0.1"
+#define PS_PORT 1337 
 #endif
 
 #define LOADING_TASK_RANK -100000

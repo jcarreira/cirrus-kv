@@ -29,8 +29,9 @@ void run_memory_task(const Configuration& /* config */) {
   std::cout << "System returned: " << ret << std::endl;
 }
 
+
 void run_tasks(int rank, int nworkers, 
-    int batch_size, const Configuration& config) {
+    int batch_size, const Configuration& config, int offset) {
 
   std::cout << "Run tasks rank: " << rank << std::endl;
   int features_per_sample = config.get_num_features();
@@ -47,7 +48,7 @@ void run_tasks(int rank, int nworkers,
     PSSparseServerTask st(REDIS_IP, REDIS_PORT, (1 << CRITEO_HASH_BITS) + 14, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank);
+        nworkers, rank, offset);
     st.run(config);
     sleep_forever();
   } else if (rank == PS_TASK_RANK) {
@@ -142,7 +143,7 @@ void print_hostname() {
 int main(int argc, char** argv) {
   std::cout << "Starting parameter server" << std::endl;
 
-  if (argc != 4) {
+  if (argc != 5) {
     print_arguments();
     throw std::runtime_error("Wrong number of arguments");
   }
@@ -158,6 +159,9 @@ int main(int argc, char** argv) {
   std::cout << "Running parameter server with: "
     << rank << " rank"
     << std::endl;
+  int port_offset = string_to<int>(argv[4]);
+  std::cout << "Running parameter server on port: "
+    << port_offset + PS_PORT << std::endl;
 
   auto config = load_configuration(argv[1]);
   config.print();
@@ -173,7 +177,7 @@ int main(int argc, char** argv) {
 
   // call the right task for this process
   std::cout << "Running task" << std::endl;
-  run_tasks(rank, nworkers, batch_size, config);
+  run_tasks(rank, nworkers, batch_size, config, port_offset);
 
   std::cout << "Test successful" << std::endl;
 
