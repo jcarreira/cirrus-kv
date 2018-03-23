@@ -142,6 +142,7 @@ T load_value(const C*& data) {
 }
 
 ssize_t send_all(int sock, void* data, size_t len);
+int send_udp_all(int sock, const struct sockaddr *dest_addr, void* data, size_t len);
 
 ssize_t read_all(int sock, void* data, size_t len);
 

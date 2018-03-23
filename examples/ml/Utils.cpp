@@ -118,6 +118,10 @@ int64_t send_all(int sock, void* data, size_t len) {
   return bytes_sent;
 }
 
+int send_udp_all(int sock, const struct sockaddr *dest_addr, void* data, size_t len) {
+  return sendto(sock, data, len, 0, dest_addr, sizeof(sockaddr_in));
+}
+
 ssize_t read_all(int sock, void* data, size_t len) {
 #ifdef DEBUG
   std::cout << "read_all len: " << len << std::endl;
