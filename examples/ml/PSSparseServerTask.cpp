@@ -385,10 +385,92 @@ void PSSparseServerTask::start_server() {
 
   server_thread = std::make_unique<std::thread>(
       std::bind(&PSSparseServerTask::poll_thread_fn, this));
+  
+  udp_thread = std::make_unique<std::thread>(
+      std::bind(&PSSparseServerTask::udp_thread_fn, this));
 
   for (uint32_t i = 0; i < n_threads; ++i) {
     gradient_thread.push_back(std::make_unique<std::thread>(
         std::bind(&PSSparseServerTask::gradient_f, this)));
+  }
+}
+
+void PSSparseServerTask::udp_thread_fn() {
+  int udp_sock = socket(AF_INET, SOCK_DGRAM, 0); 
+  if (udp_sock < 0) {
+    throw cirrus::ConnectionException("Server error creating socket");
+  }   
+
+  int opt = 1;
+  if (setsockopt(udp_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+    throw std::runtime_error("Error forcing port binding");
+  }
+
+  if (setsockopt(udp_sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt))) {
+    throw std::runtime_error("Error forcing port binding");
+  }   
+
+  struct sockaddr_in serv_addr;
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(3333);
+  std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
+
+  int ret = bind(udp_sock, reinterpret_cast<sockaddr*>(&serv_addr), sizeof(serv_addr));
+  if (ret < 0) {
+    throw std::runtime_error("Error binding in port " + to_string(port_));
+  }
+
+#define VLEN 10
+#define BUFSIZE (1024 * 1024)
+  struct mmsghdr msgs[VLEN];
+  struct iovec iovecs[VLEN];
+  char* bufs[VLEN];
+  struct timespec timeout;
+
+  for (int i = 0; i < VLEN; ++i) {
+    bufs[i] = new char[BUFSIZE];
+    memset(bufs[i], 0, BUFSIZE);
+  }
+
+  memset(msgs, 0, sizeof(msgs));
+  for (int i = 0; i < VLEN; i++) {
+    iovecs[i].iov_base         = bufs[i];
+    iovecs[i].iov_len          = BUFSIZE;
+    msgs[i].msg_hdr.msg_iov    = &iovecs[i];
+    msgs[i].msg_hdr.msg_iovlen = 1;
+  }
+  timeout.tv_sec = 0;
+  timeout.tv_nsec = 200000000; // 200ms
+
+  while (1) {
+    int retval = recvmmsg(udp_sock, msgs, VLEN, 0, &timeout);
+    if (retval == -1) {
+      perror("recvmmsg()");
+      exit(EXIT_FAILURE);
+    }
+    //printf("%d messages received\n", retval);
+
+    // process_send_lr_gradient code
+    for (int i = 0; i < retval; ++i) {
+      LRSparseGradient gradient(0);
+
+      const char* data_ptr = bufs[i] + sizeof(uint32_t);
+      int version = load_value<int>(data_ptr);
+      (void)version;
+      int num_weights = load_value<int>(data_ptr);
+      if (!num_weights) continue;
+
+      gradient.loadSerialized(bufs[i] + sizeof(uint32_t));
+
+      //model_lock.lock();
+      lr_model->sgd_update_adagrad(
+          task_config.get_learning_rate(), &gradient);
+      //lr_model->sgd_update(
+      //    task_config.get_learning_rate(), &gradient);
+      //model_lock.unlock();
+      gradientUpdatesCount++;
+    }
   }
 }
 

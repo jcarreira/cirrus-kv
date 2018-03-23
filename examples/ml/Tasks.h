@@ -284,10 +284,11 @@ class PSSparseServerTask : public MLTask {
 
   private:
     void thread_fn();
+    void udp_thread_fn();
+    void poll_thread_fn();
 
     // network related methods
     void start_server();
-    void poll_thread_fn();
     bool testRemove(struct pollfd x);
     void loop();
     bool process(struct pollfd&);
@@ -315,12 +316,13 @@ class PSSparseServerTask : public MLTask {
     std::unique_ptr<std::thread> thread; // worker threads
     std::unique_ptr<std::thread> server_thread;
     std::vector<std::unique_ptr<std::thread>> gradient_thread;
+    std::unique_ptr<std::thread> udp_thread;
     pthread_t poll_thread;
     pthread_t main_thread;
     std::mutex to_process_lock;
     sem_t sem_new_req;
     std::queue<Request> to_process;
-    const uint64_t n_threads = 4;
+    const uint64_t n_threads = 2;
     std::mutex model_lock; // used to coordinate access to the last computed model
 
     int pipefd[2] = {0};

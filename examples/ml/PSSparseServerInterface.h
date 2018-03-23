@@ -37,6 +37,9 @@ class PSSparseServerInterface {
   std::string ip;
   int port;
   int sock;
+
+  int udp_sock;
+  struct sockaddr_in si_other;
 };
 
 #endif //  PS_SPARSE_SERVER_INTERFACE_H_
