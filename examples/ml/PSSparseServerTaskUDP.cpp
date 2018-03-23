@@ -205,8 +205,8 @@ bool PSSparseServerTaskUDP::process_get_lr_full_model(
   return true;
 }
 
-#if 0
 void PSSparseServerTaskUDP::gradient_f() {
+#if 0
   std::vector<char> thread_buffer;
   thread_buffer.resize(30 * 1024 * 1024); // 30 MB
   while (1) {
@@ -263,8 +263,8 @@ void PSSparseServerTaskUDP::gradient_f() {
     std::cout << "gradient_f done" << std::endl;
 #endif
   }
-}
 #endif
+}
 
 /**
   * FORMAT
