@@ -397,4 +397,91 @@ class MFNetflixTask : public MLTask {
     std::unique_ptr<PSSparseServerInterface> psint;
 };
 
+class PSSparseServerTaskUDP : public MLTask {
+  public:
+    PSSparseServerTaskUDP(
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id);
+
+    void run(const Configuration& config);
+
+    struct Request {
+      public:
+        Request(int req_id, int sock, uint32_t incoming_size, const char* buf, struct sockaddr_in* clientaddr) :
+          req_id(req_id), sock(sock), incoming_size(incoming_size), buf(buf), clientaddr(clientaddr) {}
+
+        int req_id;
+        int sock;
+        uint32_t incoming_size;
+        const char* buf;
+        struct sockaddr_in* clientaddr;
+    };
+
+  private:
+    void thread_fn();
+
+    // network related methods
+    void start_server();
+    void poll_thread_fn();
+    bool testRemove(struct pollfd x);
+    void loop();
+    bool process(const char* buf, struct sockaddr_in* clientaddr);
+
+    // Model/ML related methods
+    void checkpoint_model() const;
+    std::shared_ptr<char> serialize_lr_model(const SparseLRModel&, uint64_t* model_size) const;
+    void gradient_f();
+
+    // message handling
+    bool process_get_lr_sparse_model(const Request& req, std::vector<char>&);
+    bool process_send_lr_gradient(const Request& req, std::vector<char>&);
+    bool process_get_mf_sparse_model(const Request& req, std::vector<char>&);
+    bool process_get_lr_full_model(const Request& req, std::vector<char>& thread_buffer);
+    bool process_send_mf_gradient(const Request& req, std::vector<char>& thread_buffer);
+    bool process_get_mf_full_model(const Request& req, std::vector<char>& thread_buffer);
+
+    /**
+      * Attributes
+      */
+    uint64_t curr_index = 0; // index (exclusive) to last sockets in fds
+#if 0
+    uint64_t server_clock = 0;  // minimum of all worker clocks
+#endif
+    std::unique_ptr<std::thread> thread; // worker threads
+    std::unique_ptr<std::thread> server_thread;
+    std::vector<std::unique_ptr<std::thread>> gradient_thread;
+    pthread_t poll_thread;
+    pthread_t main_thread;
+    std::mutex to_process_lock;
+    sem_t sem_new_req;
+    std::queue<Request> to_process;
+    const uint64_t n_threads = 4;
+    std::mutex model_lock; // used to coordinate access to the last computed model
+
+    int pipefd[2] = {0};
+
+    int port_ = 1337;
+    int server_sock_ = 0;
+    const uint64_t max_fds = 1000;
+    int timeout = 1; // 1 ms
+    std::vector<struct pollfd> fds = std::vector<struct pollfd>(max_fds);
+
+    std::vector<char> buffer; // we use this buffer to hold data from workers
+
+    volatile uint64_t gradientUpdatesCount = 0;
+    redisContext* redis_con;
+    
+    std::unique_ptr<SparseLRModel> lr_model; // last computed model
+    std::unique_ptr<MFModel> mf_model; // last computed model
+    Configuration task_config;
+    uint32_t num_connections = 0;
+
+    std::map<int, bool> task_to_status;
+    std::map<int, std::string> operation_to_name;
+};
+
 #endif  // EXAMPLES_ML_TASKS_H_
