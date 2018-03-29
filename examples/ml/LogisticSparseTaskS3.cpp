@@ -5,7 +5,7 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
 
 #include <pthread.h>
 
@@ -27,7 +27,7 @@ void check_redis(auto r) {
 // we need global variables because of the static callbacks
 namespace LogisticSparseTaskGlobal {
   redisContext* redis_con;
-  PSSparseServerInterface* psint[2];
+  PSSparseServerInterfaceWrapper* psint;
 }
 
 void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
@@ -35,9 +35,7 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  LRSparseGradient** split_model = lrg->shard();
-  LogisticSparseTaskGlobal::psint[0]->send_gradient(*split_model[0]);
-  LogisticSparseTaskGlobal::psint[1]->send_gradient(*split_model[1]);
+  LogisticSparseTaskGlobal::psint->send_gradient(lrg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -104,8 +102,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint[0] = new PSSparseServerInterface(PS_IP, PS_PORT);
-  LogisticSparseTaskGlobal::psint[1] = new PSSparseServerInterface(PS_IP, PS_PORT+1);
+  LogisticSparseTaskGlobal::psint = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
@@ -150,9 +147,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
     SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
-    for (int i = 0; i < 2; i++) {
-      LogisticSparseTaskGlobal::psint[i]->get_sparse_model(*dataset, i, 2, model);
-    }
+    model = psint->get_sparse_model(*dataset)
 
 
 #ifdef DEBUG
