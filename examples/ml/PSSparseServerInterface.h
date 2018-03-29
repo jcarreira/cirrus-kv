@@ -30,8 +30,10 @@ class PSSparseServerInterface {
   
   // XXX: Change this to fit with Joao's changes - Andy
   SparseLRModel get_full_model();
+  void get_full_model(SparseLRModel& model, int server_index, int num_servers);
   SparseLRModel get_sparse_model(const SparseDataset& ds);
   void get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model);
+  void get_sparse_model(char* msg_begin, uint32_t num_weights, SparseLRModel& model, int server_index, int num_servers);
   // XXX: END - Andy
 
 

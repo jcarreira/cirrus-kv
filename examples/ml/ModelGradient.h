@@ -104,7 +104,7 @@ class LRSparseGradient : public ModelGradient {
 
     void print() const override;
     void check_values() const override;
-    LRSparseGradient** shard() const;
+    std::vector<LRSparseGradient*> shard(int num_shards) const;
  protected:
     std::vector<std::pair<int, FEATURE_TYPE>> weights;  //< weights
 };

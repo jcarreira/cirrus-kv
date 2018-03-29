@@ -10,6 +10,7 @@
 #include "PSSparseServerInterface.h"
 #include "Configuration.h"
 
+
 #define DEBUG
 #define ERROR_INTERVAL_USEC (100000) // time between error checks
 
@@ -31,7 +32,7 @@ std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterface(PS_IP, PS_PORT);
+    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
   }
 
   bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;
@@ -89,7 +90,7 @@ void ErrorSparseTask::run(const Configuration& config) {
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
-  
+
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
   wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);

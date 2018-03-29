@@ -29,6 +29,7 @@ class PSSparseServerInterfaceWrapper {
  private:
   //std::vector<PSSparseServerInterface*> psint;
   PSSparseServerInterface* psint[2];
+  int num_servers;
 };
 
 #endif //  PS_SPARSE_SERVER_INTERFACE_WRAPPER_H_
