@@ -5,7 +5,7 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
 
 #include <pthread.h>
 
