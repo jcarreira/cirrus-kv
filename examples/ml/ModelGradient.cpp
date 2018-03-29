@@ -170,8 +170,8 @@ void LRSparseGradient::check_values() const {
   }
 }
 
-LRSparseGradient** LRSparseGradient::shard() const {
-  LRSparseGradient** servers = (LRSparseGradient**) malloc(2 * sizeof(LRSparseGradient*));
+std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
+  std::vector<LRSparseGradient*> servers(num_shards);
   std::vector<std::pair<int, FEATURE_TYPE>> model[2];
   for (size_t i = 0; i < weights.size(); i++) {
     std::pair<int, FEATURE_TYPE> weight = weights[i];
@@ -186,7 +186,7 @@ LRSparseGradient** LRSparseGradient::shard() const {
 }
 
 
-/** 
+/**
   * SOFTMAX
   *
   */
@@ -254,7 +254,7 @@ void SoftmaxGradient::check_values() const {
     }
 }
 
-/** 
+/**
   * MFGradient
   *
   */

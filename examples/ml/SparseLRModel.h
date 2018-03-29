@@ -37,10 +37,15 @@ class SparseLRModel : public aModel {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void* mem) override;
+    void loadSerialized(const void* data, int server_index, int server_number);
 
     void loadSerializedSparse(const FEATURE_TYPE* weights,
         const uint32_t* weight_indices,
         uint64_t num_weights);
+
+    void loadSerializedSparse(const FEATURE_TYPE* weights,
+        const uint32_t* weight_indices,
+        uint64_t num_weights, int server_index, int num_servers);
 
     /**
       * serializes this model into memory

@@ -147,7 +147,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
     SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
-    model = psint->get_sparse_model(*dataset)
+    model = LogisticSparseTaskGlobal::psint->get_sparse_model(*dataset);
 
 
 #ifdef DEBUG

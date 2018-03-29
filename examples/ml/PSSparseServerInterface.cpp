@@ -114,30 +114,12 @@ SparseLRModel PSSparseServerInterface::get_sparse_model(const SparseDataset& ds)
 }
 
 
-void PSSparseServerInterface::get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model) {
+void PSSparseServerInterface::get_sparse_model(char* msg_begin, uint32_t num_weights, SparseLRModel& model, int server_index, int num_servers) {
 #ifdef DEBUG
   std::cout << "Getting LR sparse model" << std::endl;
 #endif
-  // we don't know the number of weights to start with
-  char* msg = new char[MAX_MSG_SIZE];
-  char* msg_begin = msg; // need to keep this pointer to delete later
 
-  uint32_t num_weights = 0;
-  store_value<uint32_t>(msg, num_weights); // just make space for the number of weights
-
-  // XXX consider optimizing this 
-  for (const auto& sample : ds.data_) {
-    for (const auto& w : sample) {
-      if ((w.first % n) == i) {
-        store_value<uint32_t>(msg, w.first); // encode the index
-        num_weights++;
-      }
-    }
-  }
-#ifdef DEBUG
-  assert(std::distance(msg_begin, msg) < MAX_MSG_SIZE);
-  std::cout << std::endl;
-#endif
+  char* msg = msg_begin;
 
   // put num_weights in the beginning
 
@@ -162,9 +144,8 @@ void PSSparseServerInterface::get_sparse_model(const SparseDataset& ds, int i, i
 
   // build a truly sparse model and return
   // XXX Optimize resizing the model weights vector
-  model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights);
+  model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights, server_index, num_servers);
 
-  delete[] msg_begin;
   delete[] buffer;
 }
 
@@ -190,4 +171,27 @@ SparseLRModel PSSparseServerInterface::get_full_model() {
   delete[] model_data;
 
   return std::move(model);
+}
+
+
+void PSSparseServerInterface::get_full_model(SparseLRModel& model, int server_index, int num_servers) {
+#ifdef DEBUG
+  std::cout << "Getting full model" << std::endl;
+#endif
+  // 1. Send operation
+  uint32_t operation = 3;
+  send_all(sock, &operation, sizeof(uint32_t));
+  //2. receive size from PS
+  int model_size;
+  read_all(sock, &model_size, sizeof(int));
+  char* model_data = new char[sizeof(int) + model_size * sizeof(FEATURE_TYPE)];
+  char*model_data_ptr = model_data;
+  store_value<int>(model_data_ptr, model_size);
+
+  read_all(sock, model_data_ptr, model_size * sizeof(FEATURE_TYPE));
+
+  model.loadSerialized(model_data, server_index, num_servers);
+
+  delete[] model_data;
+
 }

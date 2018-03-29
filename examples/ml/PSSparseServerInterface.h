@@ -22,9 +22,9 @@ class PSSparseServerInterface {
 
   //void get_model(SparseLRModel& model);
   SparseLRModel get_full_model();
+  void get_full_model(SparseLRModel& model, int server_index, int num_servers);
   SparseLRModel get_sparse_model(const SparseDataset& ds);
-  void get_sparse_model(const SparseDataset& ds, int i, int n, SparseLRModel& model);
-
+  void get_sparse_model(char* msg_begin, uint32_t num_weights, SparseLRModel& model, int server_index, int num_servers);
 
  private:
   std::string ip;

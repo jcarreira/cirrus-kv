@@ -9,6 +9,8 @@
 //#include "adapters/libevent.h"
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
+
 
 #define DEBUG
 #define ERROR_INTERVAL_USEC (100000) // time between error checks
@@ -27,11 +29,11 @@ namespace ErrorSparseTaskGlobal {
 }
 
 SparseLRModel get_model() {
-  static PSSparseServerInterface* psi;
+  static PSSparseServerInterfaceWrapper* psi;
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterface(PS_IP, PS_PORT);
+    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
   }
 
   return psi->get_full_model();
@@ -45,7 +47,7 @@ void ErrorSparseTask::run(const Configuration& config) {
 
   std::cout << "[ERROR_TASK] connecting to redis" << std::endl;
   auto redis_con  = redis_connect(REDIS_IP, REDIS_PORT);
-  if (redis_con == NULL || redis_con -> err) { 
+  if (redis_con == NULL || redis_con -> err) {
     throw std::runtime_error(
         "Error connecting to redis server. IP: " + std::string(REDIS_IP));
   }
@@ -83,7 +85,7 @@ start:
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
-  
+
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
   wait_for_start(ERROR_SPARSE_TASK_RANK, redis_con, nworkers);
@@ -109,7 +111,7 @@ start:
 #endif
 
       int nb = mp.get_number_batches();
-      std::cout 
+      std::cout
         << "[ERROR_TASK] computing loss."
         << " number_batches: " << nb
         << std::endl;
