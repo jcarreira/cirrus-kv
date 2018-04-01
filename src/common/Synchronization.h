@@ -125,6 +125,19 @@ class PosixSemaphore : public Lock {
         return ret != -1;  // true for success
     }
 
+    int getvalue() {
+      int value;
+#ifdef __APPLE__
+      throw std::runtime_error("Not supported");
+#else
+      int ret = sem_getvalue(&m_sema, &value);
+#endif  // __APPLE__
+      if (ret == -1) {
+        throw std::runtime_error("sem_getvalue error");
+      }
+      return value;
+    }
+
  private:
 #ifdef __APPLE__
     /** Underlying semaphore that operations are performed on. */

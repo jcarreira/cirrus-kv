@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <utils/Log.h>
+#include <Utils.h>
 
 Configuration::Configuration() :
         learning_rate(-1),
@@ -18,23 +18,58 @@ void Configuration::read(const std::string& path) {
     std::ifstream fin(path.c_str(), std::ifstream::in);
 
     if (!fin) {
+        std::cout << "Error opening config file: " << std::endl;
         throw std::runtime_error("Error opening config file: " + path);
     }
 
     std::string line;
     while (getline(fin, line)) {
-        parse_line(line);
+      if (line.size() && line[0] == '#')
+        continue;
+      parse_line(line);
     }
 
     print();
+    check();
 }
 
 void Configuration::print() const {
     std::cout << "Printing configuration: " << std::endl;
     std::cout << "input_path: " << get_input_path() << std::endl;
     std::cout << "Minibatch size: " << get_minibatch_size() << std::endl;
+    std::cout << "S3 size: " << get_s3_size() << std::endl;
     std::cout << "learning rate: " << get_learning_rate() << std::endl;
-    std::cout << "num_samples: " << get_num_samples() << std::endl;
+    std::cout << "limit_samples: " << get_limit_samples() << std::endl;
+    std::cout << "epsilon: " << epsilon << std::endl;
+    std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
+    std::cout << "use_bias: " << use_bias << std::endl;
+    std::cout << "use_grad_threshold: " << use_grad_threshold << std::endl;
+    std::cout << "grad_threshold: " << grad_threshold << std::endl;
+    std::cout << "model_bits: " << model_bits << std::endl;
+    std::cout << "train_set: "
+      << train_set_range.first << "-" << train_set_range.second << std::endl;
+    std::cout << "test_set: "
+      << test_set_range.first << "-" << test_set_range.second << std::endl;
+    if (nusers || nitems) {
+      std::cout
+        << "users: " << nusers << std::endl
+        << " items: " << nitems << std::endl;
+    }
+}
+
+void Configuration::check() const {
+  if (s3_bucket_name == "") {
+    throw std::runtime_error("S3 bucket name missing from config file");
+  }
+  if (test_set_range.first && model_type == COLLABORATIVE_FILTERING) {
+    throw std::runtime_error("Can't use test range with COLLABORATIVE_FILTERING");
+  }
+  if (use_grad_threshold && grad_threshold == 0) {
+    throw std::runtime_error("Can't use a 0 for grad threshold");
+  }
+  if (model_bits == 0) {
+    throw std::runtime_error("Model bits can't be 0");
+  }
 }
 
 /**
@@ -51,6 +86,16 @@ void Configuration::parse_line(const std::string& line) {
 
     if (s == "minibatch_size:") {
         iss >> minibatch_size;
+        if (s3_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
+    } else if (s == "s3_size:") {
+        iss >> s3_size;
+        if (minibatch_size && (s3_size % minibatch_size != 0)) {
+          throw std::runtime_error("s3_size not multiple of minibatch_size");
+        }
+    } else if (s == "num_features:") {
+        iss >> num_features;
     } else if (s == "input_path:") {
         iss >> input_path;
     } else if (s == "samples_path:") {
@@ -71,8 +116,18 @@ void Configuration::parse_line(const std::string& line) {
         iss >> num_classes;
     } else if (s == "limit_cols:") {
         iss >> limit_cols;
-    } else if (s == "num_samples:") {
-        iss >> num_samples;
+    } else if (s == "limit_samples:") {
+        iss >> limit_samples;
+    } else if (s == "s3_bucket:") {
+        iss >> s3_bucket_name;
+    } else if (s == "use_bias:") {
+        iss >> use_bias;
+    } else if (s == "num_users:") {
+        iss >> nusers;
+    } else if (s == "num_items:") {
+        iss >> nitems;
+    } else if (s == "model_bits:") {
+        iss >> model_bits;
     } else if (s == "normalize:") {
         int n;
         iss >> n;
@@ -84,9 +139,42 @@ void Configuration::parse_line(const std::string& line) {
             model_type = LOGISTICREGRESSION;
         } else if (model == "Softmax") {
             model_type = SOFTMAX;
+        } else if (model == "CollaborativeFiltering") {
+            model_type = COLLABORATIVE_FILTERING;
         } else {
             throw std::runtime_error(std::string("Unknown model : ") + model);
         }
+    } else if (s == "train_set:") {
+        std::string range;
+        iss >> range;
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
+        train_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
+    } else if (s == "test_set:") {
+        std::string range;
+        iss >> range;
+        size_t index = range.find("-");
+        if (index == std::string::npos)
+          throw std::runtime_error("Wrong index");
+        std::string left = range.substr(0, index);
+        std::string right = range.substr(index + 1);
+        test_set_range = std::make_pair(
+            string_to<int>(left),
+            string_to<int>(right));
+    } else if (s == "use_grad_threshold:") {
+      std::string b;
+      iss >> b;
+      if (b != "0" && b != "1") {
+        throw std::runtime_error("use_grad_threshold must be 0/1");
+      }
+      use_grad_threshold = string_to<bool>(b);
+    } else if (s == "grad_threshold:") {
+      iss >> grad_threshold;
     } else {
         throw std::runtime_error("Unrecognized option: " + line);
     }
@@ -136,6 +224,12 @@ uint64_t Configuration::get_minibatch_size() const {
     return minibatch_size;
 }
 
+uint64_t Configuration::get_s3_size() const {
+    if (s3_size == 0)
+        throw std::runtime_error("Minibatch size not loaded");
+    return s3_size;
+}
+
 int Configuration::get_prefetching() const {
     if (prefetching == -1)
         throw std::runtime_error("prefetching not loaded");
@@ -173,7 +267,7 @@ uint64_t Configuration::get_num_classes() const {
   */
 uint64_t Configuration::get_limit_cols() const {
     if (limit_cols == 0) {
-        cirrus::LOG<cirrus::INFO>("limit_cols not loaded");
+      std::cout << "limit_cols not loaded" << std::endl;
     }
     return limit_cols;
 }
@@ -188,7 +282,52 @@ bool Configuration::get_normalize() const {
 /**
   * Get number of training input samples
   */
-uint64_t Configuration::get_num_samples() const {
-    return num_samples;
+uint64_t Configuration::get_limit_samples() const {
+    return limit_samples;
 }
 
+/**
+  * Get number of training input samples
+  */
+uint64_t Configuration::get_num_features() const {
+    return num_features;
+}
+
+/**
+  * Get S3 bucket name
+  */
+std::string Configuration::get_s3_bucket() const {
+    return s3_bucket_name;
+}
+
+std::pair<int, int> Configuration::get_train_range() const {
+  return train_set_range;
+}
+
+std::pair<int, int> Configuration::get_test_range() const {
+  return test_set_range;
+}
+
+bool Configuration::get_use_bias() const {
+  return use_bias;
+}
+
+int Configuration::get_users() const {
+  return nusers;
+}
+
+int Configuration::get_items() const {
+  return nitems;
+}
+
+bool Configuration::get_grad_threshold_use() const {
+  return use_grad_threshold;
+}
+
+double Configuration::get_grad_threshold() const {
+  return grad_threshold;
+}
+
+uint64_t Configuration::get_model_bits() const {
+  return model_bits;
+}

@@ -10,9 +10,9 @@
 
 /**
   * Logistic regression model
-  * Model is represented with a vector of doubles
+  * Model is represented with a vector of FEATURE_TYPEs
   */
-class LRModel : public Model {
+class LRModel : public CirrusModel {
  public:
     /**
       * LRModel constructor
@@ -25,7 +25,7 @@ class LRModel : public Model {
       * @param w Array of model weights
       * @param d Features dimension
       */
-    LRModel(const double* w, uint64_t d);
+    LRModel(const FEATURE_TYPE* w, uint64_t d);
 
     /**
      * Set the model weights to values between 0 and 1
@@ -37,6 +37,7 @@ class LRModel : public Model {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void* mem) override;
+    void loadSerialized(const void*, int) {throw std::runtime_error("Not Implemented");};
 
     /**
       * serializes this model into memory
@@ -55,14 +56,14 @@ class LRModel : public Model {
      * @param data Memory where the serialized model lives
      * @param size Size of the serialized model
      */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<CirrusModel> deserialize(void* data,
             uint64_t size) const override;
 
     /**
      * Performs a deep copy of this model
      * @return New model
      */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<CirrusModel> copy() const override;
 
     /**
      * Performs an SGD update in the direction of the input gradient
@@ -79,7 +80,6 @@ class LRModel : public Model {
 
     /**
      * Compute a minibatch gradient
-     * @param rank MPI worker rank
      * @param dataset Dataset to learn on
      * @param labels Labels of the samples
      * @param labels_size Size of the labels array
@@ -87,8 +87,8 @@ class LRModel : public Model {
      * @return Newly computed gradient
      */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            int rank, const Matrix& dataset,
-            double* labels,
+            const Matrix& dataset,
+            FEATURE_TYPE* labels,
             uint64_t labels_size,
             double epsilon) const override;
     /**
@@ -96,7 +96,7 @@ class LRModel : public Model {
      * @param dataset Dataset to calculate loss on
      * @return Total loss of whole dataset
      */
-    double calc_loss(Dataset& dataset) const override;
+    std::pair<double, double> calc_loss(Dataset& dataset) const override;
 
     /**
      * Return the size of the gradient when serialized
@@ -122,14 +122,20 @@ class LRModel : public Model {
       */
     void print() const;
 
+    /**
+      * Return model size (should match sample size)
+      * @return Size of the model
+      */
+    uint64_t size() const;
+
+
  private:
     /**
       * Check whether value n is an integer
       */
-    bool is_integer(double n) const;
+    bool is_integer(FEATURE_TYPE n) const;
 
-    std::vector<double> weights;  //< vector of the model weights
-    uint64_t d;                   //< size of the model
+    std::vector<FEATURE_TYPE> weights_;  //< vector of the model weights
 };
 
 #endif  // EXAMPLES_ML_LRMODEL_H_
