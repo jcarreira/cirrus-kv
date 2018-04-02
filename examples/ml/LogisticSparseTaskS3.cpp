@@ -102,7 +102,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  LogisticSparseTaskGlobal::psint = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
+  LogisticSparseTaskGlobal::psint = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
 
   std::cout << "Connecting to redis.." << std::endl;
   redis_lock.lock();
