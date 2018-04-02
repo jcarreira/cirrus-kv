@@ -28,6 +28,7 @@
 #define ERROR_TASK_RANK -2
 #define WORKER_TASK_RANK -3
 #define WORKERS_BASE 3 // used in wait_for_start
+#define NUM_PS 1
 
 using FEATURE_TYPE = float;
 

@@ -7,7 +7,7 @@
 #define MAX_MSG_SIZE (1024*1024)
 
 PSSparseServerInterfaceWrapper::PSSparseServerInterfaceWrapper(const std::string& ip, int port, int num_servers) {
-  this->num_servers = num_servers;
+  this->num_servers = NUM_PS;
   for (int i = 0; i < this->num_servers; i++) { // replace 2 with num_servers
     psint[i] = new PSSparseServerInterface(ip, port + i);
   }
@@ -15,9 +15,9 @@ PSSparseServerInterfaceWrapper::PSSparseServerInterfaceWrapper(const std::string
 
 void PSSparseServerInterfaceWrapper::send_gradient(const LRSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
-  std::vector<LRSparseGradient*> split_model = gradient->shard(2);
-  psint[0]->send_gradient(*split_model[0]);
-  psint[1]->send_gradient(*split_model[1]);
+  std::vector<LRSparseGradient*> split_model = gradient->shard(NUM_PS);
+  for (int i = 0; i < NUM_PS; i++)
+    psint[i]->send_gradient(*split_model[i]);
 }
 
 
@@ -49,7 +49,7 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_sparse_model(const SparseDatas
   }
 
   // we get the model subset with just the right amount of weights
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < NUM_PS; i++) {
     psint[i]->get_sparse_model(msg_begin_lst[i], num_weights_lst[i], model, i, num_servers);
   }
 
@@ -69,8 +69,8 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_full_model() {
   SparseLRModel model(0);
 
   // placeholder for now NOT CORRECT
-  psint[0]->get_full_model(model, 0, 2);
-  psint[1]->get_full_model(model, 1, 2);
+  for (int i = 0; i < NUM_PS; i++)
+    psint[i]->get_full_model(model, i, NUM_PS);
 
   return model;
 }
