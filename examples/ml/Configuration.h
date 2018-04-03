@@ -116,6 +116,16 @@ class Configuration {
 
     bool get_use_bias() const;
 
+
+
+    /**
+      * Get number of parameter servers
+      */
+    //uint32_t get_num_ps() const;
+    //std::string get_ps_ip(int ps_index) const;
+    //uint32_t get_ps_port(int ps_index) const;
+
+
  public:
     /**
       * Parse a specific line in the config file

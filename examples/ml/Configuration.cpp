@@ -48,6 +48,9 @@ void Configuration::print() const {
       << train_set_range.first << "-" << train_set_range.second << std::endl;
     std::cout << "test_set: "
       << test_set_range.first << "-" << test_set_range.second << std::endl;
+
+    std::cout << "num_ps: " << get_num_ps() << std::endl;
+
 }
 
 void Configuration::check() const {
@@ -279,3 +282,11 @@ bool Configuration::get_use_bias() const {
   return use_bias;
 }
 
+/*
+std::string Configuration::get_ps_ip(int ps_index) const {
+  return ps_ips[ps_index];
+}
+
+uint32_t Configuration::get_ps_port(int ps_index) const {
+  return ps_ports[ps_index];
+} */

@@ -33,7 +33,7 @@ SparseLRModel get_model() {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
+    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
   }
 
   return psi->get_full_model();

@@ -184,6 +184,9 @@ void PSSparseServerInterface::get_full_model(SparseLRModel& model, int server_in
   //2. receive size from PS
   int model_size;
   read_all(sock, &model_size, sizeof(int));
+  std::cout << "[Andy] - Original " << model_size << std::endl;
+  //model_size = model_size / NUM_PS;
+  std::cout << "[Andy] - Halved " << model_size << std::endl;
   char* model_data = new char[sizeof(int) + model_size * sizeof(FEATURE_TYPE)];
   char*model_data_ptr = model_data;
   store_value<int>(model_data_ptr, model_size);
