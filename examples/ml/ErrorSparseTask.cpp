@@ -32,7 +32,7 @@ std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, 2);
+    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
   }
 
   bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;

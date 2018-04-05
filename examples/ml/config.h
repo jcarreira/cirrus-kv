@@ -21,7 +21,7 @@
 #define PS_SPARSE_SERVER_TASK_RANK (1)
 #define LOADING_SPARSE_TASK_RANK (0)
 #define WORKERS_BASE 3 // used in wait_for_start
-#define NUM_PS 1
+#define NUM_PS 2
 
 using FEATURE_TYPE = float;
 

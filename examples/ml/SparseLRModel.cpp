@@ -138,6 +138,7 @@ void SparseLRModel::sgd_update_adagrad(double learning_rate,
     int index = w.first;
     FEATURE_TYPE value = w.second;
 
+    std::cout << index << std::endl;
     // update history
     FEATURE_TYPE& weight_hist = weights_hist_[index];
     weight_hist += value * value;
