@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CXX = g++
 #CXX = $(MPI_HOME)/bin/mpic++
 
-bin_PROGRAMS = parameter_server ps_test
+bin_PROGRAMS = parameter_server ps_test csv_to_libsvm
 
 LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
@@ -73,3 +73,5 @@ CPP_SOURCES_SOFTMAX = InputReader.cpp Utils.cpp \
 parameter_server_SOURCES  = parameter_server.cpp $(CPP_SOURCES)
 
 ps_test_SOURCES = PSSparseServerTaskTest.cpp $(CPP_SOURCES)
+
+csv_to_libsvm_SOURCES = CriteoCsvToLibSVM.cpp $(CPP_SOURCES)
