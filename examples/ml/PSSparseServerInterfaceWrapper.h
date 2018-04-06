@@ -22,8 +22,8 @@ class PSSparseServerInterfaceWrapper {
   void send_gradient(const LRSparseGradient*);
 
   //void get_model(SparseLRModel& model);
-  SparseLRModel get_full_model();
-  SparseLRModel get_sparse_model(const SparseDataset& ds);
+  std::unique_ptr<CirrusModel> get_full_model();
+  SparseLRModel get_lr_sparse_model(const SparseDataset& ds, const Configuration& config);
 
 
  private:

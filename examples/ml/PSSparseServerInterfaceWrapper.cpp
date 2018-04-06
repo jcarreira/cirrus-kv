@@ -17,14 +17,14 @@ void PSSparseServerInterfaceWrapper::send_gradient(const LRSparseGradient* gradi
   // need to generalize to arbitrary num of servers
   std::vector<LRSparseGradient*> split_model = gradient->shard(NUM_PS);
   for (int i = 0; i < NUM_PS; i++)
-    psint[i]->send_gradient(*split_model[i]);
+    psint[i]->send_lr_gradient(*split_model[i]);
 }
 
 
-SparseLRModel PSSparseServerInterfaceWrapper::get_sparse_model(const SparseDataset& ds) {
+SparseLRModel PSSparseServerInterfaceWrapper::get_lr_sparse_model(const SparseDataset& ds, const Configuration& config) {
   // Initialize variables
   SparseLRModel model(0);
-
+  //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // we don't know the number of weights to start with
   char** msg_lst = new char*[this->num_servers];
   char** msg_begin_lst = new char*[this->num_servers];
@@ -43,6 +43,7 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_sparse_model(const SparseDatas
     for (const auto& w : sample) {
       int server_index = w.first % this->num_servers;
       int data_index = (w.first - server_index) / num_servers;
+      //std::cout << "[converted] " << w.first << " to " << data_index << std::endl;
       store_value<uint32_t>(msg_lst[server_index], data_index);
       num_weights_lst[server_index]++;
     }
@@ -50,7 +51,7 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_sparse_model(const SparseDatas
 
   // we get the model subset with just the right amount of weights
   for (int i = 0; i < NUM_PS; i++) {
-    psint[i]->get_sparse_model(msg_begin_lst[i], num_weights_lst[i], model, i, num_servers);
+    psint[i]->get_lr_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_weights_lst[i], i);
   }
 
   for (int i = 0; i < this->num_servers; i++) {
@@ -65,12 +66,13 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_sparse_model(const SparseDatas
 }
 
 
-SparseLRModel PSSparseServerInterfaceWrapper::get_full_model() {
-  SparseLRModel model(0);
-
+std::unique_ptr<CirrusModel> PSSparseServerInterfaceWrapper::get_full_model() {
+  //SparseLRModel model(0);
+  std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // placeholder for now NOT CORRECT
-  for (int i = 0; i < NUM_PS; i++)
-    psint[i]->get_full_model(model, i, NUM_PS);
+  for (int i = 0; i < NUM_PS; i++) {
+    model = psint[i]->get_full_model(false, i, std::move(model));
 
+  }
   return model;
 }

@@ -23,7 +23,7 @@ class SoftmaxModel : public CirrusModel {
       * @param data Pointer to serialized model in memory
       */
     void loadSerialized(const void* data) override;
-
+    void loadSerialized(const void*, int) { throw std::runtime_error("Not implemented"); }
     /**
       * Serialized model into memory
       * @returns Pointer to memory and size of serialized model

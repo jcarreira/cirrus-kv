@@ -8,6 +8,7 @@
 #include "async.h"
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
 #include "Configuration.h"
 
 
@@ -28,7 +29,7 @@ namespace ErrorSparseTaskGlobal {
 }
 
 std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
-  static PSSparseServerInterface* psi;
+  static PSSparseServerInterfaceWrapper* psi;
   static bool first_time = true;
   if (first_time) {
     first_time = false;
@@ -36,7 +37,7 @@ std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   }
 
   bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;
-  return psi->get_full_model(use_col_filtering);
+  return psi->get_full_model();
 }
 
 void ErrorSparseTask::run(const Configuration& config) {
@@ -114,7 +115,7 @@ void ErrorSparseTask::run(const Configuration& config) {
 #endif
 
       int nb = 0;//mp.get_number_batches();
-      std::cout 
+      std::cout
         << "[ERROR_TASK] computing loss."
         << " number_batches: " << nb
         << std::endl;
@@ -154,4 +155,3 @@ void ErrorSparseTask::run(const Configuration& config) {
     }
   }
 }
-

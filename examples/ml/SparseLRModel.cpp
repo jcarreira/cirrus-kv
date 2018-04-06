@@ -88,8 +88,9 @@ void SparseLRModel::loadSerialized(const void* data) {
       weights_.data());
 }
 
-void SparseLRModel::loadSerialized(const void* data, int server_index, int num_servers) {
+void SparseLRModel::loadSerialized(const void* data, int server_index) {
   int num_weights = load_value<int>(data);
+  int num_servers = NUM_PS;
 #ifdef DEBUG
   //std::cout << "num_weights: " << num_weights << std::endl;
 #endif
@@ -138,7 +139,6 @@ void SparseLRModel::sgd_update_adagrad(double learning_rate,
     int index = w.first;
     FEATURE_TYPE value = w.second;
 
-    std::cout << index << std::endl;
     // update history
     FEATURE_TYPE& weight_hist = weights_hist_[index];
     weight_hist += value * value;
@@ -395,12 +395,12 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
 
 void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
     const uint32_t* weight_indices,
-    uint64_t num_weights, int server_index, int num_servers) {
+    uint64_t num_weights, const Configuration& config, int server_index, int num_servers) {
   is_sparse_ = true;
 
   assert(num_weights > 0 && num_weights < 10000000);
 
-  weights_sparse_.reserve((1 << config.get_model_bits()));
+  weights_sparse_.reserve((1 << 20) + 14);
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
@@ -416,11 +416,12 @@ void SparseLRModel::ensure_preallocated_vectors(const Configuration& config) con
     unique_indices.clear();
     unique_indices.reserve(500);
   }
-  
+
   if (part3.capacity() == 0) {
-    part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
+    part3.resize((1 << 20) + 14); // XXX: hardcoded fix ANDY 
+    //part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
   }
-  
+
   // value needs to be less than number of samples in minibatch
   if (part2.capacity() == 0) {
     part2.resize(500);
