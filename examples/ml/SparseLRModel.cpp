@@ -54,7 +54,7 @@ SparseLRModel::serialize() const {
 }
 
 void SparseLRModel::serializeTo(void* mem) const {
-#ifdef DEBUG 
+#ifdef DEBUG
   //std::cout << "Num weights size: " << weights_.size() << std::endl;
 #endif
   store_value<int>(mem, weights_.size());
@@ -81,10 +81,30 @@ void SparseLRModel::loadSerialized(const void* data) {
   //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
   char* data_begin = (char*)data;
 
+
   weights_.resize(num_weights);
   std::copy(reinterpret_cast<FEATURE_TYPE*>(data_begin),
       (reinterpret_cast<FEATURE_TYPE*>(data_begin)) + num_weights,
       weights_.data());
+}
+
+void SparseLRModel::loadSerialized(const void* data, int server_index) {
+  int num_weights = load_value<int>(data);
+  int num_servers = NUM_PS;
+#ifdef DEBUG
+  //std::cout << "num_weights: " << num_weights << std::endl;
+#endif
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
+  char* data_begin = (char*)data;
+
+
+  weights_.reserve(num_weights * num_servers);
+  std::cout << "[Andy] " << num_weights << std::endl;
+  for (int i = 0; i < num_weights; i++) {
+    weights_[num_servers * i + server_index] = load_value<float>(data);
+  }
 }
 
 /***
@@ -272,7 +292,7 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset, uint3
       FEATURE_TYPE value = feat.second;
       r1 += weights_[index] * value;
     }
-    
+
     double s1 = mlutils::s_1(r1);
     FEATURE_TYPE predicted_class = 0;
     if (s1 > 0.5) {
@@ -360,13 +380,31 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
     uint64_t num_weights,
     const Configuration& config) {
   is_sparse_ = true;
-  
+
+  assert(num_weights > 0 && num_weights < 10000000);
+
+  //weights_sparse_.resize(num_weights);
+  weights_sparse_.reserve((1 << config.get_model_bits()));
+  for (uint64_t i = 0; i < num_weights; ++i) {
+    uint32_t index = load_value<uint32_t>(weight_indices);
+    FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
+    weights_sparse_[index] = value;
+  }
+}
+
+
+void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
+    const uint32_t* weight_indices,
+    uint64_t num_weights, const Configuration& config, int server_index, int num_servers) {
+  is_sparse_ = true;
+
   assert(num_weights > 0 && num_weights < 10000000);
 
   weights_sparse_.reserve((1 << config.get_model_bits()));
   for (uint64_t i = 0; i < num_weights; ++i) {
     uint32_t index = load_value<uint32_t>(weight_indices);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
+    index = num_servers * index + server_index;
     weights_sparse_[index] = value;
   }
 }
@@ -378,11 +416,12 @@ void SparseLRModel::ensure_preallocated_vectors(const Configuration& config) con
     unique_indices.clear();
     unique_indices.reserve(500);
   }
-  
+
   if (part3.capacity() == 0) {
-    part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
+    part3.resize((1 << 20) + 14); // XXX: hardcoded fix ANDY 
+    //part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
   }
-  
+
   // value needs to be less than number of samples in minibatch
   if (part2.capacity() == 0) {
     part2.resize(500);
@@ -441,4 +480,3 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
   std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
   return ret;
 }
-

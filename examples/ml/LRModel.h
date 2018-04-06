@@ -37,6 +37,7 @@ class LRModel : public CirrusModel {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void* mem) override;
+    void loadSerialized(const void*, int) {throw std::runtime_error("Not Implemented");};
 
     /**
       * serializes this model into memory

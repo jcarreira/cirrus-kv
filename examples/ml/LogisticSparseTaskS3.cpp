@@ -5,7 +5,7 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
 
 #include <pthread.h>
 
@@ -16,7 +16,8 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  psint->send_lr_gradient(*lrg);
+  psint->send_gradient(lrg);
+  //psint->send_lr_gradient(*lrg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -74,8 +75,11 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  psint = new PSSparseServerInterface(PS_IP, PS_PORT);
-  sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
+
+  // Any good reason why we need 2 of these? they just seem to be wrappers of the same thing.
+  //psint = new PSSparseServerInterface(PS_IP, 1337, NUM_PS);
+  psint = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
+  //sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
@@ -114,8 +118,11 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     // compute mini batch gradient
     std::unique_ptr<ModelGradient> gradient;
 
+    SparseLRModel model(0);
     // we get the model subset with just the right amount of weights
-    sparse_model_get->get_new_model_inplace(*dataset, model, config);
+    //psint->get_new_model_inplace(*dataset, model, config);
+    model = psint->get_lr_sparse_model(*dataset, config);
+
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -145,9 +152,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     try {
       LRSparseGradient* lrg = dynamic_cast<LRSparseGradient*>(gradient.get());
       push_gradient(lrg);
-    } catch(...) {
+    } catch(std::exception &e) {
       std::cout << "[WORKER] "
-        << "Worker task error doing put of gradient" << "\n";
+        << "Worker task error doing put of gradient " << e.what() << "\n";
       exit(-1);
     }
 #ifdef DEBUG
@@ -164,4 +171,3 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     }
   }
 }
-

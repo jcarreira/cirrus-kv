@@ -11,6 +11,7 @@
 #include "SparseLRModel.h"
 #include "ProgressMonitor.h"
 #include "PSSparseServerInterface.h"
+#include "PSSparseServerInterfaceWrapper.h"
 
 #include <string>
 #include <vector>
@@ -62,6 +63,7 @@ class MLTask {
     uint64_t features_per_sample;
     uint64_t nworkers;
     uint64_t worker_id;
+    uint64_t offset;
     Configuration config;
 };
 
@@ -117,7 +119,7 @@ class LogisticSparseTaskS3 : public MLTask {
     std::mutex redis_lock;
   
     std::unique_ptr<SparseModelGet> sparse_model_get;
-    PSSparseServerInterface* psint;
+    PSSparseServerInterfaceWrapper* psint;
 };
 
 class PSSparseTask : public MLTask {
@@ -269,6 +271,13 @@ class PSSparseServerTask : public MLTask {
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id);
 
+    PSSparseServerTask(
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id, uint64_t offset);
     void run(const Configuration& config);
 
     struct Request {
