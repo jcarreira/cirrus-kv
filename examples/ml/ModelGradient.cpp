@@ -172,14 +172,14 @@ void LRSparseGradient::check_values() const {
 
 std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
   std::vector<LRSparseGradient*> servers(num_shards);
-  std::vector<std::pair<int, FEATURE_TYPE>> model[2];
+  std::vector<std::pair<int, FEATURE_TYPE>> model[NUM_PS];
   for (size_t i = 0; i < weights.size(); i++) {
     std::pair<int, FEATURE_TYPE> weight = weights[i];
-    int hash_val = (weight.first) % 2;
-    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(weight.first, weight.second);
+    int hash_val = (weight.first) % NUM_PS;
+    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair((weight.first - hash_val) / NUM_PS, weight.second);
     model[hash_val].push_back(new_pair);
   }
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < NUM_PS; i++) {
     servers[i] = new LRSparseGradient(std::move(model[i]));
   }
   return servers;

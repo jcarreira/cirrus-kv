@@ -49,7 +49,7 @@ void Configuration::print() const {
     std::cout << "test_set: "
       << test_set_range.first << "-" << test_set_range.second << std::endl;
 
-    std::cout << "num_ps: " << get_num_ps() << std::endl;
+    //std::cout << "num_ps: " << get_num_ps() << std::endl;
 
 }
 
