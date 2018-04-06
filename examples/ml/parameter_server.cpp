@@ -38,7 +38,7 @@ void run_tasks(int rank, int nworkers,
     lt.run(config);
     sleep_forever();
   } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
-    PSSparseServerTask st( ((1 << 20) + 14) / NUM_PS, MODEL_BASE,
+    PSSparseServerTask st( ((1 << config.get_model_bits()) + 1) / NUM_PS, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank, offset);

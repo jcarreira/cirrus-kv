@@ -159,7 +159,6 @@ class SparseLRModel : public CirrusModel {
 	const Configuration& config, int server_index, int num_servers);
 
     FEATURE_TYPE get_nth_weight(uint64_t n) const override {
-        std::cout << "[Getting weight] " << n << std::endl;
         return weights_[n];
     }
 

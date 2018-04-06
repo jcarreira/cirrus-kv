@@ -62,6 +62,7 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_lr_sparse_model(const SparseDa
   delete[] msg_begin_lst;
   delete[] msg_lst;
   delete[] num_weights_lst;
+  //return psint[0]->get_lr_sparse_model(ds, config);
   return model;
 }
 

@@ -42,11 +42,11 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
 void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = SEND_LR_GRADIENT;
 #ifdef DEBUG
-  std::cout << "Sending gradient" << std::endl;
+  std::cout << "Sending gradient " << operation << std::endl;
 #endif
   int ret = send(sock, &operation, sizeof(uint32_t), 0);
   if (ret == -1) {
-    throw std::runtime_error("Error sending operation");
+    throw std::runtime_error("Error sending operation sending lr gradient");
   }
 
   uint32_t size = gradient.getSerializedSize();
@@ -262,7 +262,7 @@ void PSSparseServerInterface::get_lr_sparse_model_inplace_sharded(
 
     // put num_weights in the beginning
     // 1. Send operation
-    uint32_t operation = 2;
+    uint32_t operation = GET_LR_SPARSE_MODEL;
     send_all(sock, &operation, sizeof(uint32_t));
     // 2. Send msg size
     uint32_t msg_size = sizeof(uint32_t) + sizeof(uint32_t) * num_weights;
