@@ -10,7 +10,7 @@ MultiplePSInterface::MultiplePSInterface() {
   this->num_servers = NUM_PS;
   char* ips[] = {PS_IPS_LST};
   int ports[] = {PS_PORTS_LST};
-  for (int i = 0; i < this->num_servers; i++) { // replace 2 with num_servers
+  for (int i = 0; i < this->num_servers; i++) { 
     psint[i] = new PSSparseServerInterface(ips[i], ports[i]);
   }
 }

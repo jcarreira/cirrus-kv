@@ -1,15 +1,6 @@
 #ifndef PS_SPARSE_SERVER_INTERFACE_WRAPPER_H_
 #define PS_SPARSE_SERVER_INTERFACE_WRAPPER_H_
 
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <unistd.h>
-#include <stdexcept>
-#include <cstring>
-#include <iostream>
 #include "ModelGradient.h"
 #include "Utils.h"
 #include "SparseLRModel.h"

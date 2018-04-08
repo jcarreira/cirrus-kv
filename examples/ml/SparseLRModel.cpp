@@ -101,7 +101,6 @@ void SparseLRModel::loadSerialized(const void* data, int server_index) {
 
 
   weights_.reserve(num_weights * num_servers);
-  std::cout << "[Andy] " << num_weights << std::endl;
   for (int i = 0; i < num_weights; i++) {
     weights_[num_servers * i + server_index] = load_value<float>(data);
   }
@@ -418,8 +417,7 @@ void SparseLRModel::ensure_preallocated_vectors(const Configuration& config) con
   }
 
   if (part3.capacity() == 0) {
-    part3.resize((1 << 20) + 14); // XXX: hardcoded fix ANDY 
-    //part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
+    part3.resize(1 << config.get_model_bits()); // XXX fix this MODEL_GRAD_SIZE
   }
 
   // value needs to be less than number of samples in minibatch
