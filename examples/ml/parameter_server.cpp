@@ -120,6 +120,10 @@ void print_hostname() {
 }
 
 int main(int argc, char** argv) {
+
+  int ports[] = {PS_PORTS_LST};
+  char* ips[] = {PS_IPS_LST};
+
   std::cout << "Starting parameter server" << std::endl;
 
   if (argc != 5) {
@@ -138,10 +142,13 @@ int main(int argc, char** argv) {
   std::cout << "Running parameter server with: "
     << rank << " rank"
     << std::endl;
-  int port_offset = string_to<int>(argv[4]);
-  std::cout << "Running parameter server on port: "
-    << port_offset + PS_PORT << std::endl;
 
+
+  int offset = string_to<int>(argv[4]);
+  if (rank == 1) {
+    std::cout << "Running parameter server at location: "
+      << ips[offset] << ":"  << ports[offset] << std::endl;
+  }
   auto config = load_configuration(argv[1]);
   config.print();
 
@@ -156,7 +163,7 @@ int main(int argc, char** argv) {
 
   // call the right task for this process
   std::cout << "Running task" << std::endl;
-  run_tasks(rank, nworkers, batch_size, config, port_offset);
+  run_tasks(rank, nworkers, batch_size, config, offset);
 
   std::cout << "Test successful" << std::endl;
 

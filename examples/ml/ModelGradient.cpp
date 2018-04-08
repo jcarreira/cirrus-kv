@@ -172,6 +172,9 @@ void LRSparseGradient::check_values() const {
 }
 
 std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
+
+    
+
   std::vector<LRSparseGradient*> servers(num_shards);
   std::vector<std::pair<int, FEATURE_TYPE>> model[NUM_PS];
   for (size_t i = 0; i < weights.size(); i++) {

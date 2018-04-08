@@ -1,19 +1,21 @@
 #include <cassert>
 #include "PSSparseServerInterface.h"
-#include "PSSparseServerInterfaceWrapper.h"
+#include "MultiplePSInterface.h"
 
 #undef DEBUG
 
 #define MAX_MSG_SIZE (1024*1024)
 
-PSSparseServerInterfaceWrapper::PSSparseServerInterfaceWrapper(const std::string& ip, int port, int num_servers) {
+MultiplePSInterface::MultiplePSInterface() {
   this->num_servers = NUM_PS;
+  char* ips[] = {PS_IPS_LST};
+  int ports[] = {PS_PORTS_LST};
   for (int i = 0; i < this->num_servers; i++) { // replace 2 with num_servers
-    psint[i] = new PSSparseServerInterface(ip, port + i);
+    psint[i] = new PSSparseServerInterface(ips[i], ports[i]);
   }
 }
 
-void PSSparseServerInterfaceWrapper::send_gradient(const LRSparseGradient* gradient) {
+void MultiplePSInterface::send_gradient(const LRSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
   std::vector<LRSparseGradient*> split_model = gradient->shard(NUM_PS);
   for (int i = 0; i < NUM_PS; i++)
@@ -21,7 +23,7 @@ void PSSparseServerInterfaceWrapper::send_gradient(const LRSparseGradient* gradi
 }
 
 
-SparseLRModel PSSparseServerInterfaceWrapper::get_lr_sparse_model(const SparseDataset& ds, const Configuration& config) {
+SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, const Configuration& config) {
   // Initialize variables
   SparseLRModel model(0);
   //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
@@ -67,7 +69,7 @@ SparseLRModel PSSparseServerInterfaceWrapper::get_lr_sparse_model(const SparseDa
 }
 
 
-std::unique_ptr<CirrusModel> PSSparseServerInterfaceWrapper::get_full_model() {
+std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model() {
   //SparseLRModel model(0);
   std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // placeholder for now NOT CORRECT

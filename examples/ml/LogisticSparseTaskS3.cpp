@@ -5,7 +5,7 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterfaceWrapper.h"
+#include "MultiplePSInterface.h"
 
 #include <pthread.h>
 
@@ -78,7 +78,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
   // Any good reason why we need 2 of these? they just seem to be wrappers of the same thing.
   //psint = new PSSparseServerInterface(PS_IP, 1337, NUM_PS);
-  psint = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
+  psint = new MultiplePSInterface();
   //sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches

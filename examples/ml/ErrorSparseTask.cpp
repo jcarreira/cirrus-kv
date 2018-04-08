@@ -8,7 +8,7 @@
 #include "async.h"
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
-#include "PSSparseServerInterfaceWrapper.h"
+#include "MultiplePSInterface.h"
 #include "Configuration.h"
 
 
@@ -29,11 +29,11 @@ namespace ErrorSparseTaskGlobal {
 }
 
 std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
-  static PSSparseServerInterfaceWrapper* psi;
+  static MultiplePSInterface* psi;
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterfaceWrapper(PS_IP, PS_PORT, NUM_PS);
+    psi = new MultiplePSInterface();
   }
 
   bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;

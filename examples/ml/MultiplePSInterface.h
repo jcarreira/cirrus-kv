@@ -15,9 +15,9 @@
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
 
-class PSSparseServerInterfaceWrapper {
+class MultiplePSInterface {
  public:
-  PSSparseServerInterfaceWrapper(const std::string& ip, int port, int num_servers);
+  MultiplePSInterface();
 
   void send_gradient(const LRSparseGradient*);
 

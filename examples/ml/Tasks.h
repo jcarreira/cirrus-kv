@@ -11,7 +11,7 @@
 #include "SparseLRModel.h"
 #include "ProgressMonitor.h"
 #include "PSSparseServerInterface.h"
-#include "PSSparseServerInterfaceWrapper.h"
+#include "MultiplePSInterface.h"
 
 #include <string>
 #include <vector>
@@ -119,7 +119,7 @@ class LogisticSparseTaskS3 : public MLTask {
     std::mutex redis_lock;
   
     std::unique_ptr<SparseModelGet> sparse_model_get;
-    PSSparseServerInterfaceWrapper* psint;
+    MultiplePSInterface* psint;
 };
 
 class PSSparseTask : public MLTask {
