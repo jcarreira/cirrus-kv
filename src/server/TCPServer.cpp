@@ -14,7 +14,7 @@
 #include <cstdint>
 
 #include "MemoryBackend.h"
-#include "NVStorageBackend.h"
+//#include "NVStorageBackend.h"
 
 #include "utils/logging.h"
 #include "common/Exception.h"
@@ -39,7 +39,7 @@ static const int initial_buffer_size = 50;
   */
 TCPServer::TCPServer(int port, uint64_t pool_size_,
                      const std::string& backend,
-                     const std::string& storage_path,
+                     const std::string& /* storage_path*/,
                      uint64_t max_fds_) :
     port_(port), pool_size(pool_size_), max_fds(max_fds_ + 1) {
     if (max_fds_ + 1 == 0) {
@@ -50,7 +50,8 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
     if (backend == "Memory") {
         mem = std::make_unique<MemoryBackend>();
     } else if (backend == "Storage") {
-        mem = std::make_unique<NVStorageBackend>(storage_path);
+        //mem = std::make_unique<NVStorageBackend>(storage_path);
+        throw std::runtime_error("Wrong backend option");
     } else {
         throw std::runtime_error("Wrong backend option");
     }

@@ -1,7 +1,6 @@
 #ifndef EXAMPLES_ML_UTILS_H_
 #define EXAMPLES_ML_UTILS_H_
 
-#include <mpi.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <sstream>
@@ -14,11 +13,8 @@
 #define LOG2(X) ((unsigned) (8*sizeof (uint64_t) - \
             __builtin_clzll((X)) - 1)
 
-/**
-  * Check output of an MPI return code
-  * Throws exception with error message in case of MPI error
-  */
-void check_mpi_error(int err, std::string error = "");
+#define FLOAT_EPS (1e-7)
+#define FLOAT_EQ(A, B) (std::fabs((A) - (B)) < FLOAT_EPS)
 
 /**
   * Get current time/epoch in ns
@@ -32,6 +28,11 @@ uint64_t get_time_us();
 
 /**
   * Get current time/epoch in milliseconds
+  */
+uint64_t get_time_ms();
+
+/**
+  * Get current time/epoch in secs
   */
 uint64_t get_time_ms();
 
@@ -66,11 +67,6 @@ std::string to_string(const C& s) {
 std::ifstream::pos_type filesize(const std::string& filename);
 
 /**
-  * Initializes mpi
-  */
-void init_mpi(int argc, char**argv);
-
-/**
   * Returns the name of the host where the process is running
   */
 std::string hostname();
@@ -84,6 +80,8 @@ unsigned int get_rand();
   * Get a random number between 0 and 1
   */
 double get_rand_between_0_1();
+
+double get_random_normal(double, double);
 
 /**
   * Used to delete arrays of arbitrary teypes
@@ -117,5 +115,36 @@ void print_statistics(const T& begin, const T& end) {
         << "distance: " << std::distance(begin, end) << std::endl
         << std::endl;
 }
+
+void sleep_forever();
+
+// advance ptr a number of bytes forward
+template<typename T>
+void advance_ptr(T*& p, uint64_t bytes) {
+  const char*ptr = reinterpret_cast<const char*>(p);
+  ptr += bytes;
+  p = (T*)ptr;
+}
+
+template<typename T, typename C>
+void store_value(C*& data, T value) {
+  T* v_ptr = reinterpret_cast<T*>(data);
+  *v_ptr = value;
+  advance_ptr(data, sizeof(T));
+}
+
+template<typename T, typename C>
+T load_value(const C*& data) {
+  const T* v_ptr = reinterpret_cast<const T*>(data);
+  T ret = *v_ptr;
+  advance_ptr(data, sizeof(T));
+  return ret;
+}
+
+ssize_t send_all(int sock, void* data, size_t len);
+
+ssize_t read_all(int sock, void* data, size_t len);
+
+uint64_t hash_f(const char* s);
 
 #endif  // EXAMPLES_ML_UTILS_H_
