@@ -46,11 +46,10 @@ PROJ1=check_correctness_cirrus_gd
 PROJ2=check_correctness_cirrus_sgd
 PROJ3=check_correctness_cirrus_sgd_sparse
 PROJ4=check_correctness_cirrus_sgd_rcv1
-PROJ5=sgd_sparse_kaggle
 
 #CIRRUS_ML_SRC_FILES := $(wildcard $(CIRRUS_ML_DIR)/*.cpp)
 
-all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
+all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
 
 check_correctness_cirrus_gd: $(PROJ1).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
@@ -72,10 +71,5 @@ check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp
 	  $(PROJ4).cpp $(CIRRUS_ML_SRC_FILES) \
 	  -o $@ $(LIBFLAGS) 
 
-sgd_sparse_kaggle: $(PROJ5).cpp
-	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ5).cpp $(CIRRUS_ML_SRC_FILES) \
-	  -o $@ $(LIBFLAGS) 
-
 clean:
-	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
+	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)

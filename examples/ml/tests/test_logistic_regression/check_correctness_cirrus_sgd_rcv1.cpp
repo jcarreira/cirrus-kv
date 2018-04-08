@@ -23,7 +23,7 @@ void print_info(const auto& samples) {
 }
 
 void check_error(auto model, auto dataset) {
-  auto ret = model->calc_loss(dataset);
+  auto ret = model->calc_loss(dataset, 0);
   auto total_loss = ret.first;
   auto avg_loss = 1.0 * total_loss / dataset.num_samples();
   auto acc = ret.second;
@@ -46,7 +46,7 @@ void learning_function(const SparseDataset& dataset) {
     SparseDataset ds = dataset.random_sample(20);
 
     auto gradient = model->minibatch_grad(
-        dataset, epsilon);
+        ds, epsilon);
 
     model_lock.lock();
     model->sgd_update(learning_rate, gradient.get());
@@ -79,6 +79,9 @@ void learning_function_from_s3(const SparseDataset& dataset) {
   }
 }
 
+/**
+  * Code not working
+  */
 int main() {
   InputReader input;
   SparseDataset dataset = input.read_input_rcv1_sparse(
@@ -89,21 +92,19 @@ int main() {
   dataset.check();
   dataset.print_info();
 
-  return 0;
-  
-  config.read("criteo_aws_lambdas_s3.cfg");
-  s3_iter = new S3SparseIterator(0, 10, config,
-      config.get_s3_size(),
-      config.get_minibatch_size());
+  //config.read("criteo_aws_lambdas_s3.cfg");
+  //s3_iter = new S3SparseIterator(0, 10, config,
+  //    config.get_s3_size(),
+  //    config.get_minibatch_size());
 
-  uint64_t model_size = (1 << CRITEO_HASH_BITS) + 13;
+  uint64_t model_size = (1 << 19);
   model.reset(new SparseLRModel(model_size));
 
-  uint64_t num_threads = 8;
+  uint64_t num_threads = 1;
   std::vector<std::shared_ptr<std::thread>> threads;
   for (uint64_t i = 0; i < num_threads; ++i) {
     threads.push_back(std::make_shared<std::thread>(
-          learning_function_from_s3, dataset));
+          learning_function, dataset));
   }
 
   while (1) {
