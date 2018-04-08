@@ -24,7 +24,7 @@ static const uint64_t GB = (1024*1024*1024);
 static const uint32_t SIZE = 1;
 
 void run_tasks(int rank, int nworkers,
-    int batch_size, const Configuration& config, int offset) {
+    int batch_size, const Configuration& config, int server_id) {
 
   std::cout << "Run tasks rank: " << rank << std::endl;
   int features_per_sample = config.get_num_features();
@@ -41,7 +41,7 @@ void run_tasks(int rank, int nworkers,
     PSSparseServerTask st( ((1 << config.get_model_bits()) + 1) / NUM_PS, MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank, offset);
+        nworkers, rank, server_id);
     st.run(config);
     //sleep_forever();
   } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
@@ -144,10 +144,10 @@ int main(int argc, char** argv) {
     << std::endl;
 
 
-  int offset = string_to<int>(argv[4]);
+  int server_id = string_to<int>(argv[4]);
   if (rank == 1) {
     std::cout << "Running parameter server at location: "
-      << ips[offset] << ":"  << ports[offset] << std::endl;
+      << ips[server_id] << ":"  << ports[server_id] << std::endl;
   }
   auto config = load_configuration(argv[1]);
   config.print();
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
 
   // call the right task for this process
   std::cout << "Running task" << std::endl;
-  run_tasks(rank, nworkers, batch_size, config, offset);
+  run_tasks(rank, nworkers, batch_size, config, server_id);
 
   std::cout << "Test successful" << std::endl;
 
