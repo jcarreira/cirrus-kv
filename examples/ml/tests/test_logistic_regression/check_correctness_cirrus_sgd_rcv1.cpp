@@ -15,7 +15,7 @@
 #include "../Utils.h"
 
 //typedef float FEATURE_TYPE;
-const std::string INPUT_PATH = "../data/rcv1/train.vw";
+const std::string INPUT_PATH = "../../data/rcv1/train.vw";
 
 void print_info(const auto& samples) {
   std::cout << "Number of samples: " << samples.size() << std::endl;

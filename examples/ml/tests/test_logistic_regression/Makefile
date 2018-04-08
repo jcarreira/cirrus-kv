@@ -3,6 +3,22 @@ CXXFLAGS=-Wall -ansi -O3 -std=c++14 -ggdb
 
 TOP_DIR=../../../..
 CIRRUS_ML_DIR=../..
+CIRRUS_ML_SRC_FILES=$(CIRRUS_ML_DIR)/Configuration.cpp \
+		    $(CIRRUS_ML_DIR)/Dataset.cpp \
+		    $(CIRRUS_ML_DIR)/Matrix.cpp \
+		    $(CIRRUS_ML_DIR)/LRModel.cpp \
+		    $(CIRRUS_ML_DIR)/SparseLRModel.cpp \
+		    $(CIRRUS_ML_DIR)/S3Iterator.cpp \
+		    $(CIRRUS_ML_DIR)/S3SparseIterator.cpp \
+		    $(CIRRUS_ML_DIR)/Utils.cpp \
+		    $(CIRRUS_ML_DIR)/MlUtils.cpp \
+		    $(CIRRUS_ML_DIR)/S3.cpp \
+		    $(CIRRUS_ML_DIR)/Checksum.cpp \
+		    $(CIRRUS_ML_DIR)/MurmurHash3.cpp \
+		    $(CIRRUS_ML_DIR)/ModelGradient.cpp \
+		    $(CIRRUS_ML_DIR)/InputReader.cpp \
+		    $(CIRRUS_ML_DIR)/SparseDataset.cpp
+
 
 LIBFLAGS =-static-libgcc  -static \
 	  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive \
@@ -22,6 +38,8 @@ INCLUDES=-I.. \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/ \
 	 -I$(TOP_DIR)/third_party/eigen_source \
+	 -I$(TOP_DIR)/third_party/libcuckoo \
+	 -I$(TOP_DIR)/third_party/flatbuffers/include \
 	 -I$(TOP_DIR)/third_party/hiredis
 
 PROJ1=check_correctness_cirrus_gd
@@ -30,7 +48,7 @@ PROJ3=check_correctness_cirrus_sgd_sparse
 PROJ4=check_correctness_cirrus_sgd_rcv1
 PROJ5=sgd_sparse_kaggle
 
-CIRRUS_ML_SRC_FILES := $(wildcard $(CIRRUS_ML_DIR)/*.cpp)
+#CIRRUS_ML_SRC_FILES := $(wildcard $(CIRRUS_ML_DIR)/*.cpp)
 
 all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
 
