@@ -27,9 +27,9 @@ AX_CXX_COMPILE_STDCXX_14
 CXXFLAGS="-O3 -g -fPIC -std=c++1z -Werror"
 
 # Check for libraries
-AC_LIB_HAVE_LINKFLAGS(rdmacm)
-AC_LIB_HAVE_LINKFLAGS(ibverbs)
-AC_LIB_HAVE_LINKFLAGS(mpi)
+#AC_LIB_HAVE_LINKFLAGS(rdmacm)
+#AC_LIB_HAVE_LINKFLAGS(ibverbs)
+#AC_LIB_HAVE_LINKFLAGS(mpi)
 
 AM_CONDITIONAL([USE_RDMA], [test "x${HAVE_LIBRDMACM}" = "xyes"])
 AM_CONDITIONAL([USE_MPI], [test "x${HAVE_LIBMPI}" = "xyes"])

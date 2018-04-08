@@ -21,6 +21,11 @@ make -j 10
 cd ../rocksdb
 make -j 10 static_lib
 
+#compile gflags
+cd ../gflags
+cmake ../gflags
+make -j 10
+
 # download eigen
 cd ../
 if [ ! -d "eigen_source" ]; then
