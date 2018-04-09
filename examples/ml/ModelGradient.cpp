@@ -171,6 +171,7 @@ void LRSparseGradient::check_values() const {
   }
 }
 
+<<<<<<< HEAD
 
 std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
 
@@ -192,7 +193,7 @@ std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
   for (int i = 0; i < num_shards; i++) {
     servers[i] = new LRSparseGradient(std::move(model[i]));
   }
-  return servers;
+  return gradients;
 }
 
 
