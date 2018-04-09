@@ -23,7 +23,12 @@ make -j 10 static_lib
 
 #compile gflags
 cd ../gflags
-cmake ../gflags
+cmake ../gflags -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON -DBUILD_gflags_LIB=ON
+make -j 10
+
+#compile glog
+cd ../glog
+cmake ../glog
 make -j 10
 
 # download eigen

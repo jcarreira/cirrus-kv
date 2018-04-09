@@ -45,4 +45,3 @@ store_bandwidth_SOURCES = store_bandwidth.cpp
 
 outstanding_requests_SOURCES  = outstanding_requests.cpp
 
-remove_bulk_SOURCES  = remove_bulk.cpp
