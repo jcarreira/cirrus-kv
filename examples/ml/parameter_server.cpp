@@ -3,6 +3,7 @@
 #include <string>
 #include "Utils.h"
 #include "Configuration.h"
+#include "gflags/gflags.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
@@ -22,6 +23,10 @@
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint32_t SIZE = 1;
+DEFINE_string(nworkers, "", "number of workers");
+DEFINE_string(rank, "", "rank");
+DEFINE_string(config, "", "config");
+
 
 void run_tasks(int rank, int nworkers, 
     int batch_size, const Configuration& config) {
@@ -128,18 +133,19 @@ int main(int argc, char** argv) {
   }
 
   print_hostname();
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  int nworkers = string_to<int>(argv[2]);
+  int nworkers = string_to<int>(FLAGS_nworkers);
   std::cout << "Running parameter server with: "
     << nworkers << " workers"
     << std::endl;
 
-  int rank = string_to<int>(argv[3]);
+  int rank = string_to<int>(FLAGS_rank);
   std::cout << "Running parameter server with: "
     << rank << " rank"
     << std::endl;
 
-  auto config = load_configuration(argv[1]);
+  auto config = load_configuration(FLAGS_config);
   config.print();
 
   // from config we get

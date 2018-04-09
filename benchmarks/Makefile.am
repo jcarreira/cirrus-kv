@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
                 cache_benchmark 1_2 outstanding_requests store_bandwidth \
-                cache_latency cache_iops iterator_v2 remove_bulk
+                cache_latency cache_iops iterator_v2
 
 LIBS         = 	-lclient -lauthentication -lutils -lcommon -levictionpolicies \
 		$(LIBRDMACM) $(LIBIBVERBS)
