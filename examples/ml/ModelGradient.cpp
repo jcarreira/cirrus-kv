@@ -1,4 +1,5 @@
 #include <examples/ml/ModelGradient.h>
+#include <memory>
 #include <iostream>
 #include <algorithm>
 #include <Utils.h>
@@ -171,23 +172,24 @@ void LRSparseGradient::check_values() const {
   }
 }
 
-<<<<<<< HEAD
 
-std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
+// Takes the LRSparseGradient method was called on and returns a vector
+// of LRSparseGradients. The indices are separated, then mapped down
+// for each parameter server
 
-    
-
+// XXX: use std::move on vector? This copying must be expensive
+std::vector<LRSparseGradient*> LRSparseGradient::gradient_shards(int num_shards) const {
   std::vector<LRSparseGradient*> servers(num_shards);
-
-
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   for (int i = 0; i < num_shards; i++) {
     model.push_back( std::vector<std::pair<int, FEATURE_TYPE>>() );
   }
   for (size_t i = 0; i < weights.size(); i++) {
-    std::pair<int, FEATURE_TYPE> weight = weights[i];
-    int server_index = (weight.first) % num_shards;
-    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair((weight.first - server_index) / num_shards, weight.second);
+    std::pair<int, FEATURE_TYPE> weight = weights[i]; 
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
     model[server_index].push_back(new_pair);
   }
   for (int i = 0; i < num_shards; i++) {

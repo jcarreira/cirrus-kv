@@ -2,7 +2,6 @@
 #define PS_SPARSE_SERVER_INTERFACE_WRAPPER_H_
 
 #include "ModelGradient.h"
-#include "Utils.h"
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
 

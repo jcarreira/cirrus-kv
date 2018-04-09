@@ -1,6 +1,7 @@
 #ifndef EXAMPLES_ML_MODELGRADIENT_H_
 #define EXAMPLES_ML_MODELGRADIENT_H_
 
+#include <memory>
 #include <cstdint>
 #include <cassert>
 #include <vector>
