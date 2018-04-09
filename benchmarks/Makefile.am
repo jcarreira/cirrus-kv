@@ -44,4 +44,3 @@ cache_iops_SOURCES = cache_iops.cpp
 store_bandwidth_SOURCES = store_bandwidth.cpp
 
 outstanding_requests_SOURCES  = outstanding_requests.cpp
-
