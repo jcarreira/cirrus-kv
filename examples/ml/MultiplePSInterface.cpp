@@ -67,12 +67,10 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
 }
 
 
-std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model() {
-  //SparseLRModel model(0);
+std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
-  // placeholder for now NOT CORRECT
   for (int i = 0; i < num_servers; i++) {
-    model = psint[i]->get_full_model(false, i, num_servers, std::move(model));
+    model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model));
 
   }
   return model;
