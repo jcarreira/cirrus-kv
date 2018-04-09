@@ -171,22 +171,19 @@ void LRSparseGradient::check_values() const {
   }
 }
 
-std::vector<LRSparseGradient*> LRSparseGradient::shard(int num_shards) const {
-
-    
-
-  std::vector<LRSparseGradient*> servers(num_shards);
+//gradient_shards takes in an argument for the number of pieces to split a gradient into, and splits a gradient into a vector of gradients
+std::vector<std::unique_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards(int num_shards) const {
+  std::vector<std::unique_ptr<LRSparseGradient>> gradients(num_shards);
   std::vector<std::pair<int, FEATURE_TYPE>> model[NUM_PS];
-  for (size_t i = 0; i < weights.size(); i++) {
-    std::pair<int, FEATURE_TYPE> weight = weights[i];
-    int hash_val = (weight.first) % NUM_PS;
-    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair((weight.first - hash_val) / NUM_PS, weight.second);
-    model[hash_val].push_back(new_pair);
+  for (auto weight : weights) {
+    int hash_ps = (weight.first) % NUM_PS;
+    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair((weight.first - hash_ps) / NUM_PS, weight.second);
+    model[hash_ps].push_back(new_pair);
   }
   for (int i = 0; i < NUM_PS; i++) {
-    servers[i] = new LRSparseGradient(std::move(model[i]));
+    gradients[i] = new LRSparseGradient(std::move(model[i]));
   }
-  return servers;
+  return gradients;
 }
 
 

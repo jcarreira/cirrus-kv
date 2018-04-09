@@ -17,7 +17,7 @@ MultiplePSInterface::MultiplePSInterface() {
 
 void MultiplePSInterface::send_gradient(const LRSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
-  std::vector<LRSparseGradient*> split_model = gradient->shard(NUM_PS);
+  std::vector<LRSparseGradient*> split_model = gradient->gradient_shards(NUM_PS);
   for (int i = 0; i < NUM_PS; i++)
     psint[i]->send_lr_gradient(*split_model[i]);
 }
