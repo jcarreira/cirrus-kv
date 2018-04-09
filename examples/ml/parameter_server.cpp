@@ -23,8 +23,8 @@
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint32_t SIZE = 1;
-DEFINE_string(nworkers, "", "number of workers");
-DEFINE_string(rank, "", "rank");
+DEFINE_int64(nworkers, 0, "number of workers");
+DEFINE_int64(rank, 0, "rank");
 DEFINE_string(config, "", "config");
 
 
@@ -135,12 +135,12 @@ int main(int argc, char** argv) {
   print_hostname();
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  int nworkers = string_to<int>(FLAGS_nworkers);
+  int nworkers = FLAGS_nworkers;
   std::cout << "Running parameter server with: "
     << nworkers << " workers"
     << std::endl;
 
-  int rank = string_to<int>(FLAGS_rank);
+  int rank = FLAGS_rank;
   std::cout << "Running parameter server with: "
     << rank << " rank"
     << std::endl;
