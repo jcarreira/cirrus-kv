@@ -178,8 +178,9 @@ void LRSparseGradient::check_values() const {
 // for each parameter server
 
 // XXX: use std::move on vector? This copying must be expensive
-std::vector<LRSparseGradient*> LRSparseGradient::gradient_shards(int num_shards) const {
-  std::vector<LRSparseGradient*> servers(num_shards);
+std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards(int num_shards) const {
+  std::vector<std::shared_ptr<LRSparseGradient>> servers;
+  servers.reserve(num_shards);
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   for (int i = 0; i < num_shards; i++) {
     model.push_back( std::vector<std::pair<int, FEATURE_TYPE>>() );
@@ -193,9 +194,12 @@ std::vector<LRSparseGradient*> LRSparseGradient::gradient_shards(int num_shards)
     model[server_index].push_back(new_pair);
   }
   for (int i = 0; i < num_shards; i++) {
-    servers[i] = new LRSparseGradient(std::move(model[i]));
+
+    auto gradient = std::make_shared<LRSparseGradient>(std::move(model[i]));
+    servers.push_back(std::move(gradient));
+    //servers[i] = new LRSparseGradient(std::move(model[i]));
   }
-  return gradients;
+  return std::move(servers);
 }
 
 
