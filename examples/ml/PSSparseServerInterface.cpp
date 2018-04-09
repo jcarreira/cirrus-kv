@@ -194,7 +194,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
 
 std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
     bool isCollaborative, //XXX use a better argument here
-    int server_index,
+    int server_index, int num_ps,
     std::unique_ptr<CirrusModel> model
     ) {
 #ifdef DEBUG
@@ -240,7 +240,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
       throw std::runtime_error("Error talking to PS");
     }
     //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
-    model->loadSerialized(model_data, server_index);
+    model->loadSerialized(model_data, server_index, num_ps);
 
     delete[] model_data;
     return model;
@@ -253,7 +253,6 @@ void PSSparseServerInterface::get_lr_sparse_model_inplace_sharded(
   const Configuration& config,
   char* msg_begin, uint32_t num_weights, uint32_t server_index) {
 
-    int num_servers = NUM_PS;
 
     #ifdef DEBUG
       std::cout << "Getting LR sparse model inplace sharded" << std::endl;
@@ -282,7 +281,7 @@ void PSSparseServerInterface::get_lr_sparse_model_inplace_sharded(
 
     // build a truly sparse model and return
     // XXX Optimize resizing the model weights vector
-    model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights, config, server_index, num_servers);
+    model.loadSerializedSparse((FEATURE_TYPE*)buffer, (uint32_t*)msg, num_weights, config, server_index, config.get_num_ps());
 
     delete[] buffer;
 

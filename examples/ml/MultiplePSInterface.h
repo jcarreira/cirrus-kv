@@ -8,7 +8,7 @@
 
 class MultiplePSInterface {
  public:
-  MultiplePSInterface();
+  MultiplePSInterface(const Configuration& config);
 
   void send_gradient(const LRSparseGradient*);
 
@@ -18,8 +18,7 @@ class MultiplePSInterface {
 
 
  private:
-  //std::vector<PSSparseServerInterface*> psint;
-  PSSparseServerInterface* psint[NUM_PS];
+  std::vector<PSSparseServerInterface*> psint;
   int num_servers;
 };
 

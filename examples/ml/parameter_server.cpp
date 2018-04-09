@@ -38,7 +38,7 @@ void run_tasks(int rank, int nworkers,
     lt.run(config);
     sleep_forever();
   } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
-    PSSparseServerTask st( ((1 << config.get_model_bits()) + 1) / NUM_PS, MODEL_BASE,
+    PSSparseServerTask st( ((1 << config.get_model_bits()) + 1) / config.get_num_ps(), MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
         nworkers, rank, server_id);
@@ -121,8 +121,6 @@ void print_hostname() {
 
 int main(int argc, char** argv) {
 
-  int ports[] = {PS_PORTS_LST};
-  char* ips[] = {PS_IPS_LST};
 
   std::cout << "Starting parameter server" << std::endl;
 
@@ -143,14 +141,14 @@ int main(int argc, char** argv) {
     << rank << " rank"
     << std::endl;
 
+  auto config = load_configuration(argv[1]);
+  config.print();
 
   int server_id = string_to<int>(argv[4]);
   if (rank == 1) {
     std::cout << "Running parameter server at location: "
-      << ips[server_id] << ":"  << ports[server_id] << std::endl;
+      << config.get_ip(server_id) << ":"  << config.get_port(server_id) << std::endl;
   }
-  auto config = load_configuration(argv[1]);
-  config.print();
 
   // from config we get
   int batch_size = config.get_minibatch_size() * config.get_num_features();

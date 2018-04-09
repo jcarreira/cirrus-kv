@@ -18,10 +18,6 @@
 #define WORKERS_BASE 3 // used in wait_for_start
 
 
-// parameter server params here
-#define NUM_PS 2
-#define PS_PORTS_LST 1337, 1338
-#define PS_IPS_LST "127.0.0.1", "127.0.0.1"
 
 // For Netflix's stuff
 # define PS_IP "127.0.0.1"

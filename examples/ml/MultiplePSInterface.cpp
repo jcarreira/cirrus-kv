@@ -6,19 +6,17 @@
 
 #define MAX_MSG_SIZE (1024*1024)
 
-MultiplePSInterface::MultiplePSInterface() {
-  this->num_servers = NUM_PS;
-  char* ips[] = {PS_IPS_LST};
-  int ports[] = {PS_PORTS_LST};
+MultiplePSInterface::MultiplePSInterface(const Configuration& config) {
+  this->num_servers = config.get_num_ps();
   for (int i = 0; i < this->num_servers; i++) { 
-    psint[i] = new PSSparseServerInterface(ips[i], ports[i]);
+    psint.push_back(new PSSparseServerInterface(config.get_ip(i), config.get_port(i)));
   }
 }
 
 void MultiplePSInterface::send_gradient(const LRSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
-  std::vector<LRSparseGradient*> split_model = gradient->shard(NUM_PS);
-  for (int i = 0; i < NUM_PS; i++)
+  std::vector<LRSparseGradient*> split_model = gradient->shard(num_servers);
+  for (int i = 0; i < num_servers; i++)
     psint[i]->send_lr_gradient(*split_model[i]);
 }
 
@@ -52,7 +50,7 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
   }
 
   // we get the model subset with just the right amount of weights
-  for (int i = 0; i < NUM_PS; i++) {
+  for (int i = 0; i < config.get_num_ps(); i++) {
     psint[i]->get_lr_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_weights_lst[i], i);
   }
 
@@ -73,8 +71,8 @@ std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model() {
   //SparseLRModel model(0);
   std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // placeholder for now NOT CORRECT
-  for (int i = 0; i < NUM_PS; i++) {
-    model = psint[i]->get_full_model(false, i, std::move(model));
+  for (int i = 0; i < num_servers; i++) {
+    model = psint[i]->get_full_model(false, i, num_servers, std::move(model));
 
   }
   return model;

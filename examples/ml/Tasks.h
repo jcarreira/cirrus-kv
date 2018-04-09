@@ -48,7 +48,7 @@ class MLTask {
      */
     void run(const Configuration& config, int worker);
 
-    void wait_for_start(int index, int nworkers);
+    void wait_for_start(int index, int nworkers, const Configuration& config);
     bool get_worker_status(auto r, int worker_id);
 
   protected:

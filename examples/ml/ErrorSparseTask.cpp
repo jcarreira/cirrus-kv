@@ -33,7 +33,7 @@ std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new MultiplePSInterface();
+    psi = new MultiplePSInterface(config);
   }
 
   bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;
@@ -94,7 +94,7 @@ void ErrorSparseTask::run(const Configuration& config) {
 
   ErrorSparseTaskGlobal::mp_start_lock.lock();
 
-  wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);
+  wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers, config);
   ErrorSparseTaskGlobal::start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"

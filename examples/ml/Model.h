@@ -50,7 +50,8 @@ class CirrusModel {
 
     virtual void loadSerialized(const void* mem) = 0;
 
-    virtual void loadSerialized(const void* mem, int) = 0;
+    virtual void loadSerialized(const void* mem, int, int) = 0;
+    
 
     /**
      * Randomly initialize the model

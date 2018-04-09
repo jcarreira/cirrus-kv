@@ -2,7 +2,7 @@
 #define EXAMPLES_ML_CONFIGURATION_H_
 
 #include <string>
-
+#include <vector>
 class Configuration {
  public:
     Configuration();
@@ -129,6 +129,13 @@ class Configuration {
     int get_users() const;
     int get_items() const;
 
+    /**
+      * Multiple PS 
+      */
+    int get_num_ps() const;
+    std::string get_ip(int server_index) const;
+    int get_port(int server_index) const;
+
  public:
     /**
       * Parse a specific line in the config file
@@ -179,6 +186,13 @@ class Configuration {
     double grad_threshold = 0;
 
     uint64_t model_bits = 20;
+
+
+    // Multiple PS parameters
+    int num_ps = 1;
+    std::vector<std::string> ips = {"127.0.0.1"};
+    std::vector<int> ports = {1337};
+
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

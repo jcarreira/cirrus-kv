@@ -38,7 +38,7 @@ class SparseMFModel : public CirrusModel {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void*) { throw std::runtime_error("Not implemented"); }
-    void loadSerialized(const void*, int) {throw std::runtime_error("Not implemented");}    
+    void loadSerialized(const void*, int, int) {throw std::runtime_error("Not implemented");}    
 
     void loadSerialized(const void* mem, uint64_t, uint64_t);
 

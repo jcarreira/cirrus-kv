@@ -88,9 +88,8 @@ void SparseLRModel::loadSerialized(const void* data) {
       weights_.data());
 }
 
-void SparseLRModel::loadSerialized(const void* data, int server_index) {
+void SparseLRModel::loadSerialized(const void* data, int server_index, int num_servers) {
   int num_weights = load_value<int>(data);
-  int num_servers = NUM_PS;
 #ifdef DEBUG
   //std::cout << "num_weights: " << num_weights << std::endl;
 #endif

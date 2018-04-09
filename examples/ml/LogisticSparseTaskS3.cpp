@@ -78,12 +78,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 
   // Any good reason why we need 2 of these? they just seem to be wrappers of the same thing.
   //psint = new PSSparseServerInterface(PS_IP, 1337, NUM_PS);
-  psint = new MultiplePSInterface();
+  psint = new MultiplePSInterface(config);
   //sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(worker, nworkers);
+  wait_for_start(worker, nworkers, config);
 
   // Create iterator that goes from 0 to num_s3_batches
   auto train_range = config.get_train_range();
