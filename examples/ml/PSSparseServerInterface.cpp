@@ -37,8 +37,22 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
         "Client could not connect to server."
         " Address: " + ip + " port: " + std::to_string(port));
   }
+  
+   /**
+     * UDP
+     */
+  udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (udp_sock == -1) {
+    printf("errno: %d\n", errno);
+    assert(0);
+  }
+  memset((char *) &si_other, 0, sizeof(si_other));
+  si_other.sin_family = AF_INET;
+  si_other.sin_port = htons(3333);
+  si_other.sin_addr.s_addr = inet_addr("172.31.0.197");
 }
 
+#if 0
 void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = SEND_LR_GRADIENT;
 #ifdef DEBUG
@@ -63,6 +77,29 @@ void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient)
   ret = send_all(sock, data, size);
   if (ret == 0) {
     throw std::runtime_error("Error sending grad");
+  }
+}
+#endif
+// udp version
+void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient) {
+  uint32_t size = gradient.getSerializedSize();
+#ifdef DEBUG
+  std::cout << "Sending gradient with size: " << size << std::endl;
+#endif
+  //ret = send(sock, &size, sizeof(uint32_t), 0);
+  //if (ret == -1) {
+  //  throw std::runtime_error("Error sending grad size");
+  //}
+  
+  char data[sizeof(uint32_t) + size];
+  char* data_ptr = data;
+  store_value<uint32_t>(data_ptr, size);
+  gradient.serialize(data_ptr);
+
+  //ret = send_all(sock, data, size);
+  if (sendto(udp_sock, data, size + sizeof(uint32_t), 0, (const sockaddr*)&si_other, sizeof(si_other)) == -1) {
+    printf("errno %d\n", errno);
+    assert(0);
   }
 }
 
