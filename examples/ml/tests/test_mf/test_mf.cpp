@@ -41,7 +41,7 @@ void movielens() {
     mf_model->sgd_update(learning_rate, i, ds, epsilon);
 
     if (i % 100 == 0) {
-      std::pair<double, double> ret = mf_model->calc_loss(dataset);
+      std::pair<double, double> ret = mf_model->calc_loss(dataset, i);
       double loss = ret.first;
       std::cout 
         << "Iteration " << i
@@ -98,7 +98,7 @@ void netflix() {
       //}
 
       if (i % 100000 == 0) {
-        std::pair<double, double> ret = mf_model->calc_loss(dataset);
+        std::pair<double, double> ret = mf_model->calc_loss(dataset, i);
         double loss = ret.first;
         std::cout 
           << "Iteration " << i

@@ -6,6 +6,7 @@
 class Configuration {
  public:
     Configuration();
+    Configuration(const std::string& path);
 
     /**
       * Read configuration file

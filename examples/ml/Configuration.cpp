@@ -10,6 +10,13 @@ Configuration::Configuration() :
         epsilon(-1)
 {}
 
+Configuration::Configuration(const std::string& path) :
+        learning_rate(-1),
+        epsilon(-1)
+{
+  read(path);
+}
+
 /**
   * Read configuration from a specific config file
   * @param path Path to the configuration file
