@@ -23,8 +23,8 @@
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint32_t SIZE = 1;
-DEFINE_int64(nworkers, 0, "number of workers");
-DEFINE_int64(rank, 0, "rank");
+DEFINE_int64(nworkers, -1, "number of workers");
+DEFINE_int64(rank, -1, "rank");
 DEFINE_string(config, "", "config");
 
 
@@ -134,6 +134,11 @@ int main(int argc, char** argv) {
 
   print_hostname();
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  if ((FLAGS_nworkers < 0) || (FLAGS_rank < 0) || (FLAGS_config == "")) {
+    throw std::runtime_error("Some flags not specified");
+  }
+
 
   int nworkers = FLAGS_nworkers;
   std::cout << "Running parameter server with: "
