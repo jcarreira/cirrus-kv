@@ -24,8 +24,8 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/ \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3 \
+	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/ \
+	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3 \
 	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
 	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
 	       -L/home/ec2-user/libevent/install_dir/lib/ \
@@ -42,9 +42,9 @@ CPPFLAGS = -static-libgcc -static-libstdc++ \
            -I$(TOP_DIR)/third_party/hiredis \
            -isystem $(TOP_DIR)/third_party/libcuckoo/ \
            -I $(MPI_HOME)/include/ -Itest_aws \
-	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
-	   -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
-           -I/home/ec2-user/cirrus/third_party/gflags/include/ \
+	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
+	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
+           -I$(TOP_DIR)/third_party/gflags/include/ \
 	   -ggdb -frecord-gcc-switches -O3
 #-pg
 
