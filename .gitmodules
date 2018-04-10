@@ -10,3 +10,15 @@
 [submodule "third_party/rocksdb"]
 	path = third_party/rocksdb
 	url = https://github.com/facebook/rocksdb.git
+[submodule "third_party/hiredis"]
+	path = third_party/hiredis
+	url = https://github.com/redis/hiredis.git
+[submodule "third_party/aws-sdk-cpp"]
+	path = third_party/aws-sdk-cpp
+	url = https://github.com/aws/aws-sdk-cpp.git
+[submodule "third_party/gflags"]
+	path = third_party/gflags
+	url = https://github.com/gflags/gflags.git
+[submodule "third_party/glog"]
+	path = third_party/glog
+	url = https://github.com/google/glog.git
