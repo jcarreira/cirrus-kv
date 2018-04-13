@@ -20,7 +20,10 @@ void print_info(const auto& samples) {
 void check_error(auto model, auto dataset) {
   auto ret = model->calc_loss(dataset);
   auto loss = ret.first;
-  std::cout << "loss: " << loss << std::endl;
+  auto avg_loss = loss / dataset.num_samples();
+  std::cout << "total loss: " << loss
+    << " avg loss: " << avg_loss
+    << std::endl;
 }
 
 std::mutex model_lock;

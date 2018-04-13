@@ -13,19 +13,6 @@
 #define DEBUG
 #define ERROR_INTERVAL_USEC (100000) // time between error checks
 
-/**
-  * Ugly but necessary for now
-  * both onMessage and ErrorSparseTask need access to this
-  */
-namespace ErrorSparseTaskGlobal {
-  std::mutex model_lock;
-  std::unique_ptr<CirrusModel> model;
-  std::unique_ptr<lr_model_deserializer> lmd;
-  volatile bool model_is_here = true;
-  uint64_t start_time;
-  std::mutex mp_start_lock;
-}
-
 std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   static PSSparseServerInterface* psi;
   static bool first_time = true;
@@ -34,15 +21,13 @@ std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
     psi = new PSSparseServerInterface(PS_IP, PS_PORT);
   }
 
-  bool use_col_filtering = config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;
+  bool use_col_filtering =
+    config.get_model_type() == Configuration::COLLABORATIVE_FILTERING;
   return psi->get_full_model(use_col_filtering);
 }
 
 void ErrorSparseTask::run(const Configuration& config) {
   std::cout << "Compute error task connecting to store" << std::endl;
-
-  // declare serializers
-  lr_model_deserializer lmd(MODEL_GRAD_SIZE);
 
   std::cout << "Creating sequential S3Iterator" << std::endl;
   auto train_range = config.get_train_range();
@@ -90,10 +75,8 @@ void ErrorSparseTask::run(const Configuration& config) {
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
   
-  ErrorSparseTaskGlobal::mp_start_lock.lock();
-
   wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);
-  ErrorSparseTaskGlobal::start_time = get_time_us();
+  uint64_t start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
@@ -138,14 +121,14 @@ void ErrorSparseTask::run(const Configuration& config) {
           << " Accuracy: " << (total_accuracy / minibatches_vec.size())
           << " time(us): " << get_time_us()
           << " time from start (sec): "
-          << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
+          << (get_time_us() - start_time) / 1000000.0
           << std::endl;
       } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
         std::cout
           << "[ERROR_TASK] RMSE (Total): " << std::sqrt(total_loss / total_num_features)
           << " time(us): " << get_time_us()
           << " time from start (sec): "
-          << (get_time_us() - ErrorSparseTaskGlobal::start_time) / 1000000.0
+          << (get_time_us() - start_time) / 1000000.0
           << std::endl;
       }
     } catch(const cirrus::NoSuchIDException& e) {

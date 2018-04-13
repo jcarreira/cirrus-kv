@@ -8,6 +8,7 @@
 #include <Checksum.h>
 
 #include <cassert>
+#include <limits>
 
 #define DEBUG
 
@@ -185,6 +186,7 @@ void SparseDataset::print() const {
 
 void SparseDataset::print_info() const {
   std::cout << "SparseDataset #samples: " << data_.size() << std::endl;
+  std::cout << "SparseDataset #labels: " << labels_.size() << std::endl;
   //std::cout << "SparseDataset max features: " << max_features_ << std::endl;
 
   //double avg = 0;
@@ -263,13 +265,15 @@ SparseDataset SparseDataset::random_sample(uint64_t n_samples) const {
   std::uniform_int_distribution<int> sampler(0, num_samples() - 1);
 
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> samples;
+  std::vector<FEATURE_TYPE> labels;
 
   for (uint64_t i = 0; i < n_samples; ++i) {
     int index = sampler(re);
     samples.push_back(data_[index]);
+    labels.push_back(labels_[index]);
   }
 
-  return SparseDataset(samples);
+  return SparseDataset(std::move(samples), std::move(labels));
 }
 
 SparseDataset SparseDataset::sample_from(uint64_t start, uint64_t n_samples) const {
@@ -293,15 +297,16 @@ uint64_t SparseDataset::max_features() const {
 
 void SparseDataset::normalize(uint64_t hash_size) {
   std::vector<FEATURE_TYPE> max_val_feature(hash_size);
-  std::vector<FEATURE_TYPE> min_val_feature(hash_size);
+  std::vector<FEATURE_TYPE> min_val_feature(hash_size,
+      std::numeric_limits<FEATURE_TYPE>::max());
 
   for (const auto& w : data_) {
     for (const auto& v : w) {
-      int index = v.first;
+      uint64_t index = v.first;
       FEATURE_TYPE value = v.second;
 
 #ifdef DEBUG
-      if (index >= (int)hash_size)
+      if (index >= hash_size)
         throw std::runtime_error("Index bigger than capacity");
 #endif
 
