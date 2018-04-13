@@ -6,6 +6,7 @@
 class Configuration {
  public:
     Configuration();
+    Configuration(const std::string& path);
 
     /**
       * Read configuration file
@@ -36,12 +37,6 @@ class Configuration {
       * @returns s3 object size
       */
     uint64_t get_s3_size() const;
-
-    /**
-      * Get flag indicating whether to use prefetching
-      * @returns Prefetching flag
-      */
-    int get_prefetching() const;
 
     /**
       * Get number of classes in the dataset
@@ -135,6 +130,7 @@ class Configuration {
     int get_num_ps() const;
     std::string get_ps_ip(int server_index) const;
     int get_ps_port(int server_index) const;
+    bool get_use_adagrad() const;
 
  public:
     /**
@@ -153,7 +149,6 @@ class Configuration {
     double learning_rate = 0;     //< sgd learning rate
     double epsilon = 0;           //< regularization rate
 
-    int prefetching = 0;       //< whether to prefetch input data
     uint64_t num_classes = 0;  //< number of sample classes
 
     std::string input_path;  //< path to dataset input
@@ -184,6 +179,8 @@ class Configuration {
 
     bool use_grad_threshold = false;
     double grad_threshold = 0;
+
+    bool use_adagrad = true;
 
     uint64_t model_bits = 20;
 

@@ -96,6 +96,10 @@ class SparseLRModel : public CirrusModel {
      */
     uint64_t getSerializedSize() const override;
 
+    double dot_product(
+        const std::vector<std::pair<int, FEATURE_TYPE>>& v1,
+        const std::vector<FEATURE_TYPE>& weights_) const;
+
     /**
      * Compute a minibatch gradient
      * @param dataset Dataset to learn on

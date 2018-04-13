@@ -34,7 +34,11 @@ void print_info(const auto& samples) {
 void check_error(auto model, auto dataset) {
   auto ret = model.calc_loss(dataset);
   auto loss = ret.first;
-  std::cout << "loss: " << loss << std::endl;
+  auto num_samples = dataset.num_samples();
+  auto avg_loss = loss / num_samples;
+  std::cout << "total loss: " << loss
+    << " avg loss: " << avg_loss
+    << std::endl;
 }
 
 int main() {
@@ -51,7 +55,7 @@ int main() {
   LRModel model(num_cols);
 
   double epsilon = 0.00001;
-  double learning_rate = 0.00000001;
+  double learning_rate = 0.0000001;
 
   for (uint64_t i = 0; 1; ++i) {
     auto gradient = model.minibatch_grad(dataset.samples_,

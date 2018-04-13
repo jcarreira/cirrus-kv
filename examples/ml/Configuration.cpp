@@ -10,6 +10,13 @@ Configuration::Configuration() :
         epsilon(-1)
 {}
 
+Configuration::Configuration(const std::string& path) :
+        learning_rate(-1),
+        epsilon(-1)
+{
+  read(path);
+}
+
 /**
   * Read configuration from a specific config file
   * @param path Path to the configuration file
@@ -24,8 +31,10 @@ void Configuration::read(const std::string& path) {
 
     std::string line;
     while (getline(fin, line)) {
-      if (line.size() && line[0] == '#')
+      if (line.size() && line[0] == '#') {
+        // skip comments
         continue;
+      }
       parse_line(line);
     }
 
@@ -44,6 +53,7 @@ void Configuration::print() const {
     std::cout << "s3_bucket_name: " << s3_bucket_name << std::endl;
     std::cout << "use_bias: " << use_bias << std::endl;
     std::cout << "use_grad_threshold: " << use_grad_threshold << std::endl;
+    std::cout << "use_adagrad: " << use_adagrad << std::endl;
     std::cout << "grad_threshold: " << grad_threshold << std::endl;
     std::cout << "model_bits: " << model_bits << std::endl;
     std::cout << "train_set: "
@@ -104,8 +114,6 @@ void Configuration::parse_line(const std::string& line) {
         iss >> labels_path;
     } else if (s == "n_workers:") {
         iss >> n_workers;
-    } else if (s == "prefetching:") {
-        iss >> prefetching;
     } else if (s == "epsilon:") {
         iss >> epsilon;
     } else if (s == "input_type:") {
@@ -126,6 +134,8 @@ void Configuration::parse_line(const std::string& line) {
         iss >> nusers;
     } else if (s == "num_items:") {
         iss >> nitems;
+    } else if (s == "use_adagrad:") {
+        iss >> use_adagrad;
     } else if (s == "model_bits:") {
         iss >> model_bits;
     } else if (s == "normalize:") {
@@ -250,12 +260,6 @@ uint64_t Configuration::get_s3_size() const {
     return s3_size;
 }
 
-int Configuration::get_prefetching() const {
-    if (prefetching == -1)
-        throw std::runtime_error("prefetching not loaded");
-    return prefetching;
-}
-
 std::string Configuration::get_input_type() const {
     if (input_type == "")
         throw std::runtime_error("input_type not loaded");
@@ -368,3 +372,8 @@ std::string Configuration::get_ps_ip(int server_index) const {
 int Configuration::get_ps_port(int server_index) const {
   return ports.at(server_index);
 }
+
+bool Configuration::get_use_adagrad() const {
+  return use_adagrad;
+}
+

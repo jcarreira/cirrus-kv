@@ -34,7 +34,6 @@ minibatch_size: 20
 s3_size: 50000
 learning_rate: 0.01
 epsilon: 0.0001
-prefetching: 1
 model_type: LogisticRegression
 num_classes: 2
 num_features: 13
@@ -65,12 +64,13 @@ int main() {
   config.s3_bucket_name = "--";
   config.limit_samples = 50000000;
   config.model_bits = 19;
+  config.normalize = 1;
   config.check();
 
   SparseDataset dataset = read_dataset(config);
   dataset.check();
 
-  std::ofstream ofs ("csv_to_libsvm.txt", std::ofstream::out);
+  std::ofstream ofs ("/mnt/efs/csv_to_libsvm.txt", std::ofstream::out);
 
   for (uint32_t i = 0; i < dataset.num_samples(); ++i) {
     const auto label = dataset.labels_[i];

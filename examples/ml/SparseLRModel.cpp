@@ -155,6 +155,31 @@ void SparseLRModel::sgd_update(double learning_rate,
   }
 }
 
+double SparseLRModel::dot_product(
+    const std::vector<std::pair<int, FEATURE_TYPE>>& v1,
+    const std::vector<FEATURE_TYPE>& weights_) const {
+  double res = 0;
+  for (const auto& feat : v1) {
+    int index = feat.first;
+    FEATURE_TYPE value = feat.second;
+    if ((uint64_t)index >= weights_.size()) {
+      throw std::runtime_error("Index too high");
+    }
+    assert(index >= 0 && (uint64_t)index < weights_.size());
+    res += value * weights_[index];
+#ifdef DEBUG
+    if (std::isnan(res) || std::isinf(res)) {
+      std::cout << "res: " << res << std::endl;
+      std::cout << "i: " << i << std::endl;
+      std::cout << "index: " << index << " value: " << value << std::endl;
+      std::cout << "weights_[index]: " << weights_[index] << std::endl;
+      exit(-1);
+    }
+#endif
+  }
+  return res;
+}
+
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         const SparseDataset& dataset,
         double epsilon) const {
@@ -168,29 +193,10 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
     auto start = get_time_us();
 #endif
 
-    std::vector<FEATURE_TYPE> part2(dataset.num_samples());
+    // For each sample compute the dot product with the model
+    FEATURE_TYPE part2[dataset.num_samples()];
     for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
-      double part1_i = 0;
-      for (const auto& feat : dataset.get_row(i)) {
-        int index = feat.first;
-        FEATURE_TYPE value = feat.second;
-        //std::cout <<"index: " << index << " wsize: " << weights_.size() << std::endl;
-        if ((uint64_t)index >= weights_.size()) {
-          throw std::runtime_error("Index too high");
-        }
-        assert(index >= 0 && (uint64_t)index < weights_.size());
-        part1_i += value * weights_[index];
-#ifdef DEBUG
-        if (std::isnan(part1_i) || std::isinf(part1_i)) {
-          std::cout << "part1_i: " << part1_i << std::endl;
-          std::cout << "i: " << i << std::endl;
-          std::cout << "index: " << index << " value: " << value << std::endl;
-          std::cout << "weights_[index]: " << weights_[index] << std::endl;
-          exit(-1);
-        }
-#endif
-      }
-
+      double part1_i = dot_product(dataset.get_row(i), weights_);
       part2[i] = dataset.labels_[i] - mlutils::s_1(part1_i);
     }
 #ifdef DEBUG
@@ -203,6 +209,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad(
         int index = feat.first;
         FEATURE_TYPE value = feat.second;
         part3[index] += value * part2[i];
+
 #ifdef DEBUG
         if (std::isnan(part3[index]) || std::isinf(part3[index])) {
           std::cout << "part3 isnan" << std::endl;
@@ -258,16 +265,6 @@ std::pair<double, double> SparseLRModel::calc_loss(SparseDataset& dataset, uint3
 #ifdef DEBUG
   dataset.check();
 #endif
-
-  //const FEATURE_TYPE* ds_data =
-  //  reinterpret_cast<const FEATURE_TYPE*>(dataset.samples_.data.get());
-
-  //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, Eigen::Dynamic,
-  //  Eigen::Dynamic, Eigen::RowMajor>>
-  //    ds(const_cast<FEATURE_TYPE*>(ds_data),
-  //        dataset.samples_.rows, dataset.samples_.cols);
-
-  //Eigen::Map<Eigen::Matrix<FEATURE_TYPE, -1, 1>> weights_eig(w.data(), size());
 
   // count how many samples are wrongly classified
   uint64_t wrong_count = 0;
