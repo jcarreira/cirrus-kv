@@ -133,8 +133,8 @@ class Configuration {
       * Multiple PS 
       */
     int get_num_ps() const;
-    std::string get_ip(int server_index) const;
-    int get_port(int server_index) const;
+    std::string get_ps_ip(int server_index) const;
+    int get_ps_port(int server_index) const;
 
  public:
     /**

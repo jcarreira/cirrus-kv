@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
   int server_id = string_to<int>(argv[4]);
   if (rank == 1) {
     std::cout << "Running parameter server at location: "
-      << config.get_ip(server_id) << ":"  << config.get_port(server_id) << std::endl;
+      << config.get_ps_ip(server_id) << ":"  << config.get_ps_port(server_id) << std::endl;
   }
 
   // from config we get

@@ -9,7 +9,7 @@
 MultiplePSInterface::MultiplePSInterface(const Configuration& config) {
   this->num_servers = config.get_num_ps();
   for (int i = 0; i < this->num_servers; i++) { 
-    psint.push_back(new PSSparseServerInterface(config.get_ip(i), config.get_port(i)));
+    psint.push_back(new PSSparseServerInterface(config.get_ps_ip(i), config.get_ps_port(i)));
   }
 }
 

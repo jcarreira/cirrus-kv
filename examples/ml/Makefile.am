@@ -24,8 +24,8 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/camus/build/aws-cpp-sdk-core/ \
-	       -L/home/camus/build/aws-cpp-sdk-s3 \
+	       -L$(TOP_DIR)/third_party/build/aws-cpp-sdk-core/ \
+	       -L$(TOP_DIR)/third_party/build/aws-cpp-sdk-s3 \
 	       -L$(TOP_DIR)/third_party/krb5-1.15.2/src/lib \
 	       -L$(TOP_DIR)/third_party/keyutils/keyutils-1.5.10 \
 	       -L$(TOP_DIR)/third_party/libevent/install_dir/lib/

@@ -361,10 +361,10 @@ int Configuration::get_num_ps() const {
   return num_ps;
 }
 
-std::string Configuration::get_ip(int server_index) const {
-  return ips[server_index];
+std::string Configuration::get_ps_ip(int server_index) const {
+  return ips.at(server_index);
 }
 
-int Configuration::get_port(int server_index) const {
-  return ports[server_index];
+int Configuration::get_ps_port(int server_index) const {
+  return ports.at(server_index);
 }

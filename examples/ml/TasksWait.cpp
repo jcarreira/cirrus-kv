@@ -11,7 +11,7 @@ void MLTask::wait_for_start(int index, int nworkers, const Configuration& config
     << std::endl;
 
   // Move this code into the Wrapper?
-  PSSparseServerInterface psi(config.get_ip(0), config.get_port(0));
+  PSSparseServerInterface psi(config.get_ps_ip(0), config.get_ps_port(0));
 
   psi.set_status(index, 1);
 

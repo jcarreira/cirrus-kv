@@ -91,11 +91,10 @@ void SparseLRModel::loadSerialized(const void* data) {
 void SparseLRModel::loadSerialized(const void* data, int server_index, int num_servers) {
   int num_weights = load_value<int>(data);
 #ifdef DEBUG
-  //std::cout << "num_weights: " << num_weights << std::endl;
+  std::cout << "num_weights: " << num_weights << std::endl;
 #endif
   assert(num_weights > 0 && num_weights < 10000000);
 
-  //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
   char* data_begin = (char*)data;
 
 
@@ -400,10 +399,12 @@ void SparseLRModel::loadSerializedSparse(const FEATURE_TYPE* weights,
 
   weights_sparse_.reserve((1 << config.get_model_bits()));
   for (uint64_t i = 0; i < num_weights; ++i) {
-    uint32_t index = load_value<uint32_t>(weight_indices);
+	// The weight indices from the PS server need to be
+	// remapped to their correct state before gradient calculations
+    uint32_t weight_index = load_value<uint32_t>(weight_indices);
     FEATURE_TYPE value = load_value<FEATURE_TYPE>(weights);
-    index = num_servers * index + server_index;
-    weights_sparse_[index] = value;
+    uint32_t weight_index_remapped = num_servers * weight_index + server_index;
+    weights_sparse_[weight_index_remapped] = value;
   }
 }
 

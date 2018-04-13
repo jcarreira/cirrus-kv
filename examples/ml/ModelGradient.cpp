@@ -182,9 +182,7 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
   std::vector<std::shared_ptr<LRSparseGradient>> servers;
   servers.reserve(num_shards);
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
-  for (int i = 0; i < num_shards; i++) {
-    model.push_back( std::vector<std::pair<int, FEATURE_TYPE>>() );
-  }
+  model.resize(num_shards);
   for (size_t i = 0; i < weights.size(); i++) {
     std::pair<int, FEATURE_TYPE> weight = weights[i]; 
     int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
@@ -197,7 +195,6 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
 
     auto gradient = std::make_shared<LRSparseGradient>(std::move(model[i]));
     servers.push_back(std::move(gradient));
-    //servers[i] = new LRSparseGradient(std::move(model[i]));
   }
   return std::move(servers);
 }
