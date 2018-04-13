@@ -47,7 +47,7 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
 }
 
 MFModel::MFModel(
-    const void* data, uint64_t /*nusers*/, uint64_t /*nitems*/, uint64_t /*nfactors*/) {
+    const void* data, uint64_t nusers, uint64_t nitems, uint64_t nfactors) {
   loadSerialized(data);
 }
 
@@ -134,12 +134,13 @@ void MFModel::loadSerialized(const void* data) {
   item_weights_.resize(nitems_ * nfactors_);
   user_bias_.resize(nusers_);
   item_bias_.resize(nitems_);
-
+  
   // read user bias
   for (uint32_t i = 0; i < nusers_; ++i) {
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
     user_bias_[i] = user_bias;
   }
+  
   // read item bias
   for (uint32_t i = 0; i < nitems_; ++i) {
     FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
@@ -365,9 +366,10 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //    << "calc_loss() starting"
 //    << std::endl;
 //#endif
-
+  std::cout << "calc_loss() starting" << std::endl;
   for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
-    uint64_t off_userId = userId + start_index;
+     std::cout << "testing loop: userId - " << userId << std::endl;
+     uint64_t off_userId = userId + start_index;
 //#ifdef DEBUG
 //      std::cout
 //        << "off_userId: " << off_userId

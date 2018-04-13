@@ -172,19 +172,16 @@ void LRSparseGradient::check_values() const {
   }
 }
 
-
 // Takes the LRSparseGradient method was called on and returns a vector
 // of LRSparseGradients. The indices are separated, then mapped down
 // for each parameter server
 
-// XXX: use std::move on vector? This copying must be expensive
 std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards(int num_shards) const {
   std::vector<std::shared_ptr<LRSparseGradient>> servers;
   servers.reserve(num_shards);
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   model.resize(num_shards);
-  for (size_t i = 0; i < weights.size(); i++) {
-    std::pair<int, FEATURE_TYPE> weight = weights[i]; 
+  for (const auto &weight : weights) {
     int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
     std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(
             (weight.first - server_index) / num_shards, // map the index down for the ps

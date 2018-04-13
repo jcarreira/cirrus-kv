@@ -30,7 +30,7 @@ class PSSparseServerInterface {
   std::unique_ptr<CirrusModel> get_full_model(bool isCollaborativeFiltering); //XXX use a better argument here
 
   // get full model with server_index
-  std::unique_ptr<CirrusModel> get_full_model(bool isCollaborative, int server_index, int num_ps, std::unique_ptr<CirrusModel> model);
+  std::unique_ptr<CirrusModel> get_full_model(bool isCollaborative, int server_index, int num_ps, std::unique_ptr<CirrusModel> model, int nusers, int nitems);
   void get_lr_sparse_model_inplace_sharded(SparseLRModel& model, const Configuration& config, char* msg_begin, uint32_t num_weights, uint32_t server_index);
 
 

@@ -19,6 +19,8 @@ class MultiplePSInterface {
  private:
   std::vector<std::shared_ptr<PSSparseServerInterface>> psint;
   int num_servers;
+  int nusers;
+  int nitems;
 };
 
 #endif //  PS_SPARSE_SERVER_INTERFACE_WRAPPER_H_

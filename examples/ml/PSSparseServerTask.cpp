@@ -446,7 +446,7 @@ void PSSparseServerTask::poll_thread_fn() {
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(port_); // XXX: Andy fix this!!
+  serv_addr.sin_port = htons(port_); 
   std::cout << port_ << " listening in on" << std::endl;
   std::memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
 

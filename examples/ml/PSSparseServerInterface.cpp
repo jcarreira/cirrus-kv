@@ -195,14 +195,14 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
 std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
     bool isCollaborative, //XXX use a better argument here
     int server_index, int num_ps,
-    std::unique_ptr<CirrusModel> model
+    std::unique_ptr<CirrusModel> model, int nusers, int nitems
     ) {
 #ifdef DEBUG
   std::cout << "Getting full model isCollaborative: " << isCollaborative << std::endl;
 #endif
   if (isCollaborative) {
-    std::cout << "[Andy] OPERATION NOT SUPPORTED!!" << std::endl; //XXX: Implement this - Andy
-    return model;
+  //  std::cout << "[Andy] OPERATION NOT SUPPORTED!!" << std::endl; //XXX: Implement this - Andy
+//    return model;
     // 1. Send operation
     uint32_t operation = GET_MF_FULL_MODEL;
     send_all(sock, &operation, sizeof(uint32_t));
@@ -219,8 +219,9 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
       << std::endl;
 
     // build a sparse model and return
+    int nfactors = 10; //hardcoded
     std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(
-        (FEATURE_TYPE*)buffer, 0, 0, 0); //XXX fix this
+        (FEATURE_TYPE*)buffer, nusers, nitems, nfactors); //XXX fix this
     delete[] buffer;
     //return model;
   } else {
@@ -347,7 +348,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   if (read_all(sock, buffer, to_receive_size) == 0) {
     throw std::runtime_error("");
   }
-
+  
   // build a sparse model and return
   SparseMFModel model((FEATURE_TYPE*)buffer, minibatch_size, item_ids_count);
 

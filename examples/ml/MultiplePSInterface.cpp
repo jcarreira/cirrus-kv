@@ -9,6 +9,8 @@
 
 MultiplePSInterface::MultiplePSInterface(const Configuration& config) {
   this->num_servers = config.get_num_ps();
+  this->nusers = config.get_users();
+  this->nitems = config.get_items();
   for (int i = 0; i < this->num_servers; i++) { 
     psint.push_back(std::make_shared<PSSparseServerInterface>(config.get_ps_ip(i), config.get_ps_port(i)));
   }
@@ -71,7 +73,7 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   for (int i = 0; i < num_servers; i++) {
-    model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model));
+    model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model), nusers, nitems);
 
   }
   return model;

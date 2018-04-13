@@ -115,7 +115,7 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
     }
     user_models.push_back(user_model);
   }
-  
+ std::cout << "testing" << std::endl;  
   // now we read the item vectors
   for (uint64_t i = 0; i < num_item_ids; ++i) {
     std::pair<FEATURE_TYPE,
