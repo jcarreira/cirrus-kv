@@ -41,7 +41,7 @@ void run_tasks(int rank, int nworkers,
     PSSparseServerTask st( ((1 << config.get_model_bits()) + 1) / config.get_num_ps(), MODEL_BASE,
         LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
         batch_size, samples_per_batch, features_per_sample,
-        nworkers, rank, server_id);
+        nworkers, rank, config.get_ps_port(server_id));
     st.run(config);
     //sleep_forever();
   } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {

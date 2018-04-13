@@ -63,7 +63,6 @@ class MLTask {
     uint64_t features_per_sample;
     uint64_t nworkers;
     uint64_t worker_id;
-    uint64_t server_index;
     Configuration config;
 };
 
@@ -277,7 +276,7 @@ class PSSparseServerTask : public MLTask {
         uint64_t SAMPLE_BASE, uint64_t START_BASE,
         uint64_t batch_size, uint64_t samples_per_batch,
         uint64_t features_per_sample, uint64_t nworkers,
-        uint64_t worker_id, uint64_t server_index);
+        uint64_t worker_id, uint32_t ps_port);
     void run(const Configuration& config);
 
     struct Request {
