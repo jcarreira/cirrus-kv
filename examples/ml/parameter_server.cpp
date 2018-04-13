@@ -3,7 +3,7 @@
 #include <string>
 #include "Utils.h"
 #include "Configuration.h"
-#include "../../third_party/gflags/include/gflags/gflags.h"
+#include "gflags/gflags.h"
 
 #include "object_store/FullBladeObjectStore.h"
 #include "tests/object_store/object_store_internal.h"
