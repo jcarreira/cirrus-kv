@@ -77,11 +77,8 @@ void SparseLRModel::loadSerialized(const void* data) {
   std::cout << "num_weights: " << num_weights << std::endl;
 #endif
   assert(num_weights > 0 && num_weights < 10000000);
-
-  //int size = num_weights * sizeof(FEATURE_TYPE) + sizeof(int);
+  
   char* data_begin = (char*)data;
-
-
   weights_.resize(num_weights);
   std::copy(reinterpret_cast<FEATURE_TYPE*>(data_begin),
       (reinterpret_cast<FEATURE_TYPE*>(data_begin)) + num_weights,
