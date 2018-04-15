@@ -366,9 +366,8 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //    << "calc_loss() starting"
 //    << std::endl;
 //#endif
-  std::cout << "calc_loss() starting" << std::endl;
+
   for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
-     std::cout << "testing loop: userId - " << userId << std::endl;
      uint64_t off_userId = userId + start_index;
 //#ifdef DEBUG
 //      std::cout
