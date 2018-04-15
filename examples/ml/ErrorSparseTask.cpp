@@ -107,18 +107,15 @@ void ErrorSparseTask::run(const Configuration& config) {
       uint64_t total_num_samples = 0;
       uint64_t total_num_features = 0;
       uint64_t start_index = 0;
-      std::cout << "testing error task" << std::endl;
+
       for (auto& ds : minibatches_vec) {
-	std::cout << "[Srinath] testing loop" << std::endl;
         std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
-        std::cout <<"testing" << std::endl;
 	total_loss += ret.first;
         total_accuracy += ret.second;
         total_num_samples += ds.num_samples();
         total_num_features += ds.num_features();
         start_index += config.get_minibatch_size();
       }
-      std::cout << "testing error task 2?" << std::endl;
       if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
         std::cout
           << "[ERROR_TASK] Loss (Total/Avg): " << total_loss
