@@ -107,11 +107,8 @@ void ErrorSparseTask::run(const Configuration& config) {
       uint64_t total_num_samples = 0;
       uint64_t total_num_features = 0;
       uint64_t start_index = 0;
-      //std::cout << "testing error task" << std::endl;
       for (auto& ds : minibatches_vec) {
-	//std::cout << "[Srinath] testing loop" << std::endl;
-        //std::cout <<"testing" << std::endl;
-	std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
+        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
 	total_loss += ret.first;
         total_accuracy += ret.second;
         total_num_samples += ds.num_samples();
