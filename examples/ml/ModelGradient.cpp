@@ -496,21 +496,23 @@ std::vector<std::shared_ptr<MFSparseGradient>> MFSparseGradient::gradient_shards
 
   for (const auto &weight : users_bias_grad) {
     int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
-    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
+    //std::unordered_map<int, FEATURE_TYPE> new_pair = std::unordered_map<int, FEATURE_TYPE>(
+    users_bias_grad_shards[server_index].insert(std::make_pair(
             (weight.first - server_index) / num_shards, // map the index down for the ps
-            weight.second);
-    users_bias_grad_shards[server_index].push_back(new_pair);
+            weight.second));
+    //users_bias_grad_shards[server_index].push_back(new_pair);
   }
 
   for (const auto &weight : items_bias_grad) {
     int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
-    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
-            (weight.first - server_index) / num_shards, // map the index down for the ps
-            weight.second);
-    itemitems_bias_grad_shards_shards[server_index].push_back(new_pair);
+    //std::unordered_map<int, FEATURE_TYPE> new_pair = std::unordered_map<int, FEATURE_TYPE>(
+    items_bias_grad_shards[server_index].insert(
+           std::make_pair((weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second));
+    //items_bias_grad_shards[server_index].push_back(new_pair);
   }
   for (int i = 0; i < num_shards; i++) {
-    auto gradient = std::make_shared<MFSparseGradient>(std::move(user_weights_grad_shards), std::move(item_weights_grad_shards), std::move(users_bias_grad_shards), std::move(items_bias_grad_shards));
+    auto gradient = std::make_shared<MFSparseGradient>(std::move(users_bias_grad_shards[i]), std::move(items_bias_grad_shards[i]), std::move(user_weights_grad_shards[i]), std::move(item_weights_grad_shards[i]));
     servers.push_back(std::move(gradient));
   }
   return std::move(servers);

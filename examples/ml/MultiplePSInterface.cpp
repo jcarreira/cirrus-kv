@@ -78,7 +78,8 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
 //XXX: Adapt this code!!
 SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, const Configuration& config) {
   // Initialize variables
-  SparseMFModel model(0);
+  int nfactors = 10;
+  SparseMFModel model(nusers, nitems, nfactors);
   //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // we don't know the number of weights to start with
   char** msg_lst = new char*[this->num_servers];
@@ -106,7 +107,7 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 
   // we get the model subset with just the right amount of weights
   for (int i = 0; i < config.get_num_ps(); i++) {
-    psint[i]->get_lr_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_weights_lst[i], i);
+    psint[i]->get_mf_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_weights_lst[i], i);
   }
 
   for (int i = 0; i < this->num_servers; i++) {
@@ -123,7 +124,7 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   if (isCollaborative) {
     std::unique_ptr<CirrusModel> model = std::make_unique<SparseMFModel>(0);
-    for (int i = 0; i < num_server; i++) {
+    for (int i = 0; i < num_servers; i++) {
       model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model), nusers, nitems);
     }
     return model;
