@@ -166,6 +166,8 @@ class MFSparseGradient : public ModelGradient {
       std::cout << items_bias_grad.size() << " / " << items_weights_grad.size() << std::endl;
     }
     void check_values() const override;
+    std::vector<std::shared_ptr<MFSparseGradient>> gradient_shards(int num_shards) const;
+
  public:
     void check() {
       assert(users_bias_grad.size() == users_weights_grad.size());

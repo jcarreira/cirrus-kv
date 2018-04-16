@@ -277,8 +277,7 @@ MFGradient::MFGradient(uint64_t nclasses, uint64_t d) {
   }
 }
 
-MFGradient::MFGradient(const std::vector<std::vector<FEATURE_TYPE>>& w) {
-  weights = w;
+MFGradient::MFGradient(const std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& users_data, const std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& items_data) : users_ {
 }
 
 void MFGradient::serialize(void* mem) const {
@@ -449,5 +448,32 @@ void MFSparseGradient::check_values() const {
       throw std::runtime_error("Wrong id");
     }
   }
+}
+std::vector<std::shared_ptr<MFSparseGradient>> MFSparseGradient::gradient_shards(int num_shards) const {
+  std::vector<std::shared_ptr<MFSparseGradient>> servers;
+  servers.reserve(num_shards);
+  std::vector<std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>> user_shards;
+  std::vector<std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>> item_shards;
+  model.resize(num_shards);
+  for (const auto &weight : users_weights_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
+    user_shards[server_index].push_back(new_pair);
+  }
+  for (const auto &weight : items_weights_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
+    item_shards[server_index].push_back(new_pair);
+  }
+  for (int i = 0; i < num_shards; i++) {
+
+    auto gradient = std::make_shared<MFSparseGradient>(std::move(model[i]));
+    servers.push_back(std::move(gradient));
+  }
+  return std::move(servers);
 }
 

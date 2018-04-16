@@ -5,8 +5,8 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterface.h"
 #include "SparseMFModel.h"
+#include "MultiplePSInterface.h"
 
 #include <pthread.h>
 
@@ -73,7 +73,8 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
+  //psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
+  psint = new MultiplePSInterface(config);
 
   mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
   

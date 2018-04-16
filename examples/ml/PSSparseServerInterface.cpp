@@ -223,7 +223,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
     std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(
         (FEATURE_TYPE*)buffer, nusers, nitems, nfactors); //XXX fix this
     delete[] buffer;
-    //return model;
+    return model;
   } else {
     // 1. Send operation
     uint32_t operation = GET_LR_FULL_MODEL;

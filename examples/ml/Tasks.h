@@ -402,7 +402,7 @@ class MFNetflixTask : public MLTask {
         auto& samples, auto& labels);
 
     std::unique_ptr<MFModelGet> mf_model_get;
-    std::unique_ptr<PSSparseServerInterface> psint;
+    MultiplePSInterface* psint;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_
