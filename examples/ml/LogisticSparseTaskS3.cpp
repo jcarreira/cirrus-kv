@@ -17,7 +17,6 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
   std::cout << "Publishing gradients" << std::endl;
 #endif
   psint->send_gradient(lrg);
-  //psint->send_lr_gradient(*lrg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -76,10 +75,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
   this->config = config;
 
 
-  // Any good reason why we need 2 of these? they just seem to be wrappers of the same thing.
-  //psint = new PSSparseServerInterface(PS_IP, 1337, NUM_PS);
   psint = new MultiplePSInterface(config);
-  //sparse_model_get = std::make_unique<SparseModelGet>(PS_IP, PS_PORT);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
