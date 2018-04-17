@@ -73,11 +73,8 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  //psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
   psint = std::make_unique<MultiplePSInterface>(config);
-
-  //mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
-
+  
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers, config);
