@@ -113,7 +113,8 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 
   // we get the model subset with just the right amount of weights
   for (int i = 0; i < config.get_num_ps(); i++) {
-    store_value<uint32_t>(msg_begin_lst[i], num_items_lst[i]);
+    msg_lst[i] = msg_begin_lst[i];
+    store_value<uint32_t>(msg_lst[i], num_items_lst[i]);
     // Here we split the users into their proper ranges
     psint[i]->get_mf_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_items_lst[i], i, this->minibatch_fraction);
   }
@@ -131,7 +132,7 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   if (isCollaborative) {
 
-    std::unique_ptr<CirrusModel> model = std::make_unique<SparseMFModel>(0, 0, 0);
+    std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(0, 0, 0);
 
     for (int i = 0; i < num_servers; i++) {
       model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model));

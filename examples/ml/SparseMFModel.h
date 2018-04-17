@@ -40,8 +40,6 @@ class SparseMFModel : public CirrusModel {
     void loadSerialized(const void*) { throw std::runtime_error("Not implemented"); }
     void loadSerialized(const void*, int, int) {throw std::runtime_error("Not implemented");}
     void loadSerialized(const void* mem, uint64_t, uint64_t);
-    // Loads by server
-    void loadSerialized(const void* data, int server_index, int num_ps);
 
 
     void loadSerializedSharded(

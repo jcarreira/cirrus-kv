@@ -151,13 +151,12 @@ void SparseMFModel::loadSerializedSharded(
   // data has minibatch_size vectors of size NUM_FACTORS (user weights)
   // followed by the same (item weights)
   nfactors_ = NUM_FACTORS;
-  int user_id_offset = server_index * server_index;
   for (uint64_t i = 0; i < minibatch_size; ++i) {
     std::tuple<int, FEATURE_TYPE,
       std::vector<FEATURE_TYPE>> user_model;
-    uint32_t user_id = load_value<uint32_t>(data);
+    uint32_t user_id = (load_value<uint32_t>(data) * num_servers) + server_index;
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
-    std::get<0>(user_model) = user_id + user_id_offset;
+    std::get<0>(user_model) = user_id;
     std::get<1>(user_model) = user_bias;
     for (uint64_t j = 0; j < NUM_FACTORS; ++j) {
       FEATURE_TYPE user_weight = load_value<FEATURE_TYPE>(data);
@@ -352,6 +351,8 @@ FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) 
   }
 #endif
   assert(item_models.find(itemId) != item_models.end());
+  if (!(factor < item_models[itemId].second.size()))
+      std::cout << "ERROR " << factor << " " << item_models[itemId].second.size() << std::endl;
   assert(factor < item_models[itemId].second.size());
   return item_models[itemId].second[factor];
 }

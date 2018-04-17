@@ -162,10 +162,10 @@ void MFModel::loadSerialized(const void* data) {
   }
 }
 
-void loadSerialized(const void* data, int server_index, int num_ps) {
+void MFModel::loadSerialized(const void* data, int server_index, int num_ps) {
   // Read number of samples, number of factors
-  nusers_ = load_value<uint64_t>(data);
-  nitems_ = load_value<uint64_t>(data);
+  nusers_ = load_value<uint64_t>(data) * num_ps;
+  nitems_ = load_value<uint64_t>(data) * num_ps;
   nfactors_ = load_value<uint64_t>(data);
 
 #ifdef DEBUG
@@ -176,10 +176,10 @@ void loadSerialized(const void* data, int server_index, int num_ps) {
     << std::endl;
 #endif
 
-  user_weights_.reserve(nusers_ * nfactors_  * num_ps);
-  item_weights_.reserve(nitems_ * nfactors_  * num_ps);
-  user_bias_.reserve(nusers_ * num_ps);
-  item_bias_.reserve(nitems_ * num_ps);
+  user_weights_.resize(nusers_ * nfactors_);
+  item_weights_.resize(nitems_ * nfactors_);
+  user_bias_.resize(nusers_);
+  item_bias_.resize(nitems_);
 
   // read user bias
   for (uint32_t i = 0; i < nusers_; ++i) {

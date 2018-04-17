@@ -386,6 +386,10 @@ void PSSparseServerInterface::get_mf_sparse_model_inplace_sharded(
   std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
 
   char* buffer = new char[to_receive_size];
+  if (read_all(sock, buffer, to_receive_size) == 0) {
+    throw std::runtime_error("");
+  }
+  
   model.loadSerializedSharded(buffer, minibatch_size, num_items, server_index, config.get_num_ps());
 }
 
