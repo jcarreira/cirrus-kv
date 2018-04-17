@@ -407,7 +407,7 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
 void PSSparseServerTask::start_server() {
   lr_model.reset(new SparseLRModel(MODEL_GRAD_SIZE));
   lr_model->randomize();
-  mf_model.reset(new MFModel(task_config.get_users(), task_config.get_items(), NUM_FACTORS));
+  mf_model.reset(new MFModel(task_config.get_users() / task_config.get_num_ps(), task_config.get_items() / task_config.get_num_ps(), NUM_FACTORS));
   mf_model->randomize();
 
   sem_init(&sem_new_req, 0, 0);

@@ -164,10 +164,11 @@ void MFModel::loadSerialized(const void* data) {
 
 void MFModel::loadSerialized(const void* data, int server_index, int num_ps) {
   // Read number of samples, number of factors
-  nusers_ = load_value<uint64_t>(data) * num_ps;
-  nitems_ = load_value<uint64_t>(data) * num_ps;
-  nfactors_ = load_value<uint64_t>(data);
-
+  
+  uint64_t batch_nusers_ = load_value<uint64_t>(data);
+  uint64_t batch_nitems_ = load_value<uint64_t>(data);
+  uint64_t batch_nfactors_ = load_value<uint64_t>(data);
+    
 #ifdef DEBUG
   std::cout << "loadSerialized"
     << " nusers: " << nusers_
@@ -176,31 +177,26 @@ void MFModel::loadSerialized(const void* data, int server_index, int num_ps) {
     << std::endl;
 #endif
 
-  user_weights_.resize(nusers_ * nfactors_);
-  item_weights_.resize(nitems_ * nfactors_);
-  user_bias_.resize(nusers_);
-  item_bias_.resize(nitems_);
-
   // read user bias
-  for (uint32_t i = 0; i < nusers_; ++i) {
+  for (uint32_t i = 0; i < batch_nusers_; ++i) {
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
     user_bias_[num_ps * i + server_index] = user_bias;
   }
 
   // read item bias
-  for (uint32_t i = 0; i < nitems_; ++i) {
+  for (uint32_t i = 0; i < batch_nitems_; ++i) {
     FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
     item_bias_[num_ps * i + server_index] = item_bias;
   }
   // read user weights
-  for (uint32_t i = 0; i < nusers_; ++i) {
+  for (uint32_t i = 0; i < batch_nusers_; ++i) {
     for (uint32_t j = 0; j < nfactors_; ++j) {
       FEATURE_TYPE user_weight = load_value<FEATURE_TYPE>(data);
       get_user_weights(num_ps * i + server_index, j) = user_weight;
     }
   }
   // read item weights
-  for (uint32_t i = 0; i < nitems_; ++i) {
+  for (uint32_t i = 0; i < batch_nitems_; ++i) {
     for (uint32_t j = 0; j < nfactors_; ++j) {
       FEATURE_TYPE item_weight = load_value<FEATURE_TYPE>(data);
       get_item_weights(num_ps * i + server_index, j) = item_weight;

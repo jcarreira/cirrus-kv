@@ -11,6 +11,10 @@
 MultiplePSInterface::MultiplePSInterface(const Configuration& config) {
   this->num_servers = config.get_num_ps();
   this->minibatch_fraction = config.get_minibatch_size() / this->num_servers;
+
+  this->nusers = config.get_users();
+  this->nitems = config.get_items();
+
   for (int i = 0; i < this->num_servers; i++) {
     psint.push_back(std::make_shared<PSSparseServerInterface>(config.get_ps_ip(i), config.get_ps_port(i)));
   }
@@ -78,8 +82,8 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
 //XXX: Adapt this code!!
 SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, const Configuration& config, uint64_t user_base) {
   // Initialize variables
-  int nfactors = 10;
-  SparseMFModel model((uint64_t) 0, 0, 0);
+  int nfactors = NUM_FACTORS;
+  SparseMFModel model((uint64_t) 0, 0, nfactors);
   //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // we don't know the number of weights to start with
 
@@ -132,7 +136,7 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   if (isCollaborative) {
 
-    std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(0, 0, 0);
+    std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(nusers, nitems, NUM_FACTORS);
 
     for (int i = 0; i < num_servers; i++) {
       model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model));

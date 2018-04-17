@@ -20,7 +20,8 @@ class MultiplePSInterface {
   std::vector<std::shared_ptr<PSSparseServerInterface>> psint;
   int num_servers;
   int minibatch_size = 20;
-
+  int nusers;
+  int nitems;
   int minibatch_fraction;
 };
 

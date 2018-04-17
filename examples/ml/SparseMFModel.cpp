@@ -27,6 +27,7 @@ void SparseMFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t 
   nitems_ = items;
   nfactors_ = nfactors;
 
+
   randomize();
 }
 
