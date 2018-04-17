@@ -130,18 +130,18 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   if (isCollaborative) {
-    
+
     std::unique_ptr<CirrusModel> model = std::make_unique<SparseMFModel>(0, 0, 0);
-    /*
+
     for (int i = 0; i < num_servers; i++) {
-      model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model), nusers, nitems);
+      model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model));
     }
-    */
+
     return model;
   } else {
     std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
     for (int i = 0; i < num_servers; i++) {
-      model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model), 0, 0); //XXX: fix this - Andy
+      model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model)); //XXX: fix this - Andy
     }
     return model;
   }

@@ -12,7 +12,7 @@
 // FORMAT
 // Number of users (32bits)
 // Number of factors (32bits)
-// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3 
+// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3
 // Sample2 : ...
 // ....
 
@@ -70,7 +70,7 @@ std::pair<std::unique_ptr<char[]>, uint64_t>
 MFModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
     uint64_t size = getSerializedSize();
-    
+
     res.first.reset(new char[size]);
     res.second = size;
 
@@ -121,7 +121,7 @@ void MFModel::loadSerialized(const void* data) {
   nusers_ = load_value<uint64_t>(data);
   nitems_ = load_value<uint64_t>(data);
   nfactors_ = load_value<uint64_t>(data);
-  
+
 #ifdef DEBUG
   std::cout << "loadSerialized"
     << " nusers: " << nusers_
@@ -134,13 +134,13 @@ void MFModel::loadSerialized(const void* data) {
   item_weights_.resize(nitems_ * nfactors_);
   user_bias_.resize(nusers_);
   item_bias_.resize(nitems_);
-  
+
   // read user bias
   for (uint32_t i = 0; i < nusers_; ++i) {
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
     user_bias_[i] = user_bias;
   }
-  
+
   // read item bias
   for (uint32_t i = 0; i < nitems_; ++i) {
     FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
@@ -161,6 +161,55 @@ void MFModel::loadSerialized(const void* data) {
     }
   }
 }
+
+void loadSerialized(const void* data, int server_index, int num_ps) {
+  // Read number of samples, number of factors
+  nusers_ = load_value<uint64_t>(data);
+  nitems_ = load_value<uint64_t>(data);
+  nfactors_ = load_value<uint64_t>(data);
+
+#ifdef DEBUG
+  std::cout << "loadSerialized"
+    << " nusers: " << nusers_
+    << " nitems_: " << nitems_
+    << " nfactors_: " << nfactors_
+    << std::endl;
+#endif
+
+  user_weights_.reserve(nusers_ * nfactors_  * num_ps);
+  item_weights_.reserve(nitems_ * nfactors_  * num_ps);
+  user_bias_.reserve(nusers_ * num_ps);
+  item_bias_.reserve(nitems_ * num_ps);
+
+  // read user bias
+  for (uint32_t i = 0; i < nusers_; ++i) {
+    FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
+    user_bias_[num_ps * i + server_index] = user_bias;
+  }
+
+  // read item bias
+  for (uint32_t i = 0; i < nitems_; ++i) {
+    FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
+    item_bias_[num_ps * i + server_index] = item_bias;
+  }
+  // read user weights
+  for (uint32_t i = 0; i < nusers_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE user_weight = load_value<FEATURE_TYPE>(data);
+      get_user_weights(num_ps * i + server_index, j) = user_weight;
+    }
+  }
+  // read item weights
+  for (uint32_t i = 0; i < nitems_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE item_weight = load_value<FEATURE_TYPE>(data);
+      get_item_weights(num_ps * i + server_index, j) = item_weight;
+    }
+  }
+
+
+}
+
 
 /**
   * We probably want to put 0 in the values we don't know
@@ -225,12 +274,12 @@ FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
 #else
   FEATURE_TYPE res = global_bias_ + user_bias_[userId] + item_bias_[itemId];
 #endif
-  
+
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
 #ifdef DEBUG
     if (std::isnan(res) || std::isinf(res)) {
-      std::cout << "userId: " << userId << " itemId: " << itemId 
+      std::cout << "userId: " << userId << " itemId: " << itemId
         << " get_user_weights(userId, i): " << get_user_weights(userId, i)
         << " get_item_weights(itemId, i): " << get_item_weights(itemId, i)
         << std::endl;
@@ -292,7 +341,7 @@ void MFModel::sgd_update(
       FEATURE_TYPE error = rating - pred;
 
 #ifdef DEBUG
-      std::cout 
+      std::cout
         << "user: " << user
         << "itemId: " << itemId
         << "rating: " << rating
@@ -321,7 +370,7 @@ void MFModel::sgd_update(
 
       // update user latent factors
       for (uint64_t k = 0; k < nfactors_; ++k) {
-        FEATURE_TYPE delta_user_w = 
+        FEATURE_TYPE delta_user_w =
           learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
         //std::cout << "delta_user_w: " << delta_user_w << std::endl;
         get_user_weights(user, k) += delta_user_w;

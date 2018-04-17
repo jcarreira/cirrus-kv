@@ -195,7 +195,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
 std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
     bool isCollaborative, //XXX use a better argument here
     int server_index, int num_ps,
-    std::unique_ptr<CirrusModel> model, int nusers, int nitems
+    std::unique_ptr<CirrusModel> model
     ) {
 #ifdef DEBUG
   std::cout << "Getting full model isCollaborative: " << isCollaborative << std::endl;
@@ -219,9 +219,7 @@ std::unique_ptr<CirrusModel> PSSparseServerInterface::get_full_model(
       << std::endl;
 
     // build a sparse model and return
-    int nfactors = 10; //hardcoded
-    std::unique_ptr<CirrusModel> model = std::make_unique<MFModel>(
-        (FEATURE_TYPE*)buffer, nusers, nitems, nfactors); //XXX fix this
+    model->loadSerialized((FEATURE_TYPE*) buffer, server_index, num_ps);
     delete[] buffer;
     return model;
   } else {
