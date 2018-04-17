@@ -3,14 +3,15 @@
 #include "config.h"
 #include "PSSparseServerInterface.h"
 
-void MLTask::wait_for_start(int index, int nworkers) {
+void MLTask::wait_for_start(int index, int nworkers, const Configuration& config) {
   return;
   std::cout << "Waiting for all workers to start (redis). index: " << index
     << std::endl;
   std::cout << "Setting start flag. id: " << START_BASE + index
     << std::endl;
 
-  PSSparseServerInterface psi(PS_IP, PS_PORT);
+  // Move this code into the Wrapper?
+  PSSparseServerInterface psi(config.get_ps_ip(0), config.get_ps_port(0));
 
   psi.set_status(index, 1);
 

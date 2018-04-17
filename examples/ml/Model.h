@@ -47,7 +47,11 @@ class CirrusModel {
      * Loads the weights from a serialized model
      * @param mem Pointer to memory where the model is serialized
      */
+
     virtual void loadSerialized(const void* mem) = 0;
+
+    virtual void loadSerialized(const void* data, int server_index, int num_servers) = 0;
+    
 
     /**
      * Randomly initialize the model

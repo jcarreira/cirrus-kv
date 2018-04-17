@@ -12,7 +12,7 @@
 // FORMAT
 // Number of users (32bits)
 // Number of factors (32bits)
-// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3 
+// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3
 // Sample2 : ...
 // ....
 
@@ -47,7 +47,7 @@ MFModel::MFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
 }
 
 MFModel::MFModel(
-    const void* data, uint64_t /*nusers*/, uint64_t /*nitems*/, uint64_t /*nfactors*/) {
+    const void* data, uint64_t nusers, uint64_t nitems, uint64_t nfactors) {
   loadSerialized(data);
 }
 
@@ -70,7 +70,7 @@ std::pair<std::unique_ptr<char[]>, uint64_t>
 MFModel::serialize() const {
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
     uint64_t size = getSerializedSize();
-    
+
     res.first.reset(new char[size]);
     res.second = size;
 
@@ -121,7 +121,7 @@ void MFModel::loadSerialized(const void* data) {
   nusers_ = load_value<uint64_t>(data);
   nitems_ = load_value<uint64_t>(data);
   nfactors_ = load_value<uint64_t>(data);
-  
+
 #ifdef DEBUG
   std::cout << "loadSerialized"
     << " nusers: " << nusers_
@@ -140,6 +140,7 @@ void MFModel::loadSerialized(const void* data) {
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
     user_bias_[i] = user_bias;
   }
+
   // read item bias
   for (uint32_t i = 0; i < nitems_; ++i) {
     FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
@@ -160,6 +161,51 @@ void MFModel::loadSerialized(const void* data) {
     }
   }
 }
+
+void MFModel::loadSerialized(const void* data, int server_index, int num_ps) {
+  // Read number of samples, number of factors
+  
+  uint64_t batch_nusers_ = load_value<uint64_t>(data);
+  uint64_t batch_nitems_ = load_value<uint64_t>(data);
+  uint64_t batch_nfactors_ = load_value<uint64_t>(data);
+    
+#ifdef DEBUG
+  std::cout << "loadSerialized"
+    << " nusers: " << nusers_
+    << " nitems_: " << nitems_
+    << " nfactors_: " << nfactors_
+    << std::endl;
+#endif
+
+  // read user bias
+  for (uint32_t i = 0; i < batch_nusers_; ++i) {
+    FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(data);
+    user_bias_[num_ps * i + server_index] = user_bias;
+  }
+
+  // read item bias
+  for (uint32_t i = 0; i < batch_nitems_; ++i) {
+    FEATURE_TYPE item_bias = load_value<FEATURE_TYPE>(data);
+    item_bias_[num_ps * i + server_index] = item_bias;
+  }
+  // read user weights
+  for (uint32_t i = 0; i < batch_nusers_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE user_weight = load_value<FEATURE_TYPE>(data);
+      get_user_weights(num_ps * i + server_index, j) = user_weight;
+    }
+  }
+  // read item weights
+  for (uint32_t i = 0; i < batch_nitems_; ++i) {
+    for (uint32_t j = 0; j < nfactors_; ++j) {
+      FEATURE_TYPE item_weight = load_value<FEATURE_TYPE>(data);
+      get_item_weights(num_ps * i + server_index, j) = item_weight;
+    }
+  }
+
+
+}
+
 
 /**
   * We probably want to put 0 in the values we don't know
@@ -224,12 +270,12 @@ FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
 #else
   FEATURE_TYPE res = global_bias_ + user_bias_[userId] + item_bias_[itemId];
 #endif
-  
+
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
 #ifdef DEBUG
     if (std::isnan(res) || std::isinf(res)) {
-      std::cout << "userId: " << userId << " itemId: " << itemId 
+      std::cout << "userId: " << userId << " itemId: " << itemId
         << " get_user_weights(userId, i): " << get_user_weights(userId, i)
         << " get_item_weights(itemId, i): " << get_item_weights(itemId, i)
         << std::endl;
@@ -291,7 +337,7 @@ void MFModel::sgd_update(
       FEATURE_TYPE error = rating - pred;
 
 #ifdef DEBUG
-      std::cout 
+      std::cout
         << "user: " << user
         << "itemId: " << itemId
         << "rating: " << rating
@@ -320,7 +366,7 @@ void MFModel::sgd_update(
 
       // update user latent factors
       for (uint64_t k = 0; k < nfactors_; ++k) {
-        FEATURE_TYPE delta_user_w = 
+        FEATURE_TYPE delta_user_w =
           learning_rate * (error * get_item_weights(itemId, k) - user_fact_reg_ * get_user_weights(user, k));
         //std::cout << "delta_user_w: " << delta_user_w << std::endl;
         get_user_weights(user, k) += delta_user_w;
@@ -365,9 +411,8 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //    << "calc_loss() starting"
 //    << std::endl;
 //#endif
-
   for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
-    uint64_t off_userId = userId + start_index;
+     uint64_t off_userId = userId + start_index;
 //#ifdef DEBUG
 //      std::cout
 //        << "off_userId: " << off_userId

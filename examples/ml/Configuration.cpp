@@ -185,6 +185,26 @@ void Configuration::parse_line(const std::string& line) {
       use_grad_threshold = string_to<bool>(b);
     } else if (s == "grad_threshold:") {
       iss >> grad_threshold;
+    } else if (s == "num_ps:") {
+      iss >> num_ps;
+      if (num_ps <= 0) {
+        throw std::runtime_error("Number of PS needs to be positive");
+      }
+    } else if (s == "ps_ips:") {
+      std::string ip;
+      ips.clear();      
+      while (iss >> ip) {
+        ips.push_back(ip);
+      }
+      return;
+    } else if (s == "ps_ports:") {
+      int port;
+      ports.clear();
+      while (iss >> port) {
+        ports.push_back(port);
+      }
+      return;
+    
     } else {
         throw std::runtime_error("Unrecognized option: " + line);
     }
@@ -334,6 +354,23 @@ double Configuration::get_grad_threshold() const {
 
 uint64_t Configuration::get_model_bits() const {
   return model_bits;
+}
+
+
+/**
+ * Multipe PS methods
+ */
+
+int Configuration::get_num_ps() const {
+  return num_ps;
+}
+
+std::string Configuration::get_ps_ip(int server_index) const {
+  return ips.at(server_index);
+}
+
+int Configuration::get_ps_port(int server_index) const {
+  return ports.at(server_index);
 }
 
 bool Configuration::get_use_adagrad() const {

@@ -1,6 +1,7 @@
 #ifndef EXAMPLES_ML_MODELGRADIENT_H_
 #define EXAMPLES_ML_MODELGRADIENT_H_
 
+#include <memory>
 #include <cstdint>
 #include <cassert>
 #include <vector>
@@ -104,6 +105,7 @@ class LRSparseGradient : public ModelGradient {
 
     void print() const override;
     void check_values() const override;
+    std::vector<std::shared_ptr<LRSparseGradient>> gradient_shards(int num_shards) const;
  protected:
     std::vector<std::pair<int, FEATURE_TYPE>> weights;  //< weights
 };
@@ -155,6 +157,11 @@ class MFSparseGradient : public ModelGradient {
     MFSparseGradient();
     virtual ~MFSparseGradient() = default;
 
+    MFSparseGradient(std::unordered_map<int, FEATURE_TYPE>&& users_bias_grad,
+                                       std::unordered_map<int, FEATURE_TYPE>&& items_bias_grad,
+                                       std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& users_weights_grad,
+                                       std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& items_weights_grad);
+
     void loadSerialized(const void*);
     void serialize(void*) const override;
     uint64_t getSerializedSize() const override;
@@ -164,6 +171,8 @@ class MFSparseGradient : public ModelGradient {
       std::cout << items_bias_grad.size() << " / " << items_weights_grad.size() << std::endl;
     }
     void check_values() const override;
+    std::vector<std::shared_ptr<MFSparseGradient>> gradient_shards(int num_shards) const;
+
  public:
     void check() {
       assert(users_bias_grad.size() == users_weights_grad.size());

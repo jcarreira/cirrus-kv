@@ -22,7 +22,7 @@ class SparseMFModel : public CirrusModel {
     /**
       * MFModel constructor from serialized data
       * @param w Serialized data
-      * @param minibatch_size 
+      * @param minibatch_size
       * @param num_items
       */
     SparseMFModel(const void* w, uint64_t minibatch_size, uint64_t num_items);
@@ -38,8 +38,13 @@ class SparseMFModel : public CirrusModel {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void*) { throw std::runtime_error("Not implemented"); }
+    void loadSerialized(const void*, int, int) {throw std::runtime_error("Not implemented");}
     void loadSerialized(const void* mem, uint64_t, uint64_t);
 
+
+    void loadSerializedSharded(
+            const void* data, uint64_t minibatch_size,
+            uint64_t num_items_ids, int server_index, int num_servers);
     /**
       * serializes this model into memory
       * @return pair of memory pointer and size of serialized model
@@ -98,7 +103,7 @@ class SparseMFModel : public CirrusModel {
         const Configuration&,
         uint64_t);
 
-     
+
     //void sgd_update(double learning_rate,
     //            uint64_t base_user,
     //            const SparseDataset&);
@@ -147,7 +152,7 @@ class SparseMFModel : public CirrusModel {
     std::vector<
       std::tuple<int, FEATURE_TYPE,
         std::vector<FEATURE_TYPE>>> user_models;
-    
+
     // for each item we have in order:
     // 1. item id
     // 2. item_bias

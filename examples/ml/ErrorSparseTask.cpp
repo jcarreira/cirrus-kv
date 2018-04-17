@@ -8,17 +8,19 @@
 #include "async.h"
 #include "SparseLRModel.h"
 #include "PSSparseServerInterface.h"
+#include "MultiplePSInterface.h"
 #include "Configuration.h"
+
 
 #define DEBUG
 #define ERROR_INTERVAL_USEC (100000) // time between error checks
 
 std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
-  static PSSparseServerInterface* psi;
+  static MultiplePSInterface* psi;
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    psi = new PSSparseServerInterface(PS_IP, PS_PORT);
+    psi = new MultiplePSInterface(config);
   }
 
   bool use_col_filtering =
@@ -74,8 +76,8 @@ void ErrorSparseTask::run(const Configuration& config) {
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
-  
-  wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);
+
+  wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers, config);  
   uint64_t start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"
@@ -96,7 +98,7 @@ void ErrorSparseTask::run(const Configuration& config) {
 #endif
 
       int nb = 0;//mp.get_number_batches();
-      std::cout 
+      std::cout
         << "[ERROR_TASK] computing loss."
         << " number_batches: " << nb
         << std::endl;
@@ -107,13 +109,12 @@ void ErrorSparseTask::run(const Configuration& config) {
       uint64_t start_index = 0;
       for (auto& ds : minibatches_vec) {
         std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
-        total_loss += ret.first;
+	total_loss += ret.first;
         total_accuracy += ret.second;
         total_num_samples += ds.num_samples();
         total_num_features += ds.num_features();
         start_index += config.get_minibatch_size();
       }
-
       if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
         std::cout
           << "[ERROR_TASK] Loss (Total/Avg): " << total_loss
@@ -136,4 +137,3 @@ void ErrorSparseTask::run(const Configuration& config) {
     }
   }
 }
-

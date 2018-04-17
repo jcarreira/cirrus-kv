@@ -1,4 +1,5 @@
 #include <examples/ml/ModelGradient.h>
+#include <memory>
 #include <iostream>
 #include <algorithm>
 #include <Utils.h>
@@ -171,9 +172,32 @@ void LRSparseGradient::check_values() const {
   }
 }
 
+// Takes the LRSparseGradient method was called on and returns a vector
+// of LRSparseGradients. The indices are separated, then mapped down
+// for each parameter server
+
+std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards(int num_shards) const {
+  std::vector<std::shared_ptr<LRSparseGradient>> servers;
+  servers.reserve(num_shards);
+  std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
+  model.resize(num_shards);
+  for (const auto &weight : weights) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
+    model[server_index].push_back(new_pair);
+  }
+  for (int i = 0; i < num_shards; i++) {
+
+    auto gradient = std::make_shared<LRSparseGradient>(std::move(model[i]));
+    servers.push_back(std::move(gradient));
+  }
+  return std::move(servers);
+}
 
 
-/** 
+/**
  * SOFTMAX
  *
  */
@@ -241,7 +265,7 @@ void SoftmaxGradient::check_values() const {
   }
 }
 
-/** 
+/**
  * MFGradient
  *
  */
@@ -251,10 +275,6 @@ MFGradient::MFGradient(uint64_t nclasses, uint64_t d) {
   for (auto& v : weights) {
     v.resize(nclasses);
   }
-}
-
-MFGradient::MFGradient(const std::vector<std::vector<FEATURE_TYPE>>& w) {
-  weights = w;
 }
 
 void MFGradient::serialize(void* mem) const {
@@ -317,6 +337,14 @@ MFSparseGradient::MFSparseGradient() {
   //items_weights_grad.resize(nitems);
 }
 
+MFSparseGradient::MFSparseGradient(std::unordered_map<int, FEATURE_TYPE>&& users_bias_grad,
+                                   std::unordered_map<int, FEATURE_TYPE>&& items_bias_grad,
+                                   std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& users_weights_grad,
+                                   std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& items_weights_grad) :
+                                   users_bias_grad(users_bias_grad), items_bias_grad(items_bias_grad),
+                                   users_weights_grad(users_weights_grad), items_weights_grad(items_weights_grad) {
+}
+
 /** FORMAT of the Matrix Factorization sparse gradient
  * number of users (uint32_t)
  * number of items (uint32_t)
@@ -377,7 +405,7 @@ void MFSparseGradient::loadSerialized(const void* mem) {
   uint32_t items_size = load_value<uint32_t>(mem);
   //users_bias_grad.reserve(users_size);
   //items_bias_grad.reserve(items_size);
-  
+
   for (uint32_t i = 0; i < users_size; ++i) {
     int user_id = load_value<int>(mem);
     FEATURE_TYPE user_bias = load_value<FEATURE_TYPE>(mem);
@@ -398,7 +426,7 @@ void MFSparseGradient::loadSerialized(const void* mem) {
     }
     users_weights_grad.push_back(user_weights_grad);
   }
-  
+
   for (uint32_t i = 0; i < items_size; ++i) {
     std::pair<int, std::vector<FEATURE_TYPE>> item_weights_grad;
     item_weights_grad.first = load_value<int>(mem);
@@ -427,3 +455,64 @@ void MFSparseGradient::check_values() const {
   }
 }
 
+// [D * K]
+std::unordered_map<int, FEATURE_TYPE> users_bias_grad;
+std::unordered_map<int, FEATURE_TYPE> items_bias_grad;
+//std::vector<FEATURE_TYPE> items_bias_grad;
+
+
+std::vector<std::shared_ptr<MFSparseGradient>> MFSparseGradient::gradient_shards(int num_shards) const {
+  std::vector<std::shared_ptr<MFSparseGradient>> servers;
+  servers.reserve(num_shards);
+
+  std::vector<std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>> user_weights_grad_shards;
+  std::vector<std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>> item_weights_grad_shards;
+
+  std::vector<std::unordered_map<int, FEATURE_TYPE>> users_bias_grad_shards;
+  std::vector<std::unordered_map<int, FEATURE_TYPE>> items_bias_grad_shards;
+
+  user_weights_grad_shards.resize(num_shards);
+  item_weights_grad_shards.resize(num_shards);
+
+  users_bias_grad_shards.resize(num_shards);
+  items_bias_grad_shards.resize(num_shards);
+
+  for (const auto &weight : users_weights_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
+    user_weights_grad_shards[server_index].push_back(new_pair);
+  }
+
+  for (const auto &weight : items_weights_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    std::pair<int, std::vector<FEATURE_TYPE>> new_pair = std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second);
+    item_weights_grad_shards[server_index].push_back(new_pair);
+  }
+
+  for (const auto &weight : users_bias_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    //std::unordered_map<int, FEATURE_TYPE> new_pair = std::unordered_map<int, FEATURE_TYPE>(
+    users_bias_grad_shards[server_index].insert(std::make_pair(
+            (weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second));
+    //users_bias_grad_shards[server_index].push_back(new_pair);
+  }
+
+  for (const auto &weight : items_bias_grad) {
+    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    //std::unordered_map<int, FEATURE_TYPE> new_pair = std::unordered_map<int, FEATURE_TYPE>(
+    items_bias_grad_shards[server_index].insert(
+           std::make_pair((weight.first - server_index) / num_shards, // map the index down for the ps
+            weight.second));
+    //items_bias_grad_shards[server_index].push_back(new_pair);
+  }
+  for (int i = 0; i < num_shards; i++) {
+    auto gradient = std::make_shared<MFSparseGradient>(std::move(users_bias_grad_shards[i]), std::move(items_bias_grad_shards[i]), std::move(user_weights_grad_shards[i]), std::move(item_weights_grad_shards[i]));
+    servers.push_back(std::move(gradient));
+  }
+  return std::move(servers);
+}

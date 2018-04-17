@@ -8,11 +8,6 @@
 
 // #define PRELOAD_DATA
 
-#ifdef USE_REDIS
-#define PS_IP "172.31.0.197"
-#define PS_PORT 1337
-#endif
-
 #define LOADING_TASK_RANK -100000
 #define PERFORMANCE_LAMBDA_RANK (-100000)
 
@@ -21,6 +16,12 @@
 #define PS_SPARSE_SERVER_TASK_RANK (1)
 #define LOADING_SPARSE_TASK_RANK (0)
 #define WORKERS_BASE 3 // used in wait_for_start
+
+
+
+// For Netflix's stuff
+# define PS_IP "127.0.0.1"
+# define PS_PORT 1337
 
 using FEATURE_TYPE = float;
 

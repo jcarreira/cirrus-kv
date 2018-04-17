@@ -5,8 +5,8 @@
 #include "Utils.h"
 #include "S3SparseIterator.h"
 #include "async.h"
-#include "PSSparseServerInterface.h"
 #include "SparseMFModel.h"
+#include "MultiplePSInterface.h"
 
 #include <pthread.h>
 
@@ -17,7 +17,7 @@ void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  psint->send_mf_gradient(mfg);
+  psint->send_mf_gradient(&mfg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
@@ -73,13 +73,11 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();
   this->config = config;
 
-  psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
-
-  mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
+  psint = std::make_unique<MultiplePSInterface>(config);
   
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
-  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers);
+  wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers, config);
 
   // Create iterator that goes from 0 to num_s3_batches
   auto train_range = config.get_train_range();
@@ -118,7 +116,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
     // we get the model subset with just the right amount of weights
     SparseMFModel model =
-      mf_model_get->get_new_model(*dataset, sample_index, config.get_minibatch_size());
+      psint->get_mf_sparse_model(*dataset, config, sample_index);
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -144,4 +142,3 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
     }
   }
 }
-

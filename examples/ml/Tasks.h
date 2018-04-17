@@ -11,6 +11,7 @@
 #include "SparseLRModel.h"
 #include "ProgressMonitor.h"
 #include "PSSparseServerInterface.h"
+#include "MultiplePSInterface.h"
 
 #include <string>
 #include <vector>
@@ -47,7 +48,7 @@ class MLTask {
      */
     void run(const Configuration& config, int worker);
 
-    void wait_for_start(int index, int nworkers);
+    void wait_for_start(int index, int nworkers, const Configuration& config);
     bool get_worker_status(auto r, int worker_id);
 
   protected:
@@ -115,9 +116,9 @@ class LogisticSparseTaskS3 : public MLTask {
         auto& samples, auto& labels);
 
     std::mutex redis_lock;
-  
+
     std::unique_ptr<SparseModelGet> sparse_model_get;
-    PSSparseServerInterface* psint;
+    MultiplePSInterface* psint;
 };
 
 class PSSparseTask : public MLTask {
@@ -140,7 +141,7 @@ class PSSparseTask : public MLTask {
 
     void update_gradient_version(
         auto& gradient, int worker, SparseLRModel& model, Configuration config);
-    
+
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
@@ -269,6 +270,13 @@ class PSSparseServerTask : public MLTask {
         uint64_t features_per_sample, uint64_t nworkers,
         uint64_t worker_id);
 
+    PSSparseServerTask(
+        uint64_t MODEL_GRAD_SIZE, uint64_t MODEL_BASE,
+        uint64_t LABEL_BASE, uint64_t GRADIENT_BASE,
+        uint64_t SAMPLE_BASE, uint64_t START_BASE,
+        uint64_t batch_size, uint64_t samples_per_batch,
+        uint64_t features_per_sample, uint64_t nworkers,
+        uint64_t worker_id, uint32_t ps_port);
     void run(const Configuration& config);
 
     struct Request {
@@ -335,7 +343,7 @@ class PSSparseServerTask : public MLTask {
 
     volatile uint64_t gradientUpdatesCount = 0;
     redisContext* redis_con;
-    
+
     std::unique_ptr<SparseLRModel> lr_model; // last computed model
     std::unique_ptr<MFModel> mf_model; // last computed model
     Configuration task_config;
@@ -366,25 +374,6 @@ class MFNetflixTask : public MLTask {
     void run(const Configuration& config, int worker);
 
   private:
-    class MFModelGet {
-      public:
-        MFModelGet(const std::string& ps_ip, int ps_port) :
-          ps_ip(ps_ip), ps_port(ps_port) {
-            psi = std::make_unique<PSSparseServerInterface>(ps_ip, ps_port);
-          }
-
-        SparseMFModel get_new_model(
-            const SparseDataset& ds, uint64_t user_base_index, uint64_t mb_size) {
-          return psi->get_sparse_mf_model(ds, user_base_index, mb_size);
-        }
-
-      private:
-        std::unique_ptr<PSSparseServerInterface> psi;
-        std::string ps_ip;
-        int ps_port;
-    };
-
-  private:
     bool get_dataset_minibatch(
         auto& dataset,
         auto& s3_iter);
@@ -393,8 +382,7 @@ class MFNetflixTask : public MLTask {
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 
-    std::unique_ptr<MFModelGet> mf_model_get;
-    std::unique_ptr<PSSparseServerInterface> psint;
+    std::unique_ptr<MultiplePSInterface> psint;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

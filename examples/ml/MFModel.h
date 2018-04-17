@@ -34,6 +34,7 @@ class MFModel : public CirrusModel {
      * @param mem Memory where model is serialized
      */
     void loadSerialized(const void* mem);
+    void loadSerialized(const void* data, int server_index, int num_ps);
 
     /**
       * serializes this model into memory
@@ -93,7 +94,7 @@ class MFModel : public CirrusModel {
         const SparseDataset& dataset,
         double epsilon) const;
 
-     
+
     void sgd_update(double learning_rate,
                 uint64_t base_user,
                 const SparseDataset&,
@@ -105,9 +106,9 @@ class MFModel : public CirrusModel {
      * @return Total loss of whole dataset
      */
     std::pair<double, double> calc_loss(Dataset& dataset) const;
-    
+
     std::pair<double, double> calc_loss(SparseDataset& dataset) const;
-    
+
     std::pair<double, double> calc_loss(SparseDataset& dataset, uint32_t start_index) const;
 
     /**
@@ -142,7 +143,7 @@ class MFModel : public CirrusModel {
 
  private:
     void initialize_data(uint64_t, uint64_t, uint64_t);
-    
+
     // predict rating that userId gives to itemId
     FEATURE_TYPE predict(uint32_t userId, uint32_t itemId) const;
 
