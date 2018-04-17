@@ -404,7 +404,7 @@ class MFNetflixTask : public MLTask {
     void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
         auto& samples, auto& labels);
 
-    std::unique_ptr<MFModelGet> mf_model_get;
+    //std::unique_ptr<MFModelGet> mf_model_get;
     std::unique_ptr<MultiplePSInterface> psint;
 };
 

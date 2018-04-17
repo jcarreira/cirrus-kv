@@ -42,6 +42,9 @@ class SparseMFModel : public CirrusModel {
 
     void loadSerialized(const void* mem, uint64_t, uint64_t);
 
+    void loadSerializedSharded(
+            const void* data, uint64_t minibatch_size, 
+            uint64_t num_items_ids, int server_index, int num_servers);
     /**
       * serializes this model into memory
       * @return pair of memory pointer and size of serialized model

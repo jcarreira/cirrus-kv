@@ -1,6 +1,7 @@
 #include <cassert>
 #include "PSSparseServerInterface.h"
 #include "MultiplePSInterface.h"
+#include "Constants.h"
 #include <memory>
 
 #undef DEBUG
@@ -75,10 +76,10 @@ SparseLRModel MultiplePSInterface::get_lr_sparse_model(const SparseDataset& ds, 
 }
 
 //XXX: Adapt this code!!
-SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, const Configuration& config, uint32_t user_base) {
+SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, const Configuration& config, uint64_t user_base) {
   // Initialize variables
   int nfactors = 10;
-  SparseMFModel model(nusers, nitems, nfactors);
+  SparseMFModel model((uint64_t) 0, 0, 0);
   //std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
   // we don't know the number of weights to start with
 
@@ -112,9 +113,9 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
 
   // we get the model subset with just the right amount of weights
   for (int i = 0; i < config.get_num_ps(); i++) {
-    store_value<uint32_t>(msg_begin_lst[i], num_items_lst[server_index]);
+    store_value<uint32_t>(msg_begin_lst[i], num_items_lst[i]);
     // Here we split the users into their proper ranges
-    psint[i]->get_mf_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_items_lst[i], i);
+    psint[i]->get_mf_sparse_model_inplace_sharded(model, config, msg_begin_lst[i], num_items_lst[i], i, this->minibatch_fraction);
   }
 
   // Cleanup our arrays
@@ -123,16 +124,19 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
   }
   delete[] msg_begin_lst;
   delete[] msg_lst;
-  delete[] num_weights_lst;
+  delete[] num_items_lst;
   return model;
 }
 
 std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollaborative) {
   if (isCollaborative) {
-    std::unique_ptr<CirrusModel> model = std::make_unique<SparseMFModel>(0);
+    
+    std::unique_ptr<CirrusModel> model = std::make_unique<SparseMFModel>(0, 0, 0);
+    /*
     for (int i = 0; i < num_servers; i++) {
       model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model), nusers, nitems);
     }
+    */
     return model;
   } else {
     std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
