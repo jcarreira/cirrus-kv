@@ -74,10 +74,10 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   this->config = config;
 
   //psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
-  psint = new MultiplePSInterface(config);
+  psint = std::make_unique<MultiplePSInterface>(config);
 
-  mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
-  
+  //mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
+
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers, config);
@@ -119,7 +119,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
     // we get the model subset with just the right amount of weights
     SparseMFModel model =
-      mf_model_get->get_new_model(*dataset, sample_index, config.get_minibatch_size());
+      psint->get_mf_sparse_model(*dataset, config, sample_index);
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -145,4 +145,3 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
     }
   }
 }
-

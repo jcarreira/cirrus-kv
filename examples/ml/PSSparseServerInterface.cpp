@@ -348,7 +348,7 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   if (read_all(sock, buffer, to_receive_size) == 0) {
     throw std::runtime_error("");
   }
-  
+
   // build a sparse model and return
   SparseMFModel model((FEATURE_TYPE*)buffer, minibatch_size, item_ids_count);
 
@@ -356,6 +356,39 @@ SparseMFModel PSSparseServerInterface::get_sparse_mf_model(
   delete[] buffer;
 
   return std::move(model);
+}
+
+
+void PSSparseServerInterface::get_mf_sparse_model_inplace_sharded(
+  SparseMFModel& model,
+  const Configuration& config,
+  char* msg_begin, uint32_t num_items, uint32_t server_index, uint64_t minibatch_size) {
+
+
+  // 1. Send operation
+  uint32_t operation = GET_MF_SPARSE_MODEL;
+  send_all(sock, &operation, sizeof(uint32_t));
+  // 2. Send msg size
+  uint32_t msg_size = sizeof(uint32_t) * 4 + sizeof(uint32_t) * num_items;
+  send_all(sock, &msg_size, sizeof(uint32_t));
+  // 3. Send request message
+  if (send_all(sock, msg_begin, msg_size) == -1) {
+    throw std::runtime_error("Error getting sparse mf model");
+  }
+
+  // 4. receive user vectors and item vectors
+  // FORMAT here is
+  // minibatch_size * user vectors. Each vector is user_id + user_bias + NUM_FACTORS * FEATURE_TYPE
+  // num_item_ids * item vectors. Each vector is item_id + item_bias + NUM_FACTORS * FEATURE_TYPE
+  uint32_t to_receive_size;
+  read_all(sock, &to_receive_size, sizeof(uint32_t));
+  //minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+  //item_ids_count * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
+
+  std::cout << "Request sent. Receiving: " << to_receive_size << " bytes" << std::endl;
+
+  char* buffer = new char[to_receive_size];
+  model.loadSerializedSharded(buffer, minibatch_size, num_items, server_index, config.get_num_ps());
 }
 
 // 1. send operation (uint32_t)

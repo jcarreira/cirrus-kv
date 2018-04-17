@@ -116,7 +116,7 @@ class LogisticSparseTaskS3 : public MLTask {
         auto& samples, auto& labels);
 
     std::mutex redis_lock;
-  
+
     std::unique_ptr<SparseModelGet> sparse_model_get;
     MultiplePSInterface* psint;
 };
@@ -141,7 +141,7 @@ class PSSparseTask : public MLTask {
 
     void update_gradient_version(
         auto& gradient, int worker, SparseLRModel& model, Configuration config);
-    
+
     void get_gradient(auto r, auto& gradient, auto gradient_id);
 
     void thread_fn();
@@ -343,7 +343,7 @@ class PSSparseServerTask : public MLTask {
 
     volatile uint64_t gradientUpdatesCount = 0;
     redisContext* redis_con;
-    
+
     std::unique_ptr<SparseLRModel> lr_model; // last computed model
     std::unique_ptr<MFModel> mf_model; // last computed model
     Configuration task_config;
@@ -373,7 +373,9 @@ class MFNetflixTask : public MLTask {
      */
     void run(const Configuration& config, int worker);
 
+  /*
   private:
+
     class MFModelGet {
       public:
         MFModelGet(const std::string& ps_ip, int ps_port) :
@@ -391,6 +393,7 @@ class MFNetflixTask : public MLTask {
         std::string ps_ip;
         int ps_port;
     };
+    */
 
   private:
     bool get_dataset_minibatch(
@@ -402,7 +405,7 @@ class MFNetflixTask : public MLTask {
         auto& samples, auto& labels);
 
     std::unique_ptr<MFModelGet> mf_model_get;
-    MultiplePSInterface* psint;
+    std::unique_ptr<MultiplePSInterface> psint;
 };
 
 #endif  // EXAMPLES_ML_TASKS_H_

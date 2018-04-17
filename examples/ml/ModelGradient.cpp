@@ -461,7 +461,6 @@ std::unordered_map<int, FEATURE_TYPE> items_bias_grad;
 //std::vector<FEATURE_TYPE> items_bias_grad;
 
 
-
 std::vector<std::shared_ptr<MFSparseGradient>> MFSparseGradient::gradient_shards(int num_shards) const {
   std::vector<std::shared_ptr<MFSparseGradient>> servers;
   servers.reserve(num_shards);
