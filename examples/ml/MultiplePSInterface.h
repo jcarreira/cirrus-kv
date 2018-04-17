@@ -14,7 +14,7 @@ class MultiplePSInterface {
   //void get_model(SparseLRModel& model);
   std::unique_ptr<CirrusModel> get_full_model(bool isCollaborative);
   SparseLRModel get_lr_sparse_model(const SparseDataset& ds, const Configuration& config);
-
+  SparseMFModel get_mf_sparse_model(const SparseDataset& ds, const Configuration& config);
 
  private:
   std::vector<std::shared_ptr<PSSparseServerInterface>> psint;

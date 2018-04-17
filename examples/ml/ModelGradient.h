@@ -160,7 +160,7 @@ class MFSparseGradient : public ModelGradient {
     MFSparseGradient(std::unordered_map<int, FEATURE_TYPE>&& users_bias_grad,
                                        std::unordered_map<int, FEATURE_TYPE>&& items_bias_grad,
                                        std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& users_weights_grad,
-                                       std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& items_weights_grad;
+                                       std::vector<std::pair<int, std::vector<FEATURE_TYPE>>>&& items_weights_grad);
 
     void loadSerialized(const void*);
     void serialize(void*) const override;

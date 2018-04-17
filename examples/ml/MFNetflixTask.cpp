@@ -17,7 +17,7 @@ void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
   auto before_push_us = get_time_us();
   std::cout << "Publishing gradients" << std::endl;
 #endif
-  psint->send_mf_gradient(mfg);
+  psint->send_mf_gradient(&mfg);
 #ifdef DEBUG
   std::cout << "Published gradients!" << std::endl;
   auto elapsed_push_us = get_time_us() - before_push_us;
