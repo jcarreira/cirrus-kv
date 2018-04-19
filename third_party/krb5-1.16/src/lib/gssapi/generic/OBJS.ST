@@ -1,0 +1,1 @@
+disp_com_err_status.o disp_major_status.o gssapi_generic.o oid_ops.o rel_buffer.o rel_oid_set.o util_buffer.o util_buffer_set.o util_errmap.o util_set.o util_seqstate.o util_token.o gssapi_err_generic.o
