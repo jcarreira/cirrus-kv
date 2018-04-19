@@ -26,15 +26,17 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/cache_manager \
 	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/ \
 	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3 \
+	       -L$(TOP_DIR)/third_party/krb5-1.16/src/lib \
+	       -L$(TOP_DIR)/third_party/curl/lib \
 	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
 	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
 	       -L/home/ec2-user/libevent/install_dir/lib/ \
 	       -L/home/ec2-user/cirrus/third_party/gflags/
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static-libgcc -Wl,--whole-archive \
+LDFLAGS  = -static-libgcc -static -Wl,--whole-archive \
 	   -pthread -Wl,--no-whole-archive
-CPPFLAGS = -static-libgcc -static-libstdc++ \
+CPPFLAGS = -static-libgcc -static -static-libstdc++ \
            -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
