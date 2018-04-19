@@ -12,7 +12,7 @@ LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
 		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
-		-lall -lkeyutils -lhiredis -levent
+		-lkeyutils -lhiredis -levent -lpthread
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -31,10 +31,8 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L/home/ec2-user/libevent/install_dir/lib/
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive \
-	   -lpthread -Wl,--no-whole-archive
-CPPFLAGS = -static -static-libgcc -static-libstdc++ \
-           -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
+LDFLAGS  = -lpthread
+CPPFLAGS = -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
            -I$(TOP_DIR)/third_party/eigen_source \

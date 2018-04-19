@@ -160,7 +160,8 @@ char* redis_binary_get(redisContext* c, const char* id, int* len) {
 
 char* redis_get_numid(redisContext* c, uint64_t id, int* len) {
     char* id_str;
-    asprintf(&id_str , "%lu", id);
+    int r1 = asprintf(&id_str , "%lu", id);
+    (void)r1;
 
     char* ret = redis_get(c, id_str, len);
     if (ret) {
@@ -214,7 +215,8 @@ char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
     // can be made more efficient by asprintf'ing directly into buffer 
     for (uint64_t i = 0; i < n; ++i) {
         char* id_str;
-        asprintf(&id_str , "%lu", id[i]);
+        int r1 = asprintf(&id_str , "%lu", id[i]);
+        (void)r1;
         strcat(cmd, " ");
         strcat(cmd, id_str);
         free(id_str);
