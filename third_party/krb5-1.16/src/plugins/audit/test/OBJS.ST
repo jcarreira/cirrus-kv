@@ -1,1 +1,0 @@
-au_test.o

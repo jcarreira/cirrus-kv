@@ -1,1 +1,0 @@
-greet_auth.o

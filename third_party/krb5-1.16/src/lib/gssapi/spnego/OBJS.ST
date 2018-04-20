@@ -1,1 +1,0 @@
-spnego_mech.o
