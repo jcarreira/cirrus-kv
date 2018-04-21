@@ -138,6 +138,12 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
       MFSparseGradient* grad_ptr = dynamic_cast<MFSparseGradient*>(gradient.get());
       push_gradient(*grad_ptr);
       sample_index += config.get_minibatch_size();
+
+      if (sample_index + config.get_minibatch_size() > config.get_s3_size() * config.get_train_range().second) {
+          sample_index = 0;
+      }
+              
+
     } catch(...) {
       std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);

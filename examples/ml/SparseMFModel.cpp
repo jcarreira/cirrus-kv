@@ -372,7 +372,7 @@ std::vector<char> SparseMFModel::serializeFromDense(
     uint32_t item_id = load_value<uint32_t>(item_data_ptr);
     //std::cout << "item_id: " << item_id << std::endl;
     store_value<uint32_t>(data_to_send_ptr, item_id);
-    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_user_bias(i));
+    store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_item_bias(item_id));
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_item_weights(item_id, j));
     }   
