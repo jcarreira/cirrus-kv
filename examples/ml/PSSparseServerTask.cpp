@@ -105,8 +105,13 @@ bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vecto
   gradient.loadSerialized(thread_buffer.data());
 
   model_lock.lock();
-  lr_model->sgd_update_adagrad(
-      task_config.get_learning_rate(), &gradient);
+  if (task_config.get_use_adagrad()) {
+    lr_model->sgd_update_adagrad(
+        task_config.get_learning_rate(), &gradient);
+  } else {
+    lr_model->sgd_update(
+        task_config.get_learning_rate(), &gradient);
+  }
   model_lock.unlock();
   gradientUpdatesCount++;
   return true;

@@ -1,6 +1,25 @@
 CXX=g++
 CXXFLAGS=-Wall -ansi -O3 -std=c++14 -ggdb
-TOP_DIR=../../..
+
+TOP_DIR=../../../..
+CIRRUS_ML_DIR=../..
+CIRRUS_ML_SRC_FILES=$(CIRRUS_ML_DIR)/Configuration.cpp \
+		    $(CIRRUS_ML_DIR)/Dataset.cpp \
+		    $(CIRRUS_ML_DIR)/Matrix.cpp \
+		    $(CIRRUS_ML_DIR)/LRModel.cpp \
+		    $(CIRRUS_ML_DIR)/SparseLRModel.cpp \
+		    $(CIRRUS_ML_DIR)/S3Iterator.cpp \
+		    $(CIRRUS_ML_DIR)/S3SparseIterator.cpp \
+		    $(CIRRUS_ML_DIR)/Utils.cpp \
+		    $(CIRRUS_ML_DIR)/MlUtils.cpp \
+		    $(CIRRUS_ML_DIR)/S3.cpp \
+		    $(CIRRUS_ML_DIR)/Checksum.cpp \
+		    $(CIRRUS_ML_DIR)/MurmurHash3.cpp \
+		    $(CIRRUS_ML_DIR)/ModelGradient.cpp \
+		    $(CIRRUS_ML_DIR)/InputReader.cpp \
+		    $(CIRRUS_ML_DIR)/SparseDataset.cpp
+
+
 LIBFLAGS =-static-libgcc  -static \
 	  -Wl,--whole-archive -lpthread -Wl,--no-whole-archive \
 	  -L$(TOP_DIR)/src/utils/ \
@@ -13,63 +32,44 @@ LIBFLAGS =-static-libgcc  -static \
 	  -lall -lkeyutils -lhiredis
 
 INCLUDES=-I.. \
-	 -I../../../ \
-	 -I../../../src/ \
+	 -I$(TOP_DIR) \
+	 -I$(CIRRUS_ML_DIR) \
+	 -I$(TOP_DIR)/src/ \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	 -I/home/ec2-user/cirrus/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/ \
 	 -I$(TOP_DIR)/third_party/eigen_source \
+	 -I$(TOP_DIR)/third_party/libcuckoo \
+	 -I$(TOP_DIR)/third_party/flatbuffers/include \
 	 -I$(TOP_DIR)/third_party/hiredis
 
 PROJ1=check_correctness_cirrus_gd
 PROJ2=check_correctness_cirrus_sgd
 PROJ3=check_correctness_cirrus_sgd_sparse
 PROJ4=check_correctness_cirrus_sgd_rcv1
-PROJ5=sgd_sparse_kaggle
 
-all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
+#CIRRUS_ML_SRC_FILES := $(wildcard $(CIRRUS_ML_DIR)/*.cpp)
+
+all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
 
 check_correctness_cirrus_gd: $(PROJ1).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ1).cpp \
-	  ../Dataset.cpp ../LRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
-	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	  ../MurmurHash3.cpp ../SparseDataset.cpp\
+	  $(PROJ1).cpp $(CIRRUS_ML_SRC_FILES)\
 	  -o $@ $(LIBFLAGS) 
 
 check_correctness_cirrus_sgd: $(PROJ2).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ2).cpp \
-	  ../Dataset.cpp ../LRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
-	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	  ../MurmurHash3.cpp ../SparseDataset.cpp\
+	  $(PROJ2).cpp $(CIRRUS_ML_SRC_FILES) \
 	  -o $@ $(LIBFLAGS) 
 
 check_correctness_cirrus_sgd_sparse: $(PROJ3).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ3).cpp \
-	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
-	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
-	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
+	  $(PROJ3).cpp $(CIRRUS_ML_SRC_FILES) \
 	  -o $@ $(LIBFLAGS) 
 
-check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp ../InputReader.cpp
+check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ4).cpp \
-	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
-	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
-	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
-	  -o $@ $(LIBFLAGS) 
-
-sgd_sparse_kaggle: $(PROJ5).cpp
-	$(CXX) $(INCLUDES) $(CXXFLAGS) \
-	  $(PROJ5).cpp \
-	  ../Dataset.cpp ../SparseLRModel.cpp ../ModelGradient.cpp ../Utils.cpp \
-	  ../Matrix.cpp ../MlUtils.cpp ../Checksum.cpp ../InputReader.cpp \
-	  ../SparseDataset.cpp ../MurmurHash3.cpp ../Configuration.cpp ../S3SparseIterator.cpp\
-	  ../S3.cpp ../ProgressMonitor.cpp ../Redis.cpp\
+	  $(PROJ4).cpp $(CIRRUS_ML_SRC_FILES) \
 	  -o $@ $(LIBFLAGS) 
 
 clean:
-	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
+	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
