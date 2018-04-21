@@ -50,7 +50,7 @@ bool MFNetflixTask::get_dataset_minibatch(
   auto finish1 = get_time_us();
 #endif
   dataset.reset(new SparseDataset(reinterpret_cast<const char*>(minibatch),
-        config.get_minibatch_size(), false)); // this takes 11 us
+        config.get_minibatch_size(), false));  // this takes 11 us
 
 #ifdef DEBUG
   auto finish2 = get_time_us();
@@ -76,7 +76,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   psint = std::make_unique<PSSparseServerInterface>(PS_IP, PS_PORT);
 
   mf_model_get = std::make_unique<MFModelGet>(PS_IP, PS_PORT);
-  
+
   std::cout << "[WORKER] " << "num s3 batches: " << num_s3_batches
     << std::endl;
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers);
@@ -118,12 +118,12 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
     // we get the model subset with just the right amount of weights
     SparseMFModel model =
-      mf_model_get->get_new_model(*dataset, sample_index, config.get_minibatch_size());
+      mf_model_get->get_new_model(
+              *dataset, sample_index, config.get_minibatch_size());
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
     std::cout << "Checking model" << std::endl;
-    //model.check();
     std::cout << "Computing gradient" << "\n";
     now = get_time_us();
 #endif
@@ -135,15 +135,15 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
       std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
         << " at time: " << get_time_us() << "\n";
 #endif
-      MFSparseGradient* grad_ptr = dynamic_cast<MFSparseGradient*>(gradient.get());
+      MFSparseGradient* grad_ptr =
+        dynamic_cast<MFSparseGradient*>(gradient.get());
       push_gradient(*grad_ptr);
       sample_index += config.get_minibatch_size();
 
-      if (sample_index + config.get_minibatch_size() > config.get_s3_size() * config.get_train_range().second) {
+      if (sample_index + config.get_minibatch_size()
+                   > config.get_s3_size() * config.get_train_range().second) {
           sample_index = 0;
       }
-              
-
     } catch(...) {
       std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);
