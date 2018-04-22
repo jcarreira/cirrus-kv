@@ -124,7 +124,7 @@ class SparseDataset {
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> data_;
   std::vector<FEATURE_TYPE> labels_;
 
-  uint64_t max_features_; // largest number of features of any single user
+  uint64_t max_features_ = 0; // largest number of features of any single user
 
   uint64_t size_bytes = 0; // size of data when read from serialized format
 };

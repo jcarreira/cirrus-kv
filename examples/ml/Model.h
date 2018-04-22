@@ -16,6 +16,7 @@
 class CirrusModel {
   friend class PSSparseServerInterface;
   public:
+    virtual ~CirrusModel() = default;
     /**
      * Serializes model into memory
      * @return Pointer to serialized model and size of serialized model

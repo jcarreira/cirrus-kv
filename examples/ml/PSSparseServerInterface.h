@@ -20,6 +20,7 @@
 class PSSparseServerInterface {
  public:
   PSSparseServerInterface(const std::string& ip, int port);
+  virtual ~PSSparseServerInterface();
 
   void send_lr_gradient(const LRSparseGradient&);
   void send_mf_gradient(const MFSparseGradient&);
@@ -36,7 +37,7 @@ class PSSparseServerInterface {
  private:
   std::string ip;
   int port;
-  int sock;
+  int sock = -1;
 };
 
 #endif //  PS_SPARSE_SERVER_INTERFACE_H_

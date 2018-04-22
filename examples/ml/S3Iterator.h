@@ -35,7 +35,6 @@ class S3Iterator {
 
   std::shared_ptr<Aws::S3::S3Client> s3_client;
 
-  uint64_t cur;
   uint64_t last;
   std::list<std::shared_ptr<FEATURE_TYPE>> ring;
 

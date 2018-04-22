@@ -23,8 +23,9 @@ void send_message(int sock) {
   char data[size] = {0};
   gradient.serialize(data);
   ret = send(sock, data, size, 0);
-  (void)ret;
-  //std::cout << "ret: " << ret << std::endl;
+  if (ret == -1) {
+    throw std::runtime_error("Error sending message");
+  }
 }
 
 int main() {

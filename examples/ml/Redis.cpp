@@ -9,6 +9,8 @@ extern "C" {
 
 #undef REDIS_DEBUG
 
+static char cmd[10000];
+
 redisContext* redis_connect(const char* hostname, int port) {
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
 
@@ -206,7 +208,6 @@ void redis_delete(redisContext* c, const char* id) {
     freeReplyObject(reply);
 }
 
-char cmd[10000];
 char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
     cmd[0] = 0;
     strcat(cmd, "MGET");
@@ -216,6 +217,7 @@ char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
         char* id_str;
         asprintf(&id_str , "%lu", id[i]);
         strcat(cmd, " ");
+        // we assume id_str fits
         strcat(cmd, id_str);
         free(id_str);
     }
@@ -234,6 +236,7 @@ char** redis_mget_numid(redisContext* c, uint64_t n, uint64_t* id) {
 void redis_push_list(redisContext* r, const char* list_name, const char* data) {
     cmd[0] = 0;
     strcat(cmd, "LPUSH ");
+    // we assume list_name fits
     strcat(cmd, list_name);
     strcat(cmd, " ");
     strcat(cmd, data);

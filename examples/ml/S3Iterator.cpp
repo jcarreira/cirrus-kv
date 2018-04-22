@@ -141,7 +141,6 @@ try_start:
     } catch(...) {
       std::cout << "S3Iterator: error in s3_get_object" << std::endl;
       goto try_start;
-      exit(-1);
     }
     
     // update index

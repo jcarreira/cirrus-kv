@@ -102,7 +102,7 @@ void InputReader::process_lines(
      * We have the line, now split it into features
      */ 
     assert(line.size() < STR_SIZE);
-    strncpy(str, line.c_str(), STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE - 1);
     char* s = str;
 
     uint64_t k = 0;
@@ -212,6 +212,7 @@ InputReader::read_mnist_csv(const std::string& input_file,
         samples.push_back(sample);
     }
 
+    fclose(fin);
     return samples;
 }
 
@@ -420,7 +421,7 @@ SparseDataset InputReader::read_movielens_ratings(const std::string& input_file,
   getline(fin, line); // read the header 
   while (getline(fin, line)) {
     char str[STR_SIZE];
-    assert(line.size() < STR_SIZE);
+    assert(line.size() < STR_SIZE - 1);
     strncpy(str, line.c_str(), STR_SIZE);
 
     char* s = str;
@@ -535,7 +536,7 @@ void InputReader::parse_criteo_sparse_line(
         "Criteo input line is too big: " + std::to_string(line.size()) + " " + std::to_string(STR_SIZE)) ;
   }
 
-  strncpy(str, line.c_str(), STR_SIZE);
+  strncpy(str, line.c_str(), STR_SIZE - 1);
   char* s = str;
 
   std::map<uint64_t, int> features;
@@ -714,7 +715,7 @@ void InputReader::parse_rcv1_vw_sparse_line(
     if (col == 0) { // the label
       std::string label_str(l);
       char str2[RCV1_STR_SIZE];
-      strncpy(str2, label_str.c_str(), RCV1_STR_SIZE);
+      strncpy(str2, label_str.c_str(), RCV1_STR_SIZE - 1);
       char* s = str2;
       //std::cout << "label: " << s << std::endl;
       std::vector<int> classes;
@@ -834,7 +835,7 @@ void InputReader::parse_criteo_kaggle_sparse_line(
         "Criteo input line is too big: " + std::to_string(line.size()) + " " + std::to_string(STR_SIZE)) ;
   }
 
-  strncpy(str, line.c_str(), STR_SIZE);
+  strncpy(str, line.c_str(), STR_SIZE - 1);
   char* s = str;
 
   std::map<uint64_t, int> features;
@@ -958,7 +959,7 @@ void InputReader::read_netflix_input_thread(
 
     char str[STR_SIZE];
     assert(line.size() < STR_SIZE);
-    strncpy(str, line.c_str(), STR_SIZE);
+    strncpy(str, line.c_str(), STR_SIZE - 1);
 
     char* s = str;
     char* l = strsep(&s, ",");
