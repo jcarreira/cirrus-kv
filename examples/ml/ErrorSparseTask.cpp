@@ -108,10 +108,6 @@ void ErrorSparseTask::run(const Configuration& config) {
         total_num_samples += ds.num_samples();
         total_num_features += ds.num_features();
         start_index += config.get_minibatch_size();
-        if (start_index + config.get_minibatch_size()
-            > config.get_s3_size() * config.get_train_range().second) {
-            break;
-        }
       }
 
       if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
