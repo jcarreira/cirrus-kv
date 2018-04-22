@@ -11,7 +11,7 @@
 #include "Configuration.h"
 
 #define DEBUG
-#define ERROR_INTERVAL_USEC (100000) // time between error checks
+#define ERROR_INTERVAL_USEC (100000)  // time between error checks
 
 std::unique_ptr<CirrusModel> get_model(const Configuration& config) {
   static PSSparseServerInterface* psi;
@@ -30,42 +30,39 @@ void ErrorSparseTask::run(const Configuration& config) {
   std::cout << "Compute error task connecting to store" << std::endl;
 
   std::cout << "Creating sequential S3Iterator" << std::endl;
-  auto train_range = config.get_train_range();
-  auto test_range = config.get_test_range();
 
   uint32_t left, right;
   if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
-    left = test_range.first;
-    right = test_range.second;
-  } else if(config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
-    left = train_range.first;
-    right = train_range.second;
+    left = config.get_test_range().first;
+    right = config.get_test_range().second;
+  } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
+    left = config.get_train_range().first;
+    right = config.get_train_range().second;
   } else {
     exit(-1);
   }
 
   S3SparseIterator s3_iter(left, right, config,
       config.get_s3_size(), config.get_minibatch_size(),
-      config.get_model_type() == Configuration::LOGISTICREGRESSION, // use_label true for LR
+      // use_label true for LR
+      config.get_model_type() == Configuration::LOGISTICREGRESSION,
       0, false);
 
   // get data first
   // what we are going to use as a test set
   std::vector<SparseDataset> minibatches_vec;
   std::cout << "[ERROR_TASK] getting minibatches from "
-    << train_range.first << " to " << train_range.second
+    << config.get_train_range().first << " to "
+    << config.get_train_range().second
     << std::endl;
 
-  for (uint64_t i = 0;
-      i < (right - left) *
-      (config.get_s3_size() / config.get_minibatch_size()); ++i) {
-
-    //std::cout << "Getting minibatch: " << i << std::endl;
+  uint32_t minibatches_per_s3_obj =
+    config.get_s3_size() / config.get_minibatch_size();
+  for (uint64_t i = 0; i < (right - left) * minibatches_per_s3_obj; ++i) {
     const void* minibatch_data = s3_iter.get_next_fast();
     SparseDataset ds(reinterpret_cast<const char*>(minibatch_data),
         config.get_minibatch_size(),
-        config.get_model_type() == Configuration::LOGISTICREGRESSION // has labels
-        );
+        config.get_model_type() == Configuration::LOGISTICREGRESSION);
     minibatches_vec.push_back(ds);
   }
 
@@ -74,14 +71,14 @@ void ErrorSparseTask::run(const Configuration& config) {
     << "\n";
   std::cout << "[ERROR_TASK] Building dataset"
     << "\n";
-  
+
   wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers);
   uint64_t start_time = get_time_us();
 
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
   while (1) {
-    usleep(ERROR_INTERVAL_USEC); //
+    usleep(ERROR_INTERVAL_USEC);
 
     try {
       // first we get the model
@@ -95,10 +92,8 @@ void ErrorSparseTask::run(const Configuration& config) {
       std::cout << "[ERROR_TASK] received the model" << std::endl;
 #endif
 
-      int nb = 0;//mp.get_number_batches();
-      std::cout 
+      std::cout
         << "[ERROR_TASK] computing loss."
-        << " number_batches: " << nb
         << std::endl;
       FEATURE_TYPE total_loss = 0;
       FEATURE_TYPE total_accuracy = 0;
@@ -106,7 +101,8 @@ void ErrorSparseTask::run(const Configuration& config) {
       uint64_t total_num_features = 0;
       uint64_t start_index = 0;
       for (auto& ds : minibatches_vec) {
-        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret = model->calc_loss(ds, start_index);
+        std::pair<FEATURE_TYPE, FEATURE_TYPE> ret =
+          model->calc_loss(ds, start_index);
         total_loss += ret.first;
         total_accuracy += ret.second;
         total_num_samples += ds.num_samples();
@@ -125,7 +121,8 @@ void ErrorSparseTask::run(const Configuration& config) {
           << std::endl;
       } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
         std::cout
-          << "[ERROR_TASK] RMSE (Total): " << std::sqrt(total_loss / total_num_features)
+          << "[ERROR_TASK] RMSE (Total): "
+          << std::sqrt(total_loss / total_num_features)
           << " time(us): " << get_time_us()
           << " time from start (sec): "
           << (get_time_us() - start_time) / 1000000.0
