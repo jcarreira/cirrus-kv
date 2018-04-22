@@ -27,7 +27,7 @@ SparseDataset LoadingNetflixTask::read_dataset(
   */
 void LoadingNetflixTask::check_loading(
     const Configuration& config,
-    auto& s3_client) {
+    Aws::S3::S3Client& s3_client) {
   std::cout << "[LOADER] Trying to get sample with id: " << 0 << std::endl;
 
   std::string data = s3_get_object_value(SAMPLE_BASE, s3_client, config.get_s3_bucket());
@@ -67,8 +67,6 @@ void LoadingNetflixTask::run(const Configuration& config) {
     << " #s3 objs: " << num_s3_objs
     << std::endl;
   
-  return;
-
   // For each S3 object (group of s3_obj_num_samples samples)
   for (unsigned int i = 0; i < num_s3_objs; ++i) {
     std::cout << "[LOADER-SPARSE] Building s3 batch #" << (i + 1) << std::endl;

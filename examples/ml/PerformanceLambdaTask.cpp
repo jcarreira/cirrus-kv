@@ -10,6 +10,7 @@
 
 std::unique_ptr<LRModel> lr_model;
 
+#if 0
 void PerformanceLambdaTask::unpack_minibatch(
     const FEATURE_TYPE* minibatch,
     auto& samples, auto& labels) {
@@ -34,6 +35,7 @@ void PerformanceLambdaTask::unpack_minibatch(
         samples.get() + j * features_per_sample);
   }
 }
+#endif
 
 void PerformanceLambdaTask::run(const Configuration& config) {
   uint64_t num_s3_batches = config.get_limit_samples() / config.get_s3_size();

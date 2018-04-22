@@ -39,8 +39,8 @@ void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
 
 // get samples and labels data
 bool MFNetflixTask::get_dataset_minibatch(
-    auto& dataset,
-    auto& s3_iter) {
+    std::unique_ptr<SparseDataset>& dataset,
+    S3SparseIterator& s3_iter) {
 #ifdef DEBUG
   auto start = get_time_us();
 #endif

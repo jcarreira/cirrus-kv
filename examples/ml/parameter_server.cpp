@@ -4,8 +4,6 @@
 #include "Utils.h"
 #include "Configuration.h"
 
-#include "object_store/FullBladeObjectStore.h"
-#include "tests/object_store/object_store_internal.h"
 #include "utils/Log.h"
 #include "common/Exception.h"
 #include <Tasks.h>
