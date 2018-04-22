@@ -79,6 +79,7 @@ void ErrorSparseTask::run(const Configuration& config) {
 
   wait_for_start(ERROR_SPARSE_TASK_RANK, nworkers, config);  
   uint64_t start_time = get_time_us();
+  uint64_t iteration = 1;
 
   std::cout << "[ERROR_TASK] Computing accuracies"
     << "\n";
@@ -123,14 +124,16 @@ void ErrorSparseTask::run(const Configuration& config) {
           << " time(us): " << get_time_us()
           << " time from start (sec): "
           << (get_time_us() - start_time) / 1000000.0
+	  << " Iteration # " << iteration
           << std::endl;
+	iteration = iteration + 1;
       } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
         std::cout
           << "[ERROR_TASK] RMSE (Total): " << std::sqrt(total_loss / total_num_features)
           << " time(us): " << get_time_us()
           << " time from start (sec): "
           << (get_time_us() - start_time) / 1000000.0
-          << std::endl;
+	  << std::endl;
       }
     } catch(const cirrus::NoSuchIDException& e) {
       std::cout << "run_compute_error_task unknown id" << std::endl;

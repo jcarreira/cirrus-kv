@@ -2,7 +2,14 @@
 #include "PSSparseServerInterface.h"
 #include "MultiplePSInterface.h"
 #include "Constants.h"
+#include "Serializers.h"
+#include "Redis.h"
+#include "config.h"
+#include "S3SparseIterator.h"
+#include "Utils.h"
+#include "async.h"
 #include <memory>
+#include <omp.h>
 
 #undef DEBUG
 
@@ -22,14 +29,21 @@ MultiplePSInterface::MultiplePSInterface(const Configuration& config) {
 
 void MultiplePSInterface::send_gradient(const LRSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
+  uint64_t start_time = get_time_us(); 
   std::vector<std::shared_ptr<LRSparseGradient>> split_model = gradient->gradient_shards(num_servers);
+  uint64_t end_time = get_time_us();
+//  std::cout << "Gradient Shards Time: " << end_time - start_time << std::endl;
+//  #pragma omp parallel for
   for (int i = 0; i < num_servers; i++)
     psint[i]->send_lr_gradient(*split_model[i]);
+  uint64_t loop_end = get_time_us();
+  //std::cout << "Multiple PS Gradient push Time: " << loop_end - end_time << std::endl;
 }
 
 void MultiplePSInterface::send_mf_gradient(const MFSparseGradient* gradient) {
   // need to generalize to arbitrary num of servers
   std::vector<std::shared_ptr<MFSparseGradient>> split_model = gradient->gradient_shards(num_servers);
+  //#pragma omp parallel for
   for (int i = 0; i < num_servers; i++)
     psint[i]->send_mf_gradient(*split_model[i]);
 }
@@ -96,6 +110,7 @@ SparseMFModel MultiplePSInterface::get_mf_sparse_model(const SparseDataset& ds, 
     msg_lst[i] = new char[MAX_MSG_SIZE];
     msg_begin_lst[i] = msg_lst[i];
     num_items_lst[i] = 0;
+    num_items_lst[i] = 0;
     store_value<uint32_t>(msg_lst[i], num_items_lst[i]); // just make space for the number of weights
     store_value<uint32_t>(msg_lst[i], user_base);
     store_value<uint32_t>(msg_lst[i], this->minibatch_fraction);
@@ -144,10 +159,13 @@ std::unique_ptr<CirrusModel> MultiplePSInterface::get_full_model(bool isCollabor
 
     return model;
   } else {
+    uint64_t start_time = get_time_us();
     std::unique_ptr<CirrusModel> model = std::make_unique<SparseLRModel>(0);
     for (int i = 0; i < num_servers; i++) {
       model = psint[i]->get_full_model(isCollaborative, i, num_servers, std::move(model)); //XXX: fix this - Andy
     }
+    uint64_t end_time = get_time_us();
+//    std::cout << "Get Full Model Time: " << end_time - start_time << std::endl;
     return model;
   }
-}
+ }

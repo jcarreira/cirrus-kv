@@ -92,7 +92,7 @@ void SparseLRModel::loadSerialized(const void* data, int server_index, int num_s
 #endif
   assert(num_weights > 0 && num_weights < 10000000);
 
-  char* data_begin = (char*)data;
+//  char* data_begin = (char*)data;
   weights_.reserve(num_weights * num_servers);
   for (int i = 0; i < num_weights; i++) {
     weights_[num_servers * i + server_index] = load_value<float>(data);

@@ -6,6 +6,7 @@
 #include <cassert>
 #include "utils/Log.h"
 #include "Constants.h"
+#include <omp.h>
 
 /**
  * LRGradient
@@ -181,6 +182,7 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
   servers.reserve(num_shards);
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   model.resize(num_shards);
+  
   for (const auto &weight : weights) {
     int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
     std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(
@@ -188,6 +190,7 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
             weight.second);
     model[server_index].push_back(new_pair);
   }
+//  #pragma omp parallel for
   for (int i = 0; i < num_shards; i++) {
 
     auto gradient = std::make_shared<LRSparseGradient>(std::move(model[i]));
