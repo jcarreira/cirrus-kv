@@ -1047,7 +1047,7 @@ SparseDataset InputReader::read_netflix_ratings(const std::string& input_file,
   }
 
   // we standardize the dataset
-  standardize_sparse_dataset(sparse_ds);
+  // standardize_sparse_dataset(sparse_ds);
 
   auto ds = SparseDataset(sparse_ds);
   std::cout << "Checking sparse dataset" << std::endl;
