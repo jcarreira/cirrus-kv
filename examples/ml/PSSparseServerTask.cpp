@@ -461,7 +461,8 @@ void PSSparseServerTask::loop() {
       //std::cout << "Ignoring" << std::endl;
       fds[1].revents = 0;  // Reset the event flags
       char a[1];
-      read(pipefd[0], a, 1);
+      int ret = read(pipefd[0], a, 1);
+      (void)ret;
       // ignore
     } else if (poll_status == 0) {
       //std::cout << timeout << " ms elapsed" << std::endl;
