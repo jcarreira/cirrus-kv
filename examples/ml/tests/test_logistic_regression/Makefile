@@ -17,6 +17,9 @@ CIRRUS_ML_SRC_FILES=$(CIRRUS_ML_DIR)/Configuration.cpp \
 		    $(CIRRUS_ML_DIR)/MurmurHash3.cpp \
 		    $(CIRRUS_ML_DIR)/ModelGradient.cpp \
 		    $(CIRRUS_ML_DIR)/InputReader.cpp \
+		    $(CIRRUS_ML_DIR)/PSSparseServerInterface.cpp \
+		    $(CIRRUS_ML_DIR)/SparseMFModel.cpp \
+		    $(CIRRUS_ML_DIR)/MFModel.cpp \
 		    $(CIRRUS_ML_DIR)/SparseDataset.cpp
 
 
@@ -46,10 +49,11 @@ PROJ1=check_correctness_cirrus_gd
 PROJ2=check_correctness_cirrus_sgd
 PROJ3=check_correctness_cirrus_sgd_sparse
 PROJ4=check_correctness_cirrus_sgd_rcv1
+PROJ5=check_correctness_cirrus_sgd_s3
 
 #CIRRUS_ML_SRC_FILES := $(wildcard $(CIRRUS_ML_DIR)/*.cpp)
 
-all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
+all: $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
 
 check_correctness_cirrus_gd: $(PROJ1).cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) \
@@ -71,5 +75,10 @@ check_correctness_cirrus_sgd_rcv1: $(PROJ4).cpp
 	  $(PROJ4).cpp $(CIRRUS_ML_SRC_FILES) \
 	  -o $@ $(LIBFLAGS) 
 
+check_correctness_cirrus_sgd_s3: $(PROJ5).cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) \
+	  $(PROJ5).cpp $(CIRRUS_ML_SRC_FILES) \
+	  -o $@ $(LIBFLAGS) 
+
 clean:
-	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4)
+	rm -rf a.out $(PROJ1) $(PROJ2) $(PROJ3) $(PROJ4) $(PROJ5)
