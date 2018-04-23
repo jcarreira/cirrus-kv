@@ -26,7 +26,7 @@ sort_lambda::sort_lambda(
   for (INT_TYPE i = 0; i < rh_nodes; i++)
     _index_list[i] += io[i];
 
-  _initial_sort_index =_process_index * total_read_keys;
+  _initial_sort_index = _process_index * total_read_keys;
   _next_index = 0 + nio;
   _finished = false;
 

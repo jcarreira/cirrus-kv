@@ -7,6 +7,7 @@
 #include "../S3.hpp"
 #include "hash.hpp"
 #include "sort.hpp"
+#include "merge.hpp"
 #include "serialization.hpp"
 
 #include "object_store/FullBladeObjectStore.h"
@@ -167,7 +168,7 @@ int main(int argc, char* argv[]) {
     sl->print_avg_stats();
 
     if(sl->next_index() >= rh_nodes) {
-      object_exists(s3_client, sort_done_flag_prefix + std::to_string(proc_num), true, "");
+      object_exists(s3_client, sort_done_flag_prefix + std::to_string(proc_num), true, std::to_string(sl->current_sort_index()));
       s3_delete_object(sort_progress_flag_prefix + std::to_string(proc_num), *s3_client, s3_bucket_name);
     }
     else {
@@ -181,6 +182,64 @@ int main(int argc, char* argv[]) {
           true, to_put);
     }
     s3_delete_object(sort_active_flag_prefix + std::to_string(proc_num), *s3_client, s3_bucket_name);
+  }
+  else if(rh_nodes + sort_nodes <= proc_num && proc_num < rh_nodes + sort_nodes + merge_nodes) {
+    proc_num -= rh_nodes + sort_nodes;
+
+    std::pair<bool, std::string> active_check = object_exists(s3_client,
+        merge_active_flag_prefix + std::to_string(proc_num), true, "");
+    std::pair<bool, std::string> done_check = object_exists(s3_client,
+        merge_done_flag_prefix + std::to_string(proc_num), false, "");
+    std::pair<bool, std::string> sort_done_check = object_exists(s3_client,
+        sort_done_flag_prefix + std::to_string(proc_num), false, "");
+    if(active_check.first || done_check.first || !sort_done_check.first)
+      return 0;
+
+    INT_TYPE total_input_files = std::stoul(sort_done_check.second, nullptr, 0);
+    std::vector<INT_TYPE> positions;
+    std::vector<bool> completed;
+    INT_TYPE curr_file_index;
+    std::pair<bool, std::string> resume_check = object_exists(s3_client,
+        merge_progress_flag_prefix + std::to_string(proc_num), false, "");
+    if(resume_check.first) {
+      const std::string& data = resume_check.second;
+      std::regex re("\\s+");
+      std::vector<std::string> result { std::sregex_token_iterator(data.begin(),
+          data.end(), re, -1), {} };
+      for(INT_TYPE i = 0; i < total_input_files * 2; i += 2) {
+        positions.push_back(std::stoul(result[i]));
+        completed.push_back(std::stoul(result[i + 1]));
+      }
+      curr_file_index = std::stoul(result[total_input_files * 2]);
+    }
+    else {
+      for(INT_TYPE i = 0; i < total_input_files; i++)
+        positions.push_back(0), completed.push_back(false);
+      curr_file_index = 0;
+    }
+
+    std::shared_ptr<merge_lambda> ml = std::make_shared<merge_lambda>(proc_num, s3_client, positions,
+        completed, total_input_files, curr_file_index);
+
+    merger(ml);
+
+    ml->finish();
+
+    if(std::all_of(ml->_input_files_completed.begin(), ml->_input_files_completed.end(),
+          [](const auto& c) { return c; })) {
+      object_exists(s3_client, merge_done_flag_prefix + std::to_string(proc_num), true, "");
+      s3_delete_object(merge_progress_flag_prefix + std::to_string(proc_num), *s3_client, s3_bucket_name);
+    }
+    else {
+      std::string to_put;
+      for(INT_TYPE i = 0; i < total_input_files; i++)
+        to_put += std::to_string(ml->_positions[i]) + " " + std::to_string((INT_TYPE) ml->_input_files_completed[i]) + " ";
+      to_put += std::to_string(ml->_curr_file_num);
+      s3_delete_object(merge_progress_flag_prefix + std::to_string(proc_num), *s3_client, s3_bucket_name);
+      object_exists(s3_client, merge_progress_flag_prefix + std::to_string(proc_num),
+          true, to_put);
+    }
+    s3_delete_object(merge_active_flag_prefix + std::to_string(proc_num), *s3_client, s3_bucket_name);
   }
 
   s3_shutdown_aws();

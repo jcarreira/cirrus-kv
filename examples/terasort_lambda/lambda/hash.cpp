@@ -117,10 +117,14 @@ void hash_lambda::write(
       total_read_keys + k;
     INT_TYPE key_offset = _counter_list[k]++ *
       sort_nodes;
-    //std::cout << start_offset + key_offset << std::endl;
     _write_buffer[k].first->push_back(start_offset + key_offset);
     if (_write_buffer[k].second->size() >=
-        rh_hash_bulk_put) {
+        rh_hash_bulk_put || 
+        std::accumulate(_write_buffer.begin(), _write_buffer.end(), 0,
+          [](auto& i, const auto& p) {
+            for(auto& s : *p.second) i += s.size() / (record_size + 1);
+            return i;
+          }) / cirrus_read_chunk_size >= rh_cumulative_size_threshold) {
       std::unique_lock<std::mutex> lock(_background_lock);
       _background_buffer.push(std::make_pair(
             _write_buffer[k].first,
@@ -130,7 +134,7 @@ void hash_lambda::write(
 
       _write_buffer[k].first = std::make_shared<std::vector<INT_TYPE>>();
       _write_buffer[k].second = std::make_shared<std::vector<std::string>>();
-      while(_background_buffer.size() >= rh_background_buffer_limit)
+      while (_background_buffer.size() >= rh_background_buffer_limit)
         std::this_thread::sleep_for(std::chrono::milliseconds(
             rh_background_buffer_limit_timeout_ms));
     }
