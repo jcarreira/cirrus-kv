@@ -23,6 +23,7 @@ void MFModel::initialize_data(uint64_t users, uint64_t items, uint64_t nfactors)
   //    new FEATURE_TYPE[items * nfactors], std::default_delete<FEATURE_TYPE[]>());
   user_weights_.resize(users * nfactors);
   item_weights_.resize(items * nfactors);
+  global_bias_ = 2.0;
 
   user_bias_.resize(users);
   item_bias_.resize(items);
@@ -130,6 +131,7 @@ void MFModel::loadSerialized(const void* data) {
     << std::endl;
 #endif
 
+  global_bias_ = 2.0;
   user_weights_.resize(nusers_ * nfactors_);
   item_weights_.resize(nitems_ * nfactors_);
   user_bias_.resize(nusers_);
@@ -219,7 +221,6 @@ void MFModel::sgd_update(double learning_rate,
 
 FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
 #ifdef DEBUG
-  //std::cout << "userId: " << userId << " itemId: " << itemId << std::endl;
   FEATURE_TYPE res = global_bias_ + user_bias_.at(userId) + item_bias_.at(itemId);
 #else
   FEATURE_TYPE res = global_bias_ + user_bias_[userId] + item_bias_[itemId];

@@ -22,6 +22,7 @@ void SparseMFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t 
 
   user_bias_reg_ = 0.01;
   item_bias_reg_ = 0.01;
+  global_bias_ = 2.0;
 
   nusers_ = users;
   nitems_ = items;
@@ -115,7 +116,7 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
     }
     user_models.push_back(user_model);
   }
-  
+  global_bias_ = 2.0;  
   // now we read the item vectors
   for (uint64_t i = 0; i < num_item_ids; ++i) {
     std::pair<FEATURE_TYPE,
@@ -157,6 +158,7 @@ FEATURE_TYPE SparseMFModel::predict(uint32_t userId, uint32_t itemId) {
     }
 #endif
   }
+
   return res;
 }
 

@@ -12,7 +12,7 @@ LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
 		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
-		-lall -lkeyutils -lhiredis -levent
+		-lkeyutils -lhiredis -levent -lpthread
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
@@ -24,16 +24,13 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
-	       -L/home/ec2-user/cirrus/third_party/aws-sdk-cpp/build/aws-cpp-sdk-s3 \
-	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
-	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
-	       -L/home/ec2-user/libevent/install_dir/lib/
+	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/build/aws-cpp-sdk-core/ \
+	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/build/aws-cpp-sdk-s3 
 
 LDADD    = $(LINCLUDES) $(LIBS)
-LDFLAGS  = -static-libgcc  -static  -Wl,--whole-archive \
+LDFLAGS  =  -Wl,--whole-archive \
 	   -lpthread -Wl,--no-whole-archive
-CPPFLAGS = -static -static-libgcc -static-libstdc++ \
+CPPFLAGS = -static-libstdc++ \
            -I$(TOP_DIR) -I$(TOP_DIR)/examples/sparsehash/src/ \
            -I$(TOP_DIR)/src \
            -I$(TOP_DIR)/third_party/flatbuffers/include \
