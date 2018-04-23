@@ -27,6 +27,8 @@ void MFModel::initialize_data(uint64_t users, uint64_t items, uint64_t nfactors)
   user_bias_.resize(users);
   item_bias_.resize(items);
 
+  global_bias_ = 2.0;
+
   item_fact_reg_ = 0.01;
   user_fact_reg_ = 0.01;
 

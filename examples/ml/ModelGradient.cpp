@@ -183,8 +183,13 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   model.resize(num_shards);
   
-  for (const auto &weight : weights) {
-    int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+  omp_set_num_threads(num_shards);
+//  for (const auto &weight : weights) {
+//  #pragma omp parallel for
+  for (int i = 0; i < weights.size(); i++) {
+    std::pair<int, FEATURE_TYPE> weight = weights[i];
+    //int server_index = (weight.first) % num_shards; // determine which param server to send this weight to
+    int server_index = i % num_shards;
     std::pair<int, FEATURE_TYPE> new_pair = std::make_pair(
             (weight.first - server_index) / num_shards, // map the index down for the ps
             weight.second);
@@ -192,8 +197,8 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
   }
 //  #pragma omp parallel for
   for (int i = 0; i < num_shards; i++) {
-
     auto gradient = std::make_shared<LRSparseGradient>(std::move(model[i]));
+  //  #pragma omp critical
     servers.push_back(std::move(gradient));
   }
   return std::move(servers);
