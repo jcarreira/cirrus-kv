@@ -11,7 +11,7 @@ bin_PROGRAMS = parameter_server ps_test csv_to_libsvm
 LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
-		-lcurl -lssl -lcrypto -lz -ldl -lkrb5 -lk5crypto \
+		-ldl -lcurl -lkrb5 -lk5crypto -lall -lssl -lcrypto -lz \
 		-lkeyutils -lhiredis -levent -lgflags
 
 if USE_RDMA
@@ -24,14 +24,13 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/src/authentication \
 	       -L$(TOP_DIR)/src/common \
 	       -L$(TOP_DIR)/src/cache_manager \
-	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/ \
+	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core \
 	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3 \
-	       -L$(TOP_DIR)/third_party/krb5-1.16/src/lib \
 	       -L$(TOP_DIR)/third_party/curl/lib \
+	       -L$(TOP_DIR)/third_party/gflags/lib \
 	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
 	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
-	       -L/home/ec2-user/libevent/install_dir/lib/ \
-	       -L/home/ec2-user/cirrus/third_party/gflags/
+	       -L/home/ec2-user/libevent/lib/
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc -static -Wl,--whole-archive \
@@ -47,6 +46,7 @@ CPPFLAGS = -static-libgcc -static -static-libstdc++ \
 	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3/include/ \
 	   -I$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-core/include/  \
            -I$(TOP_DIR)/third_party/gflags/include/ \
+	   -I/home/ec2-user/kerberos/krb5-1.15.2/src/include/ \
 	   -ggdb -frecord-gcc-switches -O3
 #-pg
 
