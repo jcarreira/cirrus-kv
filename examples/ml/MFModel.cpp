@@ -129,6 +129,9 @@ void MFModel::loadSerialized(const void* data) {
     << " nfactors_: " << nfactors_
     << std::endl;
 #endif
+  
+  item_fact_reg_ = user_fact_reg_ = 0.01;
+  user_bias_reg_ = item_bias_reg_ = 0.01;
 
   user_weights_.resize(nusers_ * nfactors_);
   item_weights_.resize(nitems_ * nfactors_);

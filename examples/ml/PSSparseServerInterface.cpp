@@ -39,6 +39,12 @@ PSSparseServerInterface::PSSparseServerInterface(const std::string& ip, int port
   }
 }
 
+PSSparseServerInterface::~PSSparseServerInterface() {
+  if (sock != -1) {
+    close(sock);
+  }
+}
+
 void PSSparseServerInterface::send_lr_gradient(const LRSparseGradient& gradient) {
   uint32_t operation = SEND_LR_GRADIENT;
 #ifdef DEBUG

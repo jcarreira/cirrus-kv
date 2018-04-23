@@ -77,7 +77,7 @@ class LogisticSparseTaskS3 : public MLTask {
       MLTask(MODEL_GRAD_SIZE, MODEL_BASE,
           LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
           batch_size, samples_per_batch, features_per_sample,
-          nworkers, worker_id)
+          nworkers, worker_id), psint(nullptr)
   {}
 
     /**

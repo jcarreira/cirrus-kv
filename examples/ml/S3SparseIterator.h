@@ -41,7 +41,6 @@ class S3SparseIterator {
   std::shared_ptr<Aws::S3::S3Client> s3_client;
 
   uint64_t cur;
-  uint64_t last;
   std::list<std::shared_ptr<FEATURE_TYPE>> ring;
 
   uint64_t read_ahead = 1;
@@ -53,7 +52,6 @@ class S3SparseIterator {
 
   uint64_t s3_rows;
   uint64_t minibatch_rows;
-  uint64_t features_per_sample;
 
   //ProgressMonitor pm;
 
