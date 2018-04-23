@@ -11,6 +11,7 @@
 #include "SparseLRModel.h"
 #include "ProgressMonitor.h"
 #include "PSSparseServerInterface.h"
+#include "S3SparseIterator.h"
 
 #include <string>
 #include <vector>
@@ -48,7 +49,6 @@ class MLTask {
     void run(const Configuration& config, int worker);
 
     void wait_for_start(int index, int nworkers);
-    bool get_worker_status(auto r, int worker_id);
 
   protected:
     uint64_t MODEL_GRAD_SIZE;
@@ -107,12 +107,9 @@ class LogisticSparseTaskS3 : public MLTask {
     };
 
     bool get_dataset_minibatch(
-        auto& dataset,
-        auto& s3_iter);
-    auto get_model(auto r, auto lmd);
+        std::unique_ptr<SparseDataset>& dataset,
+        S3SparseIterator& s3_iter);
     void push_gradient(LRSparseGradient*);
-    void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
-        auto& samples, auto& labels);
 
     std::mutex redis_lock;
   
@@ -133,22 +130,15 @@ class PSSparseTask : public MLTask {
     void run(const Configuration& config);
 
   private:
-    auto connect_redis();
+    redisContext* connect_redis();
 
     void put_model(const SparseLRModel& model);
     void publish_model(const SparseLRModel& model);
 
-    void update_gradient_version(
-        auto& gradient, int worker, SparseLRModel& model, Configuration config);
-    
-    void get_gradient(auto r, auto& gradient, auto gradient_id);
-
     void thread_fn();
 
-    void update_publish(auto&);
     void publish_model_pubsub();
     void publish_model_redis();
-    void update_publish_gradient(auto&);
 
     /**
       * Attributes
@@ -178,15 +168,6 @@ class ErrorSparseTask : public MLTask {
       //mp(redis_ip, redis_port)
   {}
     void run(const Configuration& config);
-
-  private:
-    void get_samples_labels_redis(
-        auto r, auto i, auto& samples, auto& labels,
-        auto cad_samples, auto cad_labels);
-    void parse_raw_minibatch(const FEATURE_TYPE* minibatch,
-        auto& samples, auto& labels);
-
-    //ProgressMonitor mp;
 };
 
 class PerformanceLambdaTask : public MLTask {
@@ -210,9 +191,6 @@ class PerformanceLambdaTask : public MLTask {
     void run(const Configuration& config);
 
   private:
-    void unpack_minibatch(const FEATURE_TYPE* /*minibatch*/,
-        auto& samples, auto& labels);
-
     redisContext* connect_redis();
 };
 
@@ -232,7 +210,7 @@ class LoadingSparseTaskS3 : public MLTask {
   {}
     void run(const Configuration& config);
     SparseDataset read_dataset(const Configuration& config);
-    void check_loading(const Configuration&, auto& s3_client);
+    void check_loading(const Configuration&, Aws::S3::S3Client& s3_client);
     void check_label(FEATURE_TYPE label);
 
   private:
@@ -254,7 +232,7 @@ class LoadingNetflixTask : public MLTask {
   {}
     void run(const Configuration& config);
     SparseDataset read_dataset(const Configuration& config, int&, int&);
-    void check_loading(const Configuration&, auto& s3_client);
+    void check_loading(const Configuration&, Aws::S3::S3Client& s3_client);
 
   private:
 };
@@ -386,12 +364,9 @@ class MFNetflixTask : public MLTask {
 
   private:
     bool get_dataset_minibatch(
-        auto& dataset,
-        auto& s3_iter);
-    auto get_model(auto r, auto lmd);
+        std::unique_ptr<SparseDataset>& dataset,
+        S3SparseIterator& s3_iter);
     void push_gradient(MFSparseGradient&);
-    void unpack_minibatch(std::shared_ptr<FEATURE_TYPE> /*minibatch*/,
-        auto& samples, auto& labels);
 
     std::unique_ptr<MFModelGet> mf_model_get;
     std::unique_ptr<PSSparseServerInterface> psint;

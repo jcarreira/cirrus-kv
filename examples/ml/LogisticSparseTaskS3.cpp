@@ -39,8 +39,8 @@ void LogisticSparseTaskS3::push_gradient(LRSparseGradient* lrg) {
 
 // get samples and labels data
 bool LogisticSparseTaskS3::get_dataset_minibatch(
-    auto& dataset,
-    auto& s3_iter) {
+    std::unique_ptr<SparseDataset>& dataset,
+    S3SparseIterator& s3_iter) {
 #ifdef DEBUG
   auto start = get_time_us();
 #endif

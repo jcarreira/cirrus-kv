@@ -41,7 +41,7 @@ void LoadingSparseTaskS3::check_label(FEATURE_TYPE label) {
   */
 void LoadingSparseTaskS3::check_loading(
     const Configuration& config,
-    auto& s3_client) {
+    Aws::S3::S3Client& s3_client) {
   std::cout << "[LOADER] Trying to get sample with id: " << 0 << std::endl;
 
   std::string obj_id = std::to_string(hash_f(std::to_string(SAMPLE_BASE).c_str())) + "-CRITEO";
@@ -90,6 +90,7 @@ void LoadingSparseTaskS3::run(const Configuration& config) {
   std::cout << "[LOADER-SPARSE] "
     << "Adding " << dataset.num_samples()
     << " #s3 objs: " << num_s3_objs
+    << " bucket: " << config.get_s3_bucket()
     << std::endl;
 
   // For each S3 object (group of s3_obj_num_samples samples)
