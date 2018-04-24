@@ -73,8 +73,8 @@ class S3SparseIterator {
   std::default_random_engine re;
   bool random_access = true;
   uint64_t current = 0;
-  uint64_t start_time;
-  uint64_t end_time;
+  uint64_t start_t;
+  uint64_t end_t;
 };
 
 #endif  // _S3_SPARSEITERATOR_H_

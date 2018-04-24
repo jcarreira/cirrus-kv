@@ -37,7 +37,7 @@ void MultiplePSInterface::send_gradient(const LRSparseGradient* gradient) {
   for (int i = 0; i < num_servers; i++)
     psint[i]->send_lr_gradient(*split_model[i]);
   uint64_t loop_end = get_time_us();
-  std::cout << "Multiple PS Gradient push Time: " << loop_end - end_time << std::endl;
+//  std::cout << "Multiple PS Gradient push Time: " << loop_end - end_time << std::endl;
 }
 
 void MultiplePSInterface::send_mf_gradient(const MFSparseGradient* gradient) {

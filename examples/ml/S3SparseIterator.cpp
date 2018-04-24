@@ -175,7 +175,7 @@ uint64_t S3SparseIterator::get_obj_id(uint64_t left, uint64_t right) {
     //std::random_device rd;
     //auto seed = rd();
     //std::default_random_engine re2(seed);
-    start_time = get_time_us();
+    start_t = get_time_us();
     
     std::uniform_int_distribution<int> sampler(left, right - 1);
     uint64_t sampled = sampler(re);
@@ -206,6 +206,7 @@ void S3SparseIterator::print_progress(const std::string& s3_obj) {
     << "Getting object count: " << count
     << " s3 e2e bw (MB/s): " << total_received / elapsed_sec / 1024.0 / 1024
     << std::endl;
+  std::cout << "Avg time/obj count " << elapsed_sec / count << "\n";
 }
 
 void S3SparseIterator::thread_function(const Configuration& config) {
@@ -218,7 +219,8 @@ void S3SparseIterator::thread_function(const Configuration& config) {
     // in the ring
     std::cout << "Waiting for pref_sem" << std::endl;
     pref_sem.wait();
-
+   // end_time = get_time_us();
+   // std::cout << "Total time per batch: " << end_time - start_time << "\n";
     uint64_t obj_id = get_obj_id(left_id, right_id);
 
     std::string obj_id_str;
@@ -271,7 +273,5 @@ try_start:
     //auto elapsed_us = (get_time_us() - start);
     //std::cout << "pushing took (us): " << elapsed_us << " at (us) " << get_time_us() << std::endl;
   }
-  end_time = get_time_us();
-  std::cout << "Total time per batch: " << end_time - start_time << "\n";
 }
 
