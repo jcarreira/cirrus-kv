@@ -175,7 +175,8 @@ uint64_t S3SparseIterator::get_obj_id(uint64_t left, uint64_t right) {
     //std::random_device rd;
     //auto seed = rd();
     //std::default_random_engine re2(seed);
-
+    start_time = get_time_us();
+    
     std::uniform_int_distribution<int> sampler(left, right - 1);
     uint64_t sampled = sampler(re);
     //uint64_t sampled = rand() % right;
@@ -270,5 +271,7 @@ try_start:
     //auto elapsed_us = (get_time_us() - start);
     //std::cout << "pushing took (us): " << elapsed_us << " at (us) " << get_time_us() << std::endl;
   }
+  end_time = get_time_us();
+  std::cout << "Total time per batch: " << end_time - start_time << "\n";
 }
 
