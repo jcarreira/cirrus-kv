@@ -422,6 +422,7 @@ void SparseLRModel::ensure_preallocated_vectors(const Configuration& config) con
 std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
         const SparseDataset& dataset,
         const Configuration& config) const {
+  uint64_t start_t = get_time_us();
   if (!is_sparse_) {
     throw std::runtime_error("This model is not sparse");
   }
@@ -469,5 +470,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
     }
   }
   std::unique_ptr<LRSparseGradient> ret = std::make_unique<LRSparseGradient>(std::move(res));
+  uint64_t end_t = get_time_us();
+  std::cout << "Minibatch SparseLRModel Time: " << end_t - start_t << "\n";
   return ret;
 }
