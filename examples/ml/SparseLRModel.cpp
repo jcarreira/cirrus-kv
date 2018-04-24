@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <map>
 #include <unordered_map>
+#include <omp.h>
 
 //#define DEBUG
 
@@ -426,7 +427,7 @@ std::unique_ptr<ModelGradient> SparseLRModel::minibatch_grad_sparse(
   }
 
   ensure_preallocated_vectors(config);
-
+  #pragma omp parallel for
   for (uint64_t i = 0; i < dataset.num_samples(); ++i) {
     double part1_i = 0;
     for (const auto& feat : dataset.get_row(i)) {
