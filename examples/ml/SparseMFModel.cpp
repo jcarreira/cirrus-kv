@@ -12,7 +12,7 @@
 // FORMAT
 // Number of users (32bits)
 // Number of factors (32bits)
-// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3 
+// Sample1: factor 1 (FEATURE_TYPE) | factor 2 | factor 3
 // Sample2 : ...
 // ....
 
@@ -22,7 +22,7 @@ void SparseMFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t 
 
   user_bias_reg_ = 0.01;
   item_bias_reg_ = 0.01;
-  global_bias_ = 2.0;
+  global_bias_ = 3.604;
 
   nusers_ = users;
   nitems_ = items;
@@ -52,7 +52,7 @@ SparseMFModel::serialize() const {
   throw std::runtime_error("not implemented");
     std::pair<std::unique_ptr<char[]>, uint64_t> res;
     uint64_t size = getSerializedSize();
-    
+
     res.first.reset(new char[size]);
     res.second = size;
 
@@ -116,7 +116,7 @@ void SparseMFModel::loadSerialized(const void* data, uint64_t minibatch_size, ui
     }
     user_models.push_back(user_model);
   }
-  global_bias_ = 2.0;  
+  global_bias_ = 3.604;
   // now we read the item vectors
   for (uint64_t i = 0; i < num_item_ids; ++i) {
     std::pair<FEATURE_TYPE,
@@ -145,12 +145,12 @@ FEATURE_TYPE SparseMFModel::predict(uint32_t userId, uint32_t itemId) {
   FEATURE_TYPE item_bias = item_models[itemId].first;
 
   FEATURE_TYPE res = global_bias_ + user_bias + item_bias;
-  
+
   for (uint32_t i = 0; i < nfactors_; ++i) {
     res += get_user_weights(userId, i) * get_item_weights(itemId, i);
 #ifdef DEBUG
     if (std::isnan(res) || std::isinf(res)) {
-      std::cout << "userId: " << userId << " itemId: " << itemId 
+      std::cout << "userId: " << userId << " itemId: " << itemId
         << " get_user_weights(userId, i): " << get_user_weights(userId, i)
         << " get_item_weights(itemId, i): " << get_item_weights(itemId, i)
         << std::endl;
@@ -190,7 +190,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
       // first user matches the model in user_models[0]
       uint64_t itemId = dataset.data_[user_from_0][j].first;
       FEATURE_TYPE rating = dataset.data_[user_from_0][j].second;
-      
+
 
       //std::cout <<
       //  "user_from_0: " << user_from_0
@@ -220,7 +220,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
       // update user latent factors
       for (uint64_t k = 0; k < nfactors_; ++k) {
-        FEATURE_TYPE delta_user_w = 
+        FEATURE_TYPE delta_user_w =
           learning_rate *
           (error * get_item_weights(itemId, k)
                    - user_fact_reg_ * get_user_weights(user_from_0, k));
@@ -264,7 +264,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
     }
     gradient->users_weights_grad.push_back(
         std::make_pair(real_user_id, std::move(user_weights_grad)));
-    //std::cout 
+    //std::cout
     //  << "user weights size: " << gradient->users_weights_grad.size()
     //  << " user bias size: " << gradient->users_bias_grad.size() << std::endl;
   }
@@ -302,8 +302,8 @@ FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) 
       << std::endl;
   }
 #endif
-  assert(item_models.find(itemId) != item_models.end());
-  assert(factor < item_models[itemId].second.size());
+  //assert(item_models.find(itemId) != item_models.end());
+  //assert(factor < item_models[itemId].second.size());
   return item_models[itemId].second[factor];
 }
 
@@ -338,7 +338,7 @@ void SparseMFModel::check() const {
     //int key = k.first;
     //auto item_bias = k.second.first;
     const auto& item_weights = k.second.second;
-    if (item_weights.size() != NUM_FACTORS) { 
+    if (item_weights.size() != NUM_FACTORS) {
       throw std::runtime_error("Item has wrong size");
     }
   }
@@ -349,7 +349,7 @@ std::vector<char> SparseMFModel::serializeFromDense(
     uint32_t base_user_id, uint32_t minibatch_size, uint32_t k_items,
     const char* item_data_ptr) const {
 
-  uint32_t to_send_size = 
+  uint32_t to_send_size =
     minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
     k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
 
@@ -366,7 +366,7 @@ std::vector<char> SparseMFModel::serializeFromDense(
       store_value<FEATURE_TYPE>(
           data_to_send_ptr,
           mf_model.get_user_weights(i, j));
-    }   
+    }
   }
 
   // now we store data about items
@@ -377,9 +377,8 @@ std::vector<char> SparseMFModel::serializeFromDense(
     store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_item_bias(item_id));
     for (uint32_t j = 0; j < NUM_FACTORS; ++j) {
       store_value<FEATURE_TYPE>(data_to_send_ptr, mf_model.get_item_weights(item_id, j));
-    }   
+    }
   }
 
   return buffer;
 }
-

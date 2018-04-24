@@ -283,7 +283,6 @@ void PSSparseServerTask::gradient_f() {
       std::cout << "GET_LR_SPARSE_MODEL Elapsed(us): " << elapsed << std::endl;
 #endif
     } else if (req.req_id == GET_MF_SPARSE_MODEL) {
-      std::cout << "process_get_mf_sparse_model" << std::endl;
       if (!process_get_mf_sparse_model(req, thread_buffer)) {
         break;
       }
