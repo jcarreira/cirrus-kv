@@ -181,6 +181,7 @@ uint64_t S3SparseIterator::get_obj_id(uint64_t left, uint64_t right) {
     uint64_t sampled = sampler(re);
     //uint64_t sampled = rand() % right;
     std::cout << "Sampled : " << sampled << " worker_id: " << worker_id << " left: " << left << " right: " << right << std::endl;
+    std::cout << "Avg time for sample: " << get_time_us() - start_t << "\n";
     return sampled;
   } else {
     auto ret = current++;
@@ -206,7 +207,7 @@ void S3SparseIterator::print_progress(const std::string& s3_obj) {
     << "Getting object count: " << count
     << " s3 e2e bw (MB/s): " << total_received / elapsed_sec / 1024.0 / 1024
     << std::endl;
-  std::cout << "Avg time/obj count " << elapsed_sec / count << "\n";
+  //std::cout << "Avg time/obj count " << elapsed_sec / count << "\n";
 }
 
 void S3SparseIterator::thread_function(const Configuration& config) {
