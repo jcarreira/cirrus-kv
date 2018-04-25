@@ -189,6 +189,11 @@ uint64_t S3SparseIterator::get_obj_id(uint64_t left, uint64_t right) {
   }
 }
 
+/**
+  * This function is used to compute the amount of S3 data consumed
+  * per second. This might not be the same as the available S3
+  * bandwidth if the system is bottleneck somewhere else
+  */
 void S3SparseIterator::print_progress(const std::string& s3_obj) {
   static uint64_t start_time = 0;
   static uint64_t total_received = 0;
@@ -205,6 +210,10 @@ void S3SparseIterator::print_progress(const std::string& s3_obj) {
     << "Getting object count: " << count
     << " s3 e2e bw (MB/s): " << total_received / elapsed_sec / 1024.0 / 1024
     << std::endl;
+}
+
+static int sstream_size(std::ostringstream& ss) {
+  return ss.tellp();
 }
 
 void S3SparseIterator::thread_function(const Configuration& config) {
@@ -232,16 +241,16 @@ void S3SparseIterator::thread_function(const Configuration& config) {
 try_start:
     try {
       std::cout << "S3SparseIterator: getting object " << obj_id_str << std::endl;
-#ifdef DEBUG
-      auto start = get_time_us();
-#endif
+      uint64_t start = get_time_us();
       s3_obj = s3_get_object_ptr(obj_id_str, *s3_client, config.get_s3_bucket());
-#ifdef DEBUG
-      auto elapsed_us = (get_time_us() - start);
+      uint64_t elapsed_us = (get_time_us() - start);
+      double mb_s = sstream_size(*s3_obj) / elapsed_us
+        * 1000.0 * 1000 / 1024 / 1024;
       std::cout << "received s3 obj"
         << " elapsed: " << elapsed_us
-        << std::endl;
-#endif
+        << " size: " << sstream_size(*s3_obj)
+        << " BW (MB/s): " << mb_s
+        << "\n";
       //pm.increment_batches(); // increment number of batches we have processed
 
 #ifdef DEBUG
