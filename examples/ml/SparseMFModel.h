@@ -22,7 +22,7 @@ class SparseMFModel : public CirrusModel {
     /**
       * MFModel constructor from serialized data
       * @param w Serialized data
-      * @param minibatch_size 
+      * @param minibatch_size
       * @param num_items
       */
     SparseMFModel(const void* w, uint64_t minibatch_size, uint64_t num_items);
@@ -98,7 +98,7 @@ class SparseMFModel : public CirrusModel {
         const Configuration&,
         uint64_t);
 
-     
+
     //void sgd_update(double learning_rate,
     //            uint64_t base_user,
     //            const SparseDataset&);
@@ -147,14 +147,20 @@ class SparseMFModel : public CirrusModel {
     std::vector<
       std::tuple<int, FEATURE_TYPE,
         std::vector<FEATURE_TYPE>>> user_models;
-    
+
     // for each item we have in order:
     // 1. item id
     // 2. item_bias
     // 3. item weights
+
+    /* XXX: Getting rid of this - Andy
     std::unordered_map<int,
       std::pair<FEATURE_TYPE,
         std::vector<FEATURE_TYPE>>> item_models;
+    */
+
+    std::pair<FEATURE_TYPE, std::vector<FEATURE_TYPE>> item_models[17770];
+
 
     FEATURE_TYPE& get_user_weights(uint64_t userId, uint64_t factor);
     FEATURE_TYPE& get_item_weights(uint64_t itemId, uint64_t factor);

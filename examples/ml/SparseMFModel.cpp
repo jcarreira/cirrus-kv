@@ -174,7 +174,8 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
   FEATURE_TYPE learning_rate = config.get_learning_rate();
   auto gradient = std::make_unique<MFSparseGradient>();
-  std::unordered_map<int, std::vector<FEATURE_TYPE>> item_weights_grad_map;
+  std::vector<FEATURE_TYPE> item_weights_grad_map[17770];
+  std::vector<int> item_weights_lst;
   double training_rmse = 0;
   uint64_t training_rmse_count = 0;
 
@@ -231,7 +232,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
                    - user_fact_reg_ * get_user_weights(user_from_0, k));
         user_weights_grad[k] += delta_user_w;
         std::get<2>(user_models[user_from_0])[k] += delta_user_w;
-        
+
 
 
 #ifdef DEBUG
@@ -255,6 +256,7 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
         if (item_weights_grad_map[itemId].size() == 0) {
           item_weights_grad_map[itemId].resize(NUM_FACTORS);
+          item_weights_lst.push_back(itemId);
         }
         //std::cout << "UPDATE HERE " << std::endl;
         item_weights_grad_map[itemId][k] += delta_item_w;
@@ -279,9 +281,8 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
     //  << " user bias size: " << gradient->users_bias_grad.size() << std::endl;
   }
 
-  for (const auto& p : item_weights_grad_map) {
-    const auto& item_id = p.first;
-    auto& item_weights = p.second;
+  for (const auto& item_id : item_weights_lst) {
+    auto& item_weights = item_weights_grad_map[item_id];
     gradient->items_weights_grad.push_back(
         std::make_pair(item_id, std::move(item_weights)));
   }
@@ -301,7 +302,8 @@ FEATURE_TYPE& SparseMFModel::get_user_weights(uint64_t userId, uint64_t factor) 
 
 FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) {
 #ifdef DEBUG
-  if (item_models.find(itemId) == item_models.end()) {
+  /*
+  if (item_models.itemId) == item_models.end()) {
     throw std::runtime_error("key not found");
   }
   if (factor >= item_models[itemId].second.size()) {
@@ -310,7 +312,7 @@ FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) 
       << "factor: " << factor
       << " size: " << item_models[itemId].second.size()
       << std::endl;
-  }
+  } */
 #endif
   //assert(item_models.find(itemId) != item_models.end());
   //assert(factor < item_models[itemId].second.size());
@@ -347,10 +349,13 @@ void SparseMFModel::check() const {
   for (const auto& k : item_models) {
     //int key = k.first;
     //auto item_bias = k.second.first;
+
+    /*
     const auto& item_weights = k.second.second;
     if (item_weights.size() != NUM_FACTORS) {
       throw std::runtime_error("Item has wrong size");
     }
+    */
   }
 }
 
