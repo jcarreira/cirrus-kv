@@ -28,9 +28,9 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/third_party/aws-sdk-cpp/aws-cpp-sdk-s3 \
 	       -L$(TOP_DIR)/third_party/curl/lib \
 	       -L$(TOP_DIR)/third_party/gflags/lib \
+	       -L$(TOP_DIR)/third_party/libevent/lib \
 	       -L/home/ec2-user/kerberos/krb5-1.15.2/src/lib \
-	       -L/home/ec2-user/keyutils/keyutils-1.5.10 \
-	       -L/home/ec2-user/libevent/lib/
+	       -L/home/ec2-user/keyutils/keyutils-1.5.10
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc -static -Wl,--whole-archive \
