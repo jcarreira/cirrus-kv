@@ -96,7 +96,9 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   if (config.get_netflix_workers()) {
     int range_length = (train_range.second - train_range.first) /
       config.get_netflix_workers();
-    l = l + (worker - 3) * range_length;
+
+    worker_id = worker - 3; // make worker id start at 0
+    l = l + worker_id * range_length;
     r = l + range_length;
   }
 
