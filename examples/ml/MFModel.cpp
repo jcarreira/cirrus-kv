@@ -237,7 +237,19 @@ FEATURE_TYPE MFModel::predict(uint32_t userId, uint32_t itemId) const {
       throw std::runtime_error("nan error in predict");
     }
 #endif
+    /*
+    if (res < -7 || res > 7)
+        for (uint32_t i = 0; i < nfactors_; i++)
+    
+    {
+        std::cout << "res: " << res << " " << global_bias_ << " " << user_bias_[userId] << " " << item_bias_[itemId] << std::endl;
+        std::cout << "userId: " << userId << " itemId: " << itemId
+        << " get_user_weights(userId, i): " << get_user_weights(userId, i)
+        << " get_item_weights(itemId, i): " << get_item_weights(itemId, i)
+        << std::endl;
+    } */
   }
+
   return res;
 }
 

@@ -17,18 +17,18 @@
 // ....
 
 void SparseMFModel::initialize_weights(uint64_t users, uint64_t items, uint64_t nfactors) {
-  item_fact_reg_ = 0.01;
-  user_fact_reg_ = 0.01;
+  item_fact_reg_ = 0.05;
+  user_fact_reg_ = 0.05;
 
-  user_bias_reg_ = 0.01;
-  item_bias_reg_ = 0.01;
+  user_bias_reg_ = 0.05;
+  item_bias_reg_ = 0.05;
   global_bias_ = 3.604;
 
   nusers_ = users;
   nitems_ = items;
   nfactors_ = nfactors;
 
-  randomize();
+//  randomize();
 }
 
 SparseMFModel::SparseMFModel(uint64_t users, uint64_t items, uint64_t nfactors) {
@@ -204,13 +204,18 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 
       // compute gradient for user bias
       FEATURE_TYPE& user_bias = std::get<1>(user_models[user_from_0]);
+      float delta = learning_rate * (error - user_bias_reg_ * user_bias);
+      gradient->users_bias_grad[real_user_id] += delta;
+      user_bias += delta;
+
       //std::cout << "real_user_id: " << real_user_id << std::endl;
-      gradient->users_bias_grad[real_user_id] +=
-        learning_rate * (error - user_bias_reg_ * user_bias);
+
 
       // compute gradient for item bias
       FEATURE_TYPE& item_bias = item_models[itemId].first;
-      gradient->items_bias_grad[itemId] += learning_rate * (error - item_bias_reg_ * item_bias);
+      delta = learning_rate * (error - item_bias_reg_ * item_bias);
+      gradient->items_bias_grad[itemId] += delta;
+      item_bias += delta;
 
 #ifdef DEBUG
       if (std::isnan(user_bias) || std::isnan(item_bias) ||
@@ -225,6 +230,10 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
           (error * get_item_weights(itemId, k)
                    - user_fact_reg_ * get_user_weights(user_from_0, k));
         user_weights_grad[k] += delta_user_w;
+        std::get<2>(user_models[user_from_0])[k] += delta_user_w;
+        
+
+
 #ifdef DEBUG
         if (std::isnan(get_user_weights(user_from_0, k)) ||
             std::isinf(get_user_weights(user_from_0, k))) {
@@ -242,13 +251,15 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
           learning_rate *
           (error * get_user_weights(user_from_0, k) -
                  item_fact_reg_ * get_item_weights(itemId, k));
+        item_models[itemId].second[k] += delta_item_w;
 
         if (item_weights_grad_map[itemId].size() == 0) {
           item_weights_grad_map[itemId].resize(NUM_FACTORS);
         }
         //std::cout << "UPDATE HERE " << std::endl;
         item_weights_grad_map[itemId][k] += delta_item_w;
-#ifdef DEBUG
+
+        /*
         if (std::isnan(get_item_weights(itemId, k)) ||
             std::isinf(get_item_weights(itemId, k))) {
           std::cout << "error: " << error << std::endl;
@@ -256,11 +267,10 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
           std::cout << "item weight: " << get_item_weights(itemId, k) << std::endl;
           std::cout << "learning_rate: " << learning_rate << std::endl;
           throw std::runtime_error("nan in item weight");
-        }
+        } */
       }
       //gradient->items_weights_grad.push_back(
       //    std::make_pair(itemId, std::move(item_weights_grad)));
-#endif
     }
     gradient->users_weights_grad.push_back(
         std::make_pair(real_user_id, std::move(user_weights_grad)));
@@ -284,8 +294,8 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 }
 
 FEATURE_TYPE& SparseMFModel::get_user_weights(uint64_t userId, uint64_t factor) {
-  assert(userId < user_models.size());
-  assert(factor < std::get<2>(user_models[userId]).size());
+  //assert(userId < user_models.size());
+  //assert(factor < std::get<2>(user_models[userId]).size());
   return std::get<2>(user_models[userId])[factor];
 }
 

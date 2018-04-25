@@ -250,7 +250,7 @@ bool PSSparseServerTask::process_get_lr_full_model(
 
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
-  thread_buffer.resize(30 * 1024 * 1024); // 30 MB
+  thread_buffer.resize(120 * 1024 * 1024); // 30 MB
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
