@@ -295,14 +295,11 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
 }
 
 FEATURE_TYPE& SparseMFModel::get_user_weights(uint64_t userId, uint64_t factor) {
-  //assert(userId < user_models.size());
-  //assert(factor < std::get<2>(user_models[userId]).size());
   return std::get<2>(user_models[userId])[factor];
 }
 
 FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) {
 #ifdef DEBUG
-  /*
   if (item_models.itemId) == item_models.end()) {
     throw std::runtime_error("key not found");
   }
@@ -312,10 +309,8 @@ FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) 
       << "factor: " << factor
       << " size: " << item_models[itemId].second.size()
       << std::endl;
-  } */
+  } 
 #endif
-  //assert(item_models.find(itemId) != item_models.end());
-  //assert(factor < item_models[itemId].second.size());
   return item_models[itemId].second[factor];
 }
 
