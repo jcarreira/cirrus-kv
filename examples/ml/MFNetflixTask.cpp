@@ -82,16 +82,28 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
   wait_for_start(WORKER_SPARSE_TASK_RANK + worker, nworkers);
 
   // Create iterator that goes from 0 to num_s3_batches
-  auto train_range = config.get_train_range();
+  std::pair<int, int> train_range = config.get_train_range();
 
   /** We sequentially iterate over data
     * This is necessary because we need to know the index of each row
     * in the dataset matrix because that tells us which user it belongs to
     * (same doesn't happen with Logistic Regression)
     */
+
+  int l = train_range.first; 
+  int r = train_range.second;
+
+  if (config.get_netflix_workers()) {
+    int range_length = (train_range.second - train_range.first) /
+      config.get_netflix_workers();
+    l = l + (worker - 3) * range_length;
+    r = l + range_length;
+  }
+
+  assert(l >= 0 && l < train_range.second && l < r);
+  assert(r < train_range.second);
   S3SparseIterator s3_iter(
-      train_range.first, train_range.second,
-      config, config.get_s3_size(), config.get_minibatch_size(),
+      l, r, config, config.get_s3_size(), config.get_minibatch_size(),
       false, worker, false);
 
   std::cout << "[WORKER] starting loop" << std::endl;
