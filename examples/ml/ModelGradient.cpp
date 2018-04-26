@@ -183,7 +183,7 @@ std::vector<std::shared_ptr<LRSparseGradient>> LRSparseGradient::gradient_shards
   std::vector<std::vector<std::pair<int, FEATURE_TYPE>>> model;
   model.resize(num_shards);
   
-  omp_set_num_threads(num_shards);
+ // omp_set_num_threads(num_shards);
 //  for (const auto &weight : weights) {
 //  #pragma omp parallel for
   for (int i = 0; i < weights.size(); i++) {
