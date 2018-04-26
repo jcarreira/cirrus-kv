@@ -32,4 +32,4 @@ using FEATURE_TYPE = float;
 #define SYNC_N_STEPS (100)
 
 // number of factors for neflix workload
-#define NUM_FACTORS 40
+#define NUM_FACTORS 10

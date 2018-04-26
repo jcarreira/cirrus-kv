@@ -300,7 +300,8 @@ FEATURE_TYPE& SparseMFModel::get_user_weights(uint64_t userId, uint64_t factor) 
 
 FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) {
 #ifdef DEBUG
-  if (item_models.itemId) == item_models.end()) {
+  /*
+  if ((item_models.itemId) == item_models.end()) {
     throw std::runtime_error("key not found");
   }
   if (factor >= item_models[itemId].second.size()) {
@@ -310,6 +311,7 @@ FEATURE_TYPE& SparseMFModel::get_item_weights(uint64_t itemId, uint64_t factor) 
       << " size: " << item_models[itemId].second.size()
       << std::endl;
   } 
+  */
 #endif
   return item_models[itemId].second[factor];
 }

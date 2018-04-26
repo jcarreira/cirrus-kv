@@ -92,25 +92,30 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 
   int l = train_range.first; 
   int r = train_range.second;
+  uint64_t sample_low = 0;
+  uint64_t sample_index = 0;
+  uint64_t sample_high = config.get_s3_size() * (config.get_train_range().second + 1);
 
   if (config.get_netflix_workers()) {
-    int range_length = (train_range.second - train_range.first) /
-      config.get_netflix_workers();
+    int range_length = (train_range.second - train_range.first) / config.get_netflix_workers();
+    range_length += 1;
+  
+    l = worker * range_length;
+    r = std::min(l + range_length, r);
 
-    worker_id = worker - 3; // make worker id start at 0
-    l = l + worker_id * range_length;
-    r = l + range_length;
+    sample_low = l * config.get_s3_size();
+    sample_high = std::min(sample_high, (r + 1) * config.get_s3_size());
+
+    sample_index = sample_low;
+
   }
 
-  assert(l >= 0 && l < train_range.second && l < r);
-  assert(r < train_range.second);
   S3SparseIterator s3_iter(
-      l, r, config, config.get_s3_size(), config.get_minibatch_size(),
+      l, r + 1, config, config.get_s3_size(), config.get_minibatch_size(),
       false, worker, false);
 
   std::cout << "[WORKER] starting loop" << std::endl;
 
-  uint64_t sample_index = 0;
   while (1) {
     // get data, labels and model
 #ifdef DEBUG
@@ -154,9 +159,8 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
       push_gradient(*grad_ptr);
       sample_index += config.get_minibatch_size();
 
-      if (sample_index + config.get_minibatch_size()
-                   > config.get_s3_size() * config.get_train_range().second) {
-          sample_index = 0;
+      if (sample_index + config.get_minibatch_size() > sample_high) {
+          sample_index = sample_low;
       }
     } catch(...) {
       std::cout << "There was an error computing the gradient" << std::endl;
