@@ -52,6 +52,10 @@ To install boost do:
 To install cpplint do:
 
     $ pip install cpplint
+    
+To install missing autoreconf packages do:
+
+    $ autoreconf --install
 
 Building
 =========

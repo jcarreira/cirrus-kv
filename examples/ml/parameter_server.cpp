@@ -3,6 +3,7 @@
 #include <string>
 #include "Utils.h"
 #include "Configuration.h"
+#include "gflags/gflags.h"
 
 #include "utils/Log.h"
 #include "common/Exception.h"
@@ -20,6 +21,10 @@
 
 static const uint64_t GB = (1024*1024*1024);
 static const uint32_t SIZE = 1;
+DEFINE_int64(nworkers, -1, "number of workers");
+DEFINE_int64(rank, -1, "rank");
+DEFINE_string(config, "", "config");
+
 
 void run_tasks(int rank, int nworkers, 
     int batch_size, const Configuration& config) {
@@ -126,18 +131,24 @@ int main(int argc, char** argv) {
   }
 
   print_hostname();
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  int nworkers = string_to<int>(argv[2]);
+  if ((FLAGS_nworkers < 0) || (FLAGS_rank < 0) || (FLAGS_config == "")) {
+    throw std::runtime_error("Some flags not specified");
+  }
+
+
+  int nworkers = FLAGS_nworkers;
   std::cout << "Running parameter server with: "
     << nworkers << " workers"
     << std::endl;
 
-  int rank = string_to<int>(argv[3]);
+  int rank = FLAGS_rank;
   std::cout << "Running parameter server with: "
     << rank << " rank"
     << std::endl;
 
-  auto config = load_configuration(argv[1]);
+  auto config = load_configuration(FLAGS_config);
   config.print();
 
   // from config we get
