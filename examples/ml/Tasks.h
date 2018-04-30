@@ -300,7 +300,7 @@ class PSSparseServerTask : public MLTask {
     // message handling
     bool process_get_lr_sparse_model(const Request& req, std::vector<char>&);
     bool process_send_lr_gradient(const Request& req, std::vector<char>&);
-    bool process_get_mf_sparse_model(const Request& req, std::vector<char>&);
+    bool process_get_mf_sparse_model(const Request& req, std::vector<char>&, int tn);
     bool process_get_lr_full_model(const Request& req, std::vector<char>& thread_buffer);
     bool process_send_mf_gradient(const Request& req, std::vector<char>& thread_buffer);
     bool process_get_mf_full_model(const Request& req, std::vector<char>& thread_buffer);
@@ -343,6 +343,10 @@ class PSSparseServerTask : public MLTask {
 
     std::map<int, bool> task_to_status;
     std::map<int, std::string> operation_to_name;
+
+    char* holder[4];
+    int tc = 0;
+
 };
 
 class MFNetflixTask : public MLTask {
