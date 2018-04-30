@@ -133,10 +133,10 @@ class SparseMFModel : public CirrusModel {
       */
     //uint64_t size() const;
 
-    std::vector<char> serializeFromDense(
+    void serializeFromDense(
         MFModel& model,
         uint32_t base_user, uint32_t minibatch_size, uint32_t k_items,
-        const char* item_data_ptr) const;
+        const char* item_data_ptr, char* holder) const;
 
  public:
 

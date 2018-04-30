@@ -7,6 +7,8 @@
 #include "Constants.h"
 #include "Checksum.h"
 
+#include <chrono>
+
 #undef DEBUG
 
 #define MAX_CONNECTIONS (nworkers * 2 + 1) // (2 x # workers + 1)
@@ -32,6 +34,9 @@ PSSparseServerTask::PSSparseServerTask(
   operation_to_name[5] = "GET_MF_SPARSE_MODEL";
   operation_to_name[6] = "SET_TASK_STATUS";
   operation_to_name[7] = "GET_TASK_STATUS";
+  
+  for (int i = 0; i < 4; i++)
+    holder[i] = new char[5000000];
 }
 
 std::shared_ptr<char> PSSparseServerTask::serialize_lr_model(
@@ -120,7 +125,7 @@ bool PSSparseServerTask::process_send_lr_gradient(const Request& req, std::vecto
 // XXX we have to refactor this ASAP
 // move this to SparseMFModel
 bool PSSparseServerTask::process_get_mf_sparse_model(
-    const Request& req, std::vector<char>& thread_buffer) {
+    const Request& req, std::vector<char>& thread_buffer, int tn) {
   uint32_t k_items = 0;
   uint32_t base_user_id = 0;
   uint32_t minibatch_size = 0;
@@ -137,7 +142,9 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
     throw std::runtime_error("Wrong message");
   }
   read_all(req.sock, thread_buffer.data(), k_items * sizeof(uint32_t));
-
+  uint32_t to_send_size = 
+    minibatch_size * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE)) +
+    k_items * (sizeof(uint32_t) + (NUM_FACTORS + 1) * sizeof(FEATURE_TYPE));
 #ifdef DEBUG
   std::cout << "k_items: " << k_items << std::endl;
   std::cout << "base_user_id: " << base_user_id << std::endl;
@@ -145,14 +152,14 @@ bool PSSparseServerTask::process_get_mf_sparse_model(
 #endif
 
   SparseMFModel sparse_mf_model((uint64_t)0, 0, 0);
-  std::vector<char> data_to_send = sparse_mf_model.serializeFromDense(
-      *mf_model, base_user_id, minibatch_size, k_items, thread_buffer.data());
+  sparse_mf_model.serializeFromDense(
+      *mf_model, base_user_id, minibatch_size, k_items, thread_buffer.data(), holder[tn]);
 
-  uint32_t to_send_size = data_to_send.size();
+  //uint32_t to_send_size = data_to_send.size();
   if (send_all(req.sock, &to_send_size, sizeof(uint32_t)) == -1) {
     return false;
   }
-  if (send_all(req.sock, data_to_send.data(), data_to_send.size()) == -1) {
+  if (send_all(req.sock, holder[tn], to_send_size) == -1) {
     return false;
   }
   return true;
@@ -251,6 +258,8 @@ bool PSSparseServerTask::process_get_lr_full_model(
 void PSSparseServerTask::gradient_f() {
   std::vector<char> thread_buffer;
   thread_buffer.resize(120 * 1024 * 1024); // 30 MB
+
+  int tn = tc++;
   while (1) {
     sem_wait(&sem_new_req);
     to_process_lock.lock();
@@ -283,7 +292,7 @@ void PSSparseServerTask::gradient_f() {
       std::cout << "GET_LR_SPARSE_MODEL Elapsed(us): " << elapsed << std::endl;
 #endif
     } else if (req.req_id == GET_MF_SPARSE_MODEL) {
-      if (!process_get_mf_sparse_model(req, thread_buffer)) {
+      if (!process_get_mf_sparse_model(req, thread_buffer, tn)) {
         break;
       }
     } else if (req.req_id == GET_LR_FULL_MODEL) {
@@ -391,6 +400,7 @@ void PSSparseServerTask::start_server() {
       std::bind(&PSSparseServerTask::poll_thread_fn, this));
 
   for (uint32_t i = 0; i < n_threads; ++i) {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     gradient_thread.push_back(std::make_unique<std::thread>(
         std::bind(&PSSparseServerTask::gradient_f, this)));
   }
