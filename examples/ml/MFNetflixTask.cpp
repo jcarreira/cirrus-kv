@@ -121,10 +121,12 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 #ifdef DEBUG
     std::cout << "[WORKER] running phase 1" << std::endl;
 #endif
+    auto t0 = get_time_us();
     std::unique_ptr<SparseDataset> dataset;
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
+    auto t1 = get_time_us();
     std::cout << "DS size: " << dataset->num_samples() << std::endl;
 #ifdef DEBUG
     std::cout << "[WORKER] phase 1 done" << std::endl;
@@ -133,12 +135,14 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
     auto now = get_time_us();
 #endif
     // compute mini batch gradient
+    auto t2 = get_time_us();
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
     SparseMFModel model =
       mf_model_get->get_new_model(
               *dataset, sample_index, config.get_minibatch_size());
+    auto t3 = get_time_us();
 
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
@@ -148,6 +152,7 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 #endif
 
     try {
+      auto t4 = get_time_us();
       auto gradient = model.minibatch_grad(*dataset, config, sample_index);
 #ifdef DEBUG
       auto elapsed_us = get_time_us() - now;
@@ -156,8 +161,12 @@ void MFNetflixTask::run(const Configuration& config, int worker) {
 #endif
       MFSparseGradient* grad_ptr =
         dynamic_cast<MFSparseGradient*>(gradient.get());
+      auto t5 = get_time_us();
       push_gradient(*grad_ptr);
+      auto t6 = get_time_us();
       sample_index += config.get_minibatch_size();
+
+      std::cout << "getd, getm, calc, push: " << t1 - t0 << " " << t3 - t2 << " " << t5 - t4 << " " << t6 - t5 << std::endl;
 
       if (sample_index + config.get_minibatch_size() > sample_high) {
           sample_index = sample_low;

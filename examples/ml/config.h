@@ -9,7 +9,7 @@
 // #define PRELOAD_DATA
 
 #ifdef USE_REDIS
-#define PS_IP "172.31.2.215"
+#define PS_IP "172.31.7.46"
 #define PS_PORT 1337
 #endif
 
