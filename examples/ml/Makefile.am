@@ -30,7 +30,7 @@ LINCLUDES    = -L$(TOP_DIR)/src/utils/ \
 	       -L$(TOP_DIR)/third_party/gflags/lib \
 	       -L$(TOP_DIR)/third_party/libevent/lib \
 	       -L$(TOP_DIR)/third_party/krb5-1.15.2/src/lib \
-	       -L/home/ec2-user/keyutils/keyutils-1.5.10
+	       -L$(TOP_DIR)/third_party/keyutils-1.5.10
 
 LDADD    = $(LINCLUDES) $(LIBS)
 LDFLAGS  = -static-libgcc -static -Wl,--whole-archive \

@@ -7,6 +7,15 @@ cd third_party/libcuckoo
 cmake .
 make -j 10
 
+# wget and compile keyutils
+cd ..
+wget http://people.redhat.com/~dhowells/keyutils/keyutils-1.5.10.tar.bz2
+tar xvjf keyutils-1.5.10.tar.bz2
+rm keyutils-1.5.10.tar.bz2
+cd keyutils-1.5.10
+make -j 10
+make install
+
 #wget and compile krb5
 cd ..
 wget https://kerberos.org/dist/krb5/1.15/krb5-1.15.2.tar.gz
