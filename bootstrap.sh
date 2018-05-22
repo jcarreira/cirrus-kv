@@ -7,6 +7,12 @@ cd third_party/libcuckoo
 cmake .
 make -j 10
 
+#compile curl
+cd ../curl
+cmake . -DCURL_STATICLIB=ON
+make -j 10
+make install
+
 # wget and compile keyutils
 cd ..
 wget http://people.redhat.com/~dhowells/keyutils/keyutils-1.5.10.tar.bz2
