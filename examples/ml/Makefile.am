@@ -12,7 +12,7 @@ LIBS         =  -lclient -lauthentication -lutils \
 		-levictionpolicies -lhiredis \
 		-laws-cpp-sdk-s3 -laws-cpp-sdk-core \
 		-ldl -lcurl -lall -lkrb5 -lk5crypto -lssl -lcrypto -lz \
-		-lkeyutils -lhiredis -levent -lgflags
+		-lkeyutils -lhiredis -levent -lgflags -lresolv
 
 if USE_RDMA
 LIBS += -lrdmacm -libverbs
