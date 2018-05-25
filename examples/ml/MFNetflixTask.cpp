@@ -10,8 +10,8 @@
 
 #include <pthread.h>
 
-#define DEBUG
 
+#define DEBUG
 void MFNetflixTask::push_gradient(MFSparseGradient& mfg) {
 #ifdef DEBUG
   auto before_push_us = get_time_us();

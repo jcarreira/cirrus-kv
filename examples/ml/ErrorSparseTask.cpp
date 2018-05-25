@@ -122,7 +122,7 @@ void ErrorSparseTask::run(const Configuration& config) {
       } else if (config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
         std::cout
           << "[ERROR_TASK] RMSE (Total): "
-          << std::sqrt(total_loss / total_num_features)
+          << std::sqrt(total_loss / total_accuracy)
           << " time(us): " << get_time_us()
           << " time from start (sec): "
           << (get_time_us() - start_time) / 1000000.0

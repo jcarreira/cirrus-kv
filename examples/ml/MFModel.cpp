@@ -352,6 +352,12 @@ std::pair<double, double> MFModel::calc_loss(Dataset& /*dataset*/) const {
   return std::make_pair(0.0, 0.0);
 }
 
+
+uint32_t hash_fun(uint32_t i) {
+    // Knuth hash function
+    return i * 2654435761 % 4294967296;
+}
+
 std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t start_index) const {
   double error = 0;
   uint64_t count = 0;
@@ -361,7 +367,8 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //    << "calc_loss() starting"
 //    << std::endl;
 //#endif
-
+  int kept = 0;
+  int lost = 0;
   for (uint64_t userId = 0; userId < dataset.data_.size(); ++userId) {
     uint64_t off_userId = userId + start_index;
 //#ifdef DEBUG
@@ -373,6 +380,13 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //#endif
     for (uint64_t j = 0; j < dataset.data_.at(userId).size(); ++j) {
       uint64_t movieId = dataset.data_.at(userId).at(j).first;
+
+      if (hash_fun(off_userId + movieId) % 10 != 0) {
+          lost++;
+          continue;
+      }
+      kept++;
+
 //#ifdef DEBUG
 //      std::cout
 //        << " movieId: " << movieId
@@ -395,6 +409,9 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
 //        << " count: " << count
 //        << std::endl;
 //#endif
+
+      //std::cout << "CalcLoss TestedOn/Lost" << kept << " " << lost << std::endl;
+
       if (std::isnan(e) || std::isnan(error)) {
         std::string error = std::string("nan in calc_loss rating: ") + std::to_string(rating) +
           " prediction: " + std::to_string(prediction);
@@ -416,7 +433,7 @@ std::pair<double, double> MFModel::calc_loss(SparseDataset& dataset, uint32_t st
   if (std::isnan(error)) {
     throw std::runtime_error("error isnan");
   }
-  return std::make_pair(error, 0);
+  return std::make_pair(error, kept);
 }
 
 uint64_t MFModel::getSerializedGradientSize() const {

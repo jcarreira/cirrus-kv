@@ -162,6 +162,11 @@ FEATURE_TYPE SparseMFModel::predict(uint32_t userId, uint32_t itemId) {
   return res;
 }
 
+uint32_t hash_func(uint32_t i) {
+    // Knuth hash function
+    return i * 2654435761 % 4294967296;
+}
+
 std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
             const SparseDataset& dataset,
             const Configuration& config,
@@ -179,6 +184,11 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
   double training_rmse = 0;
   uint64_t training_rmse_count = 0;
 
+  bool tmp = true;
+
+  int kept = 0;
+  int lost = 0;
+
   // iterate all pairs user rating
   for (uint64_t user_from_0 = 0; user_from_0 < dataset.data_.size(); ++user_from_0) {
     std::vector<FEATURE_TYPE> user_weights_grad(NUM_FACTORS);
@@ -191,7 +201,17 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
       // first user matches the model in user_models[0]
       uint64_t itemId = dataset.data_[user_from_0][j].first;
       FEATURE_TYPE rating = dataset.data_[user_from_0][j].second;
+      
+      if (hash_func(real_user_id + itemId) % 10 == 0) {
+        if (tmp) {
+          tmp = false;
+          std::cout << "Ommitted: " << real_user_id << " " << itemId << std::endl;
+        }
+        lost++;
+        continue;
+      }
 
+      kept++;
 
       //std::cout <<
       //  "user_from_0: " << user_from_0
@@ -280,6 +300,8 @@ std::unique_ptr<ModelGradient> SparseMFModel::minibatch_grad(
     //  << "user weights size: " << gradient->users_weights_grad.size()
     //  << " user bias size: " << gradient->users_bias_grad.size() << std::endl;
   }
+
+  std::cout << "Values Kept/Lost: " << kept << " " << lost << std::endl;
 
   for (const auto& item_id : item_weights_lst) {
     auto& item_weights = item_weights_grad_map[item_id];

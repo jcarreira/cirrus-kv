@@ -101,10 +101,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #ifdef DEBUG
     std::cout << get_time_us() << " [WORKER] running phase 1" << std::endl;
 #endif
+    auto t0 = get_time_us();
     std::unique_ptr<SparseDataset> dataset;
     if (!get_dataset_minibatch(dataset, s3_iter)) {
       continue;
     }
+    auto t1 = get_time_us();
 #ifdef DEBUG
     std::cout << get_time_us() << " [WORKER] phase 1 done. Getting the model" << std::endl;
     //dataset->check();
@@ -115,8 +117,9 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     std::unique_ptr<ModelGradient> gradient;
 
     // we get the model subset with just the right amount of weights
+    auto t2 = get_time_us();
     sparse_model_get->get_new_model_inplace(*dataset, model, config);
-
+    auto t3 = get_time_us();
 #ifdef DEBUG
     std::cout << "get model elapsed(us): " << get_time_us() - now << std::endl;
     std::cout << "Checking model" << std::endl;
@@ -125,6 +128,8 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
     now = get_time_us();
 #endif
 
+
+    auto t4 = get_time_us();
     try {
       gradient = model.minibatch_grad_sparse(*dataset, config);
     } catch(const std::runtime_error& e) {
@@ -134,6 +139,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
       std::cout << "There was an error computing the gradient" << std::endl;
       exit(-1);
     }
+    auto t5 = get_time_us();
 #ifdef DEBUG
     auto elapsed_us = get_time_us() - now;
     std::cout << "[WORKER] Gradient compute time (us): " << elapsed_us
@@ -142,6 +148,7 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
 #endif
     gradient->setVersion(version++);
 
+    auto t6 = get_time_us();
     try {
       LRSparseGradient* lrg = dynamic_cast<LRSparseGradient*>(gradient.get());
       push_gradient(lrg);
@@ -150,6 +157,12 @@ void LogisticSparseTaskS3::run(const Configuration& config, int worker) {
         << "Worker task error doing put of gradient" << "\n";
       exit(-1);
     }
+    auto t7 = get_time_us();
+
+
+    std::cout << "getd, getm, calc, push, sz: " << t1 - t0 << " " << t3 - t2 << " " << t5 - t4 << " " 
+              << t7 - t6 << " " << dataset->num_samples() << std::endl;
+
 #ifdef DEBUG
     std::cout << get_time_us() << " [WORKER] Sent gradient" << std::endl;
 #endif

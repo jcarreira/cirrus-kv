@@ -322,6 +322,8 @@ void PSSparseServerTask::gradient_f() {
   * buffer with previous size
   */
 bool PSSparseServerTask::process(struct pollfd& poll_fd) {
+
+  auto t0 = get_time_us();
   int sock = poll_fd.fd;
 #ifdef DEBUG
   std::cout << "Processing socket: " <<  sock << std::endl;
@@ -385,6 +387,8 @@ bool PSSparseServerTask::process(struct pollfd& poll_fd) {
     std::string error = "process: Uknown operation " + std::to_string(operation);
     throw std::runtime_error(error);
   }
+
+  std::cout << "time: " << get_time_us() - t0 << std::endl;
   return true;
 }
 
