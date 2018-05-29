@@ -31,28 +31,11 @@ cd krb5-1.15.2/src
 ./configure --disable-shared --enable-static
 make -j 10
 cd lib
-mkdir -p build && cd build
-ar -x ../libapputils.a
-ar -x ../libcom_err.a
-ar -x ../libgssapi_krb5.a
-ar -x ../libgssrpc.a
-ar -x ../libk5crypto.a
-ar -x ../libkadm5clnt_mit.a
-ar -x ../libkadm5srv_mit.a
-ar -x ../libkdb5.a
-ar -x ../libkrb5.a
-ar -x ../libkrad.a
-ar -x ../libkrb5_db2.a
-ar -x ../libkrb5_k5audit_test.a
-ar -x ../libkrb5_k5tls.a
-ar -x ../libkrb5_otp.a
-ar -x ../libkrb5_pkinit.a
-ar -x ../libkrb5support.a
-ar -x ../libkrb5_test.a
-ar -x ../libss.a
-cd ..
-ar -qc liball.a build/*.o
-rm -rf build
+for i in *.a; do
+    ar -x $i
+done
+ar -qc liball.a *.o
+find . -name \*.o -delete
 cd ..
 cd ..
 
