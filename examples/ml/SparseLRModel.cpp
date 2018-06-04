@@ -127,6 +127,29 @@ void SparseLRModel::sgd_update_adagrad(double learning_rate,
   }
 }
 
+void SparseLRModel::sgd_update_nesterov(double learning_rate,
+         const ModelGradient* gradient) {
+  const LRSparseGradient* grad =
+    dynamic_cast<const LRSparseGradient*>(gradient);
+
+  if (grad == nullptr) {
+    throw std::runtime_error("Error in dynamic cast");
+  }
+
+  double nesterov_beta = 0.9;
+
+  for (const auto& w : grad->weights) {
+  int index = w.first;
+  FEATURE_TYPE value = w.second;
+  if (nesterov_avg == 0.0) {
+    nesterov_avg = value
+  } else {
+    nesterov_avg = nesterov_beta * nesterov_avg + (1.0 - nesterov_beta) * value;
+  }
+  weights_[index] += learning_rate * nesterov_avg;
+  }
+}
+
 void SparseLRModel::sgd_update(double learning_rate,
     const ModelGradient* gradient) {
   const LRSparseGradient* grad =

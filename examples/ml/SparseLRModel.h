@@ -86,6 +86,15 @@ class SparseLRModel : public CirrusModel {
         double learning_rate, const ModelGradient* gradient);
 
     /**
+      *Performs an SGD update using NESTEROV
+      *@param learning_rate Learning rate to be used
+      *@param gradient Gradient to be used for the update
+      */
+
+    void sgd_update_nesterov(
+        double learning_rate, const ModelGradient* gradient);
+
+    /**
      * Returns the size of the model weights serialized
      * @returns Size of the model when serialized
      */
@@ -169,7 +178,8 @@ class SparseLRModel : public CirrusModel {
     std::vector<FEATURE_TYPE> weights_hist_;  //< vector of the model weights
     //mutable std::unordered_map<uint32_t, FEATURE_TYPE> weights_sparse_;
     mutable std::vector<FEATURE_TYPE> weights_sparse_;
-
+    FEATURE_TYPE nesterov_avg = 0.0;
+    
     double grad_threshold_ = 0;
 
     // we keep these vectors preallocated for performance reasons
