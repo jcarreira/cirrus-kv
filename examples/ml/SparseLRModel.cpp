@@ -139,14 +139,14 @@ void SparseLRModel::sgd_update_nesterov(double learning_rate,
   double nesterov_beta = 0.9;
 
   for (const auto& w : grad->weights) {
-  int index = w.first;
-  FEATURE_TYPE value = w.second;
-  if (nesterov_avg == 0.0) {
-    nesterov_avg = value
-  } else {
-    nesterov_avg = nesterov_beta * nesterov_avg + (1.0 - nesterov_beta) * value;
-  }
-  weights_[index] += learning_rate * nesterov_avg;
+    int index = w.first;
+    FEATURE_TYPE value = w.second;
+    if (nesterov_avg == 0.0) {
+      nesterov_avg = value;
+    } else {
+      nesterov_avg = nesterov_beta * nesterov_avg + (1.0 - nesterov_beta) * value;
+    }
+    weights_[index] += learning_rate * nesterov_avg;
   }
 }
 
