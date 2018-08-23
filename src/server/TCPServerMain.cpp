@@ -31,6 +31,9 @@ auto main(int argc, char *argv[]) -> int {
         case 4:
             {
                 storage_path = argv[3];
+#if __GNUC__ >= 7
+                [[fallthrough]];
+#endif
             }
         case 3:
             {
@@ -38,6 +41,9 @@ auto main(int argc, char *argv[]) -> int {
                     throw std::runtime_error("Wrong backend type");
                 }
                 backend_type = argv[2];
+#if __GNUC__ >= 7
+                [[fallthrough]];
+#endif
             }
         case 2:
             {
@@ -48,6 +54,9 @@ auto main(int argc, char *argv[]) -> int {
                 }
 
                 pool_size *= MB;
+#if __GNUC__ >= 7
+                [[fallthrough]];
+#endif
             }
         case 1:
             break;

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <functional>
 
 #include "client/BladeClient.h"
 
