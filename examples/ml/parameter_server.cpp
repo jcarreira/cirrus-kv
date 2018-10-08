@@ -1,182 +1,160 @@
-#include <mpi.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <fstream>
-#include <algorithm>
 #include <cstdint>
-#include <iostream>
-#include <map>
 #include <string>
-#include <cctype>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <memory>
-
-#include <Checksum.h>
-#include "Input.h"
 #include "Utils.h"
-#include "Model.h"
-#include "LRModel.h"
-#include "ModelGradient.h"
 #include "Configuration.h"
-#include "Serializers.h"
 
-#include "object_store/FullBladeObjectStore.h"
-#include "tests/object_store/object_store_internal.h"
-#include "utils/CirrusTime.h"
 #include "utils/Log.h"
-#include "utils/Stats.h"
-#include "client/TCPClient.h"
 #include "common/Exception.h"
 #include <Tasks.h>
 
-#define INSTS (1000000)  // 1 million
-#define LOADING_DONE (INSTS + 1)
-
-#define MODEL_GRAD_SIZE 10
+#include "config.h"
 
 #define BILLION (1000000000ULL)
-
-#define SAMPLE_BASE 0
-#define MODEL_BASE (BILLION)
+#define MILLION (1000000ULL)
+#define SAMPLE_BASE   (0)
+#define MODEL_BASE    (1 * BILLION)
 #define GRADIENT_BASE (2 * BILLION)
-#define LABEL_BASE (3 * BILLION)
-int nworkers = 1;
-
-int num_classes = 2;
-int features_per_sample = 10;
-int samples_per_batch = 100;
-int batch_size = samples_per_batch * features_per_sample;
-
-void sleep_forever() {
-    while (1) {
-        sleep(1000);
-    }
-}
+#define LABEL_BASE    (3 * BILLION)
+#define START_BASE    (4 * BILLION)
 
 static const uint64_t GB = (1024*1024*1024);
-const char PORT[] = "12345";
-const char IP[] = "10.10.49.83";
-
 static const uint32_t SIZE = 1;
 
-void run_memory_task(const Configuration& /* config */) {
-    std::cout << "Launching TCP server" << std::endl;
-    int ret = system("~/tcpservermain");
-    std::cout << "System returned: " << ret << std::endl;
-}
+void run_tasks(int rank, int nworkers, 
+    int batch_size, const Configuration& config) {
 
+  std::cout << "Run tasks rank: " << rank << std::endl;
+  int features_per_sample = config.get_num_features();
+  int samples_per_batch = config.get_minibatch_size();
 
-void run_tasks(int rank, const Configuration& config) {
-    std::cout << "Run tasks rank: " << rank << std::endl;
-    if (rank == 0) {
-        // run_memory_task(config_path);
-        sleep_forever();
-    } else if (rank == 1) {
-        sleep(8);
-        PSTask pt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
-        pt.run(config);
-        sleep_forever();
-    } else if (rank == 2) {
-        sleep(3);
-        LoadingTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
-        lt.run(config);
-        sleep_forever();
-    } else if (rank == 3) {
-        sleep(5);
-        ErrorTask et(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
-        et.run(config);
-        sleep_forever();
-    } else if (rank >= 4 && rank < 4 + nworkers) {
-        /**
-          * Worker tasks run here
-          * Number of tasks is determined by the value of nworkers
-          */
-        sleep(10);
-        LogisticTask lt(IP, PORT, MODEL_GRAD_SIZE, MODEL_BASE,
-                LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, batch_size,
-                samples_per_batch, features_per_sample, nworkers);
-        lt.run(config, rank - 4);
-        sleep_forever();
-
+  if (rank == PERFORMANCE_LAMBDA_RANK) {
+    PerformanceLambdaTask lt(features_per_sample, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    lt.run(config);
+    sleep_forever();
+  } else if (rank == PS_SPARSE_SERVER_TASK_RANK) {
+    PSSparseServerTask st((1 << config.get_model_bits()) + 1, MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    st.run(config);
+    //sleep_forever();
+  } else if (rank >= WORKERS_BASE && rank < WORKERS_BASE + nworkers) {
+    /**
+     * Worker tasks run here
+     * Number of tasks is determined by the value of nworkers
+     */
+    if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
+      LogisticSparseTaskS3 lt(features_per_sample, MODEL_BASE,
+          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+          batch_size, samples_per_batch, features_per_sample,
+          nworkers, rank);
+      lt.run(config, rank - WORKERS_BASE);
+    } else if(config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
+      MFNetflixTask lt(0, MODEL_BASE,
+          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+          batch_size, samples_per_batch, features_per_sample,
+          nworkers, rank);
+      lt.run(config, rank - WORKERS_BASE);
     } else {
-        throw std::runtime_error("Wrong number of tasks");
+      exit(-1);
     }
-}
-
-inline
-void init_mpi(int argc, char**argv) {
-    int provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-    if (provided != MPI_THREAD_MULTIPLE) {
-        std::cerr
-            << "MPI implementation does not support multiple threads"
-            << std::endl;
-        MPI_Abort(MPI_COMM_WORLD, 1);
+  /**
+    * SPARSE tasks
+    */
+  } else if (rank == ERROR_SPARSE_TASK_RANK) {
+    ErrorSparseTask et((1 << config.get_model_bits()), MODEL_BASE,
+        LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+        batch_size, samples_per_batch, features_per_sample,
+        nworkers, rank);
+    et.run(config);
+    sleep_forever();
+  } else if (rank == LOADING_SPARSE_TASK_RANK) {
+    if (config.get_model_type() == Configuration::LOGISTICREGRESSION) {
+      LoadingSparseTaskS3 lt((1 << config.get_model_bits()), MODEL_BASE,
+          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+          batch_size, samples_per_batch, features_per_sample,
+          nworkers, rank);
+      lt.run(config);
+    } else if(config.get_model_type() == Configuration::COLLABORATIVE_FILTERING) {
+      LoadingNetflixTask lt(0, MODEL_BASE,
+          LABEL_BASE, GRADIENT_BASE, SAMPLE_BASE, START_BASE,
+          batch_size, samples_per_batch, features_per_sample,
+          nworkers, rank);
+      lt.run(config);
+    } else {
+      exit(-1);
     }
+  } else {
+    throw std::runtime_error("Wrong task rank: " + std::to_string(rank));
+  }
 }
 
 void print_arguments() {
-    std::cout << "./parameter_server config_file [nworkers]" << std::endl;
+  // nworkers is the number of processes computing gradients
+  // rank starts at 0
+  std::cout << "./parameter_server config_file nworkers rank" << std::endl;
 }
 
 Configuration load_configuration(const std::string& config_path) {
-    Configuration config;
-    config.read(config_path);
-    return config;
+  Configuration config;
+  std::cout << "Loading configuration"
+    << std::endl;
+  config.read(config_path);
+  std::cout << "Configuration read"
+    << std::endl;
+  config.check();
+  return config;
+}
+
+void print_hostname() {
+  char name[200];
+  gethostname(name, 200);
+  std::cout << "MPI multi task test running on hostname: " << name
+    << std::endl;
 }
 
 int main(int argc, char** argv) {
-    std::cout << "Starting parameter server" << std::endl;
+  std::cout << "Starting parameter server" << std::endl;
 
-    int rank, nprocs;
+  if (argc != 4) {
+    print_arguments();
+    throw std::runtime_error("Wrong number of arguments");
+  }
 
-    init_mpi(argc, argv);
-    int err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    err = MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    check_mpi_error(err);
+  print_hostname();
 
-    if (argc != 2 && argc != 3) {
-        print_arguments();
-        throw std::runtime_error("Wrong number of arguments");
-    }
+  int nworkers = string_to<int>(argv[2]);
+  std::cout << "Running parameter server with: "
+    << nworkers << " workers"
+    << std::endl;
 
-    char name[200];
-    gethostname(name, 200);
-    std::cout << "MPI multi task test running on hostname: " << name
-        << " with rank: " << rank
-        << std::endl;
+  int rank = string_to<int>(argv[3]);
+  std::cout << "Running parameter server with: "
+    << rank << " rank"
+    << std::endl;
 
-    if (argc == 3) {
-        nworkers = string_to<int>(argv[2]);
-        std::cout << "Running parameter server with: "
-            << nworkers << " workers"
-            << std::endl;
-    }
+  auto config = load_configuration(argv[1]);
+  config.print();
 
-    auto config = load_configuration(argv[1]);
-    config.print();
+  // from config we get
+  int batch_size = config.get_minibatch_size() * config.get_num_features();
 
-    // from config we get
-    // 1. the number of classes
-    // 2. the size of input
-    samples_per_batch = config.get_minibatch_size();
-    batch_size = samples_per_batch * features_per_sample;
-    num_classes = config.get_num_classes();
+  std::cout
+    << "samples_per_batch: " << config.get_minibatch_size()
+    << " features_per_sample: " << config.get_num_features()
+    << " batch_size: " << config.get_minibatch_size()
+    << std::endl;
 
-    // call the right task for this process
-    run_tasks(rank, config);
+  // call the right task for this process
+  std::cout << "Running task" << std::endl;
+  run_tasks(rank, nworkers, batch_size, config);
 
-    MPI_Finalize();
-    std::cout << "Test successful" << std::endl;
+  std::cout << "Test successful" << std::endl;
 
-    return 0;
+  return 0;
 }
 

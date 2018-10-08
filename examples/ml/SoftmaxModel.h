@@ -4,12 +4,13 @@
 #include <Model.h>
 #include <utility>
 #include <vector>
+#include <config.h>
 
-class SoftmaxModel : public Model {
+class SoftmaxModel : public CirrusModel {
  public:
     SoftmaxModel(uint64_t classes, uint64_t d);
-    SoftmaxModel(const double* data, uint64_t nclasses, uint64_t d);
-    SoftmaxModel(std::vector<std::vector<double>> data,
+    SoftmaxModel(const FEATURE_TYPE* data, uint64_t nclasses, uint64_t d);
+    SoftmaxModel(std::vector<std::vector<FEATURE_TYPE>> data,
             uint64_t nclasses, uint64_t d);
 
     /**
@@ -29,7 +30,7 @@ class SoftmaxModel : public Model {
       */
     std::pair<std::unique_ptr<char[]>, uint64_t>
     serialize() const;
-    
+
     /**
       * serializes this model into memory pointed by mem
       */
@@ -41,14 +42,14 @@ class SoftmaxModel : public Model {
       * @param size Size of model when serialized
       * @return Deserialized model
       */
-    std::unique_ptr<Model> deserialize(void* data,
+    std::unique_ptr<CirrusModel> deserialize(void* data,
                                        uint64_t size) const;
 
     /**
       * Performs a deep copy of this model
       * @return Copy of model
       */
-    std::unique_ptr<Model> copy() const override;
+    std::unique_ptr<CirrusModel> copy() const override;
 
     /**
       * Performsa stochastic gradient update in the direction of the input gradient
@@ -65,22 +66,21 @@ class SoftmaxModel : public Model {
 
     /**
       * Compute a minibatch gradient
-      * @param rank
       * @param dataset
       * @param labels
       * @param epsilon
       * @return
       */
     std::unique_ptr<ModelGradient> minibatch_grad(
-            int rank, const Matrix& dataset,
-            double* labels,
+            const Matrix& dataset,
+            FEATURE_TYPE* labels,
             uint64_t labels_size,
             double epsilon) const override;
     /**
       * Compute the logistic loss of a given dataset on the current model
       * @areturn 
       */
-    double calc_loss(Dataset& dataset) const override;
+    std::pair<double, double> calc_loss(Dataset& dataset) const override;
 
     /**
       * Return the size of the gradient when serialized
@@ -105,7 +105,7 @@ class SoftmaxModel : public Model {
     uint64_t nclasses;  //< number of classes in the dataset
     uint64_t d;         //< number of features for each sample
 
-    std::vector<std::vector<double>> weights;  //< model weights
+    std::vector<std::vector<FEATURE_TYPE>> weights;  //< model weights
 };
 
 #endif  // EXAMPLES_ML_SOFTMAXMODEL_H_

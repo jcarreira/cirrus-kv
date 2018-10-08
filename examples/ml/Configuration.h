@@ -6,6 +6,7 @@
 class Configuration {
  public:
     Configuration();
+    Configuration(const std::string& path);
 
     /**
       * Read configuration file
@@ -32,10 +33,10 @@ class Configuration {
     uint64_t get_minibatch_size() const;
 
     /**
-      * Get flag indicating whether to use prefetching
-      * @returns Prefetching flag
+      * Get size of each object in S3
+      * @returns s3 object size
       */
-    int get_prefetching() const;
+    uint64_t get_s3_size() const;
 
     /**
       * Get number of classes in the dataset
@@ -78,7 +79,8 @@ class Configuration {
     enum ModelType {
         UNKNOWN = 0,
         LOGISTICREGRESSION,
-        SOFTMAX
+        SOFTMAX,
+        COLLABORATIVE_FILTERING,
     };
 
     /**
@@ -92,11 +94,39 @@ class Configuration {
     bool get_normalize() const;
 
     /**
-      * Get number of training samples
+      * Get max number of training samples
       */
-    uint64_t get_num_samples() const;
+    uint64_t get_limit_samples() const;
 
- private:
+    /**
+      * Get max number of training samples
+      */
+    uint64_t get_num_features() const;
+
+    std::string get_s3_bucket() const;
+
+    void check() const;
+
+    std::pair<int, int> get_train_range() const;
+    std::pair<int, int> get_test_range() const;
+
+    bool get_use_bias() const;
+
+    // threshold to filter out gradient values that are too small
+    bool get_grad_threshold_use() const;
+    double get_grad_threshold() const;
+
+    uint64_t get_model_bits() const;
+
+    /**
+      * Netflix specific
+      */
+    int get_users() const;
+    int get_items() const;
+
+    bool get_use_adagrad() const;
+
+ public:
     /**
       * Parse a specific line in the config file
       * @param line Configuration line
@@ -108,10 +138,11 @@ class Configuration {
     uint64_t n_workers = 0;  //< number of system workers
 
     uint64_t minibatch_size = 0;  //< size of minibatch
+    uint64_t s3_size = 0;  //< size of samples chunk stored in each s3 object
+
     double learning_rate = 0;     //< sgd learning rate
     double epsilon = 0;           //< regularization rate
 
-    int prefetching = 0;       //< whether to prefetch input data
     uint64_t num_classes = 0;  //< number of sample classes
 
     std::string input_path;  //< path to dataset input
@@ -126,7 +157,26 @@ class Configuration {
     uint64_t limit_cols = 0;
     bool normalize = false;    //< whether to normalize the dataset
 
-    uint64_t num_samples = 0;  //< number of training input samples
+    uint64_t limit_samples = 0;  //< max number of training input samples
+    uint64_t num_features = 0;   //< number of features in each sample
+
+    std::string s3_bucket_name; //< bucket used for training dataset
+
+    std::pair<int, int> train_set_range; // range of S3 ids for training
+    std::pair<int, int> test_set_range;  // range of S3 ids for testing
+
+    bool use_bias = false; // whether to use bias value for every sample
+
+    // Netflix parameters
+    int nusers = 0; // number of users
+    int nitems = 0; // number of items
+
+    bool use_grad_threshold = false;
+    double grad_threshold = 0;
+
+    bool use_adagrad = true;
+
+    uint64_t model_bits = 20;
 };
 
 #endif  // EXAMPLES_ML_CONFIGURATION_H_

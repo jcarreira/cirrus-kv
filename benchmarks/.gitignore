@@ -5,3 +5,7 @@ cache_benchmark
 iterator_benchmark
 outstanding_requests
 throughput
+cache_iops
+cache_latency
+iterator_v2
+store_bandwidth
