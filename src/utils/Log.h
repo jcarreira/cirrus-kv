@@ -74,7 +74,7 @@ bool LOG(Params&& ... param) {
         << " -";
 
 #if __GNUC__ >= 7
-    if constexpr (std::is_same(TT, TIME)) {
+    if constexpr (std::is_same_v<TT, TIME>) {
         std::cout << getTimeNow();
     }
 #else
@@ -89,7 +89,7 @@ bool LOG(Params&& ... param) {
     int dummy[] = { 0, ( (void) f(std::forward<Params>(param)), 0) ... };
 
 #if __GNUC__ >= 7
-    if constexpr (std::is_same(K, FLUSH)) {
+    if constexpr (std::is_same_v<K, FLUSH>) {
         std::cout << std::endl;
     }
 #else
