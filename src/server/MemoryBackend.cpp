@@ -1,9 +1,12 @@
 #include "MemoryBackend.h"
 
 #include <cstring>
+#include <malloc.h>
 #include "server/MemoryBackend.h"
 
 namespace cirrus {
+
+MemoryBackend::MemoryBackend(uint64_t bytes) : remove_increment(bytes) {}
 
 void MemoryBackend::init() {}
 
@@ -27,7 +30,13 @@ MemSlice MemoryBackend::get(uint64_t oid) const {
 }
 
 bool MemoryBackend::delet(uint64_t oid) {
-    store.erase(oid);  // we assume object exists
+    // we assume object exists
+    remove_counter += store[oid].size();
+    store.erase(oid);
+    if (remove_counter >= remove_increment) {
+        remove_counter %= remove_increment;
+        malloc_trim(0);
+    }
     return true;
 }
 

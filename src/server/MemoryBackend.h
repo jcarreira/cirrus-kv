@@ -14,6 +14,7 @@ namespace cirrus {
 class MemoryBackend : public StorageBackend {
  public:
      MemoryBackend() = default;
+     MemoryBackend(uint64_t bytes);
      virtual ~MemoryBackend() = default;
 
      void init();
@@ -27,6 +28,8 @@ class MemoryBackend : public StorageBackend {
      // make this mutable because std::map
      // doesn't play well with const
      mutable std::unordered_map<uint64_t, std::vector<int8_t>> store;
+     mutable uint64_t remove_counter = 0;
+     mutable uint64_t remove_increment = 1'000'000;
 };
 
 }  // namespace cirrus
