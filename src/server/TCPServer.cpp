@@ -48,7 +48,7 @@ TCPServer::TCPServer(int port, uint64_t pool_size_,
     }
 
     if (backend == "Memory") {
-        mem = std::make_unique<MemoryBackend>();
+        mem = std::make_unique<MemoryBackend>(100'000'000);
     } else if (backend == "Storage") {
         mem = std::make_unique<NVStorageBackend>(storage_path);
     } else {
