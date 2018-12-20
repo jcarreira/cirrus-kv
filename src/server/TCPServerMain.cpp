@@ -30,16 +30,27 @@ auto main(int argc, char *argv[]) -> int {
     switch (argc) {
         case 5:
             {
-                storage_path = argv[3];
+                storage_path = argv[4];
+#if __GNUC__ >= 7
+                [[fallthrough]];
+#endif
             }
         case 4:
             {
-                if (strcmp(argv[2], "Memory") && strcmp(argv[2], "Storage")) {
+                if (strcmp(argv[3], "Memory") && strcmp(argv[3], "Storage")) {
                     throw std::runtime_error("Wrong backend type");
                 }
-                backend_type = argv[2];
+                backend_type = argv[3];
+#if __GNUC__ >= 7
+                [[fallthrough]];
+#endif
             }
         case 3:
+            port = std::stoi(argv[2]);
+#if __GNUC__ >= 7
+            [[fallthrough]];
+#endif
+        case 2:
             {
                 std::istringstream iss(argv[1]);
                 if (!(iss >> pool_size)) {
@@ -49,8 +60,6 @@ auto main(int argc, char *argv[]) -> int {
 
                 pool_size *= MB;
             }
-        case 2:
-            port = std::stoi(argv[1]);
             break;
         case 1:
             port = 12345;

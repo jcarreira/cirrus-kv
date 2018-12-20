@@ -296,7 +296,7 @@ void test_remove_bulk() {
         store.put(i, i);
      }
 
-    store.removeBulk(0, 9);
+    store.remove_bulk(0, 9);
     // Attempt to get all items in the removed range, should fail
     for (int i = 0; i < 10; i++) {
         try {
