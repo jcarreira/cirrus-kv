@@ -9,6 +9,8 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <functional>
+#include <unordered_set>
 
 #include "object_store/ObjectStore.h"
 #include "client/BladeClient.h"
@@ -240,17 +242,19 @@ template<class T>
 std::vector<T> FullBladeObjectStoreTempl<T>::get_bulk_fast(
                                             const std::vector<ObjectID>& oids) {
 
+    std::unordered_set<uint64_t> server_ids;
     std::vector<std::vector<ObjectID>> oid_per_server;
     oid_per_server.resize(client->numServers());
 
     for (uint64_t i = 0; i < oids.size(); ++i) {
         uint64_t server_id = client->serverFromOid(oids[i]);
         oid_per_server[server_id].push_back(oids[i]);
+        server_ids.insert(server_id);
     }
 
     std::vector<T> res;
     res.reserve(oids.size());
-    for (uint64_t i = 0; i < oid_per_server.size(); ++i) {
+    for (const uint64_t& i : server_ids) {
         std::pair<std::shared_ptr<const char>, unsigned int> ptr_pair =
             client->read_sync_bulk(oid_per_server[i]);
     
@@ -324,6 +328,7 @@ void FullBladeObjectStoreTempl<T>::put_bulk_fast(
 
     std::vector<std::vector<const T*>> obj_ptrs;
     std::vector<std::vector<ObjectID>> oid_per_server;
+    std::unordered_set<uint64_t> server_ids;
 
     obj_ptrs.resize(client->numServers());
     oid_per_server.resize(client->numServers());
@@ -332,9 +337,10 @@ void FullBladeObjectStoreTempl<T>::put_bulk_fast(
         uint64_t server_id = client->serverFromOid(oids[i]);
         obj_ptrs[server_id].push_back(&data[i]);
         oid_per_server[server_id].push_back(oids[i]);
+        server_ids.insert(server_id);
     }
 
-    for (uint64_t i = 0; i < obj_ptrs.size(); ++i) {
+    for (const uint64_t& i : server_ids) {
         WriteUnitsTemplate<T> w(serializer, obj_ptrs[i]);
         client->write_sync_bulk(oid_per_server[i], w);
     }
