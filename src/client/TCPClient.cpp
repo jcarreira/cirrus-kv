@@ -44,7 +44,6 @@ TCPClient::~TCPClient() {
 
     if (sender_thread) {
         LOG<INFO>("Terminating sender thread");
-        queue_semaphore.signal();  // unblock sender thread
         sender_thread->join();
         delete sender_thread;
     }
@@ -602,8 +601,6 @@ ssize_t TCPClient::read_all(int sock, void* data, size_t len) {
 void TCPClient::process_send() {
     // Wait until there are messages to send
     while (1) {
-        queue_semaphore.wait();
-
         if (terminate_threads) {
             return;
         }
@@ -643,9 +640,6 @@ void TCPClient::process_send() {
                 " bw (MB/s): ", send_mbps);
 #endif
         LOG<INFO>("message pair sent by client");
-
-        // Release the lock so that the other thread may add to the send queue
-        queue_lock.signal();
 
         // Add the builder to the queue if it is of the right type (a write)
         // And if not over capacity
@@ -693,11 +687,6 @@ BladeClient::ClientFuture TCPClient::enqueue_message(
 
 #ifdef PERF_LOG
     TimerFunction sem_time;
-#endif
-    // Alert that the queue has been updated
-    queue_semaphore.signal();
-
-#ifdef PERF_LOG
     LOG<PERF>("TCPClient::enqueue_message semaphore signal time (us): ",
             sem_time.getUsElapsed());
 #endif
