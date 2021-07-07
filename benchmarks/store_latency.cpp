@@ -24,7 +24,7 @@ static const uint64_t GB = (1024*1024*1024);
 const char PORT[] = "12345";
 const char IP[] = "127.0.0.1";
 static const uint64_t MILLION = 1000000;
-static const uint64_t N_ITER = 100000;
+static const uint64_t N_ITER = 10000;
 
 void print_stats(std::ostream& out, const cirrus::Stats& stats,
         uint64_t msg_sent, uint64_t elapsed_us, uint64_t size, bool is_put) {
@@ -38,7 +38,7 @@ void print_stats(std::ostream& out, const cirrus::Stats& stats,
     out << "msg/s: " << (msg_sent * 1.0 / elapsed_us * MILLION)
         << std::endl;
     out << "MB/s: " << (size * msg_sent * 1.0
-        / ((elapsed_us / MILLION) * 1024 * 1024)) << std::endl;
+        / ((1.0 * elapsed_us / MILLION) * 1024 * 1024)) << std::endl;
     out << "min: " << stats.min() << " µs" << std::endl;
     out << "avg: " << stats.avg() << " µs" << std::endl;
     out << "max: " << stats.max() << " µs"<< std::endl;
@@ -84,19 +84,17 @@ void test_put_sync(std::ofstream& outfile) {
     }
 
     std::cout << "Measuring msgs/s.." << std::endl;
-    uint64_t i = 0;
     cirrus::TimerFunction start;
 
-    for (; i < N_ITER; ++i) {
+    for (uint64_t i = 0; i < N_ITER; ++i) {
         store.put(i % 10, d);
     }
 
     uint64_t elapsed_us = start.getUsElapsed();
 
 
-    print_stats(outfile, stats, i, elapsed_us, SIZE, true);
-
-    print_stats(std::cout, stats, i, elapsed_us, SIZE, true);
+    print_stats(outfile, stats, N_ITER, elapsed_us, SIZE, true);
+    print_stats(std::cout, stats, N_ITER, elapsed_us, SIZE, true);
 }
 
 /**
@@ -136,19 +134,17 @@ void test_get_sync(std::ofstream& outfile) {
     }
 
     std::cout << "Measuring msgs/s.." << std::endl;
-    uint64_t i = 0;
     cirrus::TimerFunction start;
 
-    for (; i < N_ITER; ++i) {
+    for (uint64_t i = 0; i < N_ITER; ++i) {
         store.get(i % 10);
     }
 
     uint64_t elapsed_us = start.getUsElapsed();
 
 
-    print_stats(outfile, stats, i, elapsed_us, SIZE, false);
-
-    print_stats(std::cout, stats, i, elapsed_us, SIZE, false);
+    print_stats(outfile, stats, N_ITER, elapsed_us, SIZE, false);
+    print_stats(std::cout, stats, N_ITER, elapsed_us, SIZE, false);
 }
 
 auto main() -> int {

@@ -2,7 +2,7 @@ include $(top_srcdir)/common.mk
 
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = 	1_1 1_3 throughput iterator_benchmark \
+bin_PROGRAMS = 	store_latency 1_3 throughput iterator_benchmark \
                 cache_benchmark 1_2 outstanding_requests store_bandwidth \
                 cache_latency cache_iops iterator_v2 remove_bulk
 
@@ -23,7 +23,7 @@ CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/examples/sparsehash/src/ \
            -I$(top_srcdir)/src \
 	   -I$(top_srcdir)/third_party/flatbuffers/include
 
-1_1_SOURCES  = 	1_1.cpp
+store_latency_SOURCES  = store_latency.cpp
 
 1_2_SOURCES  = 1_2.cpp
 
