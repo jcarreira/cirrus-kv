@@ -9,7 +9,7 @@ DEFAULT_LIB = -L. -lserver \
               -L../common/ -lcommon $(LIBRDMACM) $(LIBIBVERBS)
 
 noinst_LIBRARIES = libserver.a
-bin_PROGRAMS = tcpservermain
+bin_PROGRAMS = tcpservermain testtcpserver testtcpclient
 
 libserver_a_SOURCES = TCPServer.cpp MemoryBackend.cpp \
 			MemoryBackend.cpp NVStorageBackend.cpp
@@ -31,6 +31,11 @@ LDFLAGS  = -pthread
 LDADD    = $(DEFAULT_LIB)
 CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src \
            -I$(top_srcdir)/third_party/flatbuffers/include
+
+testtcpserver_DEPENDENCIES = libserver.a
+testtcpserver_SOURCES = TestTCPServer.cpp
+testtcpclient_DEPENDENCIES = libserver.a
+testtcpclient_SOURCES = TestTCPClient.cpp
 
 bladepoolmain_DEPENDENCIES = libserver.a
 bladepoolmain_SOURCES  = bladepoolmain.cpp
